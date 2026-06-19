@@ -1,0 +1,106 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Building2,
+  FolderOpen,
+  LayoutDashboard,
+  LogOut,
+  MapPin,
+  Settings,
+  TrendingUp,
+  Users,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/proyectos", label: "Proyectos", icon: FolderOpen },
+  { href: "/prospectos", label: "CRM", icon: TrendingUp },
+  { href: "/clientes", label: "Clientes", icon: Building2 },
+  { href: "/municipios", label: "Municipios", icon: MapPin },
+  { href: "/herramientas/checklist", label: "Checklist Normativo", icon: Wrench },
+  { href: "/configuracion", label: "Configuración", icon: Settings },
+];
+
+function isActive(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function Sidebar() {
+  const pathname = usePathname();
+
+  return (
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-border bg-white">
+      {/* Logo */}
+      <div className="px-6 py-6">
+        <h1 className="text-xl font-semibold tracking-tight text-[#1A3328]">
+          PermisoHub
+        </h1>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          EP Gestión Arquitectónica
+        </p>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 space-y-1 px-3 py-2">
+        {NAV_ITEMS.map((item) => {
+          const active = isActive(pathname, item.href);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                active
+                  ? "bg-[#1A3328] text-white"
+                  : "text-[#1A3328]/70 hover:bg-[#F0EBE1] hover:text-[#1A3328]"
+              )}
+            >
+              <Icon className="size-4.5 shrink-0" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* User */}
+      <div className="border-t border-border p-3">
+        <div className="flex items-center gap-3 rounded-lg px-2 py-2">
+          <Avatar size="default">
+            <AvatarFallback className="bg-[#1A3328] text-xs font-medium text-white">
+              EP
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-[#1A3328]">
+              Estefanía Parada
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              Arquitecta
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Cerrar sesión"
+            className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[#F0EBE1] hover:text-[#1A3328]"
+          >
+            <LogOut className="size-4" />
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+}

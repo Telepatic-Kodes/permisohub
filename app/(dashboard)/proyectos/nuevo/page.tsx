@@ -1,0 +1,242 @@
+"use client"
+
+import { useState, type FormEvent } from "react"
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { MOCK_CLIENTES, MUNICIPIOS_PRINCIPALES } from "@/lib/mock-data"
+import { ETAPAS_PERMISO, TIPO_PERMISO_LABELS, type TipoPermiso } from "@/types"
+
+const TIPOS = Object.entries(TIPO_PERMISO_LABELS) as [TipoPermiso, string][]
+
+export default function NuevoProyectoPage() {
+  const [cliente, setCliente] = useState("")
+  const [municipio, setMunicipio] = useState("")
+  const [tipo, setTipo] = useState("")
+  const [etapas, setEtapas] = useState<Record<string, boolean>>(
+    Object.fromEntries(ETAPAS_PERMISO.map((e) => [e, true]))
+  )
+
+  function toggleEtapa(nombre: string, checked: boolean) {
+    setEtapas((prev) => ({ ...prev, [nombre]: checked }))
+  }
+
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const form = new FormData(e.currentTarget)
+    const payload = {
+      nombre: form.get("nombre"),
+      cliente,
+      municipio,
+      tipo,
+      direccion: form.get("direccion"),
+      numero_expediente: form.get("numero_expediente"),
+      fecha_inicio: form.get("fecha_inicio"),
+      fecha_estimada: form.get("fecha_estimada"),
+      notas: form.get("notas"),
+      etapas: ETAPAS_PERMISO.filter((nombre) => etapas[nombre]),
+    }
+    // eslint-disable-next-line no-console
+    console.log("Nuevo proyecto:", payload)
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div className="space-y-3">
+        <Link
+          href="/proyectos"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-[#1A3328]"
+        >
+          <ArrowLeft className="size-4" />
+          Proyectos
+        </Link>
+        <h1 className="text-2xl font-semibold tracking-tight text-[#1A3328]">
+          Nuevo proyecto
+        </h1>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <Card>
+          <CardContent className="space-y-5 pt-6">
+            <div className="space-y-2">
+              <Label htmlFor="nombre">
+                Nombre del proyecto <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="nombre"
+                name="nombre"
+                required
+                placeholder="Ej: Tienda Retail Andino — Providencia"
+              />
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>
+                  Cliente <span className="text-destructive">*</span>
+                </Label>
+                <Select value={cliente} onValueChange={(v) => setCliente(v as string)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOCK_CLIENTES.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nombre}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="nuevo">+ Nuevo cliente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Municipio <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={municipio}
+                  onValueChange={(v) => setMunicipio(v as string)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar municipio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MUNICIPIOS_PRINCIPALES.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                Tipo de permiso <span className="text-destructive">*</span>
+              </Label>
+              <Select value={tipo} onValueChange={(v) => setTipo(v as string)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar tipo de permiso" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIPOS.map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="direccion">
+                Dirección del local <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="direccion"
+                name="direccion"
+                required
+                placeholder="Ej: Av. Providencia 1455, Local 3"
+              />
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="numero_expediente">N° Expediente DOM</Label>
+                <Input
+                  id="numero_expediente"
+                  name="numero_expediente"
+                  placeholder="Ej: EXP-2026-0142"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fecha_inicio">
+                  Fecha de inicio <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="fecha_inicio"
+                  name="fecha_inicio"
+                  type="date"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 sm:w-1/2 sm:pr-2.5">
+              <Label htmlFor="fecha_estimada">
+                Fecha estimada de aprobación
+              </Label>
+              <Input id="fecha_estimada" name="fecha_estimada" type="date" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notas">Notas</Label>
+              <Textarea
+                id="notas"
+                name="notas"
+                rows={4}
+                placeholder="Observaciones, contexto del cliente, plazos críticos..."
+              />
+            </div>
+
+            <div className="space-y-3 border-t border-border pt-5">
+              <div>
+                <Label>Etapas iniciales</Label>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Desmarca las etapas que no apliquen a este proyecto.
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {ETAPAS_PERMISO.map((etapa) => (
+                  <label
+                    key={etapa}
+                    className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border p-2.5 text-sm"
+                  >
+                    <Checkbox
+                      checked={etapas[etapa]}
+                      onCheckedChange={(checked) =>
+                        toggleEtapa(etapa, Boolean(checked))
+                      }
+                    />
+                    {etapa}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="mt-6 flex items-center justify-between">
+          <Link
+            href="/proyectos"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-[#1A3328]"
+          >
+            <ArrowLeft className="size-4" />
+            Volver
+          </Link>
+          <Button
+            type="submit"
+            className="bg-[#1A3328] text-white hover:bg-[#1A3328]/90"
+          >
+            Crear proyecto
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}
