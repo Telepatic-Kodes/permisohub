@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PermisoHub — Modelo de Negocio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green:#1A3328;
+    --green2:#2D6A4F;
+    --cream:#F9F7F3;
+    --accent:#E9C46A;
+    --ink:#1f2925;
+    --muted:#5c6b63;
+    --line:#e3ded3;
+    --white:#ffffff;
+    --sidebar-w:280px;
+    --header-h:64px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--cream);
+    color:var(--ink);
+    line-height:1.65;
+    font-size:15px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* HEADER */
+  header.topbar{
+    position:fixed;top:0;left:0;right:0;height:var(--header-h);
+    background:var(--green);color:var(--cream);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;z-index:1000;
+    box-shadow:0 2px 12px rgba(0,0,0,.12);
+  }
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-.4px;}
+  .logo .mark{
+    width:30px;height:30px;border-radius:8px;background:var(--accent);
+    display:flex;align-items:center;justify-content:center;color:var(--green);font-weight:900;font-size:17px;
+  }
+  .logo .accentword{color:var(--accent);}
+  .topbar .meta{font-size:12.5px;opacity:.85;font-weight:400;text-align:right;}
+  .topbar .meta strong{color:var(--accent);font-weight:600;}
+
+  /* SIDEBAR */
+  nav.sidebar{
+    position:fixed;top:var(--header-h);left:0;bottom:0;width:var(--sidebar-w);
+    background:var(--white);border-right:1px solid var(--line);
+    overflow-y:auto;padding:24px 0;z-index:900;
+  }
+  nav.sidebar .navtitle{
+    font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);
+    font-weight:700;padding:0 26px;margin-bottom:14px;
+  }
+  nav.sidebar a{
+    display:flex;gap:11px;align-items:baseline;
+    padding:9px 26px;color:var(--ink);text-decoration:none;font-size:13.5px;
+    border-left:3px solid transparent;transition:all .15s;
+  }
+  nav.sidebar a:hover{background:var(--cream);border-left-color:var(--accent);}
+  nav.sidebar a .num{color:var(--green2);font-weight:700;font-size:12px;min-width:22px;}
+  nav.sidebar a .lbl{font-weight:500;}
+
+  /* MAIN */
+  main{
+    margin-left:var(--sidebar-w);margin-top:var(--header-h);
+    padding:54px 64px 90px;max-width:1080px;
+  }
+  section{margin-bottom:72px;scroll-margin-top:84px;}
+  .sec-kicker{
+    display:inline-block;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--green2);font-weight:700;margin-bottom:8px;
+  }
+  h1.doctitle{font-size:42px;font-weight:900;letter-spacing:-1.2px;color:var(--green);line-height:1.1;}
+  .subtitle{font-size:18px;color:var(--muted);font-weight:400;margin-top:14px;max-width:680px;}
+  h2{
+    font-size:27px;font-weight:800;color:var(--green);letter-spacing:-.6px;
+    padding-bottom:12px;border-bottom:2px solid var(--line);margin-bottom:26px;
+    display:flex;align-items:baseline;gap:12px;
+  }
+  h2 .secnum{color:var(--accent);font-size:20px;font-weight:900;}
+  h3{font-size:19px;font-weight:700;color:var(--green2);margin:30px 0 14px;letter-spacing:-.3px;}
+  h4{font-size:15.5px;font-weight:700;color:var(--green);margin:18px 0 8px;}
+  p{margin-bottom:13px;color:var(--ink);}
+  p.lead{font-size:16.5px;}
+  ul,ol{margin:0 0 14px 22px;}
+  li{margin-bottom:6px;}
+  strong{font-weight:700;}
+  em{color:var(--green2);font-style:normal;font-weight:600;}
+  a.inline{color:var(--green2);}
+
+  /* HERO CARD */
+  .hero{
+    background:linear-gradient(135deg,var(--green) 0%,#142620 100%);
+    color:var(--cream);border-radius:18px;padding:42px 44px;margin-bottom:42px;
+    position:relative;overflow:hidden;
+  }
+  .hero:after{
+    content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;
+    background:radial-gradient(circle,rgba(233,196,106,.22),transparent 70%);border-radius:50%;
+  }
+  .hero h1{color:var(--cream);}
+  .hero .subtitle{color:rgba(249,247,243,.82);}
+  .hero-tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px;}
+  .hero-tags span{
+    background:rgba(233,196,106,.16);color:var(--accent);border:1px solid rgba(233,196,106,.35);
+    padding:6px 13px;border-radius:30px;font-size:12.5px;font-weight:600;
+  }
+
+  /* CARDS */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin:20px 0 8px;}
+  .stat{
+    background:var(--white);border:1px solid var(--line);border-radius:14px;padding:20px 18px;
+    box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  .stat .big{font-size:30px;font-weight:900;color:var(--green);letter-spacing:-1px;line-height:1;}
+  .stat .big.accent{color:var(--green2);}
+  .stat .lab{font-size:12.5px;color:var(--muted);margin-top:8px;font-weight:500;}
+  .stat .sub{font-size:11px;color:var(--green2);margin-top:4px;font-weight:600;}
+
+  .callout{
+    background:#fff;border-left:4px solid var(--accent);border-radius:0 12px 12px 0;
+    padding:16px 20px;margin:18px 0;box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  .callout.green{border-left-color:var(--green2);}
+  .callout .ctitle{font-weight:700;color:var(--green);margin-bottom:4px;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  .panel{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .panel h4{margin-top:0;}
+  .panel .price{font-size:22px;font-weight:900;color:var(--green2);margin:6px 0;}
+
+  /* TABLES */
+  .tablewrap{overflow-x:auto;margin:18px 0;border-radius:12px;border:1px solid var(--line);}
+  table{width:100%;border-collapse:collapse;background:var(--white);font-size:13.5px;}
+  th{
+    background:var(--green);color:var(--cream);text-align:left;padding:12px 14px;font-weight:600;
+    font-size:12.5px;letter-spacing:.2px;vertical-align:bottom;
+  }
+  td{padding:11px 14px;border-top:1px solid var(--line);vertical-align:top;}
+  tbody tr:nth-child(even){background:#faf8f3;}
+  tbody tr:hover{background:#f3efe4;}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+  .tag.hi{background:#fde8e6;color:#b23a2e;}
+  .tag.med{background:#fdf2d9;color:#9a7416;}
+  .tag.lo{background:#e2f0e8;color:#1f6e47;}
+  .tag.yes{background:#e2f0e8;color:#1f6e47;}
+  .tag.no{background:#f0eee8;color:#8a8576;}
+  td.feat-yes{color:#1f6e47;font-weight:700;}
+  td.feat-no{color:#b0aa9c;}
+  .highlight-col{background:#fbf6e8 !important;}
+  th.highlight-col{background:var(--green2);}
+
+  /* TAM/SAM/SOM concentric */
+  .concentric{
+    position:relative;width:380px;height:380px;margin:24px auto;
+  }
+  .ring{
+    position:absolute;border-radius:50%;display:flex;align-items:flex-start;justify-content:center;
+    left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;
+  }
+  .ring.tam{width:380px;height:380px;background:#dbe7e0;color:var(--green);}
+  .ring.sam{width:255px;height:255px;background:#9fc6b1;color:var(--green);}
+  .ring.som{width:135px;height:135px;background:var(--green2);color:var(--cream);align-items:center;}
+  .ring .rlabel{padding-top:16px;font-weight:800;font-size:13px;line-height:1.3;}
+  .ring.som .rlabel{padding-top:0;}
+  .ring .rval{display:block;font-size:18px;font-weight:900;letter-spacing:-.5px;}
+  .ring .rsub{display:block;font-size:10.5px;font-weight:600;opacity:.8;}
+
+  /* BAR CHART */
+  .barchart{margin:22px 0;}
+  .bar-row{display:flex;align-items:center;gap:14px;margin-bottom:13px;}
+  .bar-row .blabel{width:90px;font-size:12.5px;font-weight:600;color:var(--muted);text-align:right;flex-shrink:0;}
+  .bar-track{flex:1;background:#ece7db;border-radius:8px;height:30px;position:relative;overflow:hidden;}
+  .bar-fill{
+    height:100%;border-radius:8px;background:linear-gradient(90deg,var(--green2),#3c8765);
+    display:flex;align-items:center;justify-content:flex-end;padding-right:11px;
+    color:#fff;font-size:12px;font-weight:700;min-width:48px;transition:width .4s;
+  }
+  .bar-fill.gold{background:linear-gradient(90deg,#d9ab46,var(--accent));color:var(--green);}
+
+  /* milestones timeline */
+  .timeline{border-left:2px solid var(--line);margin:18px 0 18px 8px;padding-left:24px;}
+  .tl-item{position:relative;margin-bottom:18px;}
+  .tl-item:before{
+    content:"";position:absolute;left:-31px;top:4px;width:12px;height:12px;border-radius:50%;
+    background:var(--accent);border:2px solid var(--white);box-shadow:0 0 0 2px var(--accent);
+  }
+  .tl-item .tlhead{font-weight:700;color:var(--green);}
+  .tl-item .tlval{color:var(--green2);font-weight:700;}
+
+  /* assumptions box */
+  .assump{background:#eef3f0;border-radius:12px;padding:16px 20px;margin:16px 0;font-size:13.5px;}
+  .assump h4{margin-top:0;color:var(--green2);}
+  .assump ul{margin-bottom:0;}
+
+  /* FOOTER */
+  footer{
+    margin-left:var(--sidebar-w);background:var(--green);color:rgba(249,247,243,.75);
+    padding:26px 64px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+  }
+  footer .conf{color:var(--accent);font-weight:700;letter-spacing:.5px;}
+
+  @media print{
+    nav.sidebar{display:none;}
+    header.topbar{position:static;}
+    main,footer{margin-left:0;}
+    body{font-size:11.5px;}
+    section{page-break-inside:avoid;margin-bottom:30px;}
+    .hero:after{display:none;}
+    a{color:inherit;}
+  }
+  @media(max-width:980px){
+    nav.sidebar{display:none;}
+    main,footer{margin-left:0;padding-left:24px;padding-right:24px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo"><span class="mark">P</span> Permiso<span class="accentword">Hub</span></div>
+  <div class="meta">Modelo de Negocio · <strong>Junio 2026</strong><br>Plataforma SaaS B2B · Permisos de Edificación · Chile</div>
+</header>
+
+<nav class="sidebar">
+  <div class="navtitle">Índice</div>
+  <a href="#resumen"><span class="num">1</span><span class="lbl">Resumen Ejecutivo</span></a>
+  <a href="#mercado"><span class="num">2</span><span class="lbl">Análisis de Mercado</span></a>
+  <a href="#ingresos"><span class="num">3</span><span class="lbl">Modelo de Ingresos</span></a>
+  <a href="#unit"><span class="num">4</span><span class="lbl">Unit Economics</span></a>
+  <a href="#proyecciones"><span class="num">5</span><span class="lbl">Proyecciones Financieras</span></a>
+  <a href="#gtm"><span class="num">6</span><span class="lbl">Go-to-Market</span></a>
+  <a href="#tech"><span class="num">7</span><span class="lbl">Tecnología y Producto</span></a>
+  <a href="#riesgos"><span class="num">8</span><span class="lbl">Riesgos y Mitigaciones</span></a>
+  <a href="#equipo"><span class="num">9</span><span class="lbl">Equipo y Necesidades</span></a>
+  <a href="#kpis"><span class="num">10</span><span class="lbl">Métricas Clave (KPIs)</span></a>
+</nav>
+
+<main>
+
+  <div class="hero">
+    <span class="sec-kicker" style="color:var(--accent)">Documento Confidencial</span>
+    <h1 class="doctitle">PermisoHub</h1>
+    <p class="subtitle">El sistema operativo de la tramitación de permisos de edificación en Chile. Inteligencia artificial, automatización y workflow para arquitectos, oficinas y constructoras.</p>
+    <div class="hero-tags">
+      <span>MVP en producción</span>
+      <span>Fundadora: Estefanía Parada, Arquitecta</span>
+      <span>Mercado: US$2.000M/año en pérdidas</span>
+      <span>Next.js 16 · Supabase · Claude Sonnet 4.6</span>
+    </div>
+  </div>
+
+  <!-- 1. RESUMEN -->
+  <section id="resumen">
+    <span class="sec-kicker">Sección 1</span>
+    <h2><span class="secnum">01</span> Resumen Ejecutivo</h2>
+
+    <h3>Qué es PermisoHub</h3>
+    <p class="lead">PermisoHub es una plataforma SaaS B2B que centraliza, automatiza y acelera la gestión de permisos de edificación en Chile. Combina un copiloto de inteligencia artificial entrenado en la normativa chilena (OGUC, LGUC), un verificador automático de cumplimiento, extracción inteligente de observaciones de la Dirección de Obras Municipales (DOM) y un portal de seguimiento para clientes, todo orquestado sobre un motor de inteligencia municipal que conoce los plazos y particularidades de cada una de las 346 municipalidades del país.</p>
+
+    <h3>El problema</h3>
+    <p>La tramitación de permisos de edificación en Chile es lenta, opaca y costosa. El tiempo promedio se disparó de <strong>45 días hábiles en 2009 a 124 días hábiles en 2024</strong>, y la "permisología" genera <strong>pérdidas estimadas en US$2.000 millones anuales</strong> a la economía. Los arquitectos gestionan estos procesos manualmente —con planillas, correos y llamadas— enfrentando observaciones impredecibles de cada DOM. Solo <strong>12 de 346 municipios (3.5%)</strong> cuentan con soluciones de IA, y <strong>81 municipios presentan irregularidades confirmadas</strong> por Contraloría (2024).</p>
+
+    <h3>La solución</h3>
+    <p>PermisoHub digitaliza el flujo de trabajo completo del arquitecto: desde el chequeo de cumplimiento normativo previo a la presentación, hasta la interpretación automática de las observaciones de la DOM y la comunicación con el mandante vía WhatsApp y portal web. La IA reduce el trabajo de interpretación normativa de horas a minutos, y la inteligencia municipal permite anticipar plazos y exigencias específicas. La nueva <strong>Ley 21.718 (vigente desde enero 2025)</strong>, que obliga a la DOM a resolver en máximo 30 días hábiles, crea un contexto regulatorio favorable que exige a los arquitectos llegar con expedientes impecables.</p>
+
+    <h3>Tamaño de mercado</h3>
+    <div class="cards">
+      <div class="stat"><div class="big">CLP 5.760M</div><div class="lab">TAM anual</div><div class="sub">≈ US$5,9M</div></div>
+      <div class="stat"><div class="big accent">CLP 2.880M</div><div class="lab">SAM anual</div><div class="sub">≈ US$3,0M</div></div>
+      <div class="stat"><div class="big accent">CLP 1.140M</div><div class="lab">SOM Año 3</div><div class="sub">≈ US$1,18M ARR</div></div>
+      <div class="stat"><div class="big">7.741</div><div class="lab">permisos tramitados/año</div><div class="sub">Chile 2024 (INE)</div></div>
+    </div>
+
+    <h3>Estado actual</h3>
+    <p>El MVP se encuentra <strong>en producción</strong>, construido sobre un stack moderno y escalable (Next.js 16, TypeScript, Supabase, Vercel) con IA de Anthropic (Claude Sonnet 4.6), WhatsApp vía Twilio, email transaccional con Resend y automatizaciones por cron jobs. La compañía es <em>bootstrapable</em> hasta aproximadamente US$8K MRR, momento en el que una ronda seed de US$100–200K aceleraría la contratación de equipo y la inversión en adquisición.</p>
+  </section>
+
+  <!-- 2. MERCADO -->
+  <section id="mercado">
+    <span class="sec-kicker">Sección 2</span>
+    <h2><span class="secnum">02</span> Análisis de Mercado</h2>
+
+    <h3>2.1 TAM / SAM / SOM</h3>
+    <p>Modelamos el mercado de forma <em>bottom-up</em> a partir del universo de arquitectos que tramitan permisos y su disposición a pagar por automatización. Tipo de cambio de referencia: <strong>USD/CLP ≈ $970</strong>; UF ≈ $38.000.</p>
+
+    <div class="grid2" style="align-items:center;">
+      <div class="concentric">
+        <div class="ring tam"><div class="rlabel">TAM<span class="rval">CLP 5.760M</span><span class="rsub">US$5,9M · 8.000 arquitectos</span></div></div>
+        <div class="ring sam"><div class="rlabel">SAM<span class="rval">CLP 2.880M</span><span class="rsub">US$3,0M · 3.000 arq.</span></div></div>
+        <div class="ring som"><div class="rlabel">SOM<span class="rval">CLP 1.140M</span><span class="rsub">US$1,18M</span></div></div>
+      </div>
+      <div>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th>Capa</th><th>Base de cálculo</th><th class="num">CLP / año</th><th class="num">USD / año</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>TAM</strong></td>
+                <td>8.000 arquitectos activos × $60.000/mes × 12</td>
+                <td class="num">$5.760.000.000</td>
+                <td class="num">US$5,94M</td>
+              </tr>
+              <tr>
+                <td><strong>SAM</strong></td>
+                <td>3.000 arquitectos (&gt;5 proyectos/año) × $80.000/mes × 12</td>
+                <td class="num">$2.880.000.000</td>
+                <td class="num">US$2,97M</td>
+              </tr>
+              <tr class="highlight-col">
+                <td><strong>SOM<br>(Año 3)</strong></td>
+                <td>500 arquitectos × ~$72.000/mes × 12<br>+ 20 constructoras × $299.990/mes × 12</td>
+                <td class="num">$1.139.976.000</td>
+                <td class="num">US$1,18M</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout green">
+          <div class="ctitle">SOM detallado Año 3</div>
+          Arquitectos: 500 × $72.000 × 12 = <strong>CLP 432M</strong>. Constructoras: 20 × $299.990 × 12 = <strong>CLP 72M</strong>. Más upside B2G no incluido en el SOM conservador.
+        </div>
+      </div>
+    </div>
+
+    <h3>2.2 Segmentos de clientes</h3>
+    <div class="grid2">
+      <div class="panel">
+        <h4>Arquitectos independientes</h4>
+        <p style="font-size:13px;color:var(--muted)"><strong>Tamaño:</strong> ~5.000 profesionales</p>
+        <p style="font-size:13.5px"><strong>Dolor:</strong> gestionan todo manualmente, sin equipo de apoyo; cada observación de la DOM les cuesta horas de interpretación normativa. Margen apretado por proyecto.</p>
+        <p style="font-size:13.5px"><strong>Propuesta de valor:</strong> un asistente que interpreta la OGUC, anticipa observaciones y ahorra ~20–35 días por permiso.</p>
+        <div class="price">Plan objetivo: STARTER / PRO ($29.990–$79.990)</div>
+      </div>
+      <div class="panel">
+        <h4>Oficinas de arquitectura (3–15 personas)</h4>
+        <p style="font-size:13px;color:var(--muted)"><strong>Tamaño:</strong> ~1.200 oficinas</p>
+        <p style="font-size:13.5px"><strong>Dolor:</strong> coordinación entre múltiples arquitectos y proyectos simultáneos; falta de trazabilidad y estandarización en cómo se responde a las DOM.</p>
+        <p style="font-size:13.5px"><strong>Propuesta de valor:</strong> multiusuario, portal cliente, inteligencia municipal completa y base de conocimiento compartida.</p>
+        <div class="price">Plan objetivo: ESTUDIO ($149.990)</div>
+      </div>
+      <div class="panel">
+        <h4>Constructoras e inmobiliarias</h4>
+        <p style="font-size:13px;color:var(--muted)"><strong>Tamaño:</strong> ~400 empresas relevantes</p>
+        <p style="font-size:13.5px"><strong>Dolor:</strong> cada día de atraso en un permiso encarece el proyecto (financiamiento, costo de capital); necesitan visibilidad de portafolio multi-proyecto.</p>
+        <p style="font-size:13.5px"><strong>Propuesta de valor:</strong> dashboard de portafolio, analytics avanzados, múltiples arquitectos vinculados, SLA e integración ERP.</p>
+        <div class="price">Add-on: $299.990–$599.990/mes</div>
+      </div>
+      <div class="panel">
+        <h4>Municipalidades (DOM)</h4>
+        <p style="font-size:13px;color:var(--muted)"><strong>Tamaño:</strong> 346 municipios; solo 12 con IA hoy</p>
+        <p style="font-size:13.5px"><strong>Dolor:</strong> Ley 21.718 obliga a resolver en 30 días hábiles; equipos sin herramientas para cumplir el plazo y reducir irregularidades.</p>
+        <p style="font-size:13.5px"><strong>Propuesta de valor:</strong> recepción de expedientes pre-validados por IA, reduciendo retrabajo y tiempos de revisión.</p>
+        <div class="price">B2G: $1,5M–$5M/mes</div>
+      </div>
+    </div>
+
+    <h3>2.3 Análisis competitivo</h3>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Dimensión</th>
+            <th class="highlight-col">PermisoHub</th>
+            <th>REVI (CChC+CENIA+Google)</th>
+            <th>DOM en Línea (MINVU)</th>
+            <th>BauData</th>
+            <th>Consultoría tradicional</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Cliente foco</td><td class="highlight-col">Arquitecto / Constructora</td><td>DOM (B2G)</td><td>Ciudadano / Arquitecto</td><td>Proveedores</td><td>Mandante</td></tr>
+          <tr><td>IA normativa</td><td class="highlight-col"><span class="tag yes">Sí · avanzada</span></td><td><span class="tag yes">Sí (lado DOM)</span></td><td><span class="tag no">No</span></td><td><span class="tag no">No</span></td><td><span class="tag no">No</span></td></tr>
+          <tr><td>Workflow arquitecto</td><td class="highlight-col"><span class="tag yes">Sí · completo</span></td><td><span class="tag no">No</span></td><td><span class="tag med">Parcial</span></td><td><span class="tag no">No</span></td><td><span class="tag med">Manual</span></td></tr>
+          <tr><td>Cobertura</td><td class="highlight-col">Nacional (SaaS)</td><td>12 municipios (3,5%)</td><td>Nacional (portal)</td><td>Mercado</td><td>Por proyecto</td></tr>
+          <tr><td>Automatización observaciones</td><td class="highlight-col"><span class="tag yes">Sí</span></td><td><span class="tag no">No</span></td><td><span class="tag no">No</span></td><td><span class="tag no">No</span></td><td><span class="tag no">No</span></td></tr>
+          <tr><td>Inteligencia municipal</td><td class="highlight-col"><span class="tag yes">Sí</span></td><td><span class="tag med">Por municipio</span></td><td><span class="tag no">No</span></td><td><span class="tag med">Mercado</span></td><td><span class="tag no">No</span></td></tr>
+          <tr><td>Precio</td><td class="highlight-col">$30K–$150K/mes</td><td>Gratuito / B2G</td><td>Gratuito</td><td>Suscripción datos</td><td>$150K–$5,8M/proyecto</td></tr>
+          <tr><td>¿Compite directo?</td><td class="highlight-col">—</td><td><span class="tag med">Complementario</span></td><td><span class="tag med">Complementario</span></td><td><span class="tag lo">No</span></td><td><span class="tag hi">Sí (sustituto)</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <div class="ctitle">Posicionamiento</div>
+      REVI y DOM en Línea operan del lado del Estado / receptor; PermisoHub opera del lado del <strong>emisor del expediente (el arquitecto)</strong>. Lejos de competir, REVI valida la tesis del mercado y crea una oportunidad de integración: expedientes pre-validados por PermisoHub llegan más limpios a las DOM que usan REVI.
+    </div>
+  </section>
+
+  <!-- 3. INGRESOS -->
+  <section id="ingresos">
+    <span class="sec-kicker">Sección 3</span>
+    <h2><span class="secnum">03</span> Modelo de Ingresos</h2>
+
+    <h3>3.1 Pricing SaaS (arquitectos)</h3>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Característica</th><th>STARTER</th><th class="highlight-col">PRO</th><th>ESTUDIO</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Precio / mes</strong></td><td>$29.990</td><td class="highlight-col">$79.990</td><td>$149.990</td></tr>
+          <tr><td><strong>Precio / año</strong></td><td>$299.900 <span class="tag lo">-17%</span></td><td class="highlight-col">$799.900 <span class="tag lo">-17%</span></td><td>$1.499.900 <span class="tag lo">-17%</span></td></tr>
+          <tr><td>Proyectos activos</td><td>5</td><td class="highlight-col">Ilimitado</td><td>Ilimitado</td></tr>
+          <tr><td>Usuarios</td><td>1</td><td class="highlight-col">1</td><td>5</td></tr>
+          <tr><td>Chat OGUC</td><td>Limitado (20/mes)</td><td class="highlight-col">Ilimitado</td><td>Ilimitado</td></tr>
+          <tr><td>Verificador cumplimiento</td><td>5/mes</td><td class="highlight-col">Ilimitado</td><td>Ilimitado</td></tr>
+          <tr><td>Extractor PDF observaciones</td><td>3/mes</td><td class="highlight-col">Ilimitado</td><td>Ilimitado</td></tr>
+          <tr><td>WhatsApp clientes</td><td class="feat-no">No</td><td class="highlight-col feat-yes">Sí</td><td class="feat-yes">Sí</td></tr>
+          <tr><td>Inteligencia municipios</td><td>Básica</td><td class="highlight-col">Completa</td><td>Completa</td></tr>
+          <tr><td>Portal cliente</td><td class="feat-no">No</td><td class="highlight-col feat-yes">Sí</td><td class="feat-yes">Sí</td></tr>
+          <tr><td>API</td><td class="feat-no">No</td><td class="highlight-col feat-no">No</td><td class="feat-yes">Sí</td></tr>
+          <tr><td>Soporte</td><td>Email 48h</td><td class="highlight-col">Email 24h</td><td>Dedicado</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>3.2 Add-on Constructoras</h3>
+    <div class="grid2">
+      <div class="panel">
+        <h4>Constructora · Pro</h4>
+        <div class="price">$299.990 <span style="font-size:13px;color:var(--muted)">/ mes</span></div>
+        <ul style="font-size:13.5px;margin-top:8px;"><li>Portafolio multi-proyecto</li><li>Analytics avanzados</li><li>Múltiples arquitectos vinculados</li></ul>
+      </div>
+      <div class="panel">
+        <h4>Constructora · Enterprise</h4>
+        <div class="price">$599.990 <span style="font-size:13px;color:var(--muted)">/ mes</span></div>
+        <ul style="font-size:13.5px;margin-top:8px;"><li>SLA garantizado</li><li>Integración ERP</li><li>Onboarding y soporte dedicado</li></ul>
+      </div>
+    </div>
+
+    <h3>3.3 B2G Municipalidades</h3>
+    <div class="grid3">
+      <div class="panel"><h4>Municipio pequeño</h4><div class="price">$1.500.000<span style="font-size:13px;color:var(--muted)">/mes</span></div><p style="font-size:13px;color:var(--muted)">&lt;50 permisos/mes</p></div>
+      <div class="panel"><h4>Municipio mediano</h4><div class="price">$2.500.000<span style="font-size:13px;color:var(--muted)">/mes</span></div><p style="font-size:13px;color:var(--muted)">50–200 permisos/mes</p></div>
+      <div class="panel"><h4>Municipio grande</h4><div class="price">$5.000.000<span style="font-size:13px;color:var(--muted)">/mes</span></div><p style="font-size:13px;color:var(--muted)">&gt;200 permisos/mes (Las Condes, Maipú)</p></div>
+    </div>
+
+    <h3>3.4 Revenue streams adicionales</h3>
+    <ul>
+      <li><strong>Comisión marketplace:</strong> fee por Revisor Independiente referido a través de la plataforma (módulo futuro).</li>
+      <li><strong>White-label:</strong> instancia con marca propia para estudios grandes y gremios.</li>
+      <li><strong>Inteligencia de mercado B2B:</strong> datos anonimizados y agregados sobre plazos, tipologías y dinámicas de permisos (modelo similar a BauData, sin PII).</li>
+    </ul>
+  </section>
+
+  <!-- 4. UNIT ECONOMICS -->
+  <section id="unit">
+    <span class="sec-kicker">Sección 4</span>
+    <h2><span class="secnum">04</span> Unit Economics</h2>
+
+    <div class="cards">
+      <div class="stat"><div class="big">$200K</div><div class="lab">CAC arquitecto (CLP)</div><div class="sub">rango $150K–$300K</div></div>
+      <div class="stat"><div class="big accent">$1,60M</div><div class="lab">LTV arquitecto Pro (CLP)</div><div class="sub">churn 5%/mes</div></div>
+      <div class="stat"><div class="big">~8x</div><div class="lab">LTV / CAC</div><div class="sub">meta &gt;3x ✓</div></div>
+      <div class="stat"><div class="big accent">2,5 meses</div><div class="lab">Payback CAC</div><div class="sub">a MRR $80K</div></div>
+      <div class="stat"><div class="big">78–82%</div><div class="lab">Margen bruto</div><div class="sub">SaaS-grade</div></div>
+    </div>
+
+    <h3>CAC — Costo de Adquisición</h3>
+    <div class="assump">
+      <h4>Supuestos</h4>
+      <ul>
+        <li>Canales: marketing digital + alianza con Colegio de Arquitectos / AOA + referidos.</li>
+        <li>CAC arquitecto: <strong>$150.000–$300.000 CLP</strong> (base de cálculo: $200.000).</li>
+        <li>CAC constructora (ciclo de venta consultivo): <strong>$1.500.000–$3.000.000 CLP</strong>.</li>
+      </ul>
+    </div>
+
+    <h3>LTV — Lifetime Value</h3>
+    <p>Con un churn mensual estimado de <strong>5%</strong> (≈20% anual), la vida media de un cliente es 1 / 0,05 = <strong>20 meses</strong>.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Métrica</th><th class="num">Cálculo</th><th class="num">Resultado</th></tr></thead>
+        <tbody>
+          <tr><td>LTV arquitecto Pro</td><td class="num">$79.990 × (1 / 0,05)</td><td class="num"><strong>$1.599.800</strong></td></tr>
+          <tr><td>LTV / CAC (CAC $200K)</td><td class="num">$1.599.800 / $200.000</td><td class="num"><strong>~8,0x</strong></td></tr>
+          <tr><td>LTV / CAC (CAC $300K)</td><td class="num">$1.599.800 / $300.000</td><td class="num"><strong>~5,3x</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout green"><div class="ctitle">Rango objetivo</div>El ratio LTV/CAC se sitúa entre <strong>5x y 8x</strong>, muy por encima del benchmark saludable de &gt;3x para SaaS.</div>
+
+    <h3>Márgenes — Estructura de costos variables</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Componente</th><th>Costo unitario</th><th>Costo por usuario/mes (est.)</th></tr></thead>
+        <tbody>
+          <tr><td>Anthropic Claude API</td><td>~US$0,003 / mensaje</td><td>$500–$2.000 CLP</td></tr>
+          <tr><td>Supabase</td><td>US$25 / mes (hasta 100K usuarios)</td><td>marginal</td></tr>
+          <tr><td>Vercel</td><td>US$20 / mes (base)</td><td>marginal</td></tr>
+          <tr><td>Twilio WhatsApp</td><td>~US$0,05 / mensaje</td><td>variable (planes Pro/Estudio)</td></tr>
+          <tr><td>Resend (email)</td><td>bajo / incluido</td><td>marginal</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>El costo marginal por usuario es bajo y dominado por el consumo de IA, lo que se traduce en un <strong>margen bruto estimado de 78–82%</strong>. La infraestructura (Supabase, Vercel) es fija y se amortiza rápidamente al crecer la base.</p>
+
+    <h3>Payback Period</h3>
+    <div class="callout"><div class="ctitle">Cálculo</div>CAC $200.000 / MRR $80.000 (plan Pro) = <strong>2,5 meses de payback</strong>. Incluso con CAC en el extremo superior ($300K), el payback se mantiene bajo 4 meses.</div>
+  </section>
+
+  <!-- 5. PROYECCIONES -->
+  <section id="proyecciones">
+    <span class="sec-kicker">Sección 5</span>
+    <h2><span class="secnum">05</span> Proyecciones Financieras (3 años)</h2>
+
+    <div class="assump">
+      <h4>Supuestos del modelo</h4>
+      <ul>
+        <li><strong>Crecimiento:</strong> 15%/mes los primeros 6 meses, luego 8%/mes.</li>
+        <li><strong>Mezcla de planes:</strong> 80% Starter, 15% Pro, 5% Estudio (migra hacia Pro en años 2–3).</li>
+        <li><strong>Constructoras:</strong> 1 nueva cada 3 meses desde el mes 6.</li>
+        <li><strong>Churn:</strong> 5% mensual año 1, mejora a 3% en año 2.</li>
+        <li><strong>ARPU:</strong> $45.000 (año 1) → $60.000 (año 2) → $72.000 (año 3).</li>
+        <li><strong>TC:</strong> USD/CLP ≈ $970.</li>
+      </ul>
+    </div>
+
+    <h4>Año 1 — proyección mensual</h4>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Mes</th><th class="num">Arquit.</th><th class="num">Constr.</th><th class="num">MRR CLP</th><th class="num">MRR USD</th><th class="num">Costos var.</th><th class="num">Costos fijos</th><th class="num">EBITDA CLP</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>M1</td><td class="num">5</td><td class="num">0</td><td class="num">$225.000</td><td class="num">$232</td><td class="num">$10.000</td><td class="num">$800.000</td><td class="num">-$585.000</td></tr>
+          <tr><td>M2</td><td class="num">8</td><td class="num">0</td><td class="num">$360.000</td><td class="num">$371</td><td class="num">$16.000</td><td class="num">$800.000</td><td class="num">-$456.000</td></tr>
+          <tr><td>M3</td><td class="num">12</td><td class="num">0</td><td class="num">$540.000</td><td class="num">$557</td><td class="num">$24.000</td><td class="num">$1.500.000</td><td class="num">-$984.000</td></tr>
+          <tr><td>M4</td><td class="num">17</td><td class="num">0</td><td class="num">$765.000</td><td class="num">$789</td><td class="num">$34.000</td><td class="num">$1.500.000</td><td class="num">-$769.000</td></tr>
+          <tr><td>M5</td><td class="num">25</td><td class="num">0</td><td class="num">$1.125.000</td><td class="num">$1.160</td><td class="num">$50.000</td><td class="num">$1.500.000</td><td class="num">-$425.000</td></tr>
+          <tr><td>M6</td><td class="num">37</td><td class="num">1</td><td class="num">$1.964.990</td><td class="num">$2.026</td><td class="num">$88.000</td><td class="num">$1.800.000</td><td class="num">$76.990</td></tr>
+          <tr><td>M7</td><td class="num">40</td><td class="num">1</td><td class="num">$2.099.990</td><td class="num">$2.165</td><td class="num">$95.000</td><td class="num">$1.800.000</td><td class="num">$204.990</td></tr>
+          <tr><td>M8</td><td class="num">43</td><td class="num">1</td><td class="num">$2.234.990</td><td class="num">$2.304</td><td class="num">$101.000</td><td class="num">$1.800.000</td><td class="num">$333.990</td></tr>
+          <tr><td>M9</td><td class="num">47</td><td class="num">2</td><td class="num">$2.714.980</td><td class="num">$2.799</td><td class="num">$120.000</td><td class="num">$2.500.000</td><td class="num">$94.980</td></tr>
+          <tr><td>M10</td><td class="num">51</td><td class="num">2</td><td class="num">$2.894.980</td><td class="num">$2.984</td><td class="num">$130.000</td><td class="num">$2.500.000</td><td class="num">$264.980</td></tr>
+          <tr><td>M11</td><td class="num">55</td><td class="num">2</td><td class="num">$3.074.980</td><td class="num">$3.170</td><td class="num">$138.000</td><td class="num">$2.500.000</td><td class="num">$436.980</td></tr>
+          <tr style="font-weight:700;background:#fbf6e8;"><td>M12</td><td class="num">60</td><td class="num">3</td><td class="num">$3.599.970</td><td class="num">$3.711</td><td class="num">$162.000</td><td class="num">$2.500.000</td><td class="num">$937.970</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted)">Nota: la línea de MRR refleja la mezcla de planes (ARPU ponderado creciente) más el aporte de constructoras ($299.990 c/u). El modelo de hitos (abajo) refleja un escenario de crecimiento más agresivo orientado a la captación seed.</p>
+
+    <h4>Años 2 y 3 — proyección trimestral</h4>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Trimestre</th><th class="num">Arquit.</th><th class="num">Constr.</th><th class="num">MRR CLP</th><th class="num">MRR USD</th><th class="num">ARR USD</th><th class="num">EBITDA CLP/mes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Año 2 · Q1</td><td class="num">140</td><td class="num">4</td><td class="num">$9.600.000</td><td class="num">$9.897</td><td class="num">$118.762</td><td class="num">$3.100.000</td></tr>
+          <tr><td>Año 2 · Q2</td><td class="num">220</td><td class="num">6</td><td class="num">$15.000.000</td><td class="num">$15.464</td><td class="num">$185.567</td><td class="num">$5.400.000</td></tr>
+          <tr><td>Año 2 · Q3</td><td class="num">320</td><td class="num">8</td><td class="num">$21.600.000</td><td class="num">$22.268</td><td class="num">$267.216</td><td class="num">$8.600.000</td></tr>
+          <tr style="font-weight:700;background:#fbf6e8;"><td>Año 2 · Q4</td><td class="num">430</td><td class="num">10</td><td class="num">$30.000.000</td><td class="num">$30.928</td><td class="num">$371.134</td><td class="num">$12.500.000</td></tr>
+          <tr><td>Año 3 · Q1</td><td class="num">560</td><td class="num">12</td><td class="num">$43.000.000</td><td class="num">$44.330</td><td class="num">$531.959</td><td class="num">$18.500.000</td></tr>
+          <tr><td>Año 3 · Q2</td><td class="num">700</td><td class="num">14</td><td class="num">$56.000.000</td><td class="num">$57.732</td><td class="num">$692.784</td><td class="num">$24.500.000</td></tr>
+          <tr><td>Año 3 · Q3</td><td class="num">850</td><td class="num">17</td><td class="num">$68.000.000</td><td class="num">$70.103</td><td class="num">$841.237</td><td class="num">$30.500.000</td></tr>
+          <tr style="font-weight:700;background:#fbf6e8;"><td>Año 3 · Q4</td><td class="num">1.000</td><td class="num">20</td><td class="num">$80.000.000</td><td class="num">$82.474</td><td class="num">$989.691</td><td class="num">$37.000.000</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Evolución del MRR (USD)</h4>
+    <div class="barchart">
+      <div class="bar-row"><div class="blabel">M3</div><div class="bar-track"><div class="bar-fill" style="width:1%;">$0,5K</div></div></div>
+      <div class="bar-row"><div class="blabel">M6</div><div class="bar-track"><div class="bar-fill" style="width:2.5%;">$2K</div></div></div>
+      <div class="bar-row"><div class="blabel">M12</div><div class="bar-track"><div class="bar-fill" style="width:10%;">$8K</div></div></div>
+      <div class="bar-row"><div class="blabel">Año 2</div><div class="bar-track"><div class="bar-fill gold" style="width:37%;">$30K</div></div></div>
+      <div class="bar-row"><div class="blabel">Año 3</div><div class="bar-track"><div class="bar-fill gold" style="width:100%;">$80K</div></div></div>
+    </div>
+
+    <h3>Hitos financieros</h3>
+    <div class="timeline">
+      <div class="tl-item"><div class="tlhead">Mes 3 — Primeros ingresos</div><span class="tlval">$500K CLP MRR</span> · validación de pago y onboarding manual.</div>
+      <div class="tl-item"><div class="tlhead">Mes 6 — Ramen profitability</div><span class="tlval">$2M CLP MRR</span> · EBITDA cruza a positivo; primera constructora.</div>
+      <div class="tl-item"><div class="tlhead">Mes 12 — Tracción</div><span class="tlval">$8M CLP MRR (~$8K USD)</span> · base de ~200 usuarios; momento de ronda seed.</div>
+      <div class="tl-item"><div class="tlhead">Fin Año 2</div><span class="tlval">$30M CLP MRR (~$30K USD)</span> · ~430 arquitectos, 10 constructoras.</div>
+      <div class="tl-item"><div class="tlhead">Fin Año 3</div><span class="tlval">$80M CLP MRR (~$80K USD) · ARR ~US$990K</span> · 1.000 arquitectos, 20 constructoras, primeros municipios B2G.</div>
+    </div>
+  </section>
+
+  <!-- 6. GTM -->
+  <section id="gtm">
+    <span class="sec-kicker">Sección 6</span>
+    <h2><span class="secnum">06</span> Estrategia Go-to-Market</h2>
+
+    <h3>6.1 Canales de adquisición</h3>
+    <ul>
+      <li><strong>Orgánico (SEO):</strong> posicionamiento en "permiso edificación chile", "OGUC", "DOM en línea", "cómo responder observaciones DOM".</li>
+      <li><strong>Comunidad:</strong> Colegio de Arquitectos y AOA (Asociación de Oficinas de Arquitectos) como canales de credibilidad y distribución.</li>
+      <li><strong>Contenido:</strong> blog sobre normativa chilena + newsletter mensual con actualizaciones de la OGUC.</li>
+      <li><strong>Referidos:</strong> programa de referidos para arquitectos — <strong>$50.000 CLP por referido activo</strong>.</li>
+      <li><strong>Partners:</strong> revisores independientes y calculistas como red de recomendación.</li>
+    </ul>
+
+    <h3>6.2 Roadmap GTM</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Fase</th><th>Período</th><th>Meta</th><th>Acciones clave</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Seed</strong></td><td>Q3 2026</td><td>50 usuarios beta</td><td>AOA, referidos directos, onboarding manual.</td></tr>
+          <tr><td><strong>Growth</strong></td><td>Q4 2026</td><td>200 usuarios</td><td>Inbound SEO, partnership con Colegio de Arquitectos.</td></tr>
+          <tr><td><strong>Scale</strong></td><td>Q1–Q2 2027</td><td>500 usuarios</td><td>Paid search, constructoras, primeros municipios.</td></tr>
+          <tr><td><strong>Expand</strong></td><td>Q3–Q4 2027</td><td>1.000 usuarios</td><td>Regiones, expansión de producto, planning LATAM.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>6.3 Estrategia de contenido</h3>
+    <div class="grid2">
+      <div class="panel"><h4>"OGUC en Español Simple"</h4><p style="font-size:13.5px">Serie de artículos que traduce la normativa técnica a lenguaje accesible. Imán SEO de alto volumen.</p></div>
+      <div class="panel"><h4>"Cómo responder observaciones de la DOM"</h4><p style="font-size:13.5px">Guías prácticas paso a paso — contenido de alta intención de compra.</p></div>
+      <div class="panel"><h4>"Ranking de agilidad de DOMs en Chile"</h4><p style="font-size:13.5px">PR y <em>data journalism</em>: aprovecha la data de plazos por municipio para generar prensa y backlinks.</p></div>
+      <div class="panel"><h4>Newsletter mensual</h4><p style="font-size:13.5px">Actualizaciones normativas a la comunidad de arquitectos; canal de nurturing y retención.</p></div>
+    </div>
+  </section>
+
+  <!-- 7. TECH -->
+  <section id="tech">
+    <span class="sec-kicker">Sección 7</span>
+    <h2><span class="secnum">07</span> Tecnología y Producto</h2>
+
+    <h3>7.1 Arquitectura</h3>
+    <div class="grid2">
+      <div class="panel"><h4>Frontend</h4><p style="font-size:13.5px">Next.js 16, TypeScript, Tailwind CSS. App responsiva con miras a PWA móvil.</p></div>
+      <div class="panel"><h4>Backend</h4><p style="font-size:13.5px">Next.js API Routes + Supabase (PostgreSQL, Auth y RLS para aislamiento multi-tenant).</p></div>
+      <div class="panel"><h4>Inteligencia Artificial</h4><p style="font-size:13.5px">Anthropic Claude Sonnet 4.6: chat normativo, extracción de observaciones y verificación de cumplimiento.</p></div>
+      <div class="panel"><h4>Automatización & Hosting</h4><p style="font-size:13.5px">Vercel (edge functions, auto-scaling), Vercel Cron Jobs, Resend (email) y Twilio (WhatsApp).</p></div>
+    </div>
+    <div class="callout green"><div class="ctitle">Defensibilidad técnica</div>La ventaja no está solo en la IA genérica, sino en la <strong>base de conocimiento de la OGUC y la inteligencia municipal propietaria</strong> (plazos, exigencias y patrones de observación por DOM), que se profundiza con cada permiso tramitado en la plataforma.</div>
+
+    <h3>7.2 Roadmap de producto</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Trimestre</th><th>Features</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Q3 2026</strong></td><td>Onboarding mejorado, facturación con Stripe, app móvil PWA.</td></tr>
+          <tr><td><strong>Q4 2026</strong></td><td>Integración API DOM en Línea (cuando esté disponible), marketplace de revisores.</td></tr>
+          <tr><td><strong>Q1 2027</strong></td><td>Analytics para constructoras, módulo de licitaciones.</td></tr>
+          <tr><td><strong>Q2 2027</strong></td><td>Expansión B2G a municipios, API pública.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 8. RIESGOS -->
+  <section id="riesgos">
+    <span class="sec-kicker">Sección 8</span>
+    <h2><span class="secnum">08</span> Riesgos y Mitigaciones</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Riesgo</th><th>Probabilidad</th><th>Impacto</th><th>Mitigación</th></tr></thead>
+        <tbody>
+          <tr><td>REVI escala a 100% de municipios</td><td><span class="tag med">Media</span></td><td><span class="tag hi">Alto</span></td><td>Diferenciación en el workflow del arquitecto (REVI sirve a la DOM, no al emisor).</td></tr>
+          <tr><td>DOM en Línea mejora dramáticamente</td><td><span class="tag lo">Baja</span></td><td><span class="tag med">Medio</span></td><td>La IA y la automatización son capas superiores al portal estatal, no sustitutos.</td></tr>
+          <tr><td>Cambio normativa OGUC</td><td><span class="tag lo">Baja</span></td><td><span class="tag med">Medio</span></td><td>Base de conocimiento actualizable; convierte el cambio en valor (newsletter, updates).</td></tr>
+          <tr><td>Adopción lenta (arquitectos conservadores)</td><td><span class="tag med">Media</span></td><td><span class="tag hi">Alto</span></td><td>Modelo freemium + onboarding guiado + prueba de valor en el primer permiso.</td></tr>
+          <tr><td>Costo API Anthropic sube</td><td><span class="tag lo">Baja</span></td><td><span class="tag lo">Bajo</span></td><td>Arquitectura multi-proveedor (OpenAI, Gemini como fallback); el costo es marginal sobre el ARPU.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 9. EQUIPO -->
+  <section id="equipo">
+    <span class="sec-kicker">Sección 9</span>
+    <h2><span class="secnum">09</span> Equipo y Necesidades</h2>
+
+    <h3>Fundadora</h3>
+    <div class="callout green">
+      <div class="ctitle">Estefanía Parada — Fundadora & CEO</div>
+      Arquitecta con experiencia directa en tramitación ante la DOM. Construyó PermisoHub para resolver su propio dolor: el <em>founder-market fit</em> es total. Conoce el flujo de trabajo, el lenguaje del cliente y los puntos de fricción reales del proceso.
+    </div>
+
+    <h3>Necesidades de equipo (próximos 12 meses)</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Rol</th><th>Perfil</th><th>Incorporación</th></tr></thead>
+        <tbody>
+          <tr><td>Developer Full-Stack</td><td>Senior, Next.js / TypeScript</td><td>Mes 3</td></tr>
+          <tr><td>Sales / Growth</td><td>Conocimiento del sector construcción</td><td>Mes 6</td></tr>
+          <tr><td>Customer Success</td><td>Onboarding y retención</td><td>Mes 9</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Necesidades de capital</h3>
+    <div class="cards">
+      <div class="stat"><div class="big accent">US$8K</div><div class="lab">MRR hasta donde es bootstrapable</div></div>
+      <div class="stat"><div class="big">US$100–200K</div><div class="lab">Ronda seed para escalar</div></div>
+    </div>
+    <h4>Uso de fondos</h4>
+    <div class="barchart">
+      <div class="bar-row"><div class="blabel">Equipo</div><div class="bar-track"><div class="bar-fill" style="width:60%;">60%</div></div></div>
+      <div class="bar-row"><div class="blabel">Marketing</div><div class="bar-track"><div class="bar-fill gold" style="width:25%;">25%</div></div></div>
+      <div class="bar-row"><div class="blabel">Infra/Legal</div><div class="bar-track"><div class="bar-fill" style="width:15%;">15%</div></div></div>
+    </div>
+  </section>
+
+  <!-- 10. KPIs -->
+  <section id="kpis">
+    <span class="sec-kicker">Sección 10</span>
+    <h2><span class="secnum">10</span> Métricas Clave (KPIs)</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>KPI</th><th class="num">Meta Mes 3</th><th class="num">Meta Mes 12</th><th class="num">Meta Año 3</th></tr></thead>
+        <tbody>
+          <tr><td>MRR</td><td class="num">$1M CLP</td><td class="num">$8M CLP</td><td class="num">$80M CLP</td></tr>
+          <tr><td>Usuarios activos</td><td class="num">30</td><td class="num">200</td><td class="num">1.000</td></tr>
+          <tr><td>Churn mensual</td><td class="num">8%</td><td class="num">5%</td><td class="num">3%</td></tr>
+          <tr><td>NPS</td><td class="num">—</td><td class="num">50</td><td class="num">70</td></tr>
+          <tr><td>Permisos tramitados</td><td class="num">50</td><td class="num">1.000</td><td class="num">15.000</td></tr>
+          <tr><td>Tiempo ahorro / permiso</td><td class="num">20 días</td><td class="num">35 días</td><td class="num">50 días</td></tr>
+          <tr><td>CAC payback</td><td class="num">4 meses</td><td class="num">2,5 meses</td><td class="num">2 meses</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout"><div class="ctitle">Métrica norte (North Star)</div>El <strong>tiempo ahorrado por permiso</strong> es la métrica que mejor captura el valor entregado: alinea el éxito del cliente (proyectos aprobados más rápido) con el de PermisoHub (retención y expansión).</div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="conf">CONFIDENCIAL — Documento interno</div>
+  <div>PermisoHub · Modelo de Negocio · Junio 2026 · Estefanía Parada</div>
+</footer>
+
+</body>
+</html>

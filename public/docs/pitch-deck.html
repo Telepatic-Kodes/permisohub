@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PermisoHub — Pitch Deck</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;0,900;1,500&display=swap');
+
+:root{
+  --forest:#1A3328;
+  --cream:#F9F7F3;
+  --white:#FFFFFF;
+  --green:#2D6A4F;
+  --gold:#E9C46A;
+  --ink:#1A3328;
+  --muted:#5b6b62;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+html{scroll-behavior:smooth;scroll-snap-type:y mandatory;}
+
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  color:var(--ink);
+  background:var(--forest);
+  -webkit-font-smoothing:antialiased;
+}
+
+.deck{width:100%;}
+
+.slide{
+  position:relative;
+  width:100%;
+  min-height:100vh;
+  height:100vh;
+  scroll-snap-align:start;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:6vh 8vw;
+  overflow:hidden;
+}
+
+/* Surfaces */
+.bg-cream{background:var(--cream);color:var(--ink);}
+.bg-forest{background:var(--forest);color:var(--cream);}
+.bg-white{background:var(--white);color:var(--ink);}
+.bg-green{background:var(--green);color:var(--white);}
+
+/* Type */
+h1,h2,h3{font-family:'Playfair Display',serif;line-height:1.05;letter-spacing:-.01em;}
+.eyebrow{
+  font-family:'Inter',sans-serif;
+  font-weight:700;
+  font-size:.8rem;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:var(--gold);
+  margin-bottom:1.5rem;
+  display:inline-block;
+}
+.bg-cream .eyebrow,.bg-white .eyebrow{color:var(--green);}
+
+.lead{font-size:1.35rem;line-height:1.55;max-width:60ch;color:var(--muted);font-weight:400;}
+.bg-forest .lead,.bg-green .lead{color:rgba(249,247,243,.82);}
+
+/* Slide reveal animation */
+.slide > *{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease;}
+.slide.in-view > *{opacity:1;transform:none;}
+.slide.in-view > *:nth-child(2){transition-delay:.08s;}
+.slide.in-view > *:nth-child(3){transition-delay:.16s;}
+.slide.in-view > *:nth-child(4){transition-delay:.24s;}
+.slide.in-view > *:nth-child(5){transition-delay:.32s;}
+.slide.in-view > *:nth-child(6){transition-delay:.40s;}
+
+/* ---------- COVER ---------- */
+.cover{align-items:flex-start;}
+.cover::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(45,106,79,.55), transparent 45%),
+    radial-gradient(circle at 10% 90%, rgba(233,196,106,.18), transparent 40%);
+  pointer-events:none;
+}
+.logo{display:flex;align-items:center;gap:.85rem;margin-bottom:auto;z-index:1;}
+.logo svg{width:46px;height:46px;}
+.logo .name{font-family:'Inter',sans-serif;font-weight:800;font-size:1.5rem;letter-spacing:-.02em;}
+.logo .name b{color:var(--gold);font-weight:800;}
+.cover-main{z-index:1;}
+.cover h1{font-size:clamp(3rem,8vw,7rem);font-weight:800;margin-bottom:1.5rem;}
+.cover h1 .accent{color:var(--gold);font-style:italic;}
+.cover .tag{font-size:clamp(1.2rem,2.4vw,2rem);font-weight:300;color:rgba(249,247,243,.85);max-width:28ch;}
+.cover .foot{margin-top:3rem;font-size:1rem;letter-spacing:.08em;color:rgba(249,247,243,.6);z-index:1;}
+
+/* ---------- STATS ---------- */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2.5rem;margin-top:3rem;}
+.stat{border-top:3px solid var(--gold);padding-top:1.4rem;}
+.stat .num{font-family:'Playfair Display',serif;font-weight:800;font-size:clamp(3rem,6vw,5.5rem);line-height:1;color:var(--white);}
+.bg-cream .stat .num,.bg-white .stat .num{color:var(--forest);}
+.stat .lbl{margin-top:.8rem;font-size:1rem;color:rgba(249,247,243,.75);font-weight:500;}
+.bg-cream .stat .lbl,.bg-white .stat .lbl{color:var(--muted);}
+
+.quote{
+  margin-top:3.5rem;padding-left:1.6rem;border-left:4px solid var(--gold);
+  font-family:'Playfair Display',serif;font-style:italic;font-size:1.5rem;max-width:50ch;line-height:1.4;
+}
+
+/* ---------- TIMELINE ---------- */
+.flow{display:flex;align-items:stretch;gap:0;margin-top:3rem;flex-wrap:wrap;}
+.flow-step{
+  flex:1;min-width:140px;background:var(--white);border-radius:14px;padding:1.4rem 1.2rem;margin:.4rem;
+  box-shadow:0 10px 30px rgba(26,51,40,.08);position:relative;
+}
+.flow-step .n{font-size:.75rem;font-weight:700;color:var(--green);letter-spacing:.1em;}
+.flow-step h4{font-family:'Inter',sans-serif;font-size:1.05rem;font-weight:700;margin:.5rem 0;}
+.flow-step .pain{font-size:.85rem;color:#b23a2e;font-weight:500;display:flex;gap:.4rem;align-items:flex-start;}
+.flow-step .pain svg{flex-shrink:0;margin-top:2px;}
+
+/* ---------- SOLUTION ---------- */
+.sol-cols{display:grid;grid-template-columns:1.1fr 1fr;gap:3rem;margin-top:2.5rem;align-items:center;}
+.not-list{list-style:none;}
+.not-list li{display:flex;gap:1rem;align-items:flex-start;padding:1rem 0;border-bottom:1px solid rgba(249,247,243,.12);font-size:1.1rem;}
+.not-list li .mark{flex-shrink:0;font-weight:800;}
+.not-list li.no .mark{color:#e07a6b;}
+.not-list li.yes .mark{color:var(--gold);}
+.sol-frase{
+  background:var(--green);color:#fff;border-radius:18px;padding:2.4rem;
+  font-family:'Playfair Display',serif;font-size:1.7rem;font-style:italic;line-height:1.35;
+}
+.sol-frase b{color:var(--gold);font-style:normal;}
+
+/* ---------- PRODUCT GRID ---------- */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:2.5rem;}
+.feat{
+  background:var(--white);border-radius:16px;padding:1.8rem;box-shadow:0 8px 26px rgba(26,51,40,.07);
+  transition:transform .3s ease,box-shadow .3s ease;border:1px solid rgba(26,51,40,.05);
+}
+.feat:hover{transform:translateY(-6px);box-shadow:0 16px 40px rgba(26,51,40,.14);}
+.feat .ico{font-size:2rem;display:flex;width:56px;height:56px;align-items:center;justify-content:center;background:var(--cream);border-radius:12px;margin-bottom:1rem;}
+.feat h4{font-family:'Inter',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:.5rem;}
+.feat p{font-size:.92rem;color:var(--muted);line-height:1.5;}
+
+/* ---------- TAM ---------- */
+.tam-wrap{display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:2rem;align-items:center;}
+.rings{position:relative;width:100%;max-width:420px;aspect-ratio:1;margin:0 auto;}
+.ring{position:absolute;border-radius:50%;display:flex;justify-content:center;align-items:flex-start;padding-top:1.4rem;font-weight:700;}
+.ring.tam{inset:0;background:rgba(45,106,79,.18);color:var(--green);}
+.ring.sam{inset:18%;background:rgba(45,106,79,.4);color:#fff;}
+.ring.som{inset:38%;background:var(--gold);color:var(--forest);}
+.ring .rl{font-size:.85rem;letter-spacing:.1em;}
+.tam-list{list-style:none;}
+.tam-list li{padding:1.1rem 0;border-bottom:1px solid rgba(26,51,40,.1);}
+.tam-list .k{font-weight:800;font-size:1.05rem;}
+.tam-list .v{font-family:'Playfair Display',serif;font-size:1.9rem;color:var(--green);font-weight:700;}
+.tam-list .d{font-size:.9rem;color:var(--muted);}
+.tam-note{margin-top:1.4rem;font-size:.95rem;color:var(--muted);}
+
+/* ---------- TABLES ---------- */
+table{width:100%;border-collapse:collapse;margin-top:2.5rem;font-size:1rem;}
+th,td{padding:1rem 1.1rem;text-align:center;border-bottom:1px solid rgba(26,51,40,.1);}
+th{font-weight:700;font-size:.85rem;letter-spacing:.04em;text-transform:uppercase;color:var(--green);}
+td:first-child,th:first-child{text-align:left;font-weight:700;}
+.bg-forest th{color:var(--gold);}
+.bg-forest th,.bg-forest td{border-color:rgba(249,247,243,.14);}
+tr.hl{background:rgba(233,196,106,.16);}
+.bg-forest tr.hl{background:rgba(233,196,106,.12);}
+tr.hl td:first-child{color:var(--green);}
+.bg-forest tr.hl td:first-child{color:var(--gold);}
+.chk{color:var(--green);font-weight:800;font-size:1.3rem;}
+.bg-forest .chk{color:var(--gold);}
+.cross{color:#cdcdcd;font-size:1.2rem;}
+.bg-forest .cross{color:rgba(249,247,243,.3);}
+
+/* ---------- TRACTION ---------- */
+.track-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;margin-top:3rem;}
+.track-card{background:var(--white);border-radius:16px;padding:2rem 1.6rem;box-shadow:0 8px 26px rgba(26,51,40,.07);}
+.track-card .big{font-family:'Playfair Display',serif;font-weight:800;font-size:2.6rem;color:var(--green);line-height:1;}
+.track-card .cap{margin-top:.7rem;font-size:.95rem;color:var(--muted);font-weight:500;}
+.stack-row{display:flex;gap:.8rem;flex-wrap:wrap;margin-top:2.5rem;}
+.pill{background:rgba(45,106,79,.1);color:var(--green);padding:.6rem 1.2rem;border-radius:999px;font-weight:600;font-size:.95rem;}
+
+/* ---------- PRICING ---------- */
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem;margin-top:2.5rem;align-items:stretch;}
+.price{background:var(--white);border-radius:18px;padding:2rem 1.8rem;box-shadow:0 8px 26px rgba(26,51,40,.07);display:flex;flex-direction:column;border:2px solid transparent;}
+.price.featured{border-color:var(--gold);transform:scale(1.04);box-shadow:0 18px 44px rgba(26,51,40,.16);}
+.price .tier{font-weight:700;font-size:1.2rem;}
+.price .badge{display:inline-block;background:var(--gold);color:var(--forest);font-size:.7rem;font-weight:800;letter-spacing:.08em;padding:.3rem .7rem;border-radius:999px;margin-bottom:.7rem;}
+.price .amt{font-family:'Playfair Display',serif;font-weight:800;font-size:2.4rem;margin:.6rem 0 .2rem;color:var(--forest);}
+.price .per{font-size:.9rem;color:var(--muted);}
+.price ul{list-style:none;margin-top:1.2rem;}
+.price ul li{padding:.45rem 0;font-size:.92rem;color:var(--muted);display:flex;gap:.5rem;}
+.price ul li::before{content:"✓";color:var(--green);font-weight:800;}
+.addon{margin-top:2rem;background:var(--green);color:#fff;border-radius:16px;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;}
+.addon .amt2{font-family:'Playfair Display',serif;font-weight:800;font-size:1.8rem;color:var(--gold);}
+
+/* ---------- GTM ---------- */
+.phase-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem;margin-top:2.5rem;}
+.phase{background:var(--white);border-radius:16px;padding:2rem;box-shadow:0 8px 26px rgba(26,51,40,.07);border-top:5px solid var(--gold);}
+.phase .ph{font-size:.8rem;font-weight:700;letter-spacing:.1em;color:var(--green);text-transform:uppercase;}
+.phase h4{font-family:'Playfair Display',serif;font-size:1.5rem;margin:.5rem 0 1rem;}
+.phase p{font-size:.95rem;color:var(--muted);line-height:1.55;}
+
+/* ---------- TEAM ---------- */
+.team-wrap{display:grid;grid-template-columns:auto 1fr;gap:3rem;align-items:center;margin-top:2rem;}
+.avatar{width:200px;height:200px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--forest));display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:4rem;font-weight:800;color:var(--gold);box-shadow:0 16px 40px rgba(26,51,40,.25);}
+.team-wrap h3{font-size:2.4rem;}
+.team-wrap .role{color:var(--gold);font-weight:700;letter-spacing:.06em;margin:.4rem 0 1.2rem;}
+
+/* ---------- OPPORTUNITY ---------- */
+.opp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;margin-top:2.5rem;}
+.opp{display:flex;gap:1.2rem;align-items:flex-start;background:rgba(249,247,243,.06);border-radius:14px;padding:1.6rem;border-left:4px solid var(--gold);}
+.opp .oico{font-size:1.6rem;flex-shrink:0;}
+.opp h4{font-family:'Inter',sans-serif;font-size:1.15rem;font-weight:700;margin-bottom:.4rem;}
+.opp p{font-size:.95rem;color:rgba(249,247,243,.78);line-height:1.5;}
+
+/* ---------- CONTACT ---------- */
+.cta{text-align:center;align-items:center;}
+.cta h1{font-size:clamp(2.5rem,6vw,5rem);font-weight:800;margin-bottom:1.5rem;}
+.cta h1 .accent{color:var(--gold);font-style:italic;}
+.cta .contacts{display:flex;gap:2.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;}
+.cta .contacts a{color:var(--cream);text-decoration:none;font-size:1.25rem;font-weight:500;display:flex;align-items:center;gap:.6rem;border-bottom:2px solid var(--gold);padding-bottom:.3rem;transition:color .25s;}
+.cta .contacts a:hover{color:var(--gold);}
+
+/* ---------- NAV UI ---------- */
+.counter{
+  position:fixed;bottom:24px;right:28px;z-index:50;
+  font-size:.9rem;font-weight:700;letter-spacing:.06em;color:#fff;
+  background:rgba(26,51,40,.7);backdrop-filter:blur(8px);padding:.5rem .9rem;border-radius:999px;
+  font-variant-numeric:tabular-nums;
+}
+.navbtns{position:fixed;bottom:22px;left:28px;z-index:50;display:flex;gap:.6rem;}
+.navbtns button{
+  width:42px;height:42px;border:none;border-radius:50%;cursor:pointer;
+  background:rgba(26,51,40,.7);backdrop-filter:blur(8px);color:#fff;font-size:1.2rem;
+  display:flex;align-items:center;justify-content:center;transition:background .2s,transform .2s;
+}
+.navbtns button:hover{background:var(--green);transform:scale(1.08);}
+.progress{position:fixed;top:0;left:0;height:4px;background:var(--gold);z-index:60;width:0;transition:width .3s ease;}
+
+/* ---------- RESPONSIVE ---------- */
+@media(max-width:900px){
+  .slide{height:auto;min-height:100vh;padding:8vh 7vw;}
+  .stat-grid,.feat-grid,.track-grid,.price-grid,.phase-grid,.opp-grid{grid-template-columns:1fr;}
+  .sol-cols,.tam-wrap,.team-wrap{grid-template-columns:1fr;}
+  .price.featured{transform:none;}
+  .flow{flex-direction:column;}
+  table{font-size:.85rem;}
+  th,td{padding:.7rem .5rem;}
+  .avatar{margin:0 auto;}
+}
+
+/* ---------- PRINT ---------- */
+@media print{
+  html{scroll-snap-type:none;}
+  body{background:#fff;}
+  .counter,.navbtns,.progress{display:none!important;}
+  .slide{height:100vh;min-height:100vh;page-break-after:always;break-after:page;}
+  .slide > *{opacity:1!important;transform:none!important;}
+  .feat,.price,.flow-step,.track-card,.phase{box-shadow:none;border:1px solid #ddd;}
+  @page{size:landscape;margin:0;}
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+<!-- 1 COVER -->
+<section class="slide bg-forest cover">
+  <div class="logo">
+    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="40" height="40" rx="10" fill="#2D6A4F"/>
+      <path d="M14 32V20l10-7 10 7v12" stroke="#E9C46A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M20 32v-7h8v7" stroke="#F9F7F3" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="name">Permiso<b>Hub</b></span>
+  </div>
+  <div class="cover-main">
+    <span class="eyebrow">Pitch Deck · Inversión Seed</span>
+    <h1>El copiloto <span class="accent">IA</span><br>del arquitecto chileno</h1>
+    <p class="tag">Gestión inteligente de permisos de edificación municipales, de principio a fin.</p>
+  </div>
+  <div class="foot">Santiago de Chile · 2026 · permisohub.vercel.app</div>
+</section>
+
+<!-- 2 PROBLEM -->
+<section class="slide bg-cream">
+  <span class="eyebrow">El problema</span>
+  <h2 style="font-size:clamp(2rem,4.5vw,3.6rem);max-width:20ch;">La permisología le cuesta a Chile <span style="color:var(--green);">US$2 mil millones</span> al año.</h2>
+  <div class="stat-grid">
+    <div class="stat"><div class="num">124</div><div class="lbl">días promedio para aprobar un permiso (vs. 45 días en 2009)</div></div>
+    <div class="stat"><div class="num">US$2B</div><div class="lbl">en pérdidas anuales por demoras de tramitación</div></div>
+    <div class="stat"><div class="num">81</div><div class="lbl">municipios con irregularidades confirmadas por Contraloría</div></div>
+  </div>
+  <div class="quote">"Ciclos de corrección de 30 a 90 días por <em>cada</em> observación de la DOM."</div>
+</section>
+
+<!-- 3 BROKEN ECOSYSTEM -->
+<section class="slide bg-white">
+  <span class="eyebrow">El ecosistema roto</span>
+  <h2 style="font-size:clamp(1.9rem,4vw,3rem);max-width:24ch;">Un proceso manual, lento y fragmentado en cada etapa.</h2>
+  <div class="flow">
+    <div class="flow-step"><div class="n">01</div><h4>Prepara documentos</h4><div class="pain"><svg width="14" height="14" viewBox="0 0 24 24" fill="#b23a2e"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16v.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>Manual, propenso a errores</div></div>
+    <div class="flow-step"><div class="n">02</div><h4>Ingresa a DOM en Línea</h4><div class="pain"><svg width="14" height="14" viewBox="0 0 24 24" fill="#b23a2e"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16v.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>Portal estatal sin guía</div></div>
+    <div class="flow-step"><div class="n">03</div><h4>Espera 124 días</h4><div class="pain"><svg width="14" height="14" viewBox="0 0 24 24" fill="#b23a2e"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16v.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>Cero visibilidad de plazos</div></div>
+    <div class="flow-step"><div class="n">04</div><h4>Recibe observaciones</h4><div class="pain"><svg width="14" height="14" viewBox="0 0 24 24" fill="#b23a2e"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16v.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>PDFs densos y técnicos</div></div>
+    <div class="flow-step"><div class="n">05</div><h4>Responde manualmente</h4><div class="pain"><svg width="14" height="14" viewBox="0 0 24 24" fill="#b23a2e"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16v.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>Horas de trabajo experto</div></div>
+    <div class="flow-step"><div class="n">06</div><h4>Repite el ciclo</h4><div class="pain"><svg width="14" height="14" viewBox="0 0 24 24" fill="#b23a2e"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16v.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>Cada vuelta: +30-90 días</div></div>
+  </div>
+  <p class="lead" style="margin-top:2.5rem;">El arquitecto pierde tiempo facturable, el cliente pierde dinero y el proyecto pierde meses. Nadie tiene una capa de inteligencia para gestionarlo.</p>
+</section>
+
+<!-- 4 SOLUTION -->
+<section class="slide bg-forest">
+  <span class="eyebrow">La solución</span>
+  <h2 style="font-size:clamp(2rem,4.5vw,3.4rem);">PermisoHub es el <span style="color:var(--gold);font-style:italic;">copiloto</span> del arquitecto.</h2>
+  <div class="sol-cols">
+    <ul class="not-list">
+      <li class="no"><span class="mark">✕</span><div><strong>No es DOM en Línea.</strong> Ese es el portal del Estado para ingresar trámites.</div></li>
+      <li class="no"><span class="mark">✕</span><div><strong>No es REVI.</strong> Esa es IA para que los funcionarios municipales revisen.</div></li>
+      <li class="yes"><span class="mark">✓</span><div><strong>Es la capa inteligente</strong> entre el arquitecto y la burocracia: prepara, predice, responde y acelera.</div></li>
+    </ul>
+    <div class="sol-frase">Mientras REVI ayuda a la DOM a <b>revisar</b>,<br>PermisoHub ayuda al arquitecto a <b>triunfar.</b></div>
+  </div>
+</section>
+
+<!-- 5 PRODUCT -->
+<section class="slide bg-cream">
+  <span class="eyebrow">El producto</span>
+  <h2 style="font-size:clamp(1.9rem,4vw,3rem);">Una suite completa, potenciada con IA.</h2>
+  <div class="feat-grid">
+    <div class="feat"><div class="ico">🤖</div><h4>Chat OGUC con IA</h4><p>Consultas normativas resueltas al instante con Claude Sonnet sobre la Ordenanza General.</p></div>
+    <div class="feat"><div class="ico">📄</div><h4>Extractor de observaciones</h4><p>Sube el PDF de la DOM y obtén respuestas técnicas redactadas automáticamente.</p></div>
+    <div class="feat"><div class="ico">✅</div><h4>Verificador de cumplimiento</h4><p>Chequeo pre-ingreso para reducir observaciones y rechazos antes de tramitar.</p></div>
+    <div class="feat"><div class="ico">⏱️</div><h4>Contador Ley 21.718</h4><p>Días hábiles automáticos con el plazo legal de 30 días. Nunca pierdas un vencimiento.</p></div>
+    <div class="feat"><div class="ico">📊</div><h4>Inteligencia de municipios</h4><p>Tiempos reales y estadísticas por DOM para anticipar plazos y planificar mejor.</p></div>
+    <div class="feat"><div class="ico">💬</div><h4>WhatsApp automático</h4><p>Tus clientes informados en cada hito del proceso, sin esfuerzo manual (Twilio).</p></div>
+  </div>
+</section>
+
+<!-- 6 TAM/SAM/SOM -->
+<section class="slide bg-white">
+  <span class="eyebrow">Tamaño de mercado</span>
+  <h2 style="font-size:clamp(1.9rem,4vw,3rem);">Un mercado grande, defendible y en crecimiento.</h2>
+  <div class="tam-wrap">
+    <div class="rings">
+      <div class="ring tam"><span class="rl">TAM · $4.8B CLP</span></div>
+      <div class="ring sam"><span class="rl">SAM · $1.8B</span></div>
+      <div class="ring som"><span class="rl">SOM · $480M</span></div>
+    </div>
+    <div>
+      <ul class="tam-list">
+        <li><div class="k">TAM</div><div class="v">~$4.8B CLP / año</div><div class="d">~8.000 arquitectos activos × $50K CLP/mes × 12</div></li>
+        <li><div class="k">SAM</div><div class="v">~$1.8B CLP / año</div><div class="d">~3.000 arquitectos que tramitan permisos regularmente</div></li>
+        <li><div class="k">SOM (Año 3)</div><div class="v">~$480M CLP / año</div><div class="d">500 arquitectos × $79.990/mes ≈ US$500K ARR</div></li>
+      </ul>
+      <p class="tam-note"><strong>Mercado adicional:</strong> constructoras ($299.990/mes) y municipios B2G ($1.5M–3M CLP/mes) multiplican el techo.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7 COMPETITION -->
+<section class="slide bg-forest">
+  <span class="eyebrow">Competencia</span>
+  <h2 style="font-size:clamp(1.9rem,4vw,3rem);">Somos el único enfocado en el arquitecto.</h2>
+  <table>
+    <thead>
+      <tr><th>Solución</th><th>Para arquitectos</th><th>IA integrada</th><th>Cobertura nacional</th><th>Modelo SaaS</th><th>Automatización</th></tr>
+    </thead>
+    <tbody>
+      <tr class="hl"><td>PermisoHub</td><td><span class="chk">✓</span></td><td><span class="chk">✓</span></td><td><span class="chk">✓</span></td><td><span class="chk">✓</span></td><td><span class="chk">✓</span></td></tr>
+      <tr><td>REVI (CChC+Google)</td><td><span class="cross">✕</span></td><td><span class="chk">✓</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td></tr>
+      <tr><td>DOM en Línea (MINVU)</td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td><td><span class="chk">✓</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td></tr>
+      <tr><td>Consultoría tradicional</td><td><span class="chk">✓</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td><td><span class="cross">✕</span></td></tr>
+    </tbody>
+  </table>
+  <p class="lead" style="margin-top:2.5rem;">REVI cubre solo <strong style="color:var(--gold);">12 municipios (3.5%)</strong> y sirve a los funcionarios, no al arquitecto. Esa es nuestra ventana.</p>
+</section>
+
+<!-- 8 TRACTION -->
+<section class="slide bg-cream">
+  <span class="eyebrow">Tracción</span>
+  <h2 style="font-size:clamp(1.9rem,4vw,3rem);">MVP en producción, listo para escalar.</h2>
+  <div class="track-grid">
+    <div class="track-card"><div class="big">Jun '26</div><div class="cap">MVP lanzado y operativo</div></div>
+    <div class="track-card"><div class="big">Live</div><div class="cap">En producción en permisohub.vercel.app</div></div>
+    <div class="track-card"><div class="big">25+</div><div class="cap">módulos construidos y funcionales</div></div>
+    <div class="track-card"><div class="big">100%</div><div class="cap">desarrollado por la fundadora</div></div>
+  </div>
+  <div class="stack-row">
+    <span class="pill">Next.js</span>
+    <span class="pill">Anthropic Claude</span>
+    <span class="pill">Supabase</span>
+    <span class="pill">Vercel</span>
+    <span class="pill">Twilio</span>
+    <span class="pill">Cron Jobs</span>
+  </div>
+</section>
+
+<!-- 9 BUSINESS MODEL -->
+<section class="slide bg-white">
+  <span class="eyebrow">Modelo de negocio</span>
+  <h2 style="font-size:clamp(1.9rem,4vw,3rem);">SaaS B2B con expansión natural.</h2>
+  <div class="price-grid">
+    <div class="price">
+      <div class="tier">Starter</div>
+      <div class="amt">$29.990</div><div class="per">CLP / mes</div>
+      <ul><li>5 proyectos activos</li><li>Funciones básicas</li><li>Contador Ley 21.718</li><li>Portal cliente</li></ul>
+    </div>
+    <div class="price featured">
+      <span class="badge">★ Recomendado</span>
+      <div class="tier">Pro</div>
+      <div class="amt">$79.990</div><div class="per">CLP / mes</div>
+      <ul><li>Proyectos ilimitados</li><li>IA completa (OGUC + observaciones)</li><li>Inteligencia de municipios</li><li>WhatsApp automático</li></ul>
+    </div>
+    <div class="price">
+      <div class="tier">Estudio</div>
+      <div class="amt">$149.990</div><div class="per">CLP / mes</div>
+      <ul><li>Multi-usuario</li><li>Analytics avanzado</li><li>Acceso API</li><li>Soporte prioritario</li></ul>
+    </div>
+  </div>
+  <div class="addon">
+    <div><strong style="font-size:1.1rem;">Add-on Constructora</strong><br><span style="opacity:.85;font-size:.92rem;">Portafolio multi-proyecto para empresas constructoras</span></div>
+    <div class="amt2">$299.990 / mes</div>
+  </div>
+</section>
+
+<!-- 10 GO TO MARKET -->
+<section class="slide bg-cream">
+  <span class="eyebrow">Go-to-market</span>
+  <h2 style="font-size:clamp(1.9rem,4vw,3rem);">Tres fases hacia el liderazgo de mercado.</h2>
+  <div class="phase-grid">
+    <div class="phase"><div class="ph">Fase 1 · Q3 2026</div><h4>Early adopters</h4><p>50 arquitectos pioneros captados vía Colegio de Arquitectos y AOA. Foco en feedback y casos de éxito.</p></div>
+    <div class="phase"><div class="ph">Fase 2 · Q4 2026</div><h4>Crecimiento</h4><p>200 usuarios activos y primeras constructoras con el add-on multi-proyecto. Referidos y boca a boca.</p></div>
+    <div class="phase"><div class="ph">Fase 3 · 2027</div><h4>Escala nacional</h4><p>500+ usuarios, 3 municipios en piloto B2G y expansión a regiones más allá de Santiago.</p></div>
+  </div>
+</section>
+
+<!-- 11 PROJECTIONS -->
+<section class="slide bg-forest">
+  <span class="eyebrow">Proyecciones</span>
+  <h2 style="font-size:clamp(1.9rem,4vw,3rem);">Camino claro a US$500K ARR.</h2>
+  <table>
+    <thead>
+      <tr><th></th><th>Q4 2026</th><th>Q2 2027</th><th>Q4 2027</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Arquitectos</td><td>50</td><td>200</td><td>500</td></tr>
+      <tr><td>MRR (CLP)</td><td>$4M</td><td>$16M</td><td>$40M</td></tr>
+      <tr class="hl"><td>ARR (USD)</td><td>$50K</td><td>$200K</td><td>$500K</td></tr>
+    </tbody>
+  </table>
+  <p class="lead" style="margin-top:2.5rem;">Crecimiento 10× en 12 meses, impulsado por una propuesta de valor que paga sola en horas facturables recuperadas.</p>
+</section>
+
+<!-- 12 TEAM -->
+<section class="slide bg-white">
+  <span class="eyebrow">Equipo</span>
+  <div class="team-wrap">
+    <div class="avatar">EP</div>
+    <div>
+      <h3>Estefanía Parada</h3>
+      <div class="role">Fundadora · Arquitecta</div>
+      <p class="lead" style="color:var(--muted);">Arquitecta con experiencia directa en tramitación DOM. Construyó PermisoHub desde el dolor propio: conoce cada cuello de botella del proceso porque lo vivió. Combina criterio técnico de arquitectura con ejecución de producto.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 13 OPPORTUNITY -->
+<section class="slide bg-forest">
+  <span class="eyebrow">La oportunidad</span>
+  <h2 style="font-size:clamp(1.9rem,4vw,3rem);">Timing perfecto: una ventana de 2-3 años.</h2>
+  <div class="opp-grid">
+    <div class="opp"><div class="oico">⚖️</div><div><h4>Ley 21.718 vigente</h4><p>Desde enero 2025 fija un plazo máximo de 30 días hábiles. Nueva urgencia de cumplimiento para todos.</p></div></div>
+    <div class="opp"><div class="oico">🪟</div><div><h4>REVI en solo 3.5%</h4><p>La adopción de IA municipal es incipiente. Hay 2-3 años de ventana antes de que el mercado madure.</p></div></div>
+    <div class="opp"><div class="oico">🏛️</div><div><h4>CBR Digital 2026</h4><p>La digitalización del Conservador de Bienes Raíces acelera todo el flujo documental del sector.</p></div></div>
+    <div class="opp"><div class="oico">🚀</div><div><h4>Mercado en crisis</h4><p>El dolor de la permisología es agudo. Crisis = adopción acelerada de soluciones que funcionan.</p></div></div>
+  </div>
+</section>
+
+<!-- 14 CONTACT -->
+<section class="slide bg-forest cta">
+  <span class="eyebrow">Conversemos</span>
+  <h1>Construyamos el futuro de la <span class="accent">permisología</span>.</h1>
+  <p class="lead" style="margin:0 auto;">PermisoHub está listo para escalar. Buscamos socios que crean en transformar uno de los procesos más costosos de Chile.</p>
+  <div class="contacts">
+    <a href="mailto:estefania@epgestion.cl">✉ estefania@epgestion.cl</a>
+    <a href="https://permisohub.vercel.app" target="_blank">🔗 permisohub.vercel.app</a>
+  </div>
+</section>
+
+</div>
+
+<!-- NAV UI -->
+<div class="counter" id="counter">1 / 14</div>
+<div class="navbtns">
+  <button id="prev" aria-label="Anterior">‹</button>
+  <button id="next" aria-label="Siguiente">›</button>
+</div>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+  let current = 0;
+
+  // Reveal on view
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('in-view');
+        current = slides.indexOf(e.target);
+        update();
+      }
+    });
+  },{threshold:0.55});
+  slides.forEach(s=>io.observe(s));
+
+  function update(){
+    counter.textContent = (current+1) + ' / ' + total;
+    progress.style.width = ((current+1)/total*100) + '%';
+  }
+
+  function go(i){
+    current = Math.max(0, Math.min(total-1, i));
+    slides[current].scrollIntoView({behavior:'smooth'});
+  }
+
+  document.getElementById('next').onclick = ()=>go(current+1);
+  document.getElementById('prev').onclick = ()=>go(current-1);
+
+  document.addEventListener('keydown',(e)=>{
+    if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){e.preventDefault();go(current+1);}
+    else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();go(current-1);}
+    else if(e.key==='Home'){e.preventDefault();go(0);}
+    else if(e.key==='End'){e.preventDefault();go(total-1);}
+  });
+
+  update();
+})();
+</script>
+</body>
+</html>

@@ -6,6 +6,7 @@ import {
   BarChart2,
   Building2,
   Calculator,
+  FileText,
   FolderOpen,
   LayoutDashboard,
   LogOut,
@@ -54,6 +55,10 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/herramientas/calculadora", label: "Calculadora derechos", icon: Calculator },
       { href: "/configuracion/whatsapp", label: "WhatsApp", icon: MessageCircle },
     ],
+  },
+  {
+    label: "Documentos",
+    items: [{ href: "/documentos", label: "Pitch & Modelo negocio", icon: FileText }],
   },
   {
     label: null,
