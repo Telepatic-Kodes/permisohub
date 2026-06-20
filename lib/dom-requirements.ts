@@ -226,24 +226,24 @@ const DOCS_POR_TIPO: Record<string, DocumentoRequerido[]> = {
 const MUNICIPIOS_DOM: Record<string, RequisitosMunicipio> = {
   'Santiago': {
     municipio: 'Santiago',
-    urlDomEnLinea: 'https://domlena.minvu.gob.cl',
+    urlDomEnLinea: 'https://domenlinea.minvu.cl',
     tienePortalPropio: false,
     notaEspecial: 'Usa DOM en Línea MINVU. Requiere FEA del arquitecto.',
   },
   'Las Condes': {
     municipio: 'Las Condes',
-    urlDomEnLinea: 'https://domlena.minvu.gob.cl',
+    urlDomEnLinea: 'https://domenlinea.minvu.cl',
     tienePortalPropio: false,
     notaEspecial: 'Estrictos en plazos. Derechos municipales más altos.',
   },
   'Providencia': {
     municipio: 'Providencia',
-    urlDomEnLinea: 'https://domlena.minvu.gob.cl',
+    urlDomEnLinea: 'https://domenlinea.minvu.cl',
     tienePortalPropio: false,
   },
   'Vitacura': {
     municipio: 'Vitacura',
-    urlDomEnLinea: 'https://domlena.minvu.gob.cl',
+    urlDomEnLinea: 'https://domenlinea.minvu.cl',
     tienePortalPropio: false,
     notaEspecial: 'Requiere memoria arquitectónica adicional con antecedentes del entorno.',
     documentosExtra: [
@@ -260,33 +260,33 @@ const MUNICIPIOS_DOM: Record<string, RequisitosMunicipio> = {
   },
   'Ñuñoa': {
     municipio: 'Ñuñoa',
-    urlDomEnLinea: 'https://domlena.minvu.gob.cl',
+    urlDomEnLinea: 'https://domenlinea.minvu.cl',
     tienePortalPropio: false,
   },
   'La Florida': {
     municipio: 'La Florida',
-    urlDomEnLinea: 'https://domlena.minvu.gob.cl',
+    urlDomEnLinea: 'https://domenlinea.minvu.cl',
     tienePortalPropio: false,
   },
   'Maipú': {
     municipio: 'Maipú',
-    urlDomEnLinea: 'https://domlena.minvu.gob.cl',
+    urlDomEnLinea: 'https://domenlinea.minvu.cl',
     tienePortalPropio: false,
     notaEspecial: 'Portal DOM en Línea. Plazos de respuesta promedio 45 días.',
   },
   'Pudahuel': {
     municipio: 'Pudahuel',
-    urlDomEnLinea: 'https://domlena.minvu.gob.cl',
+    urlDomEnLinea: 'https://domenlinea.minvu.cl',
     tienePortalPropio: false,
   },
   'Recoleta': {
     municipio: 'Recoleta',
-    urlDomEnLinea: 'https://domlena.minvu.gob.cl',
+    urlDomEnLinea: 'https://domenlinea.minvu.cl',
     tienePortalPropio: false,
   },
   'La Reina': {
     municipio: 'La Reina',
-    urlDomEnLinea: 'https://domlena.minvu.gob.cl',
+    urlDomEnLinea: 'https://domenlinea.minvu.cl',
     tienePortalPropio: false,
   },
 }
@@ -305,7 +305,7 @@ export function getDocumentosRequeridos(
 export function getMunicipioInfo(municipio: string): RequisitosMunicipio {
   return MUNICIPIOS_DOM[municipio] ?? {
     municipio,
-    urlDomEnLinea: 'https://domlena.minvu.gob.cl',
+    urlDomEnLinea: 'https://domenlinea.minvu.cl',
     tienePortalPropio: false,
   }
 }
