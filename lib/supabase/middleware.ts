@@ -6,7 +6,8 @@ export async function updateSession(request: NextRequest) {
   // Auth will be enforced once env vars are set in Vercel.
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NODE_ENV === 'development'
   ) {
     return NextResponse.next({ request })
   }

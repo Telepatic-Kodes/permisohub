@@ -51,7 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/herramientas/compliance-check", label: "Verificador OGUC", icon: ShieldCheck },
       { href: "/herramientas/checklist", label: "Checklist Normativo", icon: Wrench },
       { href: "/herramientas/municipios", label: "Inteligencia DOM", icon: BarChart2 },
-      { href: "/herramientas/calculadora-derechos", label: "Calculadora derechos", icon: Calculator },
+      { href: "/herramientas/calculadora", label: "Calculadora derechos", icon: Calculator },
       { href: "/configuracion/whatsapp", label: "WhatsApp", icon: MessageCircle },
     ],
   },
