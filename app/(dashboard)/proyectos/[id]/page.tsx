@@ -62,10 +62,9 @@ export default function ProyectoDetallePage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  // params resolved per Next.js 16 async params API; mock data is shared.
-  use(params)
+  const { id } = use(params)
 
-  const proyecto = MOCK_PROYECTOS[0]
+  const proyecto = MOCK_PROYECTOS.find((p) => p.id === id) ?? MOCK_PROYECTOS[0]
   const estadoCfg = ESTADO_CONFIG[proyecto.estado]
 
   // Calculate days since inicio

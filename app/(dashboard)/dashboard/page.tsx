@@ -28,7 +28,7 @@ interface ProyectoReciente {
 
 const PROYECTOS_RECIENTES: ProyectoReciente[] = [
   {
-    id: "1",
+    id: "p1",
     nombre: "Local comercial — Mall Plaza Egaña",
     cliente: "Falabella Retail S.A.",
     municipio: "La Reina",
@@ -36,7 +36,7 @@ const PROYECTOS_RECIENTES: ProyectoReciente[] = [
     fechaEstimada: "28 jun 2026",
   },
   {
-    id: "2",
+    id: "p2",
     nombre: "Ampliación tienda — Av. Apoquindo",
     cliente: "Cencosud S.A.",
     municipio: "Las Condes",
@@ -44,7 +44,7 @@ const PROYECTOS_RECIENTES: ProyectoReciente[] = [
     fechaEstimada: "10 jul 2026",
   },
   {
-    id: "3",
+    id: "p3",
     nombre: "Habilitación cafetería — Costanera Center",
     cliente: "Starbucks Chile",
     municipio: "Providencia",
@@ -52,7 +52,7 @@ const PROYECTOS_RECIENTES: ProyectoReciente[] = [
     fechaEstimada: "22 jul 2026",
   },
   {
-    id: "4",
+    id: "p4",
     nombre: "Remodelación sucursal — Plaza Vespucio",
     cliente: "Banco de Chile",
     municipio: "La Florida",
@@ -60,7 +60,7 @@ const PROYECTOS_RECIENTES: ProyectoReciente[] = [
     fechaEstimada: "15 jun 2026",
   },
   {
-    id: "5",
+    id: "p5",
     nombre: "Nuevo local — Paseo Estación",
     cliente: "Tottus",
     municipio: "Estación Central",
@@ -85,21 +85,21 @@ const ALERTAS: Alerta[] = [
     tipo: "urgente",
     titulo: "Observaciones DOM por responder",
     detalle: "Mall Plaza Egaña — plazo vence en 3 días",
-    proyectoId: "1",
+    proyectoId: "p1",
   },
   {
     id: "a2",
     tipo: "proxima",
     titulo: "Próxima fecha estimada",
     detalle: "Av. Apoquindo — revisión DOM el 10 jul",
-    proyectoId: "2",
+    proyectoId: "p2",
   },
   {
     id: "a3",
     tipo: "info",
     titulo: "Expediente listo para ingreso",
     detalle: "Paseo Estación — documentación completa",
-    proyectoId: "5",
+    proyectoId: "p5",
   },
 ];
 
