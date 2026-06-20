@@ -38,7 +38,7 @@ async function queryDomEnLinea(
   }
 
   try {
-    const url = `https://domlena.minvu.gob.cl/solicitudes/busqueda?numero_expediente=${encodeURIComponent(
+    const url = `https://domenlinea.minvu.cl/solicitudes/busqueda?numero_expediente=${encodeURIComponent(
       expedienteNumero
     )}`
     const response = await fetchWithTimeout(url, {}, 15000)
