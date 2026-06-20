@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { Plus, Search } from "lucide-react"
+import { Plus, Search, Zap } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { MOCK_PROYECTOS, MUNICIPIOS_PRINCIPALES } from "@/lib/mock-data"
+import { PLAN_LIMITS } from "@/lib/plan-limits"
 import { ESTADO_CONFIG, TIPO_PERMISO_LABELS, type EstadoExpediente } from "@/types"
 
 const ESTADO_OPTIONS: { value: string; label: string }[] = [
@@ -47,6 +48,14 @@ export default function ProyectosPage() {
   const [search, setSearch] = useState("")
   const [estado, setEstado] = useState("todos")
   const [municipio, setMunicipio] = useState("todos")
+
+  // Feature gating (Starter plan): proyectos activos limitados.
+  // El plan real se resuelve server-side; aquí mostramos un aviso informativo
+  // cuando el total de proyectos alcanza el límite del plan Starter para
+  // empujar al upgrade sin bloquear la navegación.
+  const totalProyectos = MOCK_PROYECTOS.length
+  const starterLimit = PLAN_LIMITS.starter.projects
+  const atStarterLimit = totalProyectos >= starterLimit
 
   const proyectos = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -77,6 +86,29 @@ export default function ProyectosPage() {
           Nuevo proyecto
         </Button>
       </div>
+
+      {atStarterLimit && (
+        <div className="flex items-start gap-3 rounded-xl border border-[#1A3328]/15 bg-[#1A3328]/5 p-4">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#1A3328]/10">
+            <Zap className="size-4 text-[#1A3328]" />
+          </div>
+          <div className="flex-1 text-sm">
+            <p className="font-medium text-[#1A3328]">
+              Alcanzaste el límite de proyectos del plan Starter
+            </p>
+            <p className="text-muted-foreground">
+              El plan Starter permite hasta {starterLimit} proyectos activos.
+              Pasa al plan Pro para proyectos ilimitados.
+            </p>
+          </div>
+          <Link
+            href="/configuracion/billing"
+            className="shrink-0 self-center rounded-lg bg-[#1A3328] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1A3328]/90"
+          >
+            Ver planes Pro
+          </Link>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">

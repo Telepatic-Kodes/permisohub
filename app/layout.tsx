@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import { Toaster } from "@/components/ui/sonner";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import "./globals.css";
 
 const inter = Inter({
@@ -11,6 +13,16 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "PermisoHub",
   description: "Gestión de permisos municipales — EP Gestión Arquitectónica",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "PermisoHub",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1A3328",
 };
 
 export default function RootLayout({
@@ -23,6 +35,14 @@ export default function RootLayout({
       <body className="min-h-full">
         {children}
         <Toaster />
+        <PwaInstallPrompt />
+        <Script id="register-sw" strategy="afterInteractive">{`
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js')
+            })
+          }
+        `}</Script>
       </body>
     </html>
   );

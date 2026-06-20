@@ -1,0 +1,28 @@
+{
+  "name": "PermisoHub",
+  "short_name": "PermisoHub",
+  "description": "El copiloto IA del arquitecto chileno — gestión de permisos DOM",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#1A3328",
+  "theme_color": "#1A3328",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "es-CL",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "screenshots": []
+}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SetupChecklist } from "@/components/dashboard/setup-checklist";
 import {
   AlertCircle,
   Calendar,
@@ -135,6 +136,9 @@ export default function DashboardPage() {
         </h1>
         <p className="mt-1 text-sm capitalize text-muted-foreground">{fecha}</p>
       </header>
+
+      {/* Onboarding checklist (solo aparece si no se ha completado) */}
+      <SetupChecklist />
 
       {/* Stats */}
       <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

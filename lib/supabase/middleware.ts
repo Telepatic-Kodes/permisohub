@@ -42,7 +42,9 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const isPublicRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/auth")
+    pathname === "/" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth")
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
@@ -50,9 +52,11 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && pathname.startsWith("/login")) {
+  // Authenticated users hitting the public landing or the login page are
+  // sent to their dashboard.
+  if (user && (pathname === "/" || pathname.startsWith("/login"))) {
     const url = request.nextUrl.clone()
-    url.pathname = "/"
+    url.pathname = "/dashboard"
     return NextResponse.redirect(url)
   }
 

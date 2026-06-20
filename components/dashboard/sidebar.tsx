@@ -6,6 +6,7 @@ import {
   BarChart2,
   Building2,
   Calculator,
+  CreditCard,
   FileText,
   FolderOpen,
   LayoutDashboard,
@@ -38,7 +39,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: null,
     items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/proyectos", label: "Proyectos", icon: FolderOpen },
       { href: "/prospectos", label: "CRM", icon: TrendingUp },
       { href: "/clientes", label: "Clientes", icon: Building2 },
@@ -62,7 +63,10 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: null,
-    items: [{ href: "/configuracion", label: "Configuración", icon: Settings }],
+    items: [
+      { href: "/configuracion/billing", label: "Facturación", icon: CreditCard },
+      { href: "/configuracion", label: "Configuración", icon: Settings },
+    ],
   },
 ];
 
