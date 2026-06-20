@@ -17,7 +17,7 @@ import {
 const STATS = [
   { value: "124 días", label: "promedio para aprobar un permiso hoy" },
   { value: "US$2B", label: "pérdidas anuales por permisología" },
-  { value: "81 municipios", label: "con irregularidades confirmadas" },
+  { value: "84 municipios", label: "con DOM en Línea confirmado" },
 ];
 
 const FEATURES = [
