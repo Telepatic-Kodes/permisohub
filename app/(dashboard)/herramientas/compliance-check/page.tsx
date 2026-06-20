@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MUNICIPIOS_PRINCIPALES } from "@/lib/mock-data"
+import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 
 interface CheckResult {
   riesgoGeneral: 'BAJO' | 'MEDIO' | 'ALTO'
@@ -126,9 +126,12 @@ export default function ComplianceCheckPage() {
                 <Select value={form.municipio} onValueChange={(v) => setField('municipio', v as string)}>
                   <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                   <SelectContent>
-                    {MUNICIPIOS_PRINCIPALES.map(m => (
-                      <SelectItem key={m} value={m}>{m}</SelectItem>
-                    ))}
+                    {COMUNAS_CHILE
+                      .slice()
+                      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+                      .map(c => (
+                        <SelectItem key={c.id} value={c.nombre}>{c.nombre}</SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 
 // --- Tipos ---
 
@@ -47,18 +48,9 @@ type ChecklistSection = {
 
 // --- Datos ---
 
-const MUNICIPIOS = [
-  "Santiago",
-  "Providencia",
-  "Las Condes",
-  "Maipú",
-  "Ñuñoa",
-  "Vitacura",
-  "San Miguel",
-  "Pudahuel",
-  "La Florida",
-  "Rancagua",
-] as const
+const COMUNAS_NOMBRES = COMUNAS_CHILE.map((c) => c.nombre).sort((a, b) =>
+  a.localeCompare(b, "es")
+)
 
 const TIPOS_PERMISO = [
   "Permiso de Edificación",
@@ -68,18 +60,13 @@ const TIPOS_PERMISO = [
   "Recepción Final",
 ] as const
 
-type Municipio = (typeof MUNICIPIOS)[number]
+type Municipio = string
 type TipoPermiso = (typeof TIPOS_PERMISO)[number]
 
 // Municipios que operan con plataforma digital (DOM en Línea)
-const MUNICIPIOS_EN_LINEA: Municipio[] = [
-  "Santiago",
-  "Providencia",
-  "Las Condes",
-  "Ñuñoa",
-  "Vitacura",
-  "La Florida",
-]
+const MUNICIPIOS_EN_LINEA: string[] = COMUNAS_CHILE
+  .filter((c) => c.domStatus === "dom_en_linea")
+  .map((c) => c.nombre)
 
 // Plazo típico (días hábiles) por tipo de permiso
 const PLAZOS: Record<TipoPermiso, number> = {
@@ -396,7 +383,7 @@ export default function ChecklistNormativoPage() {
                   <SelectValue placeholder="Seleccionar municipio" />
                 </SelectTrigger>
                 <SelectContent>
-                  {MUNICIPIOS.map((m) => (
+                  {COMUNAS_NOMBRES.map((m) => (
                     <SelectItem key={m} value={m}>
                       {m}
                     </SelectItem>
