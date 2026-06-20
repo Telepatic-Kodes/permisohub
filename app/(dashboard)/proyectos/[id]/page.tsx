@@ -31,6 +31,7 @@ import {
   MOCK_PROYECTOS,
 } from "@/lib/mock-data"
 import { ESTADO_CONFIG, TIPO_PERMISO_LABELS } from "@/types"
+import { getEstadoPlazoLey21718, formatFecha } from "@/lib/dias-habiles"
 import { cn } from "@/lib/utils"
 
 function formatDate(value?: string) {
@@ -342,6 +343,14 @@ export default function ProyectoDetallePage({
             </CardContent>
           </Card>
 
+          {/* Plazo Ley 21.718 */}
+          {proyecto.fecha_inicio && (
+            <PlazoLey21718Card
+              fechaIngreso={proyecto.fecha_inicio}
+              tieneRevisorIndependiente={false}
+            />
+          )}
+
           {/* Documentos */}
           <Card>
             <CardHeader className="flex-row items-center justify-between">
@@ -417,5 +426,88 @@ function InfoRow({
       </span>
       <span className="text-right font-medium text-[#1A3328]">{children}</span>
     </div>
+  )
+}
+
+const PLAZO_ESTADO_CONFIG = {
+  EN_PLAZO: {
+    badge: "bg-green-100 text-green-700",
+    bar: "bg-green-600",
+    label: "En plazo",
+  },
+  PROXIMO_VENCER: {
+    badge: "bg-amber-100 text-amber-700",
+    bar: "bg-amber-500",
+    label: "Próximo a vencer",
+  },
+  VENCIDO: {
+    badge: "bg-red-100 text-red-700",
+    bar: "bg-red-600",
+    label: "Vencido",
+  },
+} as const
+
+function PlazoLey21718Card({
+  fechaIngreso,
+  tieneRevisorIndependiente,
+}: {
+  fechaIngreso: string
+  tieneRevisorIndependiente: boolean
+}) {
+  const estado = getEstadoPlazoLey21718(
+    new Date(`${fechaIngreso}T00:00:00`),
+    tieneRevisorIndependiente
+  )
+  const cfg = PLAZO_ESTADO_CONFIG[estado.estado]
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Plazo Ley 21.718</CardTitle>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold",
+            cfg.badge
+          )}
+        >
+          {estado.estado === "VENCIDO" && <AlertTriangle className="size-3" />}
+          {cfg.label}
+        </span>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Progress bar */}
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className={cn("h-full rounded-full transition-all", cfg.bar)}
+            style={{ width: `${estado.porcentajeUsado}%` }}
+          />
+        </div>
+
+        <div className="space-y-1 text-sm">
+          <p className="font-medium text-[#1A3328]">
+            {estado.estado === "VENCIDO"
+              ? `Plazo vencido (${estado.diasHabilesDesdeIngreso} días hábiles transcurridos)`
+              : `${estado.diasHabilesRestantes} días hábiles restantes de ${estado.plazoTotal}`}
+          </p>
+          <p className="text-muted-foreground">
+            Vence el {formatFecha(estado.fechaVencimiento)}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {estado.tieneRevisorIndependiente
+              ? "Plazo de 15 días hábiles (con revisor independiente)"
+              : "Plazo de 30 días hábiles (sin revisor independiente)"}
+          </p>
+        </div>
+
+        <p
+          className={cn(
+            "rounded-lg px-3 py-2 text-xs font-medium",
+            cfg.badge
+          )}
+        >
+          {estado.labelEstado}
+        </p>
+      </CardContent>
+    </Card>
   )
 }

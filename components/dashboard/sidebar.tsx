@@ -3,12 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart2,
   Building2,
+  Calculator,
   FolderOpen,
   LayoutDashboard,
   LogOut,
   MapPin,
+  MessageCircle,
+  MessageSquare,
   Settings,
+  ShieldCheck,
   TrendingUp,
   Users,
   Wrench,
@@ -23,14 +28,37 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/proyectos", label: "Proyectos", icon: FolderOpen },
-  { href: "/prospectos", label: "CRM", icon: TrendingUp },
-  { href: "/clientes", label: "Clientes", icon: Building2 },
-  { href: "/municipios", label: "Municipios", icon: MapPin },
-  { href: "/herramientas/checklist", label: "Checklist Normativo", icon: Wrench },
-  { href: "/configuracion", label: "Configuración", icon: Settings },
+interface NavGroup {
+  label: string | null;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: null,
+    items: [
+      { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/proyectos", label: "Proyectos", icon: FolderOpen },
+      { href: "/prospectos", label: "CRM", icon: TrendingUp },
+      { href: "/clientes", label: "Clientes", icon: Building2 },
+      { href: "/municipios", label: "Municipios", icon: MapPin },
+    ],
+  },
+  {
+    label: "IA Normativa",
+    items: [
+      { href: "/herramientas/oguc-chat", label: "Chat OGUC", icon: MessageSquare },
+      { href: "/herramientas/compliance-check", label: "Verificador OGUC", icon: ShieldCheck },
+      { href: "/herramientas/checklist", label: "Checklist Normativo", icon: Wrench },
+      { href: "/herramientas/municipios", label: "Inteligencia DOM", icon: BarChart2 },
+      { href: "/herramientas/calculadora-derechos", label: "Calculadora derechos", icon: Calculator },
+      { href: "/configuracion/whatsapp", label: "WhatsApp", icon: MessageCircle },
+    ],
+  },
+  {
+    label: null,
+    items: [{ href: "/configuracion", label: "Configuración", icon: Settings }],
+  },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -54,26 +82,35 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 space-y-1 px-3 py-2">
-        {NAV_ITEMS.map((item) => {
-          const active = isActive(pathname, item.href);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                active
-                  ? "bg-[#1A3328] text-white"
-                  : "text-[#1A3328]/70 hover:bg-[#F0EBE1] hover:text-[#1A3328]"
-              )}
-            >
-              <Icon className="size-4.5 shrink-0" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-4 px-3 py-2">
+        {NAV_GROUPS.map((group, groupIndex) => (
+          <div key={group.label ?? `group-${groupIndex}`} className="space-y-1">
+            {group.label && (
+              <p className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wider text-[#1A3328]/40">
+                {group.label}
+              </p>
+            )}
+            {group.items.map((item) => {
+              const active = isActive(pathname, item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-[#1A3328] text-white"
+                      : "text-[#1A3328]/70 hover:bg-[#F0EBE1] hover:text-[#1A3328]"
+                  )}
+                >
+                  <Icon className="size-4.5 shrink-0" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* User */}
