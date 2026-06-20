@@ -1,6 +1,9 @@
 export const dynamic = 'force-dynamic'
 
-interface MockProyecto {
+import { MOCK_PROYECTOS, MOCK_CLIENTES } from '@/lib/mock-data'
+import { TIPO_PERMISO_LABELS } from '@/types'
+
+interface ProyectoExport {
   nombre: string
   cliente: string
   municipio: string
@@ -13,17 +16,18 @@ interface MockProyecto {
   superficie_construida?: number
 }
 
-// Mock project data — in production this would query Supabase
-function getMockProyecto(id: string): MockProyecto {
+function getProyectoExport(id: string): ProyectoExport {
+  const p = MOCK_PROYECTOS.find((p) => p.id === id) ?? MOCK_PROYECTOS[0]
+  const cliente = MOCK_CLIENTES.find((c) => c.id === p.cliente_id)
   return {
-    nombre: `Proyecto ${id}`,
-    cliente: 'Cliente',
-    municipio: 'Las Condes',
-    tipo_permiso: 'Permiso de edificación',
-    estado: 'En tramitación',
-    fecha_inicio: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    direccion: 'No especificada',
-    numero_expediente: `EXP-2026-${id.slice(0, 4).toUpperCase()}`,
+    nombre: p.nombre,
+    cliente: cliente?.nombre ?? '—',
+    municipio: p.municipio,
+    tipo_permiso: TIPO_PERMISO_LABELS[p.tipo] ?? p.tipo,
+    estado: p.estado.replace(/_/g, ' '),
+    fecha_inicio: p.fecha_inicio,
+    direccion: p.direccion,
+    numero_expediente: p.numero_expediente,
     superficie_terreno: undefined,
     superficie_construida: undefined,
   }
@@ -34,9 +38,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-
-  // In production: query Supabase for real project data
-  const proyecto = getMockProyecto(id)
+  const proyecto = getProyectoExport(id)
 
   const fechaExport = new Date().toLocaleDateString('es-CL', {
     day: '2-digit', month: 'long', year: 'numeric',
