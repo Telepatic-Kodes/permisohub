@@ -5,7 +5,14 @@ import Link from "next/link"
 import { LayoutGrid, List, Plus, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -137,10 +144,97 @@ function ProspectoCard({ prospecto }: { prospecto: Prospecto }) {
   )
 }
 
+type NuevoProspectoForm = {
+  empresa: string
+  contacto_nombre: string
+  cargo: string
+  email: string
+  telefono: string
+  fuente: string
+  valor_estimado: string
+}
+
+const FORM_EMPTY: NuevoProspectoForm = {
+  empresa: "", contacto_nombre: "", cargo: "",
+  email: "", telefono: "", fuente: "referido", valor_estimado: "",
+}
+
+function NuevoProspectoDialog({
+  open, onClose,
+}: { open: boolean; onClose: () => void }) {
+  const [form, setForm] = useState<NuevoProspectoForm>(FORM_EMPTY)
+
+  function setField(k: keyof NuevoProspectoForm, v: string) {
+    setForm((f) => ({ ...f, [k]: v }))
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault()
+    // In production this would call a server action / API route
+    alert(`Prospecto "${form.empresa}" guardado (mock). Conecta Supabase para persistencia real.`)
+    setForm(FORM_EMPTY)
+    onClose()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-[#1A3328]">Nuevo prospecto</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4 pt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2 space-y-1.5">
+              <Label htmlFor="np-empresa">Empresa *</Label>
+              <Input id="np-empresa" placeholder="Nombre empresa" required value={form.empresa} onChange={(e) => setField("empresa", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="np-contacto">Nombre contacto *</Label>
+              <Input id="np-contacto" placeholder="Juan Pérez" required value={form.contacto_nombre} onChange={(e) => setField("contacto_nombre", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="np-cargo">Cargo</Label>
+              <Input id="np-cargo" placeholder="Gerente de Expansión" value={form.cargo} onChange={(e) => setField("cargo", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="np-email">Email</Label>
+              <Input id="np-email" type="email" placeholder="email@empresa.cl" value={form.email} onChange={(e) => setField("email", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="np-telefono">Teléfono</Label>
+              <Input id="np-telefono" placeholder="+56 9 XXXX XXXX" value={form.telefono} onChange={(e) => setField("telefono", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Fuente</Label>
+              <Select value={form.fuente} onValueChange={(v) => setField("fuente", v ?? "otro")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(FUENTE_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="np-valor">Valor estimado (CLP)</Label>
+              <Input id="np-valor" type="number" placeholder="1500000" value={form.valor_estimado} onChange={(e) => setField("valor_estimado", e.target.value)} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" className="bg-[#1A3328] text-white hover:bg-[#1A3328]/90">Guardar prospecto</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function ProspectosPage() {
   const [view, setView] = useState<"pipeline" | "lista">("pipeline")
   const [search, setSearch] = useState("")
   const [etapaFilter, setEtapaFilter] = useState("todas")
+  const [showNuevo, setShowNuevo] = useState(false)
 
   const stats = useMemo(() => {
     const activos = MOCK_PROSPECTOS.filter(
@@ -234,10 +328,11 @@ export default function ProspectosPage() {
               Lista
             </button>
           </div>
-          <Button className="bg-[#1A3328] text-white hover:bg-[#1A3328]/90">
+          <Button className="bg-[#1A3328] text-white hover:bg-[#1A3328]/90" onClick={() => setShowNuevo(true)}>
             <Plus className="size-4" />
             Nuevo prospecto
           </Button>
+          <NuevoProspectoDialog open={showNuevo} onClose={() => setShowNuevo(false)} />
         </div>
       </div>
 
