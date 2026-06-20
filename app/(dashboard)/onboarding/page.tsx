@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/client"
+import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -36,16 +37,9 @@ const ESPECIALIDADES = [
   "Otro",
 ] as const
 
-const MUNICIPIOS = [
-  "Las Condes",
-  "Providencia",
-  "Santiago",
-  "Vitacura",
-  "Ñuñoa",
-  "La Florida",
-  "Maipú",
-  "Otro",
-] as const
+const MUNICIPIOS_SORTED = COMUNAS_CHILE
+  .slice()
+  .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
 
 const TOTAL_STEPS = 3
 
@@ -311,9 +305,9 @@ export default function OnboardingPage() {
                       <SelectValue placeholder="Seleccionar municipio" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MUNICIPIOS.map((m) => (
-                        <SelectItem key={m} value={m}>
-                          {m}
+                      {MUNICIPIOS_SORTED.map((c) => (
+                        <SelectItem key={c.id} value={c.nombre}>
+                          {c.nombre}
                         </SelectItem>
                       ))}
                     </SelectContent>

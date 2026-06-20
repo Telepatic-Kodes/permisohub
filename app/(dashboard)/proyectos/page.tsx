@@ -22,7 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { MOCK_PROYECTOS, MUNICIPIOS_PRINCIPALES } from "@/lib/mock-data"
+import { MOCK_PROYECTOS } from "@/lib/mock-data"
+import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 import { PLAN_LIMITS } from "@/lib/plan-limits"
 import { ESTADO_CONFIG, TIPO_PERMISO_LABELS, type EstadoExpediente } from "@/types"
 
@@ -138,11 +139,14 @@ export default function ProyectosPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos</SelectItem>
-            {MUNICIPIOS_PRINCIPALES.map((m) => (
-              <SelectItem key={m} value={m}>
-                {m}
-              </SelectItem>
-            ))}
+            {COMUNAS_CHILE
+              .slice()
+              .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+              .map((c) => (
+                <SelectItem key={c.id} value={c.nombre}>
+                  {c.nombre}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>

@@ -21,7 +21,7 @@ import {
   type CalculoDerechos,
   type TipoObra,
 } from "@/lib/derechos-municipales"
-import { MUNICIPIOS_PRINCIPALES } from "@/lib/mock-data"
+import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 
 const TIPOS_OBRA = Object.entries(TIPO_OBRA_LABELS) as [TipoObra, string][]
 
@@ -105,11 +105,14 @@ export default function CalculadoraDerechosPage() {
                     <SelectValue placeholder="Seleccionar..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {MUNICIPIOS_PRINCIPALES.map((m) => (
-                      <SelectItem key={m} value={m}>
-                        {m}
-                      </SelectItem>
-                    ))}
+                    {COMUNAS_CHILE
+                      .slice()
+                      .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.nombre}>
+                          {c.nombre}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

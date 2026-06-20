@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { MOCK_CLIENTES, MUNICIPIOS_PRINCIPALES } from "@/lib/mock-data"
+import { MOCK_CLIENTES } from "@/lib/mock-data"
+import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 import { ETAPAS_PERMISO, TIPO_PERMISO_LABELS, type TipoPermiso } from "@/types"
 
 const TIPOS = Object.entries(TIPO_PERMISO_LABELS) as [TipoPermiso, string][]
@@ -115,11 +116,14 @@ export default function NuevoProyectoPage() {
                     <SelectValue placeholder="Seleccionar municipio" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MUNICIPIOS_PRINCIPALES.map((m) => (
-                      <SelectItem key={m} value={m}>
-                        {m}
-                      </SelectItem>
-                    ))}
+                    {COMUNAS_CHILE
+                      .slice()
+                      .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.nombre}>
+                          {c.nombre}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
