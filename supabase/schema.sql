@@ -126,6 +126,24 @@ CREATE TABLE IF NOT EXISTS comunicaciones (
 );
 
 -- ----------------------------------------------------------------------------
+-- observaciones_dom
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS observaciones_dom (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  proyecto_id uuid REFERENCES proyectos(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  numero text NOT NULL,
+  texto text NOT NULL,
+  estado text NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'respondida')),
+  fecha date DEFAULT CURRENT_DATE,
+  respuesta text,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE observaciones_dom ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "observaciones_dom_owner" ON observaciones_dom
+  USING (user_id = auth.uid());
+
+-- ----------------------------------------------------------------------------
 -- prospectos (CRM)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS prospectos (

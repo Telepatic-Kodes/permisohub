@@ -132,6 +132,7 @@ export default function ProyectoDetallePage({
   const [documentos, setDocumentos] = useState<Documento[]>(
     MOCK_DOCUMENTOS.filter((d) => d.proyecto_id === id),
   )
+  const [observaciones, setObservaciones] = useState<Observacion[]>(MOCK_OBSERVACIONES.filter(() => false))
 
   useEffect(() => {
     fetch(`/api/proyectos/${id}`)
@@ -145,6 +146,19 @@ export default function ProyectoDetallePage({
         }
       })
       .catch(() => undefined)
+
+    // Load observaciones from dedicated endpoint
+    fetch(`/api/proyectos/${id}/observaciones`)
+      .then((r) => r.json())
+      .then((data: { observaciones?: Observacion[] }) => {
+        if (data.observaciones && data.observaciones.length > 0) {
+          setObservaciones(data.observaciones)
+        } else {
+          // Show mock data in dev so the section is visible
+          setObservaciones(MOCK_OBSERVACIONES)
+        }
+      })
+      .catch(() => setObservaciones(MOCK_OBSERVACIONES))
   }, [id])
 
   const estadoCfg = ESTADO_CONFIG[proyecto.estado]
@@ -243,6 +257,43 @@ export default function ProyectoDetallePage({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(nueva),
+    }).catch(() => undefined)
+  }
+
+  // Observaciones DOM
+  const [obsDialogOpen, setObsDialogOpen] = useState(false)
+  const [obsNumero, setObsNumero] = useState("")
+  const [obsTexto, setObsTexto] = useState("")
+
+  const addObservacion = async () => {
+    if (!obsNumero.trim() || !obsTexto.trim()) return
+    const fecha = new Date().toISOString().slice(0, 10)
+    const nueva: Observacion = {
+      id: `obs-${Date.now()}`,
+      fecha,
+      numero: obsNumero.trim(),
+      texto: obsTexto.trim(),
+      estado: "pendiente",
+    }
+    setObservaciones((prev) => [nueva, ...prev])
+    setObsDialogOpen(false)
+    setObsNumero("")
+    setObsTexto("")
+    fetch(`/api/proyectos/${proyecto.id}/observaciones`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nueva),
+    }).catch(() => undefined)
+  }
+
+  const marcarRespondida = (obsId: string) => {
+    setObservaciones((prev) =>
+      prev.map((o) => o.id === obsId ? { ...o, estado: "respondida" } : o)
+    )
+    fetch(`/api/proyectos/${proyecto.id}/observaciones?obsId=${obsId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado: "respondida" }),
     }).catch(() => undefined)
   }
 
@@ -512,22 +563,66 @@ export default function ProyectoDetallePage({
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Observaciones DOM</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                nativeButton={false}
-                render={<a href={`/herramientas/auditor?proyectoId=${proyecto.id}`} />}
-              >
-                <CheckCircle2 className="size-4" />
-                Responder con IA
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  render={<a href={`/herramientas/auditor?proyectoId=${proyecto.id}`} />}
+                >
+                  <CheckCircle2 className="size-4" />
+                  Responder con IA
+                </Button>
+                <Dialog open={obsDialogOpen} onOpenChange={setObsDialogOpen}>
+                  <DialogTrigger>
+                    <Button variant="outline" size="sm">
+                      <Plus className="size-4" />
+                      Nueva
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Nueva observación DOM</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-2">
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">Número *</p>
+                        <Input
+                          value={obsNumero}
+                          onChange={(e) => setObsNumero(e.target.value)}
+                          placeholder="OBS-001"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">Texto de la observación *</p>
+                        <Textarea
+                          value={obsTexto}
+                          onChange={(e) => setObsTexto(e.target.value)}
+                          placeholder="Se requiere memoria descriptiva actualizada..."
+                          rows={4}
+                        />
+                      </div>
+                      <Button
+                        className="w-full"
+                        onClick={() => void addObservacion()}
+                        disabled={!obsNumero.trim() || !obsTexto.trim()}
+                      >
+                        Guardar observación
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {MOCK_OBSERVACIONES.map((obs) => (
+              {observaciones.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">Sin observaciones registradas.</p>
+              ) : observaciones.map((obs) => (
                 <div
                   key={obs.id}
                   className={cn(
-                    "pl-4 py-2 pr-2",
+                    "pl-4 py-2 pr-2 group",
                     obs.estado === "pendiente"
                       ? "border-l-2 border-amber-400"
                       : "border-l-2 border-green-400"
@@ -560,6 +655,14 @@ export default function ProyectoDetallePage({
                         </span>
                       )}
                     </span>
+                    {obs.estado === "pendiente" && (
+                      <button
+                        onClick={() => marcarRespondida(obs.id)}
+                        className="ml-auto text-xs text-primary/50 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        Marcar respondida
+                      </button>
+                    )}
                   </div>
                   <p className="text-sm text-foreground">{obs.texto}</p>
                 </div>
