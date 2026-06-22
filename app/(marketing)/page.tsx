@@ -15,9 +15,9 @@ import {
 // ---------------------------------------------------------------------------
 
 const STATS = [
-  { value: "124 días", label: "promedio para aprobar un permiso hoy" },
-  { value: "US$2B", label: "pérdidas anuales por permisología" },
-  { value: "84 municipios", label: "con DOM en Línea confirmado" },
+  { value: "449 días", label: "promedio en Santiago para aprobar un permiso" },
+  { value: "7.3% PIB", label: "impacto de la permisología lenta en la economía" },
+  { value: "7.000+", label: "estudios de arquitectura sin herramienta dedicada" },
 ];
 
 const FEATURES = [
@@ -25,57 +25,58 @@ const FEATURES = [
     icon: Bot,
     title: "Chat OGUC con IA",
     description:
-      "Consultas normativas resueltas al instante. Artículos citados, ejemplos concretos.",
+      "Artículos, DDU y circularidades al instante. Cita la norma exacta en segundos.",
   },
   {
     icon: FileText,
     title: "Respuesta a observaciones",
     description:
-      "Sube el PDF de la DOM. Obtén respuestas técnicas formales en 30 segundos.",
+      "Sube el PDF de la DOM. Obtén respuestas técnicas formales redactadas en 30 segundos.",
   },
   {
     icon: CheckCircle2,
-    title: "Verificador pre-ingreso",
+    title: "Score de expediente",
     description:
-      "Detecta errores antes de tramitar. Reduce el ciclo de observaciones.",
+      "Ve qué documentos faltan para el ingreso. Marca, sube y lleva al 100% en minutos.",
   },
   {
     icon: Clock,
-    title: "Contador Ley 21.718",
+    title: "Toolkit Ley 21.718",
     description:
-      "Días hábiles automáticos. Nunca pierdas un plazo legal.",
+      "Countdown de días hábiles, alertas de vencimiento y silencio administrativo en cada proyecto.",
   },
   {
     icon: BarChart3,
-    title: "Inteligencia de municipios",
-    description: "Tiempos reales por DOM. Planifica antes de ingresar.",
+    title: "Inteligencia por municipio",
+    description:
+      "PRC, zonas típicas y observaciones frecuentes de cada DOM. 345 comunas cubiertas.",
   },
   {
     icon: MessageCircle,
-    title: "WhatsApp automático",
+    title: "Portal de cliente sin login",
     description:
-      "Clientes informados en cada hito. Sin esfuerzo manual.",
+      "Comparte un link. El mandante ve el estado del proyecto sin crear cuenta.",
   },
 ];
 
 const PROBLEMA = [
   {
     step: "01",
-    title: "Preparar documentos sin guía",
+    title: "Expediente armado de memoria",
     description:
-      "Cada expediente se arma a mano, sin saber con certeza qué pide cada DOM.",
+      "Sin guía, cada arquitecto reconstruye desde cero qué exige cada DOM. 8–20 hrs perdidas por proyecto.",
   },
   {
     step: "02",
-    title: "Esperar 124 días sin visibilidad",
+    title: "449 días esperando sin visibilidad",
     description:
-      "El trámite avanza en una caja negra: ni el arquitecto ni el cliente saben en qué etapa está.",
+      "El trámite avanza en una caja negra. El cliente llama dos veces por semana preguntando qué pasó.",
   },
   {
     step: "03",
-    title: "Responder observaciones manualmente",
+    title: "Observaciones respondidas a mano",
     description:
-      "Cada ronda de observaciones se redacta desde cero, alargando el ciclo semana tras semana.",
+      "Cada ronda de la DOM se redacta desde cero, con riesgo de perder el hilo entre observación y respuesta.",
   },
 ];
 
