@@ -34,7 +34,7 @@ import {
   MOCK_ETAPAS,
   MOCK_PROYECTOS,
 } from "@/lib/mock-data"
-import { ESTADO_CONFIG, TIPO_PERMISO_LABELS } from "@/types"
+import { ESTADO_CONFIG, TIPO_PERMISO_LABELS, type Proyecto, type Etapa, type Comunicacion, type Documento } from "@/types"
 import { getEstadoPlazoLey21718, formatFecha } from "@/lib/dias-habiles"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -95,6 +95,14 @@ function docIcon(tipo: string) {
   return <FileText className="size-5 text-primary" />
 }
 
+interface ProyectoDetalleData {
+  proyecto: Proyecto
+  etapas: Etapa[]
+  comunicaciones: Comunicacion[]
+  documentos: Documento[]
+  source: string
+}
+
 export default function ProyectoDetallePage({
   params,
 }: {
@@ -102,7 +110,32 @@ export default function ProyectoDetallePage({
 }) {
   const { id } = use(params)
 
-  const proyecto = MOCK_PROYECTOS.find((p) => p.id === id) ?? MOCK_PROYECTOS[0]
+  const initialProyecto = MOCK_PROYECTOS.find((p) => p.id === id) ?? MOCK_PROYECTOS[0]
+  const [proyecto, setProyecto] = useState<Proyecto>(initialProyecto)
+  const [etapas, setEtapas] = useState<Etapa[]>(
+    MOCK_ETAPAS.filter((e) => e.proyecto_id === id),
+  )
+  const [comunicaciones, setComunicaciones] = useState<Comunicacion[]>(
+    MOCK_COMUNICACIONES.filter((c) => c.proyecto_id === id),
+  )
+  const [documentos, setDocumentos] = useState<Documento[]>(
+    MOCK_DOCUMENTOS.filter((d) => d.proyecto_id === id),
+  )
+
+  useEffect(() => {
+    fetch(`/api/proyectos/${id}`)
+      .then((r) => r.json())
+      .then((data: ProyectoDetalleData) => {
+        if (data.source === 'db' && data.proyecto) {
+          setProyecto(data.proyecto)
+          setEtapas(data.etapas ?? [])
+          setComunicaciones(data.comunicaciones ?? [])
+          setDocumentos(data.documentos ?? [])
+        }
+      })
+      .catch(() => undefined)
+  }, [id])
+
   const estadoCfg = ESTADO_CONFIG[proyecto.estado]
 
   // Calculate days since inicio
@@ -262,7 +295,7 @@ export default function ProyectoDetallePage({
               Documentos
             </p>
             <p className="text-xl font-semibold text-primary font-display mt-1">
-              {MOCK_DOCUMENTOS.length}
+              {documentos.length}
             </p>
           </div>
           <div className="rounded-xl border border-border bg-white p-4">
@@ -307,8 +340,8 @@ export default function ProyectoDetallePage({
             </CardHeader>
             <CardContent>
               <ol className="relative space-y-0">
-                {MOCK_ETAPAS.map((etapa, idx) => {
-                  const isLast = idx === MOCK_ETAPAS.length - 1
+                {etapas.map((etapa, idx) => {
+                  const isLast = idx === etapas.length - 1
                   const completed = etapa.estado === "completada"
                   const current = etapa.estado === "en_curso"
                   return (
@@ -455,7 +488,7 @@ export default function ProyectoDetallePage({
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              {MOCK_COMUNICACIONES.map((c) => (
+              {comunicaciones.map((c) => (
                 <div
                   key={c.id}
                   className="border-l-2 border-border pl-4 last:pb-0"
@@ -597,7 +630,7 @@ export default function ProyectoDetallePage({
               </Button>
             </CardHeader>
             <CardContent className="space-y-2">
-              {MOCK_DOCUMENTOS.map((d) => (
+              {documentos.map((d) => (
                 <div
                   key={d.id}
                   className="flex items-center gap-3 rounded-lg border border-border p-3"
@@ -702,7 +735,7 @@ function PlazoLey21718Card({
 }: {
   fechaIngreso: string
   tieneRevisorIndependiente: boolean
-  proyecto: (typeof MOCK_PROYECTOS)[number]
+  proyecto: Proyecto
 }) {
   const estado = getEstadoPlazoLey21718(
     new Date(`${fechaIngreso}T00:00:00`),

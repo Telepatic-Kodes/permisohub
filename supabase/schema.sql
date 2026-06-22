@@ -4,10 +4,26 @@
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
+-- profiles (un registro por usuario autenticado)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  nombre text,
+  especialidad text,
+  municipio_principal text,
+  onboarding_completed boolean DEFAULT false,
+  onboarding_step int DEFAULT 0,
+  plan text DEFAULT 'starter',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- ----------------------------------------------------------------------------
 -- clientes
 -- ----------------------------------------------------------------------------
-CREATE TABLE clientes (
+CREATE TABLE IF NOT EXISTS clientes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   nombre text NOT NULL,
   rut text,
   contacto_nombre text,
@@ -18,9 +34,9 @@ CREATE TABLE clientes (
 );
 
 -- ----------------------------------------------------------------------------
--- municipios
+-- municipios (referencia, no por usuario)
 -- ----------------------------------------------------------------------------
-CREATE TABLE municipios (
+CREATE TABLE IF NOT EXISTS municipios (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   nombre text NOT NULL,
   region text NOT NULL DEFAULT 'Metropolitana',
@@ -37,7 +53,7 @@ CREATE TABLE municipios (
 -- ----------------------------------------------------------------------------
 -- requisitos_municipio
 -- ----------------------------------------------------------------------------
-CREATE TABLE requisitos_municipio (
+CREATE TABLE IF NOT EXISTS requisitos_municipio (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   municipio_id uuid REFERENCES municipios(id) ON DELETE CASCADE,
   nombre text NOT NULL,
@@ -48,13 +64,15 @@ CREATE TABLE requisitos_municipio (
 
 -- ----------------------------------------------------------------------------
 -- proyectos
+-- NOTE: municipio es texto libre (nombre de la comuna), no FK a municipios.
 -- ----------------------------------------------------------------------------
-CREATE TABLE proyectos (
+CREATE TABLE IF NOT EXISTS proyectos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   cliente_id uuid REFERENCES clientes(id) ON DELETE SET NULL,
-  municipio_id uuid REFERENCES municipios(id) ON DELETE SET NULL,
   nombre text NOT NULL,
   direccion text,
+  municipio text,
   tipo text NOT NULL DEFAULT 'permiso_edificacion',
   estado text NOT NULL DEFAULT 'borrador',
   etapa_actual text,
@@ -69,7 +87,7 @@ CREATE TABLE proyectos (
 -- ----------------------------------------------------------------------------
 -- etapas
 -- ----------------------------------------------------------------------------
-CREATE TABLE etapas (
+CREATE TABLE IF NOT EXISTS etapas (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   proyecto_id uuid REFERENCES proyectos(id) ON DELETE CASCADE,
   nombre text NOT NULL,
@@ -83,7 +101,7 @@ CREATE TABLE etapas (
 -- ----------------------------------------------------------------------------
 -- documentos
 -- ----------------------------------------------------------------------------
-CREATE TABLE documentos (
+CREATE TABLE IF NOT EXISTS documentos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   proyecto_id uuid REFERENCES proyectos(id) ON DELETE CASCADE,
   nombre text NOT NULL,
@@ -96,7 +114,7 @@ CREATE TABLE documentos (
 -- ----------------------------------------------------------------------------
 -- comunicaciones
 -- ----------------------------------------------------------------------------
-CREATE TABLE comunicaciones (
+CREATE TABLE IF NOT EXISTS comunicaciones (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   proyecto_id uuid REFERENCES proyectos(id) ON DELETE CASCADE,
   fecha date DEFAULT CURRENT_DATE,
@@ -108,18 +126,56 @@ CREATE TABLE comunicaciones (
 );
 
 -- ----------------------------------------------------------------------------
--- Índices útiles
+-- prospectos (CRM)
 -- ----------------------------------------------------------------------------
-CREATE INDEX idx_proyectos_cliente_id ON proyectos(cliente_id);
-CREATE INDEX idx_proyectos_municipio_id ON proyectos(municipio_id);
-CREATE INDEX idx_proyectos_estado ON proyectos(estado);
-CREATE INDEX idx_etapas_proyecto_id ON etapas(proyecto_id);
-CREATE INDEX idx_documentos_proyecto_id ON documentos(proyecto_id);
-CREATE INDEX idx_comunicaciones_proyecto_id ON comunicaciones(proyecto_id);
-CREATE INDEX idx_requisitos_municipio_id ON requisitos_municipio(municipio_id);
+CREATE TABLE IF NOT EXISTS prospectos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  empresa text NOT NULL,
+  contacto_nombre text NOT NULL,
+  cargo text,
+  email text,
+  telefono text,
+  linkedin_url text,
+  fuente text DEFAULT 'web',
+  etapa text NOT NULL DEFAULT 'nuevo_contacto',
+  valor_estimado int,
+  municipios_interes text[],
+  notas text,
+  proximo_contacto date,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
 
 -- ----------------------------------------------------------------------------
--- Trigger: mantener proyectos.updated_at
+-- actividades_crm
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS actividades_crm (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  prospecto_id uuid REFERENCES prospectos(id) ON DELETE CASCADE,
+  tipo text NOT NULL DEFAULT 'nota',
+  descripcion text NOT NULL,
+  fecha date DEFAULT CURRENT_DATE,
+  resultado text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- ----------------------------------------------------------------------------
+-- Índices
+-- ----------------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_proyectos_user_id ON proyectos(user_id);
+CREATE INDEX IF NOT EXISTS idx_proyectos_cliente_id ON proyectos(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_proyectos_estado ON proyectos(estado);
+CREATE INDEX IF NOT EXISTS idx_clientes_user_id ON clientes(user_id);
+CREATE INDEX IF NOT EXISTS idx_prospectos_user_id ON prospectos(user_id);
+CREATE INDEX IF NOT EXISTS idx_etapas_proyecto_id ON etapas(proyecto_id);
+CREATE INDEX IF NOT EXISTS idx_documentos_proyecto_id ON documentos(proyecto_id);
+CREATE INDEX IF NOT EXISTS idx_comunicaciones_proyecto_id ON comunicaciones(proyecto_id);
+CREATE INDEX IF NOT EXISTS idx_actividades_prospecto_id ON actividades_crm(prospecto_id);
+CREATE INDEX IF NOT EXISTS idx_requisitos_municipio_id ON requisitos_municipio(municipio_id);
+
+-- ----------------------------------------------------------------------------
+-- Trigger: mantener updated_at
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS trigger AS $$
@@ -129,17 +185,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_proyectos_updated_at
+CREATE OR REPLACE TRIGGER trg_proyectos_updated_at
   BEFORE UPDATE ON proyectos
-  FOR EACH ROW
-  EXECUTE FUNCTION set_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE OR REPLACE TRIGGER trg_prospectos_updated_at
+  BEFORE UPDATE ON prospectos
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE OR REPLACE TRIGGER trg_profiles_updated_at
+  BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ----------------------------------------------------------------------------
 -- Row Level Security
--- Habilitada en todas las tablas. Se permite el acceso completo a usuarios
--- autenticados (modelo de un solo tenant interno: EP Gestión Arquitectónica).
--- Ajustar políticas si se requiere multi-tenant en el futuro.
 -- ----------------------------------------------------------------------------
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE municipios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE requisitos_municipio ENABLE ROW LEVEL SECURITY;
@@ -147,26 +208,63 @@ ALTER TABLE proyectos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE etapas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documentos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comunicaciones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prospectos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE actividades_crm ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "auth_all_clientes" ON clientes
+-- Profiles: cada usuario solo ve/edita su propio perfil
+CREATE POLICY "profiles_own" ON profiles
+  FOR ALL TO authenticated USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+
+-- Clientes: cada usuario solo ve/edita sus propios clientes
+CREATE POLICY "clientes_own" ON clientes
+  FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+-- Municipios: lectura pública, escritura solo autenticados
+CREATE POLICY "municipios_read" ON municipios
+  FOR SELECT USING (true);
+CREATE POLICY "municipios_write" ON municipios
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "auth_all_municipios" ON municipios
+
+-- Requisitos: lectura pública
+CREATE POLICY "requisitos_read" ON requisitos_municipio
+  FOR SELECT USING (true);
+CREATE POLICY "requisitos_write" ON requisitos_municipio
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "auth_all_requisitos_municipio" ON requisitos_municipio
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "auth_all_proyectos" ON proyectos
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "auth_all_etapas" ON etapas
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "auth_all_documentos" ON documentos
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "auth_all_comunicaciones" ON comunicaciones
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Proyectos: cada usuario solo ve/edita los suyos
+CREATE POLICY "proyectos_own" ON proyectos
+  FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+-- Etapas: heredan acceso via proyecto del usuario
+CREATE POLICY "etapas_own" ON etapas
+  FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM proyectos p WHERE p.id = proyecto_id AND p.user_id = auth.uid())
+  );
+
+-- Documentos: heredan acceso via proyecto del usuario
+CREATE POLICY "documentos_own" ON documentos
+  FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM proyectos p WHERE p.id = proyecto_id AND p.user_id = auth.uid())
+  );
+
+-- Comunicaciones: heredan acceso via proyecto del usuario
+CREATE POLICY "comunicaciones_own" ON comunicaciones
+  FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM proyectos p WHERE p.id = proyecto_id AND p.user_id = auth.uid())
+  );
+
+-- Prospectos: cada usuario solo ve/edita los suyos
+CREATE POLICY "prospectos_own" ON prospectos
+  FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+-- Actividades CRM: heredan acceso via prospecto del usuario
+CREATE POLICY "actividades_own" ON actividades_crm
+  FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM prospectos pr WHERE pr.id = prospecto_id AND pr.user_id = auth.uid())
+  );
 
 -- ============================================================================
--- Seed: 10 municipios principales
--- Plazos típicos (días) basados en estimaciones referenciales del trámite
--- de permiso de edificación en cada Dirección de Obras Municipales (DOM).
+-- Seed: 10 municipios principales de Chile
 -- ============================================================================
 INSERT INTO municipios
   (nombre, region, dom_telefono, dom_email, dom_horario, plataforma_digital, url_dom, plazo_tipico_dias, notas_internas)
@@ -210,4 +308,5 @@ VALUES
   ('Rancagua', 'O''Higgins', '+56 72 220 0900', 'obras@rancagua.cl',
    'Lun a Vie 8:30 - 14:00', NULL,
    'https://www.rancagua.cl/direccion-de-obras/', 45,
-   'Capital regional de O''Higgins; coordinar con SEREMI cuando aplique.');
+   'Capital regional de O''Higgins; coordinar con SEREMI cuando aplique.')
+ON CONFLICT DO NOTHING;

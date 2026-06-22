@@ -10,8 +10,9 @@ import {
 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { cn } from "@/lib/utils"
-import { MOCK_PROYECTOS, MOCK_CLIENTES } from "@/lib/mock-data"
+import { MOCK_PROYECTOS } from "@/lib/mock-data"
 import type { EstadoExpediente, Proyecto } from "@/types"
+import { createClient } from "@/lib/supabase/server"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -39,9 +40,6 @@ function daysFromNow(dateStr: string): number {
   )
 }
 
-function clienteNombre(clienteId: string): string {
-  return MOCK_CLIENTES.find((c) => c.id === clienteId)?.nombre ?? "—"
-}
 
 // ---------------------------------------------------------------------------
 // Timeline data types
@@ -69,7 +67,7 @@ interface TimelineSections {
   completado: TimelineRow[]
 }
 
-function buildTimeline(): { sections: TimelineSections; stats: { activos: number; urgentes: number; diasPromedio: number; byEstado: Partial<Record<EstadoExpediente, number>> } } {
+function buildTimeline(proyectos: Proyecto[]): { sections: TimelineSections; stats: { activos: number; urgentes: number; diasPromedio: number; byEstado: Partial<Record<EstadoExpediente, number>> } } {
   const now = new Date()
   now.setHours(0, 0, 0, 0)
   const en30dias = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
@@ -83,7 +81,7 @@ function buildTimeline(): { sections: TimelineSections; stats: { activos: number
   const proyectosConObsIds = new Set<string>()
 
   // Sort projects: con_observaciones first, then by fecha_estimada
-  const sorted = [...MOCK_PROYECTOS].sort((a, b) => {
+  const sorted = [...proyectos].sort((a, b) => {
     if (a.estado === "con_observaciones" && b.estado !== "con_observaciones") return -1
     if (b.estado === "con_observaciones" && a.estado !== "con_observaciones") return 1
     const da = a.fecha_estimada ? new Date(`${a.fecha_estimada}T00:00:00`).getTime() : Infinity
@@ -116,10 +114,10 @@ function buildTimeline(): { sections: TimelineSections; stats: { activos: number
     accionRequerida.push({ kind: "alerta", alerta })
   }
 
-  const activos = MOCK_PROYECTOS.filter((p) => !["aprobado", "rechazado"].includes(p.estado)).length
-  const urgentes = MOCK_PROYECTOS.filter((p) => p.estado === "con_observaciones").length
+  const activos = proyectos.filter((p) => !["aprobado", "rechazado"].includes(p.estado)).length
+  const urgentes = proyectos.filter((p) => p.estado === "con_observaciones").length
 
-  const activosConFecha = MOCK_PROYECTOS.filter(
+  const activosConFecha = proyectos.filter(
     (p) => p.fecha_inicio && !["aprobado", "rechazado", "borrador"].includes(p.estado)
   )
   const diasPromedio =
@@ -196,7 +194,7 @@ function ProyectoRow({ proyecto, dias }: { proyecto: Proyecto; dias: number | nu
           )}
         </div>
         <p className="text-[11px] text-muted-foreground/70">
-          {clienteNombre(proyecto.cliente_id)} · {proyecto.municipio}
+          {proyecto.cliente?.nombre ?? "—"} · {proyecto.municipio}
         </p>
       </div>
 
@@ -266,9 +264,24 @@ function TimelineSection({
 // Page
 // ---------------------------------------------------------------------------
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  let proyectos: Proyecto[] = MOCK_PROYECTOS
+
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('proyectos')
+      .select('*, cliente:clientes(*)')
+      .order('created_at', { ascending: false })
+    if (!error && data && data.length > 0) {
+      proyectos = data as unknown as Proyecto[]
+    }
+  } catch {
+    // Supabase not configured — use mock data
+  }
+
   const { saludo, fechaCorta } = saludoFecha()
-  const { sections, stats } = buildTimeline()
+  const { sections, stats } = buildTimeline(proyectos)
 
   const PIPELINE_LABELS: Partial<Record<EstadoExpediente, string>> = {
     borrador: "Borrador",

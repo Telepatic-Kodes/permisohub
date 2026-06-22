@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
   Building2,
@@ -39,6 +39,7 @@ import { PLAN_LIMITS } from "@/lib/plan-limits"
 import {
   TIPO_PERMISO_LABELS,
   type EstadoExpediente,
+  type Proyecto,
 } from "@/types"
 import { cn } from "@/lib/utils"
 
@@ -96,7 +97,7 @@ function ProyectoCard({
   proyecto,
   compact = false,
 }: {
-  proyecto: (typeof MOCK_PROYECTOS)[number]
+  proyecto: Proyecto
   compact?: boolean
 }) {
   const fecha = formatDate(proyecto.fecha_estimada)
@@ -167,7 +168,7 @@ function KanbanColumn({
   proyectos,
 }: {
   estado: EstadoExpediente
-  proyectos: (typeof MOCK_PROYECTOS)
+  proyectos: Proyecto[]
 }) {
   return (
     <div className="flex w-[272px] shrink-0 flex-col">
@@ -205,14 +206,26 @@ export default function ProyectosPage() {
   const [estado, setEstado] = useState("todos")
   const [municipio, setMunicipio] = useState("todos")
   const [view, setView] = useState<ViewMode>("kanban")
+  const [allProyectos, setAllProyectos] = useState<Proyecto[]>(MOCK_PROYECTOS)
 
-  const totalProyectos = MOCK_PROYECTOS.length
+  useEffect(() => {
+    fetch('/api/proyectos')
+      .then((r) => r.json())
+      .then((json: { data: Proyecto[]; source: string }) => {
+        if (json.data && json.data.length > 0 && json.source === 'db') {
+          setAllProyectos(json.data)
+        }
+      })
+      .catch(() => undefined)
+  }, [])
+
+  const totalProyectos = allProyectos.length
   const starterLimit = PLAN_LIMITS.starter.projects
   const atStarterLimit = totalProyectos >= starterLimit
 
   const proyectos = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return MOCK_PROYECTOS.filter((p) => {
+    return allProyectos.filter((p) => {
       const matchSearch =
         !q ||
         p.nombre.toLowerCase().includes(q) ||

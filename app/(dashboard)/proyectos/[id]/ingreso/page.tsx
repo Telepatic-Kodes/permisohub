@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, CheckCircle2, Circle, ExternalLink, FileText, Upload, AlertCircle, ChevronRight, ChevronLeft, Package } from "lucide-react"
 
@@ -25,7 +25,16 @@ export default function IngresoPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
-  const proyecto = MOCK_PROYECTOS.find((p) => p.id === id)
+  const [proyecto, setProyecto] = useState(MOCK_PROYECTOS.find((p) => p.id === id))
+
+  useEffect(() => {
+    fetch(`/api/proyectos/${id}`)
+      .then(r => r.json())
+      .then((d: { proyecto?: (typeof MOCK_PROYECTOS)[number]; source?: string }) => {
+        if (d.source === 'db' && d.proyecto) setProyecto(d.proyecto)
+      })
+      .catch(() => undefined)
+  }, [id])
 
   const [step, setStep] = useState(0)
   const [checkedDocs, setCheckedDocs] = useState<Set<string>>(new Set())

@@ -1,6 +1,6 @@
 "use client"
 
-import { type FormEvent } from "react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
 import Link from "next/link"
 import { ExternalLink, Plus } from "lucide-react"
 
@@ -31,13 +31,65 @@ import {
   MOCK_CLIENTES,
   PROYECTOS_ACTIVOS_POR_CLIENTE,
 } from "@/lib/mock-data"
+import type { Cliente } from "@/types"
 
 export default function ClientesPage() {
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  const [clientes, setClientes] = useState<Cliente[]>(MOCK_CLIENTES)
+  const [proyectosCount, setProyectosCount] = useState<Record<string, number>>(
+    PROYECTOS_ACTIVOS_POR_CLIENTE,
+  )
+  const [saving, setSaving] = useState(false)
+  const closeRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    fetch('/api/clientes')
+      .then((r) => r.json())
+      .then((json: { data: Cliente[]; source: string }) => {
+        if (json.data && json.data.length > 0 && json.source === 'db') {
+          setClientes(json.data)
+          setProyectosCount({})
+        }
+      })
+      .catch(() => undefined)
+  }, [])
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    setSaving(true)
     const form = new FormData(e.currentTarget)
-    // eslint-disable-next-line no-console
-    console.log("Nuevo cliente:", Object.fromEntries(form.entries()))
+    const body = {
+      nombre: form.get('nombre') as string,
+      rut: form.get('rut') as string,
+      contacto_nombre: form.get('contacto') as string,
+      email: form.get('email') as string,
+      telefono: form.get('telefono') as string,
+      notas: form.get('notas') as string,
+    }
+
+    try {
+      const res = await fetch('/api/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const json = await res.json() as { ok: boolean; id: string; cliente?: Cliente }
+      if (json.ok) {
+        const nuevoCliente: Cliente = json.cliente ?? {
+          id: json.id,
+          nombre: body.nombre,
+          rut: body.rut || undefined,
+          contacto_nombre: body.contacto_nombre || undefined,
+          email: body.email || undefined,
+          telefono: body.telefono || undefined,
+          notas: body.notas || undefined,
+          created_at: new Date().toISOString(),
+        }
+        setClientes((prev) => [nuevoCliente, ...prev])
+        closeRef.current?.click()
+      }
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -98,10 +150,12 @@ export default function ClientesPage() {
                   <Textarea id="notas" name="notas" rows={3} />
                 </div>
                 <DialogFooter>
-                  <DialogClose render={<Button variant="outline" />}>
+                  <DialogClose render={<Button ref={closeRef} variant="outline" />}>
                     Cancelar
                   </DialogClose>
-                  <Button type="submit">Guardar cliente</Button>
+                  <Button type="submit" disabled={saving}>
+                    {saving ? "Guardando…" : "Guardar cliente"}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -132,7 +186,7 @@ export default function ClientesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {MOCK_CLIENTES.map((c) => (
+              {clientes.map((c) => (
                 <TableRow
                   key={c.id}
                   className="group/row hover:bg-primary/[0.02]"
@@ -152,7 +206,7 @@ export default function ClientesPage() {
                   </TableCell>
                   <TableCell>
                     <span className="inline-flex min-w-6 justify-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                      {PROYECTOS_ACTIVOS_POR_CLIENTE[c.id] ?? 0}
+                      {proyectosCount[c.id] ?? 0}
                     </span>
                   </TableCell>
                   <TableCell className="w-16">

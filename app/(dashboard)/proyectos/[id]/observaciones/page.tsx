@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, use } from "react"
+import { useState, use, useEffect } from "react"
 import { Upload, FileText, AlertCircle, CheckCircle2, AlertTriangle, Loader2, Wand2, Copy, ChevronDown, ChevronUp, MessageCircle, FileDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -54,7 +54,16 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
   const [notificando, setNotificando] = useState(false)
   const [notificadoOk, setNotificadoOk] = useState(false)
 
-  const proyecto = MOCK_PROYECTOS.find(p => p.id === id)
+  const [proyecto, setProyecto] = useState(MOCK_PROYECTOS.find(p => p.id === id))
+
+  useEffect(() => {
+    fetch(`/api/proyectos/${id}`)
+      .then(r => r.json())
+      .then((d: { proyecto?: (typeof MOCK_PROYECTOS)[number]; source?: string }) => {
+        if (d.source === 'db' && d.proyecto) setProyecto(d.proyecto)
+      })
+      .catch(() => undefined)
+  }, [id])
   const municipioStats = result?.municipio
     ? ESTADISTICAS_MUNICIPIOS.find(m => m.nombre === result.municipio)
     : null

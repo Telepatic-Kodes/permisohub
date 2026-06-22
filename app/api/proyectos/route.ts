@@ -1,6 +1,26 @@
 import { createClient } from '@/lib/supabase/server'
+import { MOCK_PROYECTOS } from '@/lib/mock-data'
 
 export const dynamic = 'force-dynamic'
+
+export async function GET() {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('proyectos')
+      .select('*, cliente:clientes(*)')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return Response.json({ data: data ?? [], source: 'db' })
+  } catch {
+    if (process.env.NODE_ENV !== 'production') {
+      return Response.json({ data: MOCK_PROYECTOS, source: 'mock' })
+    }
+    return Response.json({ error: 'Error al obtener proyectos' }, { status: 500 })
+  }
+}
 
 interface NuevoProyectoBody {
   nombre: string

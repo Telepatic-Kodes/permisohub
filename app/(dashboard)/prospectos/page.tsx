@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { ExternalLink, LayoutGrid, List, Plus, Search } from "lucide-react"
 
@@ -162,20 +162,54 @@ const FORM_EMPTY: NuevoProspectoForm = {
 }
 
 function NuevoProspectoDialog({
-  open, onClose,
-}: { open: boolean; onClose: () => void }) {
+  open, onClose, onCreated,
+}: { open: boolean; onClose: () => void; onCreated?: (p: Prospecto) => void }) {
   const [form, setForm] = useState<NuevoProspectoForm>(FORM_EMPTY)
+  const [saving, setSaving] = useState(false)
 
   function setField(k: keyof NuevoProspectoForm, v: string) {
     setForm((f) => ({ ...f, [k]: v }))
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
-    // In production this would call a server action / API route
-    alert(`Prospecto "${form.empresa}" guardado (mock). Conecta Supabase para persistencia real.`)
-    setForm(FORM_EMPTY)
-    onClose()
+    setSaving(true)
+    try {
+      const res = await fetch('/api/prospectos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          empresa: form.empresa,
+          contacto_nombre: form.contacto_nombre,
+          cargo: form.cargo || undefined,
+          email: form.email || undefined,
+          telefono: form.telefono || undefined,
+          fuente: form.fuente,
+          valor_estimado: form.valor_estimado ? parseInt(form.valor_estimado, 10) : undefined,
+          etapa: 'nuevo_contacto',
+        }),
+      })
+      const json = await res.json() as { ok: boolean; id: string; prospecto?: Prospecto }
+      if (json.ok) {
+        const nuevo: Prospecto = json.prospecto ?? {
+          id: json.id,
+          empresa: form.empresa,
+          contacto_nombre: form.contacto_nombre,
+          cargo: form.cargo || undefined,
+          email: form.email || undefined,
+          telefono: form.telefono || undefined,
+          fuente: form.fuente as Prospecto['fuente'],
+          etapa: 'nuevo_contacto',
+          valor_estimado: form.valor_estimado ? parseInt(form.valor_estimado, 10) : undefined,
+          created_at: new Date().toISOString(),
+        }
+        onCreated?.(nuevo)
+        setForm(FORM_EMPTY)
+        onClose()
+      }
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -224,7 +258,9 @@ function NuevoProspectoDialog({
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" className="bg-[#1A3328] text-white hover:bg-[#1A3328]/90">Guardar prospecto</Button>
+            <Button type="submit" disabled={saving} className="bg-[#1A3328] text-white hover:bg-[#1A3328]/90">
+              {saving ? "Guardando…" : "Guardar prospecto"}
+            </Button>
           </div>
         </form>
       </DialogContent>
@@ -237,15 +273,27 @@ export default function ProspectosPage() {
   const [search, setSearch] = useState("")
   const [etapaFilter, setEtapaFilter] = useState("todas")
   const [showNuevo, setShowNuevo] = useState(false)
+  const [allProspectos, setAllProspectos] = useState<Prospecto[]>(MOCK_PROSPECTOS)
+
+  useEffect(() => {
+    fetch('/api/prospectos')
+      .then((r) => r.json())
+      .then((json: { data: Prospecto[]; source: string }) => {
+        if (json.data && json.data.length > 0 && json.source === 'db') {
+          setAllProspectos(json.data)
+        }
+      })
+      .catch(() => undefined)
+  }, [])
 
   const stats = useMemo(() => {
-    const activos = MOCK_PROSPECTOS.filter(
+    const activos = allProspectos.filter(
       (p) => p.etapa !== "ganado" && p.etapa !== "descartado"
     )
-    const enNegociacion = MOCK_PROSPECTOS.filter(
+    const enNegociacion = allProspectos.filter(
       (p) => p.etapa === "negociando" || p.etapa === "propuesta_enviada"
     ).length
-    const ganadosMes = MOCK_PROSPECTOS.filter(
+    const ganadosMes = allProspectos.filter(
       (p) => p.etapa === "ganado"
     ).length
     const valorPipeline = activos.reduce(
@@ -258,10 +306,10 @@ export default function ProspectosPage() {
       ganadosMes,
       valorPipeline,
     }
-  }, [])
+  }, [allProspectos])
 
-  const ganados = MOCK_PROSPECTOS.filter((p) => p.etapa === "ganado")
-  const descartados = MOCK_PROSPECTOS.filter((p) => p.etapa === "descartado")
+  const ganados = allProspectos.filter((p) => p.etapa === "ganado")
+  const descartados = allProspectos.filter((p) => p.etapa === "descartado")
 
   const byEtapa = useMemo(() => {
     const map: Record<EtapaCRM, Prospecto[]> = {
@@ -273,13 +321,13 @@ export default function ProspectosPage() {
       ganado: [],
       descartado: [],
     }
-    for (const p of MOCK_PROSPECTOS) map[p.etapa].push(p)
+    for (const p of allProspectos) map[p.etapa].push(p)
     return map
-  }, [])
+  }, [allProspectos])
 
   const listaFiltrada = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return MOCK_PROSPECTOS.filter((p) => {
+    return allProspectos.filter((p) => {
       const matchSearch =
         !q ||
         p.empresa.toLowerCase().includes(q) ||
@@ -287,7 +335,7 @@ export default function ProspectosPage() {
       const matchEtapa = etapaFilter === "todas" || p.etapa === etapaFilter
       return matchSearch && matchEtapa
     })
-  }, [search, etapaFilter])
+  }, [allProspectos, search, etapaFilter])
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -332,6 +380,7 @@ export default function ProspectosPage() {
             <NuevoProspectoDialog
               open={showNuevo}
               onClose={() => setShowNuevo(false)}
+              onCreated={(p) => setAllProspectos((prev) => [p, ...prev])}
             />
           </div>
         }
