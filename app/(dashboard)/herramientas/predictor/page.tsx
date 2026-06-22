@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { AlertCircle, Calendar, Loader2, Target, TrendingDown, TrendingUp } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
@@ -44,12 +45,13 @@ const TIPOS_OBRA = [
 ]
 
 export default function PredictorPage() {
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<PredictResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const [form, setForm] = useState({
-    municipio: '',
+    municipio: searchParams.get("municipio") ?? '',
     zonaPRC: '',
     superficieTerreno: '',
     superficieConstruida: '',
@@ -58,7 +60,7 @@ export default function PredictorPage() {
     alturaMaxima: '',
     distanciamientoFrontal: '',
     distanciamientoLateral: '',
-    tipoObra: 'permiso_edificacion',
+    tipoObra: searchParams.get("tipo") ?? 'permiso_edificacion',
   })
 
   function setField(k: keyof typeof form, v: string | null) {
