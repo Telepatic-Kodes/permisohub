@@ -750,6 +750,42 @@ export default function ProyectoDetallePage({
             proyectoId={proyecto.id}
           />
 
+          {/* Herramientas IA del proyecto */}
+          <div className="rounded-xl border border-border bg-white p-4 space-y-2">
+            <p className="text-xs font-semibold text-primary/60 uppercase tracking-wider">Herramientas IA</p>
+            {[
+              {
+                label: "Generar Memoria Descriptiva",
+                href: `/herramientas/memoria?nombre=${encodeURIComponent(proyecto.nombre)}&municipio=${encodeURIComponent(proyecto.municipio)}&direccion=${encodeURIComponent(proyecto.direccion ?? "")}&tipo=${encodeURIComponent(proyecto.tipo)}`,
+                icon: "📄",
+              },
+              {
+                label: "Predecir observaciones DOM",
+                href: `/herramientas/predictor?municipio=${encodeURIComponent(proyecto.municipio)}&tipo=${encodeURIComponent(proyecto.tipo)}`,
+                icon: "🔮",
+              },
+              {
+                label: "Consultar OGUC",
+                href: `/herramientas/oguc-chat?municipio=${encodeURIComponent(proyecto.municipio)}`,
+                icon: "💬",
+              },
+              {
+                label: "Ver ficha DOM",
+                href: `/municipios/${encodeURIComponent(proyecto.municipio.toLowerCase().replace(/\s+/g, "-"))}`,
+                icon: "🏛️",
+              },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[11.5px] font-medium text-primary/70 hover:bg-[#F9F7F3] hover:text-primary transition-colors"
+              >
+                <span className="text-sm">{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+          </div>
+
           {/* Plazo Ley 21.718 */}
           {proyecto.fecha_inicio && (
             <PlazoLey21718Card

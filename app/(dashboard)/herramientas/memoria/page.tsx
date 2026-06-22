@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import type { ReactNode } from "react"
 import { BookText, Download, Loader2 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -138,17 +139,18 @@ function MemoriaPreview({ text }: { text: string }) {
 }
 
 export default function MemoriaDescriptivaPage() {
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [result, setResult] = useState<MemoriaResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const [form, setForm] = useState({
-    proyectoNombre: '',
-    direccion: '',
-    municipio: '',
-    propietario: '',
-    tipoObra: 'permiso_edificacion',
+    proyectoNombre: searchParams.get("nombre") ?? '',
+    direccion: searchParams.get("direccion") ?? '',
+    municipio: searchParams.get("municipio") ?? '',
+    propietario: searchParams.get("propietario") ?? '',
+    tipoObra: searchParams.get("tipo") ?? 'permiso_edificacion',
     zonaPRC: '',
     superficieTerreno: '',
     superficieConstruida: '',
@@ -161,6 +163,23 @@ export default function MemoriaDescriptivaPage() {
     descripcionProyecto: '',
     arquitecta: '',
   })
+
+  // Re-sync if search params change after initial render
+  useEffect(() => {
+    const nombre = searchParams.get("nombre")
+    const direccion = searchParams.get("direccion")
+    const municipio = searchParams.get("municipio")
+    const tipo = searchParams.get("tipo")
+    if (nombre || direccion || municipio || tipo) {
+      setForm((prev) => ({
+        ...prev,
+        ...(nombre && { proyectoNombre: nombre }),
+        ...(direccion && { direccion }),
+        ...(municipio && { municipio }),
+        ...(tipo && { tipoObra: tipo }),
+      }))
+    }
+  }, [searchParams])
 
   function setField(k: string, v: string) {
     setForm((prev) => ({ ...prev, [k]: v }))
