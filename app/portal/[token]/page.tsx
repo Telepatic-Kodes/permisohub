@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
 import {
   AlertTriangle,
@@ -70,13 +70,30 @@ const ESTADO_TEXT: Record<string, string> = {
 
 export default function PortalTokenPage() {
   const params  = useParams<{ token: string }>()
-  const meta    = TOKEN_META[params.token]
   const [selected, setSelected] = useState<string | null>(null)
+  const [clienteNombre, setClienteNombre] = useState<string | null>(null)
+  const [proyectosReales, setProyectosReales] = useState<typeof MOCK_PROYECTOS | null>(null)
+
+  // Try to load real data from Supabase via the token
+  useEffect(() => {
+    fetch(`/api/portal/resolve?token=${params.token}`)
+      .then((r) => r.json())
+      .then((data: { nombre?: string; proyectos?: typeof MOCK_PROYECTOS }) => {
+        if (data.proyectos) {
+          setProyectosReales(data.proyectos)
+          setClienteNombre(data.nombre ?? null)
+        }
+      })
+      .catch(() => undefined)
+  }, [params.token])
+
+  const meta = TOKEN_META[params.token]
 
   const proyectos = useMemo(() => {
+    if (proyectosReales) return proyectosReales
     if (!meta) return []
     return MOCK_PROYECTOS.filter((p) => meta.proyectosIds.includes(p.id))
-  }, [meta])
+  }, [meta, proyectosReales])
 
   const stats = useMemo(() => ({
     total:   proyectos.length,
@@ -108,7 +125,7 @@ export default function PortalTokenPage() {
       {/* Welcome */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-primary">{meta.nombre}</h1>
+          <h1 className="text-xl font-semibold text-primary">{clienteNombre ?? meta?.nombre ?? "Portal de proyectos"}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Seguimiento de permisos · Solo lectura
           </p>
