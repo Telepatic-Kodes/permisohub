@@ -192,6 +192,21 @@ export default function ProyectoDetallePage({
   } | null>(null)
   const [waDialogOpen, setWaDialogOpen] = useState(false)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [notas, setNotas] = useState(proyecto.notas ?? "")
+  const [notasSaving, setNotasSaving] = useState(false)
+
+  const saveNotas = async () => {
+    setNotasSaving(true)
+    try {
+      await fetch(`/api/proyectos/${proyecto.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notas }),
+      })
+    } finally {
+      setNotasSaving(false)
+    }
+  }
 
   const handleVerificarEstado = async () => {
     setVerificando(true)
@@ -703,11 +718,17 @@ export default function ProyectoDetallePage({
             </CardHeader>
             <CardContent className="space-y-3">
               <Textarea
-                defaultValue="Cliente solicita priorizar la aprobación antes de la temporada alta. Coordinar con la DOM una reunión de revisión conjunta para acelerar las observaciones."
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                placeholder="Notas internas del proyecto..."
                 rows={5}
               />
-              <Button className="bg-primary text-white hover:bg-primary/90">
-                Guardar notas
+              <Button
+                className="bg-primary text-white hover:bg-primary/90"
+                onClick={() => void saveNotas()}
+                disabled={notasSaving}
+              >
+                {notasSaving ? "Guardando…" : "Guardar notas"}
               </Button>
             </CardContent>
           </Card>
