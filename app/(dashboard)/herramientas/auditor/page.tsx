@@ -138,7 +138,7 @@ export default function AuditorPage() {
     <div className="flex min-h-screen flex-col">
       <PageHeader
         emoji="📁"
-        title="Auditor de Expediente"
+        title="Revisor de Expediente"
         breadcrumbs={[
           { label: "IA Normativa" },
           { label: "Auditor de Expediente" },

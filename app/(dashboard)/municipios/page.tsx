@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import {
   AlertTriangle,
   BarChart3,
+  BookOpen,
   ChevronDown,
   Clock,
   ExternalLink,
@@ -26,7 +27,7 @@ import {
   type ComunaChile,
   type DomStatus,
 } from "@/lib/comunas-chile"
-import { getInteligenciaMunicipio, type InteligenciaMunicipio } from "@/lib/inteligencia-dom"
+import { getInteligenciaMunicipio, type InteligenciaMunicipio, type PlanReguladorInfo } from "@/lib/inteligencia-dom"
 import { MOCK_MUNICIPIOS, type MunicipioInfo } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 
@@ -123,9 +124,98 @@ function InteligenciaDOMSection({ data }: { data: InteligenciaMunicipio }) {
         </div>
       )}
 
+      {/* Plan Regulador Comunal */}
+      {data.planRegulador && <PlanReguladorSection prc={data.planRegulador} />}
+
       <p className="text-[9px] text-muted-foreground/40 text-right">
         Base: {data.totalExpedientesBase} expedientes históricos · Datos sintéticos beta
       </p>
+    </div>
+  )
+}
+
+function PlanReguladorSection({ prc }: { prc: PlanReguladorInfo }) {
+  const [expandido, setExpandido] = useState(false)
+  return (
+    <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <BookOpen className="size-3.5 text-indigo-600 shrink-0" />
+          <p className="text-[11px] font-semibold text-indigo-900">Plan Regulador Comunal (PRC)</p>
+        </div>
+        <a
+          href={prc.urlPRC}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-600 hover:text-indigo-800 shrink-0"
+        >
+          Ver PRC <ExternalLink className="size-3" />
+        </a>
+      </div>
+
+      {prc.notaGeneral && (
+        <p className="text-[10.5px] text-indigo-800/80 leading-relaxed">{prc.notaGeneral}</p>
+      )}
+
+      {/* Zonas típicas */}
+      {prc.zonasTipicas && prc.zonasTipicas.length > 0 && (
+        <div className="rounded bg-amber-50 border border-amber-200 p-2">
+          <p className="text-[10px] font-semibold text-amber-800 mb-1">
+            Zonas de Conservación Histórica (requieren CMN)
+          </p>
+          <ul className="space-y-0.5">
+            {prc.zonasTipicas.map((z) => (
+              <li key={z} className="flex items-start gap-1.5 text-[10px] text-amber-700">
+                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-amber-400" />
+                {z}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Seccionales */}
+      {prc.seccionales && prc.seccionales.length > 0 && (
+        <div>
+          <button
+            onClick={() => setExpandido(!expandido)}
+            className="text-[10px] font-semibold text-indigo-700 hover:text-indigo-900 flex items-center gap-1"
+          >
+            <ChevronDown className={cn("size-3 transition-transform", expandido && "rotate-180")} />
+            {expandido ? "Ocultar" : "Ver"} seccionales por barrio ({prc.seccionales.length})
+          </button>
+          {expandido && (
+            <div className="mt-2 space-y-2">
+              {prc.seccionales.map((sec) => (
+                <div key={sec.codigo} className="rounded bg-white border border-indigo-100 p-2.5 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-semibold text-primary">
+                      {sec.codigo} — {sec.nombre}
+                    </p>
+                    {sec.urlPlano && (
+                      <a
+                        href={sec.urlPlano}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 text-[9.5px] font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5"
+                      >
+                        Plano <ExternalLink className="size-2.5" />
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-[10.5px] text-muted-foreground leading-snug">{sec.descripcion}</p>
+                  {sec.notaPatrimonio && (
+                    <div className="flex items-start gap-1.5 mt-1">
+                      <AlertTriangle className="size-3 text-amber-500 shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-amber-700 leading-snug">{sec.notaPatrimonio}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -341,8 +341,8 @@ export default function ProspectosPage() {
     <div className="flex min-h-screen flex-col">
       <PageHeader
         emoji="📈"
-        title="CRM / Prospectos"
-        subtitle="Pipeline de ventas"
+        title="Pipeline de Clientes"
+        subtitle="Seguimiento de oportunidades y prospectos"
         action={
           <div className="flex items-center gap-2">
             <div className="flex rounded-lg border border-gray-100 bg-white p-0.5 shadow-sm">
@@ -419,7 +419,7 @@ export default function ProspectosPage() {
       <SectionTabs
         tabs={[
           { label: "Clientes", href: "/clientes" },
-          { label: "CRM / Prospectos", href: "/prospectos" },
+          { label: "Oportunidades", href: "/prospectos" },
         ]}
         active="/prospectos"
       />

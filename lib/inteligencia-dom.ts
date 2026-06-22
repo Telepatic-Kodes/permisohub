@@ -18,6 +18,23 @@ export interface AlertaMunicipio {
   texto: string
 }
 
+export interface SeccionalPRC {
+  codigo: string
+  nombre: string
+  descripcion: string
+  notaPatrimonio?: string
+  urlPlano?: string
+}
+
+export interface PlanReguladorInfo {
+  urlPRC: string
+  ultimaModificacion?: string
+  notaGeneral?: string
+  seccionales?: SeccionalPRC[]
+  zonasTipicas?: string[]
+  requiereConsejMonumentos?: boolean
+}
+
 export interface InteligenciaMunicipio {
   nombre: string
   tasaObservaciones: number      // % proyectos que reciben ≥1 observación
@@ -29,6 +46,7 @@ export interface InteligenciaMunicipio {
   alertas: AlertaMunicipio[]
   consejos: string[]
   ultimaActualizacion: string
+  planRegulador?: PlanReguladorInfo
 }
 
 const BASE: InteligenciaMunicipio[] = [
@@ -75,11 +93,51 @@ const BASE: InteligenciaMunicipio[] = [
     alertas: [
       { nivel: 'info', texto: 'Plataforma SmartCity Providencia permite seguimiento online en tiempo real.' },
       { nivel: 'info', texto: 'DOM responde dentro de 22 días hábiles promedio — mejor resultado de la RM.' },
+      { nivel: 'warning', texto: 'Zonas Típicas en Providencia requieren visación del Consejo de Monumentos Nacionales antes del ingreso DOM.' },
     ],
     consejos: [
       'Adjuntar "verificación de zonificación" del DOM antes de elaborar el proyecto para evitar obs de uso de suelo.',
       'Providencia exige carátula de expediente con todos los datos del propietario y arquitecto.',
+      'Para proyectos en barrios patrimoniales (Ej: Bellavista, Villa Frei), solicitar normas seccionales antes de diseñar.',
+      'En Zonas de Conservación Histórica, el CMN puede exigir plano de detalle del conjunto; verificar el seccional específico del barrio.',
     ],
+    planRegulador: {
+      urlPRC: 'https://providencia.cl/provi/municipalidad/servicios/plan-regulador-comunal/plan-regulador-comunal-providencia',
+      ultimaModificacion: '2025',
+      notaGeneral: 'Providencia tiene un PRC detallado con múltiples seccionales por barrio. La zonificación base y los seccionales son documentos distintos — un predio puede estar afecto a ambos simultáneamente.',
+      zonasTipicas: [
+        'ZCH-01 Barrio Italia (Av. Italia / Condell)',
+        'ZCH-02 Villa Frei',
+        'ZCH-03 Barrio Bellavista',
+        'ZCH-04 Población Salvador - Legión Militar de Chile',
+      ],
+      requiereConsejMonumentos: true,
+      seccionales: [
+        {
+          codigo: 'ZCH-04',
+          nombre: 'Población Salvador - Legión Militar de Chile',
+          descripcion: 'Barrio residencial de valor patrimonial. Normas de intervención estrictas: altura máxima 2 pisos, materialidad coherente con el conjunto original, ventanas y muros bajo regulación.',
+          notaPatrimonio: 'Requiere aprobación del Consejo de Monumentos Nacionales. El proyecto debe adjuntar plano de detalle del seccional y fotografías del estado actual.',
+          urlPlano: 'https://providencia.cl/provi/site/docs/20260105/20260105112840/prcp_plano_de_detalle_n_1_zch_04_poblacion_salvador_legion_militar_de_chile__3_.pdf',
+        },
+        {
+          codigo: 'ZCH-03',
+          nombre: 'Barrio Bellavista',
+          descripcion: 'Zona mixta residencial-comercial con fuerte valor patrimonial. Altura máxima regulada por el seccional. Actividades de entretención solo en primer piso hacia la calle.',
+          notaPatrimonio: 'Zona Típica declarada — toda intervención exterior requiere visación CMN.',
+        },
+        {
+          codigo: 'ZCH-01',
+          nombre: 'Barrio Italia (Av. Italia / Condell)',
+          descripcion: 'Eje comercial patrimonial con normas de imagen urbana específicas. Fachadas continuas, alturas reguladas, uso comercial en planta baja permitido.',
+        },
+        {
+          codigo: 'ZCH-02',
+          nombre: 'Villa Frei',
+          descripcion: 'Conjunto residencial moderno de valor patrimonial. Restricciones a modificaciones de fachada y división de predios.',
+        },
+      ],
+    },
   },
   {
     nombre: 'Las Condes',

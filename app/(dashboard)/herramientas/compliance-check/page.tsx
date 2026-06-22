@@ -102,10 +102,10 @@ export default function ComplianceCheckPage() {
     <div className="flex min-h-screen flex-col">
       <PageHeader
         emoji="🔍"
-        title="Verificador OGUC"
+        title="Verificador Normativo"
         breadcrumbs={[
-          { label: "IA Normativa" },
-          { label: "Verificador OGUC" },
+          { label: "Herramientas" },
+          { label: "Verificador Normativo" },
         ]}
       />
       <div className="flex-1 overflow-auto p-8">

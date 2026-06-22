@@ -7,11 +7,24 @@ export type EstadoExpediente =
   | 'rechazado'
 
 export type TipoPermiso =
-  | 'permiso_edificacion'
+  // Permisos mayores
+  | 'permiso_edificacion'         // Obra nueva o ampliación que requiere permiso completo
+  | 'anteproyecto'               // Aprobación previa de anteproyecto (art. 1.1.2 OGUC)
+  | 'ampliacion'                 // Ampliación de edificación existente
+  | 'cambio_destino'             // Cambio de uso de un inmueble ya existente
+  // Obras menores (Ley 21.718 / Art. 5.1.2 OGUC)
+  | 'obra_menor_sin_permiso'     // Obra menor exenta — solo Declaración Jurada (Art. 5.1.2)
+  | 'obra_menor_con_permiso'     // Obra menor que igual requiere permiso simplificado (Art. 5.1.4)
+  // Subdivisiones y loteos
+  | 'subdivision'                // Subdivisión o fusión de predios (Art. 3.1.2 OGUC)
+  | 'loteo'                      // Loteo o urbanización
+  // Recepciones y certificaciones
+  | 'recepcion_final'            // Recepción final de obra (requiere certificados especialidades)
+  | 'recepcion_parcial'          // Recepción parcial por etapas
+  // Otros trámites
   | 'revision_normativa'
   | 'supervision_apertura'
   | 'patente_comercial'
-  | 'recepcion_final'
   | 'otro'
 
 export interface Cliente {
@@ -118,12 +131,38 @@ export const ESTADO_CONFIG: Record<EstadoExpediente, { label: string; color: str
 }
 
 export const TIPO_PERMISO_LABELS: Record<TipoPermiso, string> = {
-  permiso_edificacion:  'Permiso de Edificación',
-  revision_normativa:   'Revisión Normativa',
-  supervision_apertura: 'Supervisión de Apertura',
-  patente_comercial:    'Patente Comercial',
-  recepcion_final:      'Recepción Final',
-  otro:                 'Otro',
+  // Permisos mayores
+  permiso_edificacion:      'Permiso de Edificación',
+  anteproyecto:             'Anteproyecto (Art. 1.1.2)',
+  ampliacion:               'Ampliación',
+  cambio_destino:           'Cambio de Destino',
+  // Obras menores
+  obra_menor_sin_permiso:   'Obra Menor sin Permiso (Art. 5.1.2)',
+  obra_menor_con_permiso:   'Obra Menor con Permiso (Art. 5.1.4)',
+  // Subdivisiones
+  subdivision:              'Subdivisión / Fusión',
+  loteo:                    'Loteo / Urbanización',
+  // Recepciones
+  recepcion_final:          'Recepción Final',
+  recepcion_parcial:        'Recepción Parcial por Etapas',
+  // Otros
+  revision_normativa:       'Revisión Normativa',
+  supervision_apertura:     'Supervisión de Apertura',
+  patente_comercial:        'Patente Comercial',
+  otro:                     'Otro',
+}
+
+export const TIPO_PERMISO_DESCRIPCION: Partial<Record<TipoPermiso, string>> = {
+  permiso_edificacion:    'Obras nuevas o ampliaciones ≥ 150 m² o ≥ 3 pisos. Requiere expediente completo con todas las especialidades.',
+  anteproyecto:           'Aprobación previa de diseño. Congela normativa por 180 días hábiles.',
+  ampliacion:             'Aumento de superficie construida en edificación existente.',
+  cambio_destino:         'Modificación del uso del inmueble (ej: bodega → oficina).',
+  obra_menor_sin_permiso: 'Obras de mantención o reparación que no alteran estructura ni superficie. Solo requiere Declaración Jurada ante DOM.',
+  obra_menor_con_permiso: 'Obras menores que requieren visación DOM pero con proceso simplificado.',
+  subdivision:            'División o fusión de uno o más predios. Requiere CBR y Catastro.',
+  loteo:                  'Habilitación de terrenos con apertura de calles u obras de urbanización.',
+  recepcion_final:        'Certificación de término de obra. Requiere certificados de electricidad (SEC), gas (GASCO/SEC), sanitario (empresa sanitaria), ascensores, etc.',
+  recepcion_parcial:      'Recepción de una etapa de obra mientras continúa la construcción.',
 }
 
 export type EtapaCRM =

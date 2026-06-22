@@ -109,9 +109,9 @@ export default function PredictorPage() {
     <div className="flex min-h-screen flex-col">
       <PageHeader
         emoji="🎯"
-        title="Predictor de Riesgo"
-        subtitle="Anticipa las observaciones DOM antes de ingresar el expediente"
-        breadcrumbs={[{ label: 'IA Normativa' }, { label: 'Predictor de Riesgo' }]}
+        title="Anticipa Observaciones"
+        subtitle="Predice qué observará la DOM antes de ingresar el expediente"
+        breadcrumbs={[{ label: 'Herramientas' }, { label: 'Anticipa Observaciones' }]}
       />
 
       <div className="flex-1 p-8">
