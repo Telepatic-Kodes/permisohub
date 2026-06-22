@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { ArrowRight, CreditCard, MessageCircle, Send } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -174,14 +174,18 @@ const TEST_TIPO_LABEL: Record<TestTipo, string> = {
 // ---------------------------------------------------------------------------
 
 export default function ConfiguracionPage() {
+  // 0. Perfil
+  const [perfilNombre, setPerfilNombre] = useState("")
+  const [perfilEspecialidad, setPerfilEspecialidad] = useState("")
+  const [perfilMunicipio, setPerfilMunicipio] = useState("")
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false)
+
   // 1. Notificaciones por email (preferencias internas)
   const [observacionesDom, setObservacionesDom] = useState(true)
   const [vencimientoPlazo, setVencimientoPlazo] = useState(true)
   const [cambioEstado, setCambioEstado] = useState(true)
   const [resumenSemanal, setResumenSemanal] = useState(false)
-  const [emailNotificaciones, setEmailNotificaciones] = useState(
-    "estefania@epgestion.cl"
-  )
+  const [emailNotificaciones, setEmailNotificaciones] = useState("")
 
   // 2. Notificaciones a clientes
   const [notificarClientes, setNotificarClientes] = useState(true)
@@ -193,6 +197,42 @@ export default function ConfiguracionPage() {
   const [testTipo, setTestTipo] = useState<TestTipo>("observacion")
   const [testEmail, setTestEmail] = useState("")
   const [sending, setSending] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/configuracion/perfil')
+      .then((r) => r.json())
+      .then((d: { perfil?: { nombre?: string; especialidad?: string; municipio_principal?: string; email_notificaciones?: string }; email?: string }) => {
+        if (d.perfil) {
+          setPerfilNombre(d.perfil.nombre ?? "")
+          setPerfilEspecialidad(d.perfil.especialidad ?? "")
+          setPerfilMunicipio(d.perfil.municipio_principal ?? "")
+          if (d.perfil.email_notificaciones) setEmailNotificaciones(d.perfil.email_notificaciones)
+        }
+        if (!emailNotificaciones && d.email) setEmailNotificaciones(d.email)
+      })
+      .catch(() => undefined)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handleGuardarPerfil() {
+    setGuardandoPerfil(true)
+    try {
+      await fetch('/api/configuracion/perfil', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: perfilNombre.trim(),
+          especialidad: perfilEspecialidad.trim(),
+          municipio_principal: perfilMunicipio.trim(),
+        }),
+      })
+      toast.success("Perfil actualizado")
+    } catch {
+      toast.error("No se pudo guardar el perfil")
+    } finally {
+      setGuardandoPerfil(false)
+    }
+  }
 
   function handleGuardarPreferencias() {
     fetch('/api/configuracion/notificaciones', {
@@ -263,6 +303,42 @@ export default function ConfiguracionPage() {
     <div className="flex min-h-screen flex-col">
       <PageHeader emoji="⚙️" title="Configuración" />
       <div className="flex-1 space-y-6 overflow-auto p-8">
+
+      {/* 0. Perfil */}
+      <SectionCard title="Información personal">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Nombre completo</Label>
+            <Input
+              value={perfilNombre}
+              onChange={(e) => setPerfilNombre(e.target.value)}
+              placeholder="Tu nombre"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Especialidad</Label>
+            <Input
+              value={perfilEspecialidad}
+              onChange={(e) => setPerfilEspecialidad(e.target.value)}
+              placeholder="Ej: Arquitectura residencial"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Municipio principal</Label>
+            <Input
+              value={perfilMunicipio}
+              onChange={(e) => setPerfilMunicipio(e.target.value)}
+              placeholder="Ej: Providencia"
+            />
+          </div>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <Button className={BRAND} onClick={handleGuardarPerfil} disabled={guardandoPerfil}>
+            {guardandoPerfil ? "Guardando…" : "Guardar perfil"}
+          </Button>
+        </div>
+      </SectionCard>
+
       {/* 1. Notificaciones por email */}
       <SectionCard title="Notificaciones automáticas">
         <div className="divide-y divide-border">
