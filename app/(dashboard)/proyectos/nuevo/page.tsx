@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -27,8 +27,14 @@ const TIPOS = Object.entries(TIPO_PERMISO_LABELS) as [TipoPermiso, string][]
 
 export default function NuevoProyectoPage() {
   const router = useRouter()
-  const [cliente, setCliente] = useState("")
-  const [municipio, setMunicipio] = useState("")
+  const searchParams = useSearchParams()
+  const clienteNombreParam = searchParams.get("cliente") ?? ""
+  // Try to match an existing client by name; fall back to "" (user must pick/create)
+  const clienteMatch = clienteNombreParam
+    ? (MOCK_CLIENTES.find((c) => c.nombre.toLowerCase() === clienteNombreParam.toLowerCase())?.id ?? "")
+    : ""
+  const [cliente, setCliente] = useState(clienteMatch)
+  const [municipio, setMunicipio] = useState(searchParams.get("municipio") ?? "")
   const [tipo, setTipo] = useState("")
   const [etapas, setEtapas] = useState<Record<string, boolean>>(
     Object.fromEntries(ETAPAS_PERMISO.map((e) => [e, true]))
@@ -122,6 +128,11 @@ export default function NuevoProyectoPage() {
                     <SelectItem value="nuevo">+ Nuevo cliente</SelectItem>
                   </SelectContent>
                 </Select>
+                {clienteNombreParam && !clienteMatch && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Prospecto: <span className="font-medium">{clienteNombreParam}</span> — selecciona un cliente existente o crea uno nuevo.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

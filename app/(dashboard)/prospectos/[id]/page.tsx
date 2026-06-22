@@ -2,6 +2,7 @@
 
 import { use, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   ArrowLeft,
   Briefcase,
@@ -92,6 +93,7 @@ export default function ProspectoDetallePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const router = useRouter()
   const prospecto = MOCK_PROSPECTOS.find((p) => p.id === id)
 
   const [etapa, setEtapa] = useState<EtapaCRM>(
@@ -151,6 +153,21 @@ export default function ProspectoDetallePage({
   function marcarGanado() {
     if (window.confirm("¿Marcar este prospecto como Ganado?")) {
       setEtapa("ganado")
+      // Persist to Supabase best-effort
+      fetch(`/api/prospectos/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ etapa: "ganado" }),
+      }).catch(() => undefined)
+      // Navigate to new project with pre-filled data from prospecto
+      if (prospecto) {
+        const params = new URLSearchParams({
+          cliente: prospecto.empresa,
+          email: prospecto.email ?? "",
+          municipio: prospecto.municipios_interes?.[0] ?? "",
+        })
+        router.push(`/proyectos/nuevo?${params.toString()}`)
+      }
     }
   }
 
