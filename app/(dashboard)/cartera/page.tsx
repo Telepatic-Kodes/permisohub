@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
   AlertTriangle,
@@ -58,8 +58,30 @@ export default function CarteraPage() {
   const [groupBy, setGroupBy] = useState<"cliente" | "estado">("cliente")
   const [expanded, setExpanded] = useState<string[]>(MOCK_LOCATARIOS.map((l) => l.id))
 
-  const proyectos = MOCK_PROYECTOS
-  const clientes  = MOCK_CLIENTES
+  const [proyectos, setProyectos] = useState(MOCK_PROYECTOS)
+  const [clientes, setClientes] = useState(MOCK_CLIENTES)
+
+  useEffect(() => {
+    fetch('/api/proyectos')
+      .then((r) => r.json())
+      .then((data: { data?: typeof MOCK_PROYECTOS; proyectos?: typeof MOCK_PROYECTOS }) => {
+        const list = data.data ?? data.proyectos
+        if (list && list.length > 0) {
+          setProyectos(list)
+        }
+      })
+      .catch(() => undefined)
+
+    fetch('/api/clientes')
+      .then((r) => r.json())
+      .then((data: { data?: typeof MOCK_CLIENTES; clientes?: typeof MOCK_CLIENTES }) => {
+        const list = data.data ?? data.clientes
+        if (list && list.length > 0) {
+          setClientes(list)
+        }
+      })
+      .catch(() => undefined)
+  }, [])
 
   // Stats globales
   const stats = useMemo(() => {
