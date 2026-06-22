@@ -195,12 +195,31 @@ export default function ConfiguracionPage() {
   const [sending, setSending] = useState(false)
 
   function handleGuardarPreferencias() {
+    fetch('/api/configuracion/notificaciones', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        observaciones_dom: observacionesDom,
+        vencimiento_plazo: vencimientoPlazo,
+        cambio_estado: cambioEstado,
+        resumen_semanal: resumenSemanal,
+        email_notificaciones: emailNotificaciones,
+      }),
+    }).catch(() => undefined)
     toast.success("Preferencias guardadas", {
       description: "Los cambios se aplicarán a las próximas notificaciones.",
     })
   }
 
   function handleGuardarClientes() {
+    fetch('/api/configuracion/notificaciones', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notificar_clientes: notificarClientes,
+        email_remitente: emailRemitente,
+      }),
+    }).catch(() => undefined)
     toast.success("Configuración de clientes guardada")
   }
 
