@@ -162,6 +162,28 @@ const BASE: InteligenciaMunicipio[] = [
       'Llevar expediente completo desde el primer ingreso — Las Condes no acepta ingresos por partes.',
       'La fotocopia del título del arquitecto debe ser notariada.',
     ],
+    planRegulador: {
+      urlPRC: 'https://www.lascondes.cl/contenido/plan-regulador-comunal',
+      ultimaModificacion: '2024',
+      notaGeneral: 'El PRC de Las Condes define zonas residenciales exclusivas (ZR), mixtas (ZM) y de equipamiento. La zonificación determina la relación entre rasante, CUS y CUT. Es esencial verificar el plano de zonificación vigente antes de cualquier anteproyecto.',
+      seccionales: [
+        {
+          codigo: 'ZR1-A',
+          nombre: 'Zona Residencial Exclusiva Baja Densidad',
+          descripcion: 'Subdivisión mínima 1.000 m², CUS 0.3, altura máxima 2 pisos o 8 m. Solo uso habitacional. No se permiten actividades comerciales ni equipamiento.',
+        },
+        {
+          codigo: 'ZM-3',
+          nombre: 'Zona Mixta Comercial-Residencial',
+          descripcion: 'Permite comercio, oficinas y vivienda en altura. CUS hasta 3.0 con coeficiente de constructibilidad variable. Estudio de impacto vial requerido sobre 1.000 m².',
+        },
+        {
+          codigo: 'ZE-1',
+          nombre: 'Zona de Equipamiento',
+          descripcion: 'Escuelas, clínicas, centros comerciales. Puede requerir aprobación SEREMI para proyectos sobre 5.000 m².',
+        },
+      ],
+    },
   },
   {
     nombre: 'Vitacura',
@@ -185,6 +207,23 @@ const BASE: InteligenciaMunicipio[] = [
       'Verificar zonificación y altura máxima en el Plan Regulador antes de iniciar el anteproyecto.',
       'La imagen urbana es revisada en paralelo por la Unidad de Obras — coordinar desde el diseño.',
     ],
+    planRegulador: {
+      urlPRC: 'https://www.vitacura.cl/municipalidad/plan-regulador-comunal',
+      ultimaModificacion: '2025',
+      notaGeneral: 'El PRC de Vitacura es uno de los más detallados de la RM. Regula imagen urbana, arborización, y materialidad de fachadas además de los índices urbanísticos habituales. La Unidad de Urbanismo puede solicitar correcciones de diseño aunque los índices sean correctos.',
+      seccionales: [
+        {
+          codigo: 'ZR-BU',
+          nombre: 'Zona Residencial Baja Densidad Unifamiliar',
+          descripcion: 'Viviendas unifamiliares en predios de 1.000 m² mínimo. Altura máxima 2 pisos. CUS 0.4. Antejardín obligatorio mínimo 5 m. Materialidad de fachada regulada por Ordenanza de Imagen Urbana.',
+        },
+        {
+          codigo: 'ZCE',
+          nombre: 'Zona Comercial Exclusiva (Av. Vitacura)',
+          descripcion: 'Eje comercial principal. CUS hasta 2.5. Uso comercial en planta baja obligatorio. Diseño de fachada debe integrar criterios de la Guía de Imagen Urbana comunal.',
+        },
+      ],
+    },
   },
   {
     nombre: 'Ñuñoa',
@@ -203,11 +242,35 @@ const BASE: InteligenciaMunicipio[] = [
     ],
     alertas: [
       { nivel: 'warning', texto: 'Atención presencial solo con hora previa — reservar con 5 días hábiles de anticipación.' },
+      { nivel: 'warning', texto: 'Zonas Típicas en Villa Olímpica y barrios históricos requieren visación CMN antes del ingreso DOM.' },
     ],
     consejos: [
       'Ñuñoa tiene zonas de conservación histórica — verificar si el predio está afecto antes de iniciar.',
       'El CIP debe ser solicitado con 45 días mínimos de anticipación dado el alto volumen de solicitudes.',
     ],
+    planRegulador: {
+      urlPRC: 'https://www.nunoa.cl/municipalidad/plan-regulador-comunal',
+      ultimaModificacion: '2024',
+      notaGeneral: 'El PRC de Ñuñoa tiene varias modificaciones vigentes que definen distintas zonas de densificación y conservación. Varios barrios están en proceso de Zona Típica o ya la tienen declarada. La coexistencia de zonas de densificación y conservación hace fundamental verificar la zonificación exacta del predio.',
+      zonasTipicas: [
+        'Barrio Olímpico (Villa Olímpica) — Zona Típica declarada CMN',
+        'Barrio Irarrázaval — en proceso de declaración',
+      ],
+      requiereConsejMonumentos: true,
+      seccionales: [
+        {
+          codigo: 'ZC-1',
+          nombre: 'Zona de Conservación Histórica Barrio Olímpico',
+          descripcion: 'Conjunto residencial de 1936 con valor patrimonial. Toda intervención en fachadas, cubiertas o elementos originales requiere visación del CMN. Altura máxima 2 pisos. Prohibida la demolición sin autorización.',
+          notaPatrimonio: 'Zona Típica vigente. Requiere informe de arqueología urbana para intervenciones que impliquen movimiento de tierra.',
+        },
+        {
+          codigo: 'ZR-3',
+          nombre: 'Zona Residencial Media Densidad',
+          descripcion: 'Permite vivienda colectiva hasta 5 pisos. CUS 1.5. Antejardín mínimo 3 m. Aplica restricción de horario de obras y gestión de áridos.',
+        },
+      ],
+    },
   },
   {
     nombre: 'Maipú',

@@ -497,30 +497,31 @@ export default function ConfiguracionPage() {
       <SectionCard title="Cuenta y acceso">
         <div className="space-y-3 text-sm">
           <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-muted-foreground">
-              Arquitecta responsable
-            </span>
+            <span className="text-xs text-muted-foreground">Arquitecta responsable</span>
             <span className="font-medium text-primary">Estefanía Parada</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-muted-foreground">Plan</span>
-            <span className="font-medium text-primary">
-              Fase 1 — Uso interno
-            </span>
+            <span className="text-xs text-muted-foreground">Plan activo</span>
+            <span className="font-medium text-primary">Starter · $29.990 CLP/mes</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-muted-foreground">Próximo paso</span>
-            <span className="font-medium text-primary">
-              Conectar Supabase para persistir datos
-            </span>
+            <span className="text-xs text-muted-foreground">Workspace</span>
+            <span className="font-medium text-primary">EP Gestión Arquitectónica</span>
           </div>
         </div>
-
-        <div className="mt-6">
-          <Button variant="outline">
-            Ver guía de configuración
-            <ArrowRight className="size-4" />
-          </Button>
+        <div className="mt-6 flex gap-3">
+          <Link href="/configuracion/equipo">
+            <Button variant="outline" className="gap-1.5">
+              Gestionar equipo
+              <ArrowRight className="size-4" />
+            </Button>
+          </Link>
+          <Link href="/configuracion/billing">
+            <Button variant="outline" className="gap-1.5">
+              Facturación
+              <ArrowRight className="size-4" />
+            </Button>
+          </Link>
         </div>
       </SectionCard>
       </div>

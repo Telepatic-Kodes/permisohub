@@ -4,11 +4,13 @@ import { useState } from "react"
 import {
   Check,
   Clock,
+  Copy,
   Crown,
   Eye,
+  ExternalLink,
+  Link2,
   Mail,
   MoreHorizontal,
-  Plus,
   Shield,
   Trash2,
   UserPlus,
@@ -113,6 +115,16 @@ function Initials({ nombre }: { nombre?: string }) {
 // ──────────────────────────────────────────────────
 // Component
 // ──────────────────────────────────────────────────
+// Generate a deterministic portal link from member user_id (mock: slug from id)
+const VIEWER_TOKEN_MAP: Record<string, string> = {
+  "u3": "pq-arauco-01",
+}
+
+function portalLink(userId: string): string {
+  const token = VIEWER_TOKEN_MAP[userId] ?? userId
+  return `${typeof window !== "undefined" ? window.location.origin : ""}/portal/${token}`
+}
+
 export default function EquipoPage() {
   const [members, setMembers] = useState<WorkspaceMember[]>(MOCK_MEMBERS)
   const [invites, setInvites] = useState<WorkspaceInvite[]>(MOCK_INVITES)
@@ -121,6 +133,13 @@ export default function EquipoPage() {
   const [inviteRol, setInviteRol] = useState<RolWorkspace>("arquitecto")
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [inviteSent, setInviteSent] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  function copyLink(userId: string) {
+    navigator.clipboard.writeText(portalLink(userId)).catch(() => {})
+    setCopiedId(userId)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
   function handleInvite() {
     if (!inviteEmail.trim()) return
@@ -247,6 +266,19 @@ export default function EquipoPage() {
                   <p className="text-[10.5px] text-muted-foreground truncate">{m.email}</p>
                 </div>
                 <RolBadge role={m.role} />
+                {m.role === "viewer" && (
+                  <button
+                    onClick={() => copyLink(m.user_id)}
+                    title="Copiar link de portal para este cliente"
+                    className="flex items-center gap-1 rounded-lg border border-border bg-white px-2 py-1 text-[10.5px] text-muted-foreground hover:border-primary/30 hover:text-primary transition-colors"
+                  >
+                    {copiedId === m.user_id ? (
+                      <><Check className="size-3 text-green-500" /> Copiado</>
+                    ) : (
+                      <><Copy className="size-3" /> Link portal</>
+                    )}
+                  </button>
+                )}
                 {m.role !== "admin" && (
                   <div className="relative">
                     <button
@@ -321,21 +353,32 @@ export default function EquipoPage() {
         {/* Info portal */}
         <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
           <div className="flex items-start gap-3">
-            <Eye className="size-4 text-indigo-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-indigo-900">Portal de cliente (Viewer)</p>
+            <Link2 className="size-4 text-indigo-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-indigo-900">Portal de cliente — acceso por link</p>
               <p className="mt-1 text-xs text-indigo-700 leading-relaxed">
-                Los miembros con rol <strong>Sólo lectura</strong> pueden acceder al portal simplificado.
-                Ideal para mandantes, locatarios o administradoras que necesitan ver el avance
-                sin acceder al panel completo.
+                Cada miembro con rol <strong>Sólo lectura</strong> tiene un link único al portal.
+                Compártelo con el mandante, administradora o locatario — no necesitan crear cuenta.
+                Solo ven sus proyectos, no el panel completo.
               </p>
-              <Link
-                href="/portal"
-                className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
-              >
-                <Shield className="size-3.5" />
-                Ver portal de cliente →
-              </Link>
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <Link
+                  href="/portal/pq-arauco-01"
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                >
+                  <ExternalLink className="size-3.5" />
+                  Ver demo portal Parque Arauco →
+                </Link>
+                <span className="text-[10px] text-indigo-400">|</span>
+                <Link
+                  href="/portal"
+                  className="inline-flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-700"
+                >
+                  <Shield className="size-3.5" />
+                  Portal general →
+                </Link>
+              </div>
             </div>
           </div>
         </div>

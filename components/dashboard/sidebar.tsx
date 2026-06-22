@@ -68,8 +68,9 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Sistema",
     items: [
-      { href: "/documentos",            label: "Documentos",    icon: FileText },
-      { href: "/configuracion/equipo",  label: "Equipo",        icon: Users, matchPaths: ["/configuracion"] },
+      { href: "/documentos",           label: "Documentos",    icon: FileText },
+      { href: "/configuracion/equipo", label: "Equipo",        icon: Users },
+      { href: "/configuracion",        label: "Configuración", icon: Settings, matchPaths: ["/configuracion/billing", "/configuracion/whatsapp"] },
     ],
   },
 ]
