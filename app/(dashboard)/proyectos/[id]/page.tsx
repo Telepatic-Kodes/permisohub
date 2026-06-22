@@ -1,18 +1,22 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import {
+  AlertCircle,
   AlertTriangle,
-  ArrowLeft,
   Check,
+  CheckCircle2,
   Clock,
+  Copy,
   Download,
   FileSpreadsheet,
   FileText,
+  Link2,
   Loader2,
   Mail,
   MapPin,
+  MessageCircle,
   Pencil,
   Plus,
   RefreshCw,
@@ -33,6 +37,40 @@ import {
 import { ESTADO_CONFIG, TIPO_PERMISO_LABELS } from "@/types"
 import { getEstadoPlazoLey21718, formatFecha } from "@/lib/dias-habiles"
 import { cn } from "@/lib/utils"
+import { PageHeader } from "@/components/dashboard/page-header"
+import { WhatsAppDialog } from "@/components/dashboard/whatsapp-dialog"
+import { setCommandContext, clearCommandContext } from "@/hooks/use-command-context"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
+interface Observacion {
+  id: string
+  fecha: string
+  numero: string
+  texto: string
+  estado: "pendiente" | "respondida"
+}
+
+const MOCK_OBSERVACIONES: Observacion[] = [
+  {
+    id: "1",
+    fecha: "2024-03-15",
+    numero: "OBS-001",
+    texto: "Se requiere memoria descriptiva actualizada con superficies desagregadas por uso.",
+    estado: "pendiente",
+  },
+  {
+    id: "2",
+    fecha: "2024-02-28",
+    numero: "OBS-002",
+    texto: "Plano de emplazamiento debe indicar rasantes y distanciamientos según Art. 2.6.3 OGUC.",
+    estado: "respondida",
+  },
+]
 
 function formatDate(value?: string) {
   if (!value) return "—"
@@ -53,8 +91,8 @@ const COMUNICACION_LABELS: Record<string, string> = {
 
 function docIcon(tipo: string) {
   if (tipo.toLowerCase().includes("especificaciones"))
-    return <FileSpreadsheet className="size-5 text-[#1A3328]" />
-  return <FileText className="size-5 text-[#1A3328]" />
+    return <FileSpreadsheet className="size-5 text-primary" />
+  return <FileText className="size-5 text-primary" />
 }
 
 export default function ProyectoDetallePage({
@@ -76,13 +114,47 @@ export default function ProyectoDetallePage({
     diasDesdeInicio > 30 &&
     !["aprobado", "rechazado", "borrador"].includes(proyecto.estado)
 
+  useEffect(() => {
+    setCommandContext({
+      proyectoId: proyecto.id,
+      proyectoNombre: proyecto.nombre,
+      municipio: proyecto.municipio ?? '',
+    })
+    return () => clearCommandContext()
+  }, [proyecto.id, proyecto.nombre, proyecto.municipio])
+
+  const [compartirLoading, setCompartirLoading] = useState(false)
+  const [portalUrl, setPortalUrl] = useState<string | null>(null)
+
+  const handleCompartir = async () => {
+    setCompartirLoading(true)
+    try {
+      const res = await fetch('/api/portal/generate-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proyectoId: proyecto.id }),
+      })
+      const data = await res.json() as { ok: boolean; url?: string }
+      if (data.ok && data.url) {
+        setPortalUrl(data.url)
+        await navigator.clipboard.writeText(data.url)
+      }
+    } finally {
+      setCompartirLoading(false)
+    }
+  }
+
   const [verificando, setVerificando] = useState(false)
   const [ultimaVerificacion, setUltimaVerificacion] = useState<{
     changed: boolean
+    estadoAnterior?: string
     estadoNuevo?: string
     simulated?: boolean
     fetchedAt: string
+    observaciones?: string | null
+    expedienteNumero?: string
   } | null>(null)
+  const [waDialogOpen, setWaDialogOpen] = useState(false)
 
   const handleVerificarEstado = async () => {
     setVerificando(true)
@@ -112,36 +184,102 @@ export default function ProyectoDetallePage({
   }
 
   return (
-    <div className="space-y-6">
-      <Link
-        href="/proyectos"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-[#1A3328]"
-      >
-        <ArrowLeft className="size-4" />
-        Proyectos
-      </Link>
+    <div className="flex min-h-screen flex-col">
+      <PageHeader
+        emoji="📄"
+        title={proyecto.nombre}
+        breadcrumbs={[
+          { label: "Proyectos", href: "/proyectos" },
+          { label: proyecto.nombre },
+        ]}
+        action={
+          <div className="flex items-center gap-2">
+            {!["aprobado", "rechazado"].includes(proyecto.estado) && (
+              <Button
+                nativeButton={false}
+                render={<Link href={`/proyectos/${proyecto.id}/ingreso`} />}
+                variant="outline"
+                size="sm"
+              >
+                <Upload className="size-4" />
+                Preparar ingreso DOM
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={compartirLoading}
+              onClick={() => void handleCompartir()}
+              title={portalUrl ? `Link copiado: ${portalUrl}` : 'Generar link para cliente'}
+            >
+              {portalUrl ? (
+                <><Check className="size-4 text-green-600" /> Link copiado</>
+              ) : (
+                <><Link2 className="size-4" /> Compartir</>
+              )}
+            </Button>
+            <Button
+              nativeButton={false}
+              render={
+                <a
+                  href={`/api/export/proyecto/${proyecto.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+              variant="outline"
+              size="sm"
+            >
+              <Download className="size-4" />
+              Exportar PDF
+            </Button>
+          </div>
+        }
+      />
+      <div className="flex-1 overflow-auto p-8">
+        {/* Barra de estadísticas rápidas */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="rounded-xl border border-border bg-white p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              Días en tramitación
+            </p>
+            <p className="text-xl font-semibold text-primary font-display mt-1">
+              {diasDesdeInicio}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-white p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              Estado actual
+            </p>
+            <span
+              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium mt-1 ${estadoCfg.color}`}
+            >
+              {estadoCfg.label}
+            </span>
+          </div>
+          <div className="rounded-xl border border-border bg-white p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              Documentos
+            </p>
+            <p className="text-xl font-semibold text-primary font-display mt-1">
+              {MOCK_DOCUMENTOS.length}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-white p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              N° Expediente
+            </p>
+            <p className="text-xl font-semibold text-primary font-display mt-1">
+              {proyecto.numero_expediente ?? "Sin asignar"}
+            </p>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_minmax(0,360px)]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_minmax(0,360px)]">
         {/* Left column */}
         <div className="space-y-6">
           {/* Header */}
           <div className="space-y-3">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight text-[#1A3328]">
-                {proyecto.nombre}
-              </h1>
-              {!["aprobado", "rechazado"].includes(proyecto.estado) && (
-                <Button
-                  nativeButton={false}
-                  render={<Link href={`/proyectos/${proyecto.id}/ingreso`} />}
-                  variant="outline"
-                  className="border-[#1A3328] text-[#1A3328] hover:bg-[#F0EBE1]"
-                >
-                  <Upload className="size-4" />
-                  Preparar ingreso DOM
-                </Button>
-              )}
-            </div>
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${estadoCfg.color}`}
@@ -180,9 +318,9 @@ export default function ProyectoDetallePage({
                           className={cn(
                             "flex size-8 shrink-0 items-center justify-center rounded-full border-2",
                             completed &&
-                              "border-[#1A3328] bg-[#1A3328] text-white",
+                              "border-primary bg-primary text-white",
                             current &&
-                              "border-[#1A3328] bg-white text-[#1A3328]",
+                              "border-primary bg-white text-primary",
                             !completed &&
                               !current &&
                               "border-border bg-white text-muted-foreground"
@@ -202,7 +340,7 @@ export default function ProyectoDetallePage({
                           <span
                             className={cn(
                               "mt-1 w-0.5 flex-1",
-                              completed ? "bg-[#1A3328]" : "bg-border"
+                              completed ? "bg-primary" : "bg-border"
                             )}
                           />
                         )}
@@ -212,7 +350,7 @@ export default function ProyectoDetallePage({
                           className={cn(
                             "text-sm font-medium",
                             current
-                              ? "text-[#1A3328]"
+                              ? "text-primary"
                               : completed
                                 ? "text-foreground"
                                 : "text-muted-foreground"
@@ -230,11 +368,80 @@ export default function ProyectoDetallePage({
                             {etapa.notas}
                           </p>
                         )}
+                        {completed && etapa.fecha_inicio && etapa.fecha_fin && (
+                          <p className="text-xs text-muted-foreground/70 mt-0.5">
+                            Duración:{" "}
+                            {Math.floor(
+                              (new Date(`${etapa.fecha_fin}T00:00:00`).getTime() -
+                                new Date(`${etapa.fecha_inicio}T00:00:00`).getTime()) /
+                                (1000 * 60 * 60 * 24)
+                            )}{" "}
+                            días
+                          </p>
+                        )}
                       </div>
                     </li>
                   )
                 })}
               </ol>
+            </CardContent>
+          </Card>
+
+          {/* Observaciones DOM */}
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle>Observaciones DOM</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => console.log("TODO")}
+              >
+                <CheckCircle2 className="size-4" />
+                Responder con IA
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {MOCK_OBSERVACIONES.map((obs) => (
+                <div
+                  key={obs.id}
+                  className={cn(
+                    "pl-4 py-2 pr-2",
+                    obs.estado === "pendiente"
+                      ? "border-l-2 border-amber-400"
+                      : "border-l-2 border-green-400"
+                  )}
+                >
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(obs.fecha)}
+                    </span>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {obs.numero}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-xs px-2 py-0.5 rounded-full font-medium",
+                        obs.estado === "pendiente"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-green-100 text-green-700"
+                      )}
+                    >
+                      {obs.estado === "pendiente" ? (
+                        <span className="flex items-center gap-1">
+                          <AlertCircle className="size-3" />
+                          Pendiente
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="size-3" />
+                          Respondida
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground">{obs.texto}</p>
+                </div>
+              ))}
             </CardContent>
           </Card>
 
@@ -259,7 +466,7 @@ export default function ProyectoDetallePage({
                     </span>
                     <Badge variant="muted">{COMUNICACION_LABELS[c.tipo]}</Badge>
                   </div>
-                  <p className="mt-1 text-sm font-medium text-[#1A3328]">
+                  <p className="mt-1 text-sm font-medium text-primary">
                     {c.asunto}
                   </p>
                   {c.descripcion && (
@@ -273,7 +480,7 @@ export default function ProyectoDetallePage({
                 !["aprobado", "rechazado"].includes(proyecto.estado) && (
                   <button
                     onClick={handleGenerarEmailSeguimiento}
-                    className="flex items-center gap-2 text-sm text-[#1A3328] hover:underline"
+                    className="flex items-center gap-2 text-sm text-primary hover:underline"
                   >
                     <Mail className="size-4" />
                     Generar email de seguimiento a DOM
@@ -314,7 +521,7 @@ export default function ProyectoDetallePage({
                 <button
                   onClick={handleVerificarEstado}
                   disabled={verificando}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-[#1A3328] px-3 py-2 text-sm font-medium text-[#1A3328] hover:bg-[#F0EBE1] disabled:opacity-50 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-medium text-primary hover:bg-muted disabled:opacity-50 transition-colors"
                 >
                   {verificando ? (
                     <>
@@ -327,18 +534,47 @@ export default function ProyectoDetallePage({
                   )}
                 </button>
                 {ultimaVerificacion && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {ultimaVerificacion.simulated ? "(simulado) " : ""}
-                    {ultimaVerificacion.changed
-                      ? `Estado actualizado → ${ultimaVerificacion.estadoNuevo}`
-                      : "Sin cambios en el portal"}
-                    {" · "}
-                    {new Date(ultimaVerificacion.fetchedAt).toLocaleTimeString(
-                      "es-CL"
+                  <div className={`mt-2 rounded-lg border p-3 text-xs ${
+                    ultimaVerificacion.changed
+                      ? 'border-green-200 bg-green-50'
+                      : 'border-border bg-muted/40'
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-primary">
+                        {ultimaVerificacion.changed
+                          ? `Estado actualizado: ${ultimaVerificacion.estadoNuevo}`
+                          : 'Sin cambios en el portal'}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {new Date(ultimaVerificacion.fetchedAt).toLocaleTimeString('es-CL')}
+                      </span>
+                    </div>
+                    {ultimaVerificacion.expedienteNumero && (
+                      <p className="text-muted-foreground">
+                        Expediente: <span className="font-medium text-primary">{ultimaVerificacion.expedienteNumero}</span>
+                      </p>
                     )}
-                  </p>
+                    {ultimaVerificacion.observaciones && (
+                      <div className="mt-1.5 rounded border border-amber-200 bg-amber-50 p-2">
+                        <p className="font-medium text-amber-800">Observaciones:</p>
+                        <p className="mt-0.5 text-amber-700">{ultimaVerificacion.observaciones}</p>
+                      </div>
+                    )}
+                    {ultimaVerificacion.simulated && (
+                      <p className="mt-1 italic text-muted-foreground">(simulado en desarrollo)</p>
+                    )}
+                  </div>
                 )}
               </div>
+              {proyecto.cliente?.telefono && (
+                <button
+                  onClick={() => setWaDialogOpen(true)}
+                  className="mt-2 w-full flex items-center justify-center gap-2 rounded-lg border border-green-700 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-50 transition-colors"
+                >
+                  <MessageCircle className="size-4" />
+                  Notificar cliente por WhatsApp
+                </button>
+              )}
             </CardContent>
           </Card>
 
@@ -347,6 +583,7 @@ export default function ProyectoDetallePage({
             <PlazoLey21718Card
               fechaIngreso={proyecto.fecha_inicio}
               tieneRevisorIndependiente={false}
+              proyecto={proyecto}
             />
           )}
 
@@ -367,7 +604,7 @@ export default function ProyectoDetallePage({
                 >
                   {docIcon(d.tipo)}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[#1A3328]">
+                    <p className="truncate text-sm font-medium text-primary">
                       {d.nombre}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
@@ -397,12 +634,24 @@ export default function ProyectoDetallePage({
                 defaultValue="Cliente solicita priorizar la aprobación antes de la temporada alta. Coordinar con la DOM una reunión de revisión conjunta para acelerar las observaciones."
                 rows={5}
               />
-              <Button className="bg-[#1A3328] text-white hover:bg-[#1A3328]/90">
+              <Button className="bg-primary text-white hover:bg-primary/90">
                 Guardar notas
               </Button>
             </CardContent>
           </Card>
         </div>
+        </div>
+
+        {proyecto.cliente?.telefono && (
+          <WhatsAppDialog
+            open={waDialogOpen}
+            onClose={() => setWaDialogOpen(false)}
+            telefono={proyecto.cliente.telefono}
+            proyectoNombre={proyecto.nombre}
+            municipio={proyecto.municipio}
+            clienteNombre={proyecto.cliente?.nombre ?? 'Cliente'}
+          />
+        )}
       </div>
     </div>
   )
@@ -423,7 +672,7 @@ function InfoRow({
         {icon}
         {label}
       </span>
-      <span className="text-right font-medium text-[#1A3328]">{children}</span>
+      <span className="text-right font-medium text-primary">{children}</span>
     </div>
   )
 }
@@ -449,9 +698,11 @@ const PLAZO_ESTADO_CONFIG = {
 function PlazoLey21718Card({
   fechaIngreso,
   tieneRevisorIndependiente,
+  proyecto,
 }: {
   fechaIngreso: string
   tieneRevisorIndependiente: boolean
+  proyecto: (typeof MOCK_PROYECTOS)[number]
 }) {
   const estado = getEstadoPlazoLey21718(
     new Date(`${fechaIngreso}T00:00:00`),
@@ -459,54 +710,151 @@ function PlazoLey21718Card({
   )
   const cfg = PLAZO_ESTADO_CONFIG[estado.estado]
 
+  const [generando, setGenerando] = useState(false)
+  const [carta, setCarta] = useState<string | null>(null)
+  const [cartaOpen, setCartaOpen] = useState(false)
+  const [copiado, setCopiado] = useState(false)
+
+  const necesitaCarta = estado.estado === 'VENCIDO' || estado.estado === 'PROXIMO_VENCER'
+
+  async function handleGenerarCarta() {
+    setGenerando(true)
+    try {
+      const res = await fetch('/api/ai/generate-communication', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: estado.estado === 'VENCIDO' ? 'reclamo_ley21718' : 'seguimiento_dom',
+          proyectoNombre: proyecto.nombre,
+          municipio: proyecto.municipio,
+          numeroExpediente: proyecto.numero_expediente,
+          fechaIngreso: proyecto.fecha_inicio,
+          diasHabiles: estado.diasHabilesDesdeIngreso,
+          direccion: proyecto.direccion,
+        }),
+      })
+      const data = await res.json() as { ok: boolean; texto?: string }
+      if (data.ok && data.texto) {
+        setCarta(data.texto)
+        setCartaOpen(true)
+      }
+    } finally {
+      setGenerando(false)
+    }
+  }
+
+  function handleCopiar() {
+    if (!carta) return
+    void navigator.clipboard.writeText(carta).then(() => {
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    })
+  }
+
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>Plazo Ley 21.718</CardTitle>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold",
-            cfg.badge
-          )}
-        >
-          {estado.estado === "VENCIDO" && <AlertTriangle className="size-3" />}
-          {cfg.label}
-        </span>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {/* Progress bar */}
-        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className={cn("h-full rounded-full transition-all", cfg.bar)}
-            style={{ width: `${estado.porcentajeUsado}%` }}
-          />
-        </div>
+    <>
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle>Plazo Ley 21.718</CardTitle>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold",
+              cfg.badge
+            )}
+          >
+            {estado.estado === "VENCIDO" && <AlertTriangle className="size-3" />}
+            {cfg.label}
+          </span>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Progress bar */}
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className={cn("h-full rounded-full transition-all", cfg.bar)}
+              style={{ width: `${estado.porcentajeUsado}%` }}
+            />
+          </div>
 
-        <div className="space-y-1 text-sm">
-          <p className="font-medium text-[#1A3328]">
-            {estado.estado === "VENCIDO"
-              ? `Plazo vencido (${estado.diasHabilesDesdeIngreso} días hábiles transcurridos)`
-              : `${estado.diasHabilesRestantes} días hábiles restantes de ${estado.plazoTotal}`}
-          </p>
-          <p className="text-muted-foreground">
-            Vence el {formatFecha(estado.fechaVencimiento)}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {estado.tieneRevisorIndependiente
-              ? "Plazo de 15 días hábiles (con revisor independiente)"
-              : "Plazo de 30 días hábiles (sin revisor independiente)"}
-          </p>
-        </div>
+          <div className="space-y-1 text-sm">
+            <p className="font-medium text-primary">
+              {estado.estado === "VENCIDO"
+                ? `Plazo vencido (${estado.diasHabilesDesdeIngreso} días hábiles transcurridos)`
+                : `${estado.diasHabilesRestantes} días hábiles restantes de ${estado.plazoTotal}`}
+            </p>
+            <p className="text-muted-foreground">
+              Vence el {formatFecha(estado.fechaVencimiento)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {estado.tieneRevisorIndependiente
+                ? "Plazo de 15 días hábiles (con revisor independiente)"
+                : "Plazo de 30 días hábiles (sin revisor independiente)"}
+            </p>
+          </div>
 
-        <p
-          className={cn(
-            "rounded-lg px-3 py-2 text-xs font-medium",
-            cfg.badge
+          <p
+            className={cn(
+              "rounded-lg px-3 py-2 text-xs font-medium",
+              cfg.badge
+            )}
+          >
+            {estado.labelEstado}
+          </p>
+
+          {necesitaCarta && (
+            <button
+              onClick={() => void handleGenerarCarta()}
+              disabled={generando}
+              className={cn(
+                "w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50",
+                estado.estado === 'VENCIDO'
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'border border-amber-600 text-amber-700 hover:bg-amber-50'
+              )}
+            >
+              {generando ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Mail className="size-4" />
+              )}
+              {generando
+                ? 'Generando...'
+                : estado.estado === 'VENCIDO'
+                  ? 'Generar reclamo Ley 21.718 (IA)'
+                  : 'Generar aviso preventivo a DOM'}
+            </button>
           )}
-        >
-          {estado.labelEstado}
-        </p>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      <Dialog open={cartaOpen} onOpenChange={v => { if (!v) setCartaOpen(false) }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-primary">
+              {estado.estado === 'VENCIDO' ? 'Reclamo Ley 21.718' : 'Aviso preventivo a DOM'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <textarea
+              readOnly
+              value={carta ?? ''}
+              rows={14}
+              className="w-full resize-none rounded-lg border border-border bg-background p-4 font-mono text-xs leading-relaxed text-gray-700 focus:outline-none"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setCartaOpen(false)}>
+                Cerrar
+              </Button>
+              <Button
+                onClick={handleCopiar}
+                className="bg-primary text-white hover:bg-primary/90"
+              >
+                {copiado ? <Check className="size-4" /> : <Copy className="size-4" />}
+                {copiado ? 'Copiado' : 'Copiar carta'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

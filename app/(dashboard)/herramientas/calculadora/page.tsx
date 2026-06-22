@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { AlertTriangle, Calculator, Info } from "lucide-react"
 
+import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -25,8 +26,22 @@ import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 
 const TIPOS_OBRA = Object.entries(TIPO_OBRA_LABELS) as [TipoObra, string][]
 
+interface UfData {
+  valor: number
+  fecha: string | null
+  fallback: boolean
+}
+
 export default function CalculadoraDerechosPage() {
   const [resultado, setResultado] = useState<CalculoDerechos | null>(null)
+  const [ufActual, setUfActual] = useState<UfData | null>(null)
+
+  useEffect(() => {
+    fetch('/api/utils/uf')
+      .then(r => r.json() as Promise<UfData & { ok: boolean }>)
+      .then(data => setUfActual({ valor: data.valor, fecha: data.fecha, fallback: data.fallback ?? false }))
+      .catch(() => setUfActual({ valor: 38000, fecha: null, fallback: true }))
+  }, [])
 
   const [form, setForm] = useState({
     municipio: "",
@@ -62,34 +77,48 @@ export default function CalculadoraDerechosPage() {
         form.tipoObra,
         Number(form.superficieConstruida),
         form.esDFL2,
-        form.municipio
+        form.municipio,
+        ufActual?.valor ?? 38000
       )
     )
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 rounded-xl bg-[#1A3328] p-5 text-white">
-        <div className="flex size-11 items-center justify-center rounded-xl bg-white/10">
-          <Calculator className="size-6" />
+    <div className="flex min-h-screen flex-col">
+      <PageHeader
+        emoji="🧮"
+        title="Calculadora de derechos"
+        breadcrumbs={[
+          { label: "IA Normativa" },
+          { label: "Calculadora de derechos" },
+        ]}
+      />
+      <div className="flex-1 overflow-auto p-8">
+        <div className="mx-auto max-w-3xl space-y-6">
+      {/* UF badge */}
+      {ufActual && (
+        <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+          ufActual.fallback
+            ? 'border-amber-200 bg-amber-50 text-amber-700'
+            : 'border-border bg-muted/40 text-muted-foreground'
+        }`}>
+          <span className="font-medium">
+            UF: ${ufActual.valor.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+          </span>
+          <span>·</span>
+          <span>
+            {ufActual.fallback
+              ? 'valor referencial (mindicador.cl no disponible)'
+              : `actualizado ${new Date(ufActual.fecha!).toLocaleDateString('es-CL')}`}
+          </span>
         </div>
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            Calculadora de Derechos DOM
-          </h1>
-          <p className="text-sm text-white/70">
-            Estimación de derechos municipales para permisos de edificación
-            (Art. 130 LGUC)
-          </p>
-        </div>
-      </div>
+      )}
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base text-[#1A3328]">
+            <CardTitle className="text-base text-primary">
               Datos de la obra
             </CardTitle>
           </CardHeader>
@@ -165,7 +194,7 @@ export default function CalculadoraDerechosPage() {
               </div>
             </div>
 
-            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-[#1A3328]">
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-primary">
               <Checkbox
                 checked={form.esDFL2}
                 onCheckedChange={(checked) =>
@@ -178,7 +207,7 @@ export default function CalculadoraDerechosPage() {
             <Button
               type="submit"
               disabled={!formularioValido}
-              className="w-full bg-[#1A3328] text-white hover:bg-[#1A3328]/90"
+              className="w-full bg-primary text-white hover:bg-primary/90"
             >
               <Calculator className="size-4" />
               Calcular derechos
@@ -189,12 +218,12 @@ export default function CalculadoraDerechosPage() {
 
       {/* Result */}
       {resultado && (
-        <Card className="border-2 border-[#1A3328]/30">
-          <CardHeader className="rounded-t-xl bg-[#1A3328]/5">
-            <CardTitle className="text-sm font-medium text-[#1A3328]">
+        <Card className="border-2 border-primary/30">
+          <CardHeader className="rounded-t-xl bg-primary/5">
+            <CardTitle className="text-sm font-medium text-primary">
               Derechos municipales estimados
             </CardTitle>
-            <p className="text-3xl font-semibold tracking-tight text-[#1A3328]">
+            <p className="text-3xl font-semibold tracking-tight text-primary">
               ${resultado.montoDerechos.toLocaleString("es-CL")}
             </p>
           </CardHeader>
@@ -204,13 +233,13 @@ export default function CalculadoraDerechosPage() {
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Detalle del cálculo
               </h3>
-              <ul className="space-y-1.5 rounded-lg bg-[#1A3328]/5 p-4">
+              <ul className="space-y-1.5 rounded-lg bg-primary/5 p-4">
                 {resultado.detalle.map((linea, i) => (
                   <li
                     key={i}
                     className="flex gap-2 text-sm text-gray-700"
                   >
-                    <span className="shrink-0 font-bold text-[#1A3328]">
+                    <span className="shrink-0 font-bold text-primary">
                       ·
                     </span>
                     {linea}
@@ -244,6 +273,8 @@ export default function CalculadoraDerechosPage() {
           Estimación referencial. Los montos exactos son determinados por cada
           DOM según su tabla de cobros vigente.
         </p>
+      </div>
+        </div>
       </div>
     </div>
   )

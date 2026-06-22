@@ -23,9 +23,6 @@ export interface CalculoDerechos {
 // Mínimo: varía por municipio (usamos UF como referencia)
 const PORCENTAJE_BASE = 0.015
 
-// Reference: 1 UF ≈ CLP 38,000 (mid 2025)
-const UF_CLP = 38000
-
 const MINIMOS_UF: Record<string, number> = {
   'Santiago': 5,
   'Providencia': 6,
@@ -44,7 +41,8 @@ export function calcularDerechosMunicipales(
   tipoObra: TipoObra,
   superficieConstruida: number,
   esDFL2: boolean,
-  municipio: string
+  municipio: string,
+  ufCLP: number = 38000
 ): CalculoDerechos {
   const detalle: string[] = []
   const advertencias: string[] = []
@@ -87,7 +85,7 @@ export function calcularDerechosMunicipales(
 
   // Apply minimum
   const minimoUF = MINIMOS_UF[municipio] ?? MINIMOS_UF['default']
-  const minimoCLP = minimoUF * UF_CLP
+  const minimoCLP = minimoUF * ufCLP
   if (montoCalculado < minimoCLP) {
     detalle.push(`Se aplica mínimo de ${minimoUF} UF (≈ $${minimoCLP.toLocaleString('es-CL')}) en ${municipio}`)
     montoCalculado = minimoCLP

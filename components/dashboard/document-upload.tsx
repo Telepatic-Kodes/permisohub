@@ -243,13 +243,13 @@ export function DocumentUpload({
         onDragLeave={handleDragLeave}
         className={cn(
           "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 px-6 py-10 text-center transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#1A3328]/40",
-          isDragOver && "border-[#1A3328] bg-[#F0EBE1]",
+          isDragOver && "border-primary bg-muted",
         )}
       >
-        <div className="flex size-12 items-center justify-center rounded-full bg-[#F0EBE1]">
-          <Upload className="size-6 text-[#1A3328]" />
+        <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+          <Upload className="size-6 text-primary" />
         </div>
-        <p className="text-sm font-medium text-[#1A3328]">
+        <p className="text-sm font-medium text-primary">
           Arrastra archivos aquí o haz clic para subir
         </p>
         <p className="text-xs text-muted-foreground">
@@ -269,14 +269,14 @@ export function DocumentUpload({
       {queue.length > 0 && (
         <div className="rounded-xl border border-border bg-white p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[#1A3328]">
+            <h3 className="text-sm font-semibold text-primary">
               Archivos en cola
             </h3>
             {pendingCount > 0 && (
               <button
                 type="button"
                 onClick={uploadAll}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#1A3328] px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
               >
                 <Upload className="size-3.5" />
                 Subir {pendingCount}{" "}
@@ -292,14 +292,14 @@ export function DocumentUpload({
                 className="rounded-lg border border-border bg-card p-3"
               >
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#F0EBE1]">
-                    <FileText className="size-4.5 text-[#1A3328]" />
+                  <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <FileText className="size-4.5 text-primary" />
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-[#1A3328]">
+                        <p className="truncate text-sm font-medium text-primary">
                           {item.file.name}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -313,7 +313,7 @@ export function DocumentUpload({
                           type="button"
                           onClick={() => removeItem(item.id)}
                           aria-label="Quitar archivo"
-                          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-[#1A3328]"
+                          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
                         >
                           <X className="size-4" />
                         </button>
@@ -327,7 +327,7 @@ export function DocumentUpload({
                         onChange={(event) =>
                           updateItem(item.id, { tipo: event.target.value })
                         }
-                        className="mt-2 h-8 w-full rounded-lg border border-input bg-card px-2 text-xs text-[#1A3328] outline-none focus-visible:border-[#1A3328] focus-visible:ring-2 focus-visible:ring-[#1A3328]/30"
+                        className="mt-2 h-8 w-full rounded-lg border border-input bg-card px-2 text-xs text-primary outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-[#1A3328]/30"
                       >
                         {TIPOS_DOCUMENTO.map((tipo) => (
                           <option key={tipo} value={tipo}>
@@ -348,7 +348,7 @@ export function DocumentUpload({
                     {item.status === "uploading" && (
                       <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full rounded-full bg-[#1A3328] transition-all duration-150"
+                          className="h-full rounded-full bg-primary transition-all duration-150"
                           style={{ width: `${item.progress}%` }}
                         />
                       </div>
@@ -362,7 +362,7 @@ export function DocumentUpload({
                           <button
                             type="button"
                             onClick={() => void uploadItem(item)}
-                            className="shrink-0 rounded-md border border-[#1A3328] px-2 py-1 text-xs font-medium text-[#1A3328] transition-colors hover:bg-[#F0EBE1]"
+                            className="shrink-0 rounded-md border border-primary px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-muted"
                           >
                             Reintentar
                           </button>
@@ -380,7 +380,7 @@ export function DocumentUpload({
       {/* Completed uploads */}
       {uploaded.length > 0 && (
         <div className="rounded-xl border border-border bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-[#1A3328]">
+          <h3 className="mb-3 text-sm font-semibold text-primary">
             Archivos subidos
           </h3>
           <ul className="space-y-2">
@@ -393,7 +393,7 @@ export function DocumentUpload({
                   <CheckCircle className="size-4 text-green-700" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[#1A3328]">
+                  <p className="truncate text-sm font-medium text-primary">
                     {doc.nombre}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -412,7 +412,7 @@ export function DocumentUpload({
 function StatusIndicator({ status }: { status: QueueStatus }) {
   if (status === "uploading") {
     return (
-      <Loader2 className="size-4 animate-spin text-[#1A3328]" aria-label="Subiendo" />
+      <Loader2 className="size-4 animate-spin text-primary" aria-label="Subiendo" />
     )
   }
   if (status === "complete") {

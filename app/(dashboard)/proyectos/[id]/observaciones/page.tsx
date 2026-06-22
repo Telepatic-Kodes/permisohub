@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, use } from "react"
-import { Upload, FileText, AlertCircle, CheckCircle2, AlertTriangle, Loader2, Wand2, Copy, ChevronDown, ChevronUp } from "lucide-react"
+import { Upload, FileText, AlertCircle, CheckCircle2, AlertTriangle, Loader2, Wand2, Copy, ChevronDown, ChevronUp, MessageCircle, FileDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { ESTADISTICAS_MUNICIPIOS } from "@/lib/municipios-stats"
+import { MOCK_PROYECTOS } from "@/lib/mock-data"
 
 interface Observacion {
   numero: number
@@ -49,6 +51,13 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
   const [error, setError] = useState<string | null>(null)
   const [observaciones, setObservaciones] = useState<Observacion[]>([])
   const [copied, setCopied] = useState<number | null>(null)
+  const [notificando, setNotificando] = useState(false)
+  const [notificadoOk, setNotificadoOk] = useState(false)
+
+  const proyecto = MOCK_PROYECTOS.find(p => p.id === id)
+  const municipioStats = result?.municipio
+    ? ESTADISTICAS_MUNICIPIOS.find(m => m.nombre === result.municipio)
+    : null
 
   async function processFile(file: File) {
     if (!file.name.endsWith('.pdf')) {
@@ -125,6 +134,54 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
         await generateResponse(i)
       }
     }
+  }
+
+  async function notificarCliente() {
+    const telefono = proyecto?.cliente?.telefono ?? proyecto?.cliente?.email
+    if (!telefono || !result) return
+    setNotificando(true)
+    try {
+      const res = await fetch('/api/notifications/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telefono,
+          tipo: 'con_observaciones',
+          proyectoNombre: proyecto?.nombre ?? 'Proyecto',
+          municipio: result.municipio ?? 'la DOM',
+          mensaje: `${observaciones.length} observaciones — plazo: ${result.plazoRespuesta ?? '?'} días hábiles`,
+          arquitecta: 'Estefanía Parada',
+        }),
+      })
+      const data = await res.json() as { ok: boolean; configured?: boolean }
+      if (data.ok || data.configured === false) setNotificadoOk(true)
+    } finally {
+      setNotificando(false)
+    }
+  }
+
+  async function descargarCarta() {
+    if (!result) return
+    const res = await fetch('/api/export/carta-respuesta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        proyectoNombre: `Proyecto ${id}`,
+        municipio: result.municipio ?? 'la DOM',
+        expediente: result.expediente,
+        fechaOrdinario: result.fechaOrdinario,
+        plazoRespuesta: result.plazoRespuesta,
+        observaciones,
+      }),
+    })
+    if (!res.ok) return
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `carta-respuesta-${result.expediente ?? 'dom'}.pdf`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   function copyToClipboard(text: string, index: number) {
@@ -221,13 +278,38 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
                     {result.plazoRespuesta} días hábiles para responder
                   </Badge>
                 )}
-                <div className="ml-auto flex gap-2">
+                <div className="ml-auto flex gap-2 flex-wrap justify-end">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => { setResult(null); setObservaciones([]) }}
+                    onClick={() => { setResult(null); setObservaciones([]); setNotificadoOk(false) }}
                   >
                     Subir otro PDF
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={notificando || notificadoOk}
+                    onClick={() => void notificarCliente()}
+                    className="border-green-300 text-green-700 hover:bg-green-50"
+                  >
+                    {notificadoOk ? (
+                      <><CheckCircle2 className="size-3.5 mr-1.5 text-green-600" /> Cliente notificado</>
+                    ) : notificando ? (
+                      <><Loader2 className="size-3.5 animate-spin mr-1.5" /> Enviando...</>
+                    ) : (
+                      <><MessageCircle className="size-3.5 mr-1.5" /> Notificar cliente</>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={observaciones.every(o => !o.respuestaGenerada)}
+                    onClick={() => void descargarCarta()}
+                    className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                  >
+                    <FileDown className="size-3.5 mr-1.5" />
+                    Descargar carta formal
                   </Button>
                   <Button
                     size="sm"
@@ -235,12 +317,27 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
                     onClick={() => void generateAllResponses()}
                   >
                     <Wand2 className="size-3.5 mr-1.5" />
-                    Generar todas las respuestas
+                    Responder todas con IA
                   </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Indicador inteligencia municipal */}
+          {municipioStats && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
+              <p className="font-medium text-amber-800 mb-1">
+                Inteligencia DOM — {result?.municipio}
+              </p>
+              <p className="text-amber-700 text-xs leading-relaxed">
+                {Math.round(municipioStats.tasaObservaciones * 100)}% de proyectos reciben observaciones en este municipio.
+                {municipioStats.tiposObservacionFrequentes.length > 0 && (
+                  <> Observaciones frecuentes: {municipioStats.tiposObservacionFrequentes.slice(0, 3).join(', ')}.</>
+                )}
+              </p>
+            </div>
+          )}
 
           {observaciones.length === 0 && (
             <div className="flex flex-col items-center gap-2 py-8 text-center">

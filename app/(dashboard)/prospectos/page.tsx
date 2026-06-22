@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { LayoutGrid, List, Plus, Search } from "lucide-react"
+import { ExternalLink, LayoutGrid, List, Plus, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -28,6 +28,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { PageHeader } from "@/components/dashboard/page-header"
+import { SectionTabs } from "@/components/dashboard/section-tabs"
 import { MOCK_PROSPECTOS } from "@/lib/mock-data"
 import {
   ETAPA_CRM_CONFIG,
@@ -288,68 +290,116 @@ export default function ProspectosPage() {
   }, [search, etapaFilter])
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#1A3328]">
-            CRM — Prospectos
-          </h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Pipeline de ventas
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-gray-100 bg-white p-0.5 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setView("pipeline")}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                view === "pipeline"
-                  ? "bg-[#1A3328] text-white"
-                  : "text-[#1A3328]/70 hover:bg-[#F0EBE1]"
-              )}
-            >
-              <LayoutGrid className="size-4" />
-              Pipeline
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("lista")}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                view === "lista"
-                  ? "bg-[#1A3328] text-white"
-                  : "text-[#1A3328]/70 hover:bg-[#F0EBE1]"
-              )}
-            >
-              <List className="size-4" />
-              Lista
-            </button>
+    <div className="flex min-h-screen flex-col">
+      <PageHeader
+        emoji="📈"
+        title="CRM / Prospectos"
+        subtitle="Pipeline de ventas"
+        action={
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border border-gray-100 bg-white p-0.5 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setView("pipeline")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  view === "pipeline"
+                    ? "bg-primary text-white"
+                    : "text-primary/70 hover:bg-[#F0EBE1]"
+                )}
+              >
+                <LayoutGrid className="size-4" />
+                Pipeline
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("lista")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  view === "lista"
+                    ? "bg-primary text-white"
+                    : "text-primary/70 hover:bg-[#F0EBE1]"
+                )}
+              >
+                <List className="size-4" />
+                Lista
+              </button>
+            </div>
+            <Button onClick={() => setShowNuevo(true)}>
+              <Plus className="size-4" />
+              Nuevo prospecto
+            </Button>
+            <NuevoProspectoDialog
+              open={showNuevo}
+              onClose={() => setShowNuevo(false)}
+            />
           </div>
-          <Button className="bg-[#1A3328] text-white hover:bg-[#1A3328]/90" onClick={() => setShowNuevo(true)}>
-            <Plus className="size-4" />
-            Nuevo prospecto
-          </Button>
-          <NuevoProspectoDialog open={showNuevo} onClose={() => setShowNuevo(false)} />
-        </div>
-      </div>
+        }
+        toolbar={
+          view === "lista" ? (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="relative flex-1">
+                <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar por empresa o contacto..."
+                  className="pl-9"
+                />
+              </div>
+              <Select
+                value={etapaFilter}
+                onValueChange={(v) => setEtapaFilter(v as string)}
+              >
+                <SelectTrigger className="sm:w-56">
+                  <SelectValue placeholder="Etapa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ETAPA_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : undefined
+        }
+      />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Prospectos activos" value={String(stats.totalActivos)} />
-        <StatCard label="En negociación" value={String(stats.enNegociacion)} />
-        <StatCard label="Ganados este mes" value={String(stats.ganadosMes)} />
-        <StatCard
-          label="Valor pipeline"
-          value={formatCompact(stats.valorPipeline)}
-        />
-      </div>
+      <SectionTabs
+        tabs={[
+          { label: "Clientes", href: "/clientes" },
+          { label: "CRM / Prospectos", href: "/prospectos" },
+        ]}
+        active="/prospectos"
+      />
 
-      {view === "pipeline" ? (
+      <div className="flex-1 overflow-auto p-8">
         <div className="space-y-6">
-          {/* Kanban */}
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard
+              label="Prospectos activos"
+              value={String(stats.totalActivos)}
+            />
+            <StatCard
+              label="En negociación"
+              value={String(stats.enNegociacion)}
+            />
+            <StatCard
+              label="Ganados este mes"
+              value={String(stats.ganadosMes)}
+            />
+            <StatCard
+              label="Valor pipeline"
+              value={formatCompact(stats.valorPipeline)}
+            />
+          </div>
+
+          {view === "pipeline" ? (
+            <div className="space-y-6">
+              {/* Kanban */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
             {PIPELINE_ETAPAS.map((etapa) => {
               const cfg = ETAPA_CRM_CONFIG[etapa]
@@ -359,11 +409,11 @@ export default function ProspectosPage() {
                   <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
                       <span className={cn("size-2 rounded-full", cfg.dot)} />
-                      <span className="text-sm font-medium text-[#1A3328]">
+                      <span className="text-sm font-medium text-primary">
                         {cfg.label}
                       </span>
                     </div>
-                    <span className="rounded-full bg-[#F0EBE1] px-2 py-0.5 text-xs font-medium text-[#1A3328]">
+                    <span className="rounded-full bg-[#F0EBE1] px-2 py-0.5 text-xs font-medium text-primary">
                       {items.length}
                     </span>
                   </div>
@@ -399,7 +449,7 @@ export default function ProspectosPage() {
                     className="flex items-center justify-between rounded-lg bg-white px-3 py-2 shadow-sm transition-colors hover:bg-[#F0EBE1]"
                   >
                     <div>
-                      <p className="text-sm font-medium text-[#1A3328]">
+                      <p className="text-sm font-medium text-primary">
                         {p.empresa}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -434,7 +484,7 @@ export default function ProspectosPage() {
                     className="flex items-center justify-between rounded-lg bg-white px-3 py-2 shadow-sm transition-colors hover:bg-[#F0EBE1]"
                   >
                     <div>
-                      <p className="text-sm font-medium text-[#1A3328]">
+                      <p className="text-sm font-medium text-primary">
                         {p.empresa}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -450,128 +500,107 @@ export default function ProspectosPage() {
             </div>
           </div>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Filtros */}
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por empresa o contacto..."
-                className="pl-9"
-              />
-            </div>
-            <Select
-              value={etapaFilter}
-              onValueChange={(v) => setEtapaFilter(v as string)}
-            >
-              <SelectTrigger className="sm:w-56">
-                <SelectValue placeholder="Etapa" />
-              </SelectTrigger>
-              <SelectContent>
-                {ETAPA_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Tabla */}
-          <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Contacto</TableHead>
-                  <TableHead>Fuente</TableHead>
-                  <TableHead>Etapa</TableHead>
-                  <TableHead>Valor estimado</TableHead>
-                  <TableHead>Próximo contacto</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {listaFiltrada.map((p) => {
-                  const cfg = ETAPA_CRM_CONFIG[p.etapa]
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium text-[#1A3328]">
-                        {p.empresa}
-                      </TableCell>
-                      <TableCell>
-                        <p className="text-[#1A3328]">{p.contacto_nombre}</p>
-                        {p.cargo ? (
-                          <p className="text-xs text-muted-foreground">
-                            {p.cargo}
-                          </p>
-                        ) : null}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {FUENTE_LABELS[p.fuente]}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
-                            cfg.bg,
-                            cfg.color
-                          )}
-                        >
-                          {cfg.label}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-[#1A3328]">
-                        {p.valor_estimado
-                          ? formatCurrency(p.valor_estimado)
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {p.proximo_contacto ? (
-                          <span
-                            className={cn(
-                              "text-sm",
-                              proximoColor(p.proximo_contacto)
-                            )}
-                          >
-                            {formatDate(p.proximo_contacto)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          nativeButton={false}
-                          render={<Link href={`/prospectos/${p.id}`} />}
-                          variant="ghost"
-                          size="sm"
-                          className="text-[#1A3328]"
-                        >
-                          Ver
-                        </Button>
-                      </TableCell>
+          ) : (
+            <div className="space-y-4">
+              {/* Tabla */}
+              <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Empresa</TableHead>
+                      <TableHead>Contacto</TableHead>
+                      <TableHead>Fuente</TableHead>
+                      <TableHead>Etapa</TableHead>
+                      <TableHead>Valor estimado</TableHead>
+                      <TableHead>Próximo contacto</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
-                  )
-                })}
-                {listaFiltrada.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="py-10 text-center text-muted-foreground"
-                    >
-                      No se encontraron prospectos con los filtros aplicados.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {listaFiltrada.map((p) => {
+                      const cfg = ETAPA_CRM_CONFIG[p.etapa]
+                      return (
+                        <TableRow
+                          key={p.id}
+                          className="group/row hover:bg-primary/[0.02]"
+                        >
+                          <TableCell className="font-medium text-primary">
+                            {p.empresa}
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-primary">{p.contacto_nombre}</p>
+                            {p.cargo ? (
+                              <p className="text-xs text-muted-foreground">
+                                {p.cargo}
+                              </p>
+                            ) : null}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {FUENTE_LABELS[p.fuente]}
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={cn(
+                                "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+                                cfg.bg,
+                                cfg.color
+                              )}
+                            >
+                              {cfg.label}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-primary">
+                            {p.valor_estimado
+                              ? formatCurrency(p.valor_estimado)
+                              : "—"}
+                          </TableCell>
+                          <TableCell>
+                            {p.proximo_contacto ? (
+                              <span
+                                className={cn(
+                                  "text-sm",
+                                  proximoColor(p.proximo_contacto)
+                                )}
+                              >
+                                {formatDate(p.proximo_contacto)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="w-16">
+                            <div className="flex justify-end gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100">
+                              <Button
+                                nativeButton={false}
+                                render={<Link href={`/prospectos/${p.id}`} />}
+                                variant="ghost"
+                                size="icon-sm"
+                                title="Ver"
+                              >
+                                <ExternalLink className="size-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                    {listaFiltrada.length === 0 && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="py-10 text-center text-muted-foreground"
+                        >
+                          No se encontraron prospectos con los filtros aplicados.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

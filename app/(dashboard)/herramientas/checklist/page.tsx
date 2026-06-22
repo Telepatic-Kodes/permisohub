@@ -12,6 +12,7 @@ import {
   Square,
 } from "lucide-react"
 
+import { PageHeader } from "@/components/dashboard/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -331,7 +332,7 @@ export default function ChecklistNormativoPage() {
   }
 
   return (
-    <div className="space-y-6 p-6 lg:p-8">
+    <div className="flex min-h-screen flex-col">
       {/* Estilos de impresión */}
       <style jsx global>{`
         @media print {
@@ -352,27 +353,26 @@ export default function ChecklistNormativoPage() {
         }
       `}</style>
 
-      {/* Encabezado */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1A3328]">
-          Checklist Normativo
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Genera la lista de documentos para tu trámite
-        </p>
-      </div>
-
+      <PageHeader
+        emoji="✅"
+        title="Checklist Normativo"
+        breadcrumbs={[
+          { label: "IA Normativa" },
+          { label: "Checklist Normativo" },
+        ]}
+      />
+      <div className="flex-1 space-y-6 overflow-auto p-8">
       {/* Paso 1 — Selector */}
       <Card className="no-print">
         <CardHeader>
-          <CardTitle className="text-[#1A3328]">
+          <CardTitle className="text-primary">
             1. Selecciona tu trámite
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[#1A3328]">
+              <label className="text-sm font-medium text-primary">
                 Municipio
               </label>
               <Select
@@ -393,7 +393,7 @@ export default function ChecklistNormativoPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[#1A3328]">
+              <label className="text-sm font-medium text-primary">
                 Tipo de permiso
               </label>
               <Select
@@ -418,7 +418,7 @@ export default function ChecklistNormativoPage() {
             onClick={handleGenerate}
             disabled={!canGenerate}
             size="lg"
-            className="bg-[#1A3328] hover:bg-[#1A3328]/90"
+            className="bg-primary hover:bg-primary/90"
           >
             Generar checklist
           </Button>
@@ -432,7 +432,7 @@ export default function ChecklistNormativoPage() {
             <CardHeader>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-1">
-                  <CardTitle className="text-lg text-[#1A3328]">
+                  <CardTitle className="text-lg text-primary">
                     Checklist para {generado.tipo} en {generado.municipio}
                   </CardTitle>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -460,7 +460,7 @@ export default function ChecklistNormativoPage() {
               {/* Barra de progreso */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-[#1A3328]">
+                  <span className="font-medium text-primary">
                     Progreso
                   </span>
                   <span className="tabular-nums text-muted-foreground">
@@ -473,7 +473,7 @@ export default function ChecklistNormativoPage() {
               {/* Secciones de documentos */}
               {sections.map((section) => (
                 <div key={section.titulo} className="space-y-3">
-                  <h3 className="text-sm font-semibold tracking-wide text-[#1A3328] uppercase">
+                  <h3 className="text-sm font-semibold tracking-wide text-primary uppercase">
                     {section.titulo}
                   </h3>
                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -487,11 +487,11 @@ export default function ChecklistNormativoPage() {
                           className={cn(
                             "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
                             isChecked
-                              ? "border-[#1A3328]/30 bg-[#F0EBE1]"
+                              ? "border-primary/30 bg-[#F0EBE1]"
                               : "border-border bg-card hover:bg-[#F0EBE1]"
                           )}
                         >
-                          <span className="mt-0.5 shrink-0 text-[#1A3328]">
+                          <span className="mt-0.5 shrink-0 text-primary">
                             {isChecked ? (
                               <CheckSquare className="size-5" />
                             ) : (
@@ -502,7 +502,7 @@ export default function ChecklistNormativoPage() {
                             <span className="flex flex-wrap items-center gap-2">
                               <span
                                 className={cn(
-                                  "font-semibold text-[#1A3328]",
+                                  "font-semibold text-primary",
                                   isChecked &&
                                     "line-through opacity-60"
                                 )}
@@ -557,6 +557,7 @@ export default function ChecklistNormativoPage() {
           </div>
         </>
       )}
+      </div>
     </div>
   )
 }

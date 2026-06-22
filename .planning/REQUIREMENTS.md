@@ -3,6 +3,19 @@
 **Defined:** 2026-06-20
 **Core Value:** El copiloto IA del arquitecto chileno
 
+## v1.2 Requirements — Dashboard Clarity
+
+### DASH — Dashboard Redesign
+
+- [x] **DASH-01**: Sección "Acción requerida" muestra proyectos con obs. + alertas juntos, ordenados por urgencia
+- [x] **DASH-02**: Tres métricas hero (Urgentes, Activos, Días prom.) son los únicos KPIs prominentes
+- [x] **DASH-03**: Cuatro secciones temporales organizan todos los proyectos sin superposición
+- [x] **DASH-04**: Cada proyecto aparece exactamente una vez en el timeline
+- [x] **DASH-05**: El estado visual (color/icono de fila) es el ÚNICO indicador — sin badges redundantes
+- [x] **DASH-06**: Quick actions accesibles como pills horizontales desde el header del contenido
+
+---
+
 ## v1.1 Requirements — Cumplir la Promesa
 
 ### BILL — Billing & Subscription

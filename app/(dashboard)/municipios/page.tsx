@@ -12,6 +12,7 @@ import {
   Search,
 } from "lucide-react"
 
+import { PageHeader } from "@/components/dashboard/page-header"
 import { Input } from "@/components/ui/input"
 import {
   COMUNAS_CHILE,
@@ -59,94 +60,103 @@ export default function MunicipiosPage() {
   }, [search, region, status])
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1A3328]">
-          Municipios
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Cobertura DOM en Línea por comuna · base de conocimiento normativo
-        </p>
-      </div>
+    <div className="flex min-h-screen flex-col">
+      <PageHeader
+        emoji="📍"
+        title="Municipios"
+        subtitle="Cobertura DOM en Línea por comuna · base de conocimiento normativo"
+        toolbar={
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1 sm:max-w-xs">
+              <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar comuna..."
+                className="pl-9"
+              />
+            </div>
 
-      {/* Stats bar */}
-      <div className="rounded-xl bg-[#F9F7F3] p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-col rounded-lg bg-white px-4 py-2 shadow-sm">
-            <span className="text-xl font-semibold text-[#1A3328]">210 comunas</span>
-            <span className="text-xs text-muted-foreground">en DOM en Línea</span>
-          </div>
-          <div className="flex flex-col rounded-lg bg-white px-4 py-2 shadow-sm">
-            <span className="text-xl font-semibold text-[#1A3328]">
-              {stats.pctCoverage}% del país
-            </span>
-            <span className="text-xs text-muted-foreground">cobertura nacional</span>
-          </div>
-          <div className="flex flex-col rounded-lg bg-white px-4 py-2 shadow-sm">
-            <span className="text-xl font-semibold text-gray-500">345 comunas</span>
-            <span className="text-xs text-muted-foreground">Chile total</span>
-          </div>
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">Datos MINVU · Sep 2023</p>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar comuna..."
-            className="pl-9"
-          />
-        </div>
-
-        <select
-          value={region}
-          onChange={(e) => setRegion(e.target.value)}
-          className="h-9 rounded-lg border border-input bg-card px-3 text-sm shadow-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-        >
-          <option value="">Todas las regiones</option>
-          {REGIONES_CHILE.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-
-        <div className="inline-flex rounded-lg border border-input bg-card p-0.5 shadow-sm">
-          {(
-            [
-              { key: "todas", label: "Todas" },
-              { key: "dom_en_linea", label: "DOM en Línea" },
-              { key: "presencial", label: "Presencial" },
-            ] as { key: StatusFilter; label: string }[]
-          ).map((opt) => (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => setStatus(opt.key)}
-              className={cn(
-                "rounded-md px-3 py-1 text-sm font-medium transition-colors",
-                status === opt.key
-                  ? "bg-[#1A3328] text-white"
-                  : "text-muted-foreground hover:text-[#1A3328]"
-              )}
+            <select
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              className="h-9 rounded-lg border border-input bg-card px-3 text-sm shadow-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
             >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
+              <option value="">Todas las regiones</option>
+              {REGIONES_CHILE.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
 
-      {/* Result count */}
-      <p className="text-sm text-muted-foreground">
-        Mostrando {filtered.length} de {COMUNAS_CHILE.length} comunas
-      </p>
+            <div className="inline-flex rounded-lg border border-input bg-card p-0.5 shadow-sm">
+              {(
+                [
+                  { key: "todas", label: "Todas" },
+                  { key: "dom_en_linea", label: "DOM en Línea" },
+                  { key: "presencial", label: "Presencial" },
+                ] as { key: StatusFilter; label: string }[]
+              ).map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setStatus(opt.key)}
+                  className={cn(
+                    "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                    status === opt.key
+                      ? "bg-primary text-white"
+                      : "text-muted-foreground hover:text-primary"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        }
+      />
 
-      {/* List */}
-      <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+      <div className="flex-1 overflow-auto p-8">
+        <div className="space-y-6">
+          {/* Stats bar */}
+          <div className="rounded-xl bg-[#F9F7F3] p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-col rounded-lg bg-white px-4 py-2 shadow-sm">
+                <span className="text-xl font-semibold text-primary">
+                  210 comunas
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  en DOM en Línea
+                </span>
+              </div>
+              <div className="flex flex-col rounded-lg bg-white px-4 py-2 shadow-sm">
+                <span className="text-xl font-semibold text-primary">
+                  {stats.pctCoverage}% del país
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  cobertura nacional
+                </span>
+              </div>
+              <div className="flex flex-col rounded-lg bg-white px-4 py-2 shadow-sm">
+                <span className="text-xl font-semibold text-gray-500">
+                  345 comunas
+                </span>
+                <span className="text-xs text-muted-foreground">Chile total</span>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Datos MINVU · Sep 2023
+            </p>
+          </div>
+
+          {/* Result count */}
+          <p className="text-sm text-muted-foreground">
+            Mostrando {filtered.length} de {COMUNAS_CHILE.length} comunas
+          </p>
+
+          {/* List */}
+          <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
         {filtered.map((comuna) => {
           const isOpen = expanded === comuna.id
           const badge = STATUS_BADGE[comuna.domStatus]
@@ -159,7 +169,7 @@ export default function MunicipiosPage() {
                 className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[#F9F7F3]"
               >
                 <div className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold text-[#1A3328]">
+                  <span className="block truncate font-semibold text-primary">
                     {comuna.nombre}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
@@ -182,7 +192,7 @@ export default function MunicipiosPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="shrink-0 text-muted-foreground transition-colors hover:text-[#1A3328]"
+                    className="shrink-0 text-muted-foreground transition-colors hover:text-primary"
                     aria-label={`Abrir plataforma DOM de ${comuna.nombre}`}
                   >
                     <Globe className="size-4" />
@@ -230,7 +240,7 @@ export default function MunicipiosPage() {
 
                       {info.requisitos.length > 0 && (
                         <div>
-                          <p className="mb-1.5 text-xs font-semibold text-[#1A3328]">
+                          <p className="mb-1.5 text-xs font-semibold text-primary">
                             Requisitos
                           </p>
                           <ul className="space-y-1.5">
@@ -239,7 +249,7 @@ export default function MunicipiosPage() {
                                 key={r.nombre}
                                 className="flex items-start gap-2 text-sm text-muted-foreground"
                               >
-                                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[#1A3328]" />
+                                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
                                 <span>
                                   {r.nombre}
                                   {!r.obligatorio && (
@@ -265,7 +275,7 @@ export default function MunicipiosPage() {
                       href={comuna.urlDom ?? DOM_EN_LINEA_URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[#1A3328] hover:underline"
+                      className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
                     >
                       Ir a domenlinea.minvu.cl
                       <ExternalLink className="size-3.5" />
@@ -277,11 +287,13 @@ export default function MunicipiosPage() {
           )
         })}
 
-        {filtered.length === 0 && (
-          <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-            No se encontraron comunas con los filtros seleccionados.
+            {filtered.length === 0 && (
+              <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                No se encontraron comunas con los filtros seleccionados.
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

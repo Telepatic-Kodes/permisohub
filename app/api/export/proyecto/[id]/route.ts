@@ -1,169 +1,132 @@
+import PDFDocument from 'pdfkit'
+import { NextRequest } from 'next/server'
+import { MOCK_PROYECTOS, MOCK_CLIENTES, MOCK_DOCUMENTOS, MOCK_ETAPAS } from '@/lib/mock-data'
+import { TIPO_PERMISO_LABELS, ESTADO_CONFIG } from '@/types'
+
 export const dynamic = 'force-dynamic'
 
-import { MOCK_PROYECTOS, MOCK_CLIENTES } from '@/lib/mock-data'
-import { TIPO_PERMISO_LABELS } from '@/types'
-
-interface ProyectoExport {
-  nombre: string
-  cliente: string
-  municipio: string
-  tipo_permiso: string
-  estado: string
-  fecha_inicio: string
-  direccion?: string
-  numero_expediente?: string
-  superficie_terreno?: number
-  superficie_construida?: number
-}
-
-function getProyectoExport(id: string): ProyectoExport {
-  const p = MOCK_PROYECTOS.find((p) => p.id === id) ?? MOCK_PROYECTOS[0]
-  const cliente = MOCK_CLIENTES.find((c) => c.id === p.cliente_id)
-  return {
-    nombre: p.nombre,
-    cliente: cliente?.nombre ?? '—',
-    municipio: p.municipio,
-    tipo_permiso: TIPO_PERMISO_LABELS[p.tipo] ?? p.tipo,
-    estado: p.estado.replace(/_/g, ' '),
-    fecha_inicio: p.fecha_inicio,
-    direccion: p.direccion,
-    numero_expediente: p.numero_expediente,
-    superficie_terreno: undefined,
-    superficie_construida: undefined,
-  }
-}
-
 export async function GET(
-  request: Request,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const proyecto = getProyectoExport(id)
+  const proyecto = MOCK_PROYECTOS.find((p) => p.id === id) ?? MOCK_PROYECTOS[0]
+  const cliente = MOCK_CLIENTES.find((c) => c.id === proyecto.cliente_id)
+  const estadoCfg = ESTADO_CONFIG[proyecto.estado]
+  const etapas = MOCK_ETAPAS.filter((e) => e.proyecto_id === proyecto.id)
+  const documentos = MOCK_DOCUMENTOS.filter((d) => d.proyecto_id === proyecto.id)
 
-  const fechaExport = new Date().toLocaleDateString('es-CL', {
-    day: '2-digit', month: 'long', year: 'numeric',
+  // Stream PDF to response
+  const chunks: Buffer[] = []
+
+  await new Promise<void>((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 50, size: 'A4' })
+
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk))
+    doc.on('end', resolve)
+    doc.on('error', reject)
+
+    // ── HEADER ──
+    doc.fillColor('#1A3328').fontSize(20).font('Helvetica-Bold')
+       .text('PermisoHub', 50, 50)
+    doc.fillColor('#6B7280').fontSize(10).font('Helvetica')
+       .text('EP Gestión Arquitectónica', 50, 75)
+
+    doc.moveTo(50, 95).lineTo(545, 95).strokeColor('#E5E7EB').stroke()
+
+    // ── TÍTULO PROYECTO ──
+    doc.fillColor('#111827').fontSize(16).font('Helvetica-Bold')
+       .text(proyecto.nombre, 50, 110)
+
+    doc.fillColor('#6B7280').fontSize(10).font('Helvetica')
+       .text(
+         `Estado: ${estadoCfg?.label ?? proyecto.estado}  ·  ${TIPO_PERMISO_LABELS[proyecto.tipo] ?? proyecto.tipo}`,
+         50, 132
+       )
+
+    // ── DATOS PRINCIPALES ──
+    doc.moveDown(2)
+    const startY = doc.y
+
+    const rows: [string, string][] = [
+      ['Cliente', cliente?.nombre ?? '—'],
+      ['Municipio', proyecto.municipio],
+      ['Dirección', proyecto.direccion ?? '—'],
+      ['N° Expediente', proyecto.numero_expediente ?? 'Sin asignar'],
+      ['Fecha de ingreso', proyecto.fecha_inicio],
+      ['Fecha estimada', proyecto.fecha_estimada ?? '—'],
+    ]
+
+    doc.fontSize(12).font('Helvetica-Bold').fillColor('#1A3328')
+       .text('Información del Expediente', 50, startY)
+    doc.moveDown(0.5)
+
+    rows.forEach(([label, value]) => {
+      const y = doc.y
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151')
+         .text(label + ':', 50, y, { width: 150 })
+      doc.fontSize(9).font('Helvetica').fillColor('#111827')
+         .text(value, 200, y, { width: 345 })
+      doc.moveDown(0.4)
+    })
+
+    // ── ETAPAS ──
+    if (etapas.length > 0) {
+      doc.moveDown(1)
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#1A3328')
+         .text('Etapas de Tramitación')
+      doc.moveDown(0.5)
+
+      etapas.forEach((etapa) => {
+        const y = doc.y
+        const estadoLabel =
+          etapa.estado === 'completada' ? '[OK]' :
+          etapa.estado === 'en_curso'   ? '[->]' : '[ ]'
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151')
+           .text(`${estadoLabel}  ${etapa.nombre}`, 50, y)
+        if (etapa.notas) {
+          doc.moveDown(0.2)
+          doc.fontSize(8).font('Helvetica').fillColor('#6B7280')
+             .text(etapa.notas, 70, doc.y)
+        }
+        doc.moveDown(0.5)
+      })
+    }
+
+    // ── DOCUMENTOS ──
+    if (documentos.length > 0) {
+      doc.moveDown(1)
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#1A3328')
+         .text('Documentos Adjuntos')
+      doc.moveDown(0.5)
+
+      documentos.forEach((d) => {
+        doc.fontSize(9).font('Helvetica').fillColor('#374151')
+           .text(`- ${d.nombre}  (${d.tipo})`, 50, doc.y)
+        doc.moveDown(0.3)
+      })
+    }
+
+    // ── FOOTER ──
+    const pageHeight = doc.page.height
+    doc.fontSize(8).font('Helvetica').fillColor('#9CA3AF')
+       .text(
+         `Generado por PermisoHub · ${new Date().toLocaleDateString('es-CL')}`,
+         50, pageHeight - 50,
+         { align: 'center', width: 495 }
+       )
+
+    doc.end()
   })
 
-  const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Expediente — ${proyecto.nombre}</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a1a; background: white; }
-    .header { background: #1A3328; color: white; padding: 32px 40px; }
-    .header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
-    .header p { font-size: 13px; opacity: 0.8; }
-    .content { padding: 40px; max-width: 800px; margin: 0 auto; }
-    .section { margin-bottom: 32px; }
-    .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #1A3328; border-bottom: 2px solid #1A3328; padding-bottom: 6px; margin-bottom: 16px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .field { margin-bottom: 12px; }
-    .field-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin-bottom: 2px; }
-    .field-value { font-size: 14px; color: #1a1a1a; }
-    .badge { display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; background: #dcfce7; color: #166534; }
-    .timeline { border-left: 2px solid #e5e7eb; padding-left: 20px; }
-    .timeline-item { position: relative; margin-bottom: 20px; }
-    .timeline-item::before { content: ''; position: absolute; left: -25px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: #1A3328; }
-    .timeline-date { font-size: 11px; color: #888; margin-bottom: 2px; }
-    .timeline-text { font-size: 14px; }
-    .footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #888; display: flex; justify-content: space-between; }
-    .disclaimer { background: #fef9c3; border: 1px solid #fef08a; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #854d0e; margin-top: 32px; }
-    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none; } }
-  </style>
-</head>
-<body>
-  <div class="no-print" style="background:#f3f4f6;padding:12px 40px;display:flex;align-items:center;justify-content:space-between;">
-    <span style="font-size:13px;color:#374151;">Expediente completo — ${proyecto.nombre}</span>
-    <button onclick="window.print()" style="background:#1A3328;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;">🖨️ Imprimir / Guardar PDF</button>
-  </div>
+  const pdf = Buffer.concat(chunks)
+  const filename = `expediente-${proyecto.numero_expediente ?? proyecto.id}.pdf`
 
-  <div class="header">
-    <h1>Expediente de Tramitación</h1>
-    <p>EP Gestión Arquitectónica — Estefanía Parada · estefania@epgestion.cl</p>
-  </div>
-
-  <div class="content">
-    <!-- Project data -->
-    <div class="section">
-      <div class="section-title">Datos del proyecto</div>
-      <div class="grid-2">
-        <div>
-          <div class="field"><div class="field-label">Nombre del proyecto</div><div class="field-value">${proyecto.nombre}</div></div>
-          <div class="field"><div class="field-label">Tipo de permiso</div><div class="field-value">${proyecto.tipo_permiso}</div></div>
-          <div class="field"><div class="field-label">Estado actual</div><div class="field-value"><span class="badge">${proyecto.estado}</span></div></div>
-        </div>
-        <div>
-          <div class="field"><div class="field-label">Municipio</div><div class="field-value">${proyecto.municipio}</div></div>
-          <div class="field"><div class="field-label">N° Expediente DOM</div><div class="field-value">${proyecto.numero_expediente ?? '—'}</div></div>
-          <div class="field"><div class="field-label">Fecha de ingreso</div><div class="field-value">${proyecto.fecha_inicio ? new Date(proyecto.fecha_inicio).toLocaleDateString('es-CL') : '—'}</div></div>
-        </div>
-      </div>
-      ${proyecto.direccion ? `<div class="field"><div class="field-label">Dirección</div><div class="field-value">${proyecto.direccion}</div></div>` : ''}
-    </div>
-
-    <!-- Client data -->
-    <div class="section">
-      <div class="section-title">Datos del mandante</div>
-      <div class="field"><div class="field-label">Nombre</div><div class="field-value">${proyecto.cliente}</div></div>
-    </div>
-
-    <!-- Technical data -->
-    ${(proyecto.superficie_terreno ?? proyecto.superficie_construida) ? `
-    <div class="section">
-      <div class="section-title">Datos técnicos</div>
-      <div class="grid-2">
-        ${proyecto.superficie_terreno ? `<div class="field"><div class="field-label">Superficie terreno</div><div class="field-value">${proyecto.superficie_terreno} m²</div></div>` : ''}
-        ${proyecto.superficie_construida ? `<div class="field"><div class="field-label">Superficie construida</div><div class="field-value">${proyecto.superficie_construida} m²</div></div>` : ''}
-      </div>
-    </div>` : ''}
-
-    <!-- Timeline placeholder -->
-    <div class="section">
-      <div class="section-title">Línea de tiempo</div>
-      <div class="timeline">
-        <div class="timeline-item">
-          <div class="timeline-date">${proyecto.fecha_inicio ? new Date(proyecto.fecha_inicio).toLocaleDateString('es-CL') : '—'}</div>
-          <div class="timeline-text">Ingreso a la DOM de ${proyecto.municipio}</div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-date">Presente</div>
-          <div class="timeline-text">Estado: ${proyecto.estado}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Professional -->
-    <div class="section">
-      <div class="section-title">Arquitecta responsable</div>
-      <div class="grid-2">
-        <div>
-          <div class="field"><div class="field-label">Nombre</div><div class="field-value">Estefanía Parada</div></div>
-          <div class="field"><div class="field-label">Empresa</div><div class="field-value">EP Gestión Arquitectónica</div></div>
-        </div>
-        <div>
-          <div class="field"><div class="field-label">Email</div><div class="field-value">estefania@epgestion.cl</div></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="disclaimer">
-      ⚠️ Este documento es un resumen generado por PermisoHub y tiene carácter informativo. Los documentos oficiales son los emitidos por la DOM correspondiente.
-    </div>
-
-    <div class="footer">
-      <span>Generado el ${fechaExport} por PermisoHub</span>
-      <span>Expediente ID: ${id}</span>
-    </div>
-  </div>
-</body>
-</html>`
-
-  return new Response(html, {
+  return new Response(pdf, {
     headers: {
-      'Content-Type': 'text/html; charset=utf-8',
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': String(pdf.length),
     },
   })
 }

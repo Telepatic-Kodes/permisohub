@@ -1,4 +1,4 @@
-import { getAI, AI_MODEL } from '@/lib/ai'
+import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
 
 export const dynamic = 'force-dynamic'
@@ -16,9 +16,8 @@ interface ObservationRequest {
 export async function POST(request: Request) {
   const body = await request.json() as ObservationRequest
 
-  const ai = getAI()
-  if (!ai) {
-    return Response.json({ error: 'ANTHROPIC_API_KEY no configurado' }, { status: 503 })
+  if (!isAIAvailable()) {
+    return Response.json({ error: 'OPENAI_API_KEY no configurado' }, { status: 503 })
   }
 
   const ogucContext = getContextoOGUC(body.observacionTexto)
@@ -51,13 +50,7 @@ El tono debe ser técnico, formal y constructivo. Cita siempre el artículo OGUC
 Si la observación de la DOM parece incorrecta o aplicó mal la norma, indícalo respetuosamente con la cita normativa correcta.`
 
   try {
-    const response = await ai.messages.create({
-      model: AI_MODEL,
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
-    })
-
-    const texto = response.content[0].type === 'text' ? response.content[0].text : ''
+    const texto = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 2000 })
 
     return Response.json({
       ok: true,

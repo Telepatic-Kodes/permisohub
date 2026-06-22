@@ -79,5 +79,15 @@ El copiloto IA del arquitecto chileno — reduce el tiempo de tramitación DOM d
 | Route: `/calculadora` no `/calculadora-derechos` | Turbopack unicode bug workaround | ✓ Good |
 | Dashboard en `/dashboard` (v1.1) | Landing page pública en `/` | — Pending |
 
+## Current Milestone: v1.2 Dashboard Clarity
+
+**Goal:** Rediseñar el dashboard a Timeline View — información organizada por urgencia/tiempo, flujo único sin paneles separados.
+
+**Target features:**
+- Timeline View: ACCIÓN REQUERIDA / PRÓXIMOS 30D / EN PROCESO / COMPLETADO
+- 3 hero stats prominentes (Urgentes, Activos, Días prom.)
+- Quick actions como pills horizontales
+- Status bar minimalista al fondo con conteos por estado
+
 ---
-*Last updated: 2026-06-20 — Milestone v1.1 started*
+*Last updated: 2026-06-21 — Milestone v1.2 started*

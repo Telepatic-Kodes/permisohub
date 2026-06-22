@@ -1,4 +1,4 @@
-import { getAI, AI_MODEL } from '@/lib/ai'
+import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { ARTICULOS_OGUC } from '@/lib/oguc-knowledge'
 
 export const dynamic = 'force-dynamic'
@@ -22,9 +22,8 @@ interface ComplianceRequest {
 export async function POST(request: Request) {
   const body = await request.json() as ComplianceRequest
 
-  const ai = getAI()
-  if (!ai) {
-    return Response.json({ error: 'ANTHROPIC_API_KEY no configurado' }, { status: 503 })
+  if (!isAIAvailable()) {
+    return Response.json({ error: 'OPENAI_API_KEY no configurado' }, { status: 503 })
   }
 
   // Include coefficient and rasante articles always
@@ -77,13 +76,7 @@ Verifica al menos: FOT, FOS, rasantes (calcula si la altura genera problemas seg
 Si no tienes datos suficientes para verificar algo, ponlo como "VERIFICAR" con instrucción de qué verificar en el PRC municipal.`
 
   try {
-    const response = await ai.messages.create({
-      model: AI_MODEL,
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
-    })
-
-    const text = response.content[0].type === 'text' ? response.content[0].text : '{}'
+    const text = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 2000 })
 
     // Parse JSON response
     const jsonMatch = text.match(/\{[\s\S]*\}/)

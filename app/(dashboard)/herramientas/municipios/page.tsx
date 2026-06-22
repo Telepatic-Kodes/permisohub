@@ -11,6 +11,7 @@ import {
   Star,
 } from "lucide-react"
 
+import { PageHeader } from "@/components/dashboard/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import {
@@ -94,17 +95,16 @@ export default function InteligenciaMunicipiosPage() {
   }, [region, sortKey])
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1A3328]">
-          Inteligencia de municipios
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Comparativa de desempeño de Direcciones de Obras Municipales (DOM)
-        </p>
-      </div>
-
+    <div className="flex min-h-screen flex-col">
+      <PageHeader
+        emoji="🏛️"
+        title="Inteligencia DOM"
+        breadcrumbs={[
+          { label: "IA Normativa" },
+          { label: "Inteligencia DOM" },
+        ]}
+      />
+      <div className="flex-1 space-y-6 overflow-auto p-8">
       {/* Disclaimer */}
       <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
         <Info className="mt-0.5 size-4 shrink-0" />
@@ -123,7 +123,7 @@ export default function InteligenciaMunicipiosPage() {
           <select
             value={region}
             onChange={(e) => setRegion(e.target.value)}
-            className="h-9 rounded-md border border-input bg-white px-3 text-sm text-[#1A3328] focus:outline-none focus:ring-2 focus:ring-[#1A3328]/20"
+            className="h-9 rounded-md border border-input bg-white px-3 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             <option value="todas">Todas las regiones</option>
             {regiones.map((r) => (
@@ -140,7 +140,7 @@ export default function InteligenciaMunicipiosPage() {
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="h-9 rounded-md border border-input bg-white px-3 text-sm text-[#1A3328] focus:outline-none focus:ring-2 focus:ring-[#1A3328]/20"
+            className="h-9 rounded-md border border-input bg-white px-3 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -165,10 +165,10 @@ export default function InteligenciaMunicipiosPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-[#1A3328]/40">
+                    <span className="text-xs font-semibold text-primary/40">
                       #{index + 1}
                     </span>
-                    <h2 className="text-lg font-semibold text-[#1A3328]">
+                    <h2 className="text-lg font-semibold text-primary">
                       {m.nombre}
                     </h2>
                     <Badge variant="outline">{m.region}</Badge>
@@ -180,7 +180,7 @@ export default function InteligenciaMunicipiosPage() {
                     N/A — acumulando datos
                   </span>
                 ) : (
-                  <span className="inline-flex items-center rounded-full bg-[#F0EBE1] px-2.5 py-0.5 text-xs font-medium text-[#1A3328]">
+                  <span className="inline-flex items-center rounded-full bg-[#F0EBE1] px-2.5 py-0.5 text-xs font-medium text-primary">
                     {m.totalProyectos} proyectos
                   </span>
                 )}
@@ -194,7 +194,7 @@ export default function InteligenciaMunicipiosPage() {
                     <Clock className="size-3.5" />
                     Días hábiles promedio
                   </span>
-                  <p className="mt-1 text-lg font-semibold text-[#1A3328]">
+                  <p className="mt-1 text-lg font-semibold text-primary">
                     {m.tiempoPromedioHabiles}
                     <span className="ml-1 text-xs font-normal text-muted-foreground">
                       (mediana {m.tiempoMedianoHabiles})
@@ -234,7 +234,7 @@ export default function InteligenciaMunicipiosPage() {
                     <CalendarCheck className="size-3.5" />
                     Meses más ágiles
                   </span>
-                  <p className="mt-1 text-sm font-medium text-[#1A3328]">
+                  <p className="mt-1 text-sm font-medium text-primary">
                     {m.mesesMasAgiles.join(", ")}
                   </p>
                 </div>
@@ -250,7 +250,7 @@ export default function InteligenciaMunicipiosPage() {
                   {m.tiposObservacionFrequentes.map((obs) => (
                     <span
                       key={obs}
-                      className="inline-flex items-center rounded-full bg-white px-2.5 py-0.5 text-xs text-[#1A3328] ring-1 ring-gray-200"
+                      className="inline-flex items-center rounded-full bg-white px-2.5 py-0.5 text-xs text-primary ring-1 ring-gray-200"
                     >
                       {obs}
                     </span>
@@ -272,6 +272,7 @@ export default function InteligenciaMunicipiosPage() {
           No hay municipios para los filtros seleccionados.
         </p>
       )}
+      </div>
     </div>
   )
 }

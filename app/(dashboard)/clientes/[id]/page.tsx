@@ -3,7 +3,6 @@
 import { use } from "react"
 import Link from "next/link"
 import {
-  ArrowLeft,
   FileDown,
   Mail,
   MapPin,
@@ -14,6 +13,7 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { PageHeader } from "@/components/dashboard/page-header"
 import {
   Table,
   TableBody,
@@ -57,21 +57,24 @@ export default function ClienteDetallePage({
 
   if (!cliente) {
     return (
-      <div className="space-y-6">
-        <Link
-          href="/clientes"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-[#1A3328]"
-        >
-          <ArrowLeft className="size-4" />
-          Clientes
-        </Link>
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-sm text-muted-foreground">
-              No se encontró el cliente solicitado.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="flex min-h-screen flex-col">
+        <PageHeader
+          emoji="🏢"
+          title="Cliente no encontrado"
+          breadcrumbs={[
+            { label: "Clientes", href: "/clientes" },
+            { label: "Cliente no encontrado" },
+          ]}
+        />
+        <div className="flex-1 overflow-auto p-8">
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-sm text-muted-foreground">
+                No se encontró el cliente solicitado.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
@@ -86,19 +89,18 @@ export default function ClienteDetallePage({
   const valorTotal = proyectos.length * VALOR_ESTIMADO_POR_PROYECTO
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-screen flex-col">
+      <PageHeader
+        emoji="🏢"
+        title={cliente.nombre}
+        breadcrumbs={[
+          { label: "Clientes", href: "/clientes" },
+          { label: cliente.nombre },
+        ]}
+      />
+      <div className="flex-1 overflow-auto p-8 space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-3">
-          <Link
-            href="/clientes"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-[#1A3328]"
-          >
-            <ArrowLeft className="size-4" />
-            Clientes
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#1A3328]">
-            {cliente.nombre}
-          </h1>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
             {cliente.rut && <span>RUT {cliente.rut}</span>}
             {cliente.email && (
@@ -128,7 +130,7 @@ export default function ClienteDetallePage({
             Nuevo proyecto
           </Button>
           <Button
-            className="bg-[#1A3328] text-white hover:bg-[#1A3328]/90"
+            className="bg-primary text-white hover:bg-primary/90"
             nativeButton={false}
             render={<Link href={`/clientes/${cliente.id}/informe`} />}
           >
@@ -183,7 +185,7 @@ export default function ClienteDetallePage({
                   const estadoCfg = ESTADO_CONFIG[p.estado]
                   return (
                     <TableRow key={p.id}>
-                      <TableCell className="font-medium text-[#1A3328]">
+                      <TableCell className="font-medium text-primary">
                         <Link
                           href={`/proyectos/${p.id}`}
                           className="hover:underline"
@@ -218,6 +220,7 @@ export default function ClienteDetallePage({
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }
@@ -237,7 +240,7 @@ function StatCard({
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
         <p
           className={`text-2xl font-semibold ${
-            highlight ? "text-orange-600" : "text-[#1A3328]"
+            highlight ? "text-orange-600" : "text-primary"
           }`}
         >
           {value}

@@ -2,11 +2,13 @@
 
 import { useState, type FormEvent } from "react"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { PageHeader } from "@/components/dashboard/page-header"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -24,52 +26,70 @@ import { ETAPAS_PERMISO, TIPO_PERMISO_LABELS, type TipoPermiso } from "@/types"
 const TIPOS = Object.entries(TIPO_PERMISO_LABELS) as [TipoPermiso, string][]
 
 export default function NuevoProyectoPage() {
+  const router = useRouter()
   const [cliente, setCliente] = useState("")
   const [municipio, setMunicipio] = useState("")
   const [tipo, setTipo] = useState("")
   const [etapas, setEtapas] = useState<Record<string, boolean>>(
     Object.fromEntries(ETAPAS_PERMISO.map((e) => [e, true]))
   )
+  const [guardando, setGuardando] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   function toggleEtapa(nombre: string, checked: boolean) {
     setEtapas((prev) => ({ ...prev, [nombre]: checked }))
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    setErrorMsg(null)
+    setGuardando(true)
+
     const form = new FormData(e.currentTarget)
     const payload = {
-      nombre: form.get("nombre"),
-      cliente,
+      nombre: form.get("nombre") as string,
+      cliente_id: cliente,
       municipio,
       tipo,
-      direccion: form.get("direccion"),
-      numero_expediente: form.get("numero_expediente"),
-      fecha_inicio: form.get("fecha_inicio"),
-      fecha_estimada: form.get("fecha_estimada"),
-      notas: form.get("notas"),
-      etapas: ETAPAS_PERMISO.filter((nombre) => etapas[nombre]),
+      direccion: form.get("direccion") as string,
+      numero_expediente: (form.get("numero_expediente") as string) || undefined,
+      fecha_inicio: form.get("fecha_inicio") as string,
+      fecha_estimada: (form.get("fecha_estimada") as string) || undefined,
+      notas: (form.get("notas") as string) || undefined,
     }
-    // eslint-disable-next-line no-console
-    console.log("Nuevo proyecto:", payload)
+
+    try {
+      const res = await fetch('/api/proyectos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json() as { ok: boolean; id?: string; error?: string }
+      if (!data.ok || !data.id) {
+        setErrorMsg(data.error ?? 'Error al crear el proyecto')
+        return
+      }
+      router.push(`/proyectos/${data.id}`)
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Error de red')
+    } finally {
+      setGuardando(false)
+    }
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="space-y-3">
-        <Link
-          href="/proyectos"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-[#1A3328]"
-        >
-          <ArrowLeft className="size-4" />
-          Proyectos
-        </Link>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1A3328]">
-          Nuevo proyecto
-        </h1>
-      </div>
-
-      <form onSubmit={handleSubmit}>
+    <div className="flex min-h-screen flex-col">
+      <PageHeader
+        emoji="➕"
+        title="Nuevo proyecto"
+        breadcrumbs={[
+          { label: "Proyectos", href: "/proyectos" },
+          { label: "Nuevo proyecto" },
+        ]}
+      />
+      <div className="flex-1 overflow-auto p-8">
+        <div className="mx-auto max-w-3xl">
+          <form onSubmit={handleSubmit}>
         <Card>
           <CardContent className="space-y-5 pt-6">
             <div className="space-y-2">
@@ -225,22 +245,39 @@ export default function NuevoProyectoPage() {
           </CardContent>
         </Card>
 
+        {errorMsg && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <AlertCircle className="size-4 shrink-0" />
+            {errorMsg}
+          </div>
+        )}
+
         <div className="mt-6 flex items-center justify-between">
           <Link
             href="/proyectos"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-[#1A3328]"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
           >
             <ArrowLeft className="size-4" />
             Volver
           </Link>
           <Button
             type="submit"
-            className="bg-[#1A3328] text-white hover:bg-[#1A3328]/90"
+            disabled={guardando}
+            className="bg-primary text-white hover:bg-primary/90 disabled:opacity-60"
           >
-            Crear proyecto
+            {guardando ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              'Crear proyecto'
+            )}
           </Button>
         </div>
-      </form>
+          </form>
+        </div>
+      </div>
     </div>
   )
 }

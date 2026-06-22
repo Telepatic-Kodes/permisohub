@@ -1,3 +1,14 @@
+# Roadmap: Milestone v1.2 — Dashboard Clarity
+
+**Started:** 2026-06-21
+**Phases:** 1 (numbered 6, continues from v1.1)
+
+| # | Phase | Goal | Requirements | Status |
+|---|-------|------|--------------|--------|
+| 6 | Dashboard Timeline View | Flujo único organizado por urgencia/tiempo | DASH-01→06 | ✅ Complete |
+
+---
+
 # Roadmap: Milestone v1.1 — Cumplir la Promesa
 
 **Started:** 2026-06-20
@@ -5,11 +16,11 @@
 
 | # | Phase | Goal | Requirements | Status |
 |---|-------|------|--------------|--------|
-| 1 | Stripe Billing | Cobrar dinero real | BILL-01→07 | Pending |
-| 2 | Feature Gating | Tier limits enforced | GATE-01→06 | Pending |
-| 3 | Landing Page | Página pública de conversión | LAND-01→04 | Pending |
-| 4 | Onboarding Flow | Activación de nuevos usuarios | ONBD-01→03 | Pending |
-| 5 | PWA | App instalable en móvil | PWA-01→03 | Pending |
+| 1 | Stripe Billing | Cobrar dinero real | BILL-01→07 | ✅ Complete |
+| 2 | Feature Gating | Tier limits enforced | GATE-01→06 | ✅ Complete |
+| 3 | Landing Page | Página pública de conversión | LAND-01→04 | ✅ Complete |
+| 4 | Onboarding Flow | Activación de nuevos usuarios | ONBD-01→03 | ✅ Complete |
+| 5 | PWA | App instalable en móvil | PWA-01→03 | ✅ Complete |
 
 ---
 

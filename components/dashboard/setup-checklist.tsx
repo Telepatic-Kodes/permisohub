@@ -6,10 +6,6 @@ import { Check, ChevronRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-// ---------------------------------------------------------------------------
-// Items del checklist de setup
-// ---------------------------------------------------------------------------
-
 interface ChecklistItem {
   label: string
   href: string
@@ -22,10 +18,7 @@ const CHECKLIST_ITEMS: ChecklistItem[] = [
   { label: "Configura WhatsApp", href: "/configuracion/whatsapp" },
 ]
 
-// ---------------------------------------------------------------------------
-
 export function SetupChecklist() {
-  // `null` = aún no leímos localStorage (evita parpadeo / mismatch SSR).
   const [done, setDone] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -38,40 +31,38 @@ export function SetupChecklist() {
     }
   }, [])
 
-  // No renderizar nada hasta saber el estado, ni si ya completó el onboarding.
   if (done === null || done) {
     return null
   }
 
-  // En el MVP los items no tienen seguimiento individual de completado.
   const completados = 0
   const total = CHECKLIST_ITEMS.length
 
   return (
-    <div className="rounded-xl border-2 border-[#1A3328]/30 bg-white p-5">
+    <div className="mb-8 rounded-xl border border-border border-l-4 border-l-primary/50 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-[#1A3328]">
+        <h2 className="text-sm font-semibold text-primary">
           Completa tu configuración
         </h2>
-        <span className="text-sm font-medium text-muted-foreground">
+        <span className="text-xs font-medium text-muted-foreground">
           {completados}/{total}
         </span>
       </div>
 
-      <ul className="mt-4 space-y-2">
+      <ul className="mt-3 space-y-1">
         {CHECKLIST_ITEMS.map((item, index) => {
           const isDone = index < completados
           return (
             <li key={item.label}>
               <Link
                 href={item.href}
-                className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-[#F9F7F3]"
+                className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-background"
               >
                 <div
                   className={cn(
                     "flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors",
                     isDone
-                      ? "border-[#1A3328] bg-[#1A3328] text-[#F9F7F3]"
+                      ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-white",
                   )}
                 >
@@ -82,7 +73,7 @@ export function SetupChecklist() {
                     "flex-1 text-sm",
                     isDone
                       ? "text-muted-foreground line-through"
-                      : "text-[#1A3328]",
+                      : "text-foreground",
                   )}
                 >
                   {item.label}

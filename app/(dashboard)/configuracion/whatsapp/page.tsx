@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { MessageCircle, CheckCircle2, AlertCircle, Send, Loader2, ExternalLink } from "lucide-react"
+import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -63,17 +64,17 @@ export default function WhatsAppConfigPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-[#25D366] text-white">
-          <MessageCircle className="size-5" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#1A3328]">WhatsApp para clientes</h1>
-          <p className="text-sm text-muted-foreground">Notificaciones automáticas vía Twilio WhatsApp Business</p>
-        </div>
-      </div>
-
+    <div className="flex min-h-screen flex-col">
+      <PageHeader
+        emoji="📱"
+        title="WhatsApp"
+        breadcrumbs={[
+          { label: "Configuración", href: "/configuracion" },
+          { label: "WhatsApp" },
+        ]}
+      />
+      <div className="flex-1 overflow-auto p-8">
+        <div className="mx-auto max-w-2xl space-y-6">
       {/* Status */}
       <Card className={configured ? 'border-green-200' : 'border-amber-200'}>
         <CardContent className="flex items-center gap-3 pt-4">
@@ -103,7 +104,7 @@ export default function WhatsAppConfigPage() {
       {!configured && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base text-[#1A3328]">Cómo configurar</CardTitle>
+            <CardTitle className="text-base text-primary">Cómo configurar</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="space-y-2">
@@ -112,7 +113,7 @@ export default function WhatsAppConfigPage() {
                 href="https://www.twilio.com/try-twilio"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-[#1A3328] underline"
+                className="flex items-center gap-1 text-primary underline"
               >
                 twilio.com/try-twilio <ExternalLink className="size-3" />
               </a>
@@ -140,7 +141,7 @@ export default function WhatsAppConfigPage() {
       {/* Test send */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base text-[#1A3328]">Enviar mensaje de prueba</CardTitle>
+          <CardTitle className="text-base text-primary">Enviar mensaje de prueba</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -192,7 +193,7 @@ export default function WhatsAppConfigPage() {
       {/* Automatic triggers */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base text-[#1A3328]">Cuándo se envían notificaciones automáticas</CardTitle>
+          <CardTitle className="text-base text-primary">Cuándo se envían notificaciones automáticas</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2 text-sm text-gray-700">
@@ -211,6 +212,8 @@ export default function WhatsAppConfigPage() {
           </ul>
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   )
 }

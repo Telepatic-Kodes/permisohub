@@ -1,9 +1,11 @@
 "use client"
 
 import { useState, type ReactNode } from "react"
-import { ArrowRight, Send } from "lucide-react"
+import { ArrowRight, CreditCard, MessageCircle, Send } from "lucide-react"
+import Link from "next/link"
 import { toast } from "sonner"
 
+import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -23,7 +25,7 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
-const BRAND = "bg-[#1A3328] text-white hover:bg-[#1A3328]/90"
+const BRAND = "bg-primary text-white hover:bg-primary/90"
 
 // ---------------------------------------------------------------------------
 // Toggle (checkbox styled as a switch)
@@ -43,7 +45,7 @@ function Toggle({
   return (
     <label className="flex cursor-pointer items-start justify-between gap-4 py-2">
       <span className="min-w-0">
-        <span className="block text-sm font-medium text-[#1A3328]">
+        <span className="block text-sm font-medium text-primary">
           {label}
         </span>
         {description ? (
@@ -62,7 +64,7 @@ function Toggle({
         <span
           aria-hidden
           className={cn(
-            "h-6 w-11 rounded-full bg-muted transition-colors peer-checked:bg-[#1A3328]"
+            "h-6 w-11 rounded-full bg-muted transition-colors peer-checked:bg-primary"
           )}
         />
         <span
@@ -89,7 +91,7 @@ function SectionCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-[#1A3328]">{title}</CardTitle>
+        <CardTitle className="text-primary">{title}</CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}
       </CardHeader>
       <CardContent>{children}</CardContent>
@@ -239,16 +241,9 @@ export default function ConfiguracionPage() {
   }
 
   return (
-    <div className="space-y-6 p-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1A3328]">
-          Configuración
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Preferencias del sistema
-        </p>
-      </div>
-
+    <div className="flex min-h-screen flex-col">
+      <PageHeader emoji="⚙️" title="Configuración" />
+      <div className="flex-1 space-y-6 overflow-auto p-8">
       {/* 1. Notificaciones por email */}
       <SectionCard title="Notificaciones automáticas">
         <div className="divide-y divide-border">
@@ -300,7 +295,7 @@ export default function ConfiguracionPage() {
       {/* Automatización */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold text-[#1A3328]">
+          <CardTitle className="text-base font-semibold text-primary">
             Automatización
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -361,7 +356,7 @@ export default function ConfiguracionPage() {
                     `Revisión completada: ${data.deadlineAlerts ?? 0} alertas enviadas`
                   )
                 }}
-                className="rounded-lg border border-[#1A3328] px-3 py-1.5 text-sm text-[#1A3328] hover:bg-[#F0EBE1] transition-colors"
+                className="rounded-lg border border-primary px-3 py-1.5 text-sm text-primary hover:bg-[#F0EBE1] transition-colors"
               >
                 Ejecutar revisión diaria ahora
               </button>
@@ -454,6 +449,50 @@ export default function ConfiguracionPage() {
         </div>
       </SectionCard>
 
+      {/* Facturación */}
+      <SectionCard title="Facturación" description="Gestión de plan y métodos de pago.">
+        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/8">
+              <CreditCard className="size-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-[13px] font-medium text-primary">Plan Starter</p>
+              <p className="text-[11px] text-muted-foreground">$29.990 CLP / mes · Próximo cobro 21 jul</p>
+            </div>
+          </div>
+          <Link
+            href="/configuracion/billing"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-muted/40"
+          >
+            Gestionar
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
+      </SectionCard>
+
+      {/* Integraciones */}
+      <SectionCard title="Integraciones" description="Canales de comunicación con clientes.">
+        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-50">
+              <MessageCircle className="size-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-[13px] font-medium text-primary">WhatsApp Business</p>
+              <p className="text-[11px] text-muted-foreground">Notificaciones automáticas vía Twilio</p>
+            </div>
+          </div>
+          <Link
+            href="/configuracion/whatsapp"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-muted/40"
+          >
+            Configurar
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
+      </SectionCard>
+
       {/* 4. Cuenta y acceso */}
       <SectionCard title="Cuenta y acceso">
         <div className="space-y-3 text-sm">
@@ -461,17 +500,17 @@ export default function ConfiguracionPage() {
             <span className="text-xs text-muted-foreground">
               Arquitecta responsable
             </span>
-            <span className="font-medium text-[#1A3328]">Estefanía Parada</span>
+            <span className="font-medium text-primary">Estefanía Parada</span>
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-xs text-muted-foreground">Plan</span>
-            <span className="font-medium text-[#1A3328]">
+            <span className="font-medium text-primary">
               Fase 1 — Uso interno
             </span>
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-xs text-muted-foreground">Próximo paso</span>
-            <span className="font-medium text-[#1A3328]">
+            <span className="font-medium text-primary">
               Conectar Supabase para persistir datos
             </span>
           </div>
@@ -484,6 +523,7 @@ export default function ConfiguracionPage() {
           </Button>
         </div>
       </SectionCard>
+      </div>
     </div>
   )
 }

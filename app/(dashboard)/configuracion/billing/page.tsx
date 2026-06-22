@@ -8,6 +8,7 @@ import {
   type PlanId,
 } from "@/lib/stripe"
 import { getUserSubscription, type Subscription } from "@/lib/subscription"
+import { PageHeader } from "@/components/dashboard/page-header"
 import { Badge } from "@/components/ui/badge"
 import {
   ManageSubscriptionButton,
@@ -74,13 +75,13 @@ function formatDate(iso: string | null): string {
 function planBadgeClass(plan: PlanId): string {
   switch (plan) {
     case "pro":
-      return "bg-[#1A3328] text-white"
+      return "bg-primary text-white"
     case "estudio":
-      return "bg-[#1A3328]/80 text-white"
+      return "bg-primary/80 text-white"
     case "starter":
-      return "bg-[#1A3328]/15 text-[#1A3328]"
+      return "bg-primary/15 text-primary"
     default:
-      return "bg-[#1A3328]/10 text-[#1A3328]/70"
+      return "bg-primary/10 text-primary/70"
   }
 }
 
@@ -126,11 +127,11 @@ function CurrentPlanSummary({
     <div className="rounded-xl border border-border bg-white p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-[#1A3328]/50">
+          <p className="text-xs font-medium uppercase tracking-wider text-primary/50">
             Plan actual
           </p>
           <div className="mt-1.5 flex items-center gap-2.5">
-            <span className="text-2xl font-semibold text-[#1A3328]">
+            <span className="text-2xl font-semibold text-primary">
               {PLAN_NAMES[plan]}
             </span>
             <Badge className={planBadgeClass(plan)}>
@@ -145,16 +146,16 @@ function CurrentPlanSummary({
 
       <div className="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-5 sm:grid-cols-2">
         <div>
-          <p className="text-xs text-[#1A3328]/50">Monto</p>
-          <p className="mt-0.5 text-sm font-medium text-[#1A3328]">
+          <p className="text-xs text-primary/50">Monto</p>
+          <p className="mt-0.5 text-sm font-medium text-primary">
             {plan === "free"
               ? "Gratis"
               : `${CLP.format(amount)} / ${interval === "annual" ? "mes (anual)" : "mes"}`}
           </p>
         </div>
         <div>
-          <p className="text-xs text-[#1A3328]/50">Próxima renovación</p>
-          <p className="mt-0.5 text-sm font-medium text-[#1A3328]">
+          <p className="text-xs text-primary/50">Próxima renovación</p>
+          <p className="mt-0.5 text-sm font-medium text-primary">
             {formatDate(subscription?.currentPeriodEnd ?? null)}
           </p>
         </div>
@@ -175,12 +176,12 @@ function PlanCardView({
   const isCurrent = currentPlan === card.id
 
   const containerClass = card.highlighted
-    ? "rounded-xl border-2 border-[#1A3328] bg-[#1A3328] p-6 text-white shadow-md"
+    ? "rounded-xl border-2 border-primary bg-primary p-6 text-white shadow-md"
     : "rounded-xl border border-border bg-white p-6"
 
   const featureTextClass = card.highlighted
     ? "text-white/90"
-    : "text-[#1A3328]/80"
+    : "text-primary/80"
 
   return (
     <div className={containerClass}>
@@ -189,7 +190,7 @@ function PlanCardView({
           className={
             card.highlighted
               ? "text-lg font-semibold text-white"
-              : "text-lg font-semibold text-[#1A3328]"
+              : "text-lg font-semibold text-primary"
           }
         >
           {PLAN_NAMES[card.id]}
@@ -206,7 +207,7 @@ function PlanCardView({
           className={
             card.highlighted
               ? "text-3xl font-bold text-white"
-              : "text-3xl font-bold text-[#1A3328]"
+              : "text-3xl font-bold text-primary"
           }
         >
           {CLP.format(amounts.monthly)}
@@ -214,7 +215,7 @@ function PlanCardView({
             className={
               card.highlighted
                 ? "text-sm font-normal text-white/70"
-                : "text-sm font-normal text-[#1A3328]/60"
+                : "text-sm font-normal text-primary/60"
             }
           >
             {" "}
@@ -225,7 +226,7 @@ function PlanCardView({
           className={
             card.highlighted
               ? "mt-1 text-xs text-white/70"
-              : "mt-1 text-xs text-[#1A3328]/60"
+              : "mt-1 text-xs text-primary/60"
           }
         >
           o {CLP.format(amounts.annual)} / mes facturado anual
@@ -242,7 +243,7 @@ function PlanCardView({
               className={
                 card.highlighted
                   ? "mt-0.5 size-4 shrink-0 text-white"
-                  : "mt-0.5 size-4 shrink-0 text-[#1A3328]"
+                  : "mt-0.5 size-4 shrink-0 text-primary"
               }
             />
             <span>{feature}</span>
@@ -256,7 +257,7 @@ function PlanCardView({
             className={
               card.highlighted
                 ? "rounded-lg bg-white/15 px-4 py-2.5 text-center text-sm font-medium text-white"
-                : "rounded-lg bg-[#1A3328]/5 px-4 py-2.5 text-center text-sm font-medium text-[#1A3328]"
+                : "rounded-lg bg-primary/5 px-4 py-2.5 text-center text-sm font-medium text-primary"
             }
           >
             Tu plan actual
@@ -272,7 +273,7 @@ function PlanCardView({
             className={
               card.highlighted
                 ? "text-center text-xs text-white/70"
-                : "text-center text-xs text-[#1A3328]/50"
+                : "text-center text-xs text-primary/50"
             }
           >
             Precio no configurado
@@ -294,14 +295,17 @@ export default async function BillingPage() {
     subscription && subscription.status === "active" ? subscription.plan : "free"
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold text-[#1A3328]">Facturación</h1>
-        <p className="mt-1 text-sm text-[#1A3328]/60">
-          Gestiona tu plan y método de pago.
-        </p>
-      </header>
-
+    <div className="flex min-h-screen flex-col">
+      <PageHeader
+        emoji="💳"
+        title="Facturación"
+        breadcrumbs={[
+          { label: "Configuración", href: "/configuracion" },
+          { label: "Facturación" },
+        ]}
+      />
+      <div className="flex-1 overflow-auto p-8">
+        <div className="mx-auto max-w-5xl">
       {!isStripeAvailable() ? (
         <div className="space-y-8">
           <StripeNotConfigured />
@@ -312,7 +316,7 @@ export default async function BillingPage() {
           <CurrentPlanSummary subscription={subscription} />
 
           <section>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#1A3328]/50">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-primary/50">
               Planes disponibles
             </h2>
             <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
@@ -327,6 +331,8 @@ export default async function BillingPage() {
           </section>
         </div>
       )}
+        </div>
+      </div>
     </div>
   )
 }

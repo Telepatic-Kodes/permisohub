@@ -1,4 +1,4 @@
-import { getAI, AI_MODEL } from '@/lib/ai'
+import { isAIAvailable, aiCompleteWithPDF } from '@/lib/ai'
 import { createClient } from '@/lib/supabase/server'
 import { getUserPlan } from '@/lib/subscription'
 import { getLimits, isWithinLimit } from '@/lib/plan-limits'
@@ -8,9 +8,8 @@ import type { PlanId } from '@/lib/stripe'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
-  const ai = getAI()
-  if (!ai) {
-    return Response.json({ error: 'ANTHROPIC_API_KEY no configurado' }, { status: 503 })
+  if (!isAIAvailable()) {
+    return Response.json({ error: 'OPENAI_API_KEY no configurado' }, { status: 503 })
   }
 
   // Feature gating: enforce per-plan monthly PDF extraction limits.
@@ -93,31 +92,7 @@ Si el documento no contiene observaciones (ya fue aprobado o es otro tipo de doc
 {"observaciones": [], "municipio": null, "expediente": null, "fechaOrdinario": null, "plazoRespuesta": null}`
 
   try {
-    const response = await ai.messages.create({
-      model: AI_MODEL,
-      max_tokens: 3000,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'document',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: pdfBase64,
-              },
-            },
-            {
-              type: 'text',
-              text: prompt,
-            },
-          ],
-        },
-      ],
-    })
-
-    const text = response.content[0].type === 'text' ? response.content[0].text : '{}'
+    const text = await aiCompleteWithPDF(prompt, pdfBase64, fileName, { max_tokens: 3000 })
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('No JSON en respuesta')
 

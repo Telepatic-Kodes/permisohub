@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { AlertCircle, CheckCircle2, AlertTriangle, HelpCircle, Loader2, ShieldCheck } from "lucide-react"
+import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -98,25 +99,21 @@ export default function ComplianceCheckPage() {
     : null
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-[#1A3328] text-white">
-          <ShieldCheck className="size-5" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#1A3328]">
-            Verificador de cumplimiento OGUC
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Detecta problemas antes de ingresar a DOM en Línea
-          </p>
-        </div>
-      </div>
-
+    <div className="flex min-h-screen flex-col">
+      <PageHeader
+        emoji="🔍"
+        title="Verificador OGUC"
+        breadcrumbs={[
+          { label: "IA Normativa" },
+          { label: "Verificador OGUC" },
+        ]}
+      />
+      <div className="flex-1 overflow-auto p-8">
+        <div className="mx-auto max-w-3xl space-y-6">
       <form onSubmit={(e) => void handleSubmit(e)}>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base text-[#1A3328]">Datos del proyecto</CardTitle>
+            <CardTitle className="text-base text-primary">Datos del proyecto</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             {/* Municipality + Zone */}
@@ -193,7 +190,7 @@ export default function ComplianceCheckPage() {
             <Button
               type="submit"
               disabled={loading || !form.municipio || !form.superficieTerreno}
-              className="w-full bg-[#1A3328] text-white hover:bg-[#1A3328]/90"
+              className="w-full bg-primary text-white hover:bg-primary/90"
             >
               {loading ? (
                 <><Loader2 className="size-4 animate-spin" /> Analizando cumplimiento OGUC...</>
@@ -251,13 +248,13 @@ export default function ComplianceCheckPage() {
           {result.recomendaciones.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-[#1A3328]">Recomendaciones antes de ingresar</CardTitle>
+                <CardTitle className="text-sm text-primary">Recomendaciones antes de ingresar</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-1.5">
                   {result.recomendaciones.map((rec, i) => (
                     <li key={i} className="flex gap-2 text-sm text-gray-700">
-                      <span className="text-[#1A3328] font-bold shrink-0">{i + 1}.</span>
+                      <span className="text-primary font-bold shrink-0">{i + 1}.</span>
                       {rec}
                     </li>
                   ))}
@@ -267,6 +264,8 @@ export default function ComplianceCheckPage() {
           )}
         </div>
       )}
+        </div>
+      </div>
     </div>
   )
 }

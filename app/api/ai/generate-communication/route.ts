@@ -1,4 +1,4 @@
-import { getAI, AI_MODEL } from '@/lib/ai'
+import { isAIAvailable, aiComplete } from '@/lib/ai'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,9 +21,8 @@ interface CommunicationRequest {
 export async function POST(request: Request) {
   const body = await request.json() as CommunicationRequest
 
-  const ai = getAI()
-  if (!ai) {
-    return Response.json({ error: 'ANTHROPIC_API_KEY no configurado' }, { status: 503 })
+  if (!isAIAvailable()) {
+    return Response.json({ error: 'OPENAI_API_KEY no configurado' }, { status: 503 })
   }
 
   const templates: Record<TipoComunicacion, string> = {
@@ -56,13 +55,7 @@ EMAIL: estefania@epgestion.cl
 Formato: Texto listo para copiar y enviar. Usa formato de carta formal con fecha (${new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })}), saludo, cuerpo, cierre y firma.`
 
   try {
-    const response = await ai.messages.create({
-      model: AI_MODEL,
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: prompt }],
-    })
-
-    const texto = response.content[0].type === 'text' ? response.content[0].text : ''
+    const texto = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 1500 })
 
     return Response.json({ ok: true, texto, tipo: body.tipo })
   } catch (err) {

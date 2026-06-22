@@ -1,4 +1,4 @@
-import { getAI, AI_MODEL } from '@/lib/ai'
+import { getAI, AI_MODEL, isAIAvailable } from '@/lib/ai'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
 import { createClient } from '@/lib/supabase/server'
 import { getUserPlan } from '@/lib/subscription'
@@ -30,17 +30,15 @@ export async function POST(request: Request) {
   const body = await request.json() as { messages: Array<{ role: string; content: string }> }
   const { messages } = body
 
-  const ai = getAI()
-  if (!ai) {
+  if (!isAIAvailable()) {
     return Response.json(
-      { error: 'ANTHROPIC_API_KEY no configurado' },
+      { error: 'OPENAI_API_KEY no configurado' },
       { status: 503 }
     )
   }
 
-  // Feature gating: enforce per-plan monthly AI chat limits.
-  // In development we always treat the user as 'pro' and skip the usage
-  // check so local development is never blocked.
+  const ai = getAI()!
+
   const isDev = process.env.NODE_ENV === 'development'
   let userId: string | null = null
 
@@ -67,11 +65,9 @@ export async function POST(request: Request) {
     }
   }
 
-  // Get the last user message for context retrieval
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content ?? ''
   const ogucContext = getContextoOGUC(lastUserMsg)
 
-  // Inject OGUC context as first system message
   const systemWithContext = `${SYSTEM_PROMPT}
 
 ## Artículos OGUC relevantes para esta consulta:
@@ -83,23 +79,23 @@ ${ogucContext}`
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const anthropicStream = ai.messages.stream({
+        const openaiStream = await ai.chat.completions.create({
           model: AI_MODEL,
-          max_tokens: 1500,
-          system: systemWithContext,
-          messages: messages.map((m) => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          })),
+          max_tokens: 4096,
+          stream: true,
+          messages: [
+            { role: 'system', content: systemWithContext },
+            ...messages.map((m) => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+            })),
+          ],
         })
 
-        for await (const chunk of anthropicStream) {
-          if (
-            chunk.type === 'content_block_delta' &&
-            chunk.delta.type === 'text_delta'
-          ) {
-            const data = `data: ${JSON.stringify({ text: chunk.delta.text })}\n\n`
-            controller.enqueue(encoder.encode(data))
+        for await (const chunk of openaiStream) {
+          const text = chunk.choices[0]?.delta?.content
+          if (text) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`))
           }
         }
 
@@ -113,8 +109,6 @@ ${ogucContext}`
     },
   })
 
-  // Record usage before returning the stream (SSE response body cannot be
-  // awaited downstream, so we must register the event here).
   if (userId) {
     await recordUsage(userId, 'ai_chats')
   }
