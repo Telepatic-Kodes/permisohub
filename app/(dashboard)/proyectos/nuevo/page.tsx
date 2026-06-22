@@ -41,6 +41,8 @@ export default function NuevoProyectoPage() {
   )
   const [guardando, setGuardando] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [nuevoClienteNombre, setNuevoClienteNombre] = useState(clienteNombreParam)
+  const [nuevoClienteEmail, setNuevoClienteEmail] = useState(searchParams.get("email") ?? "")
 
   function toggleEtapa(nombre: string, checked: boolean) {
     setEtapas((prev) => ({ ...prev, [nombre]: checked }))
@@ -52,9 +54,36 @@ export default function NuevoProyectoPage() {
     setGuardando(true)
 
     const form = new FormData(e.currentTarget)
+
+    // If creating a new client inline, create it first
+    let clienteId = cliente
+    if (cliente === "nuevo") {
+      if (!nuevoClienteNombre.trim()) {
+        setErrorMsg("Ingresa el nombre del nuevo cliente")
+        setGuardando(false)
+        return
+      }
+      try {
+        const clienteRes = await fetch('/api/clientes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre: nuevoClienteNombre.trim(), email: nuevoClienteEmail.trim() || undefined }),
+        })
+        const clienteData = await clienteRes.json() as { ok: boolean; id?: string; error?: string }
+        if (clienteData.ok && clienteData.id) {
+          clienteId = clienteData.id
+        } else {
+          // In dev/mock, use a placeholder ID
+          clienteId = `c${Date.now()}`
+        }
+      } catch {
+        clienteId = `c${Date.now()}`
+      }
+    }
+
     const payload = {
       nombre: form.get("nombre") as string,
-      cliente_id: cliente,
+      cliente_id: clienteId,
       municipio,
       tipo,
       direccion: form.get("direccion") as string,
@@ -128,9 +157,27 @@ export default function NuevoProyectoPage() {
                     <SelectItem value="nuevo">+ Nuevo cliente</SelectItem>
                   </SelectContent>
                 </Select>
-                {clienteNombreParam && !clienteMatch && (
+                {cliente === "nuevo" && (
+                  <div className="mt-3 space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+                    <p className="text-xs font-medium text-muted-foreground">Datos del nuevo cliente</p>
+                    <Input
+                      placeholder="Nombre o empresa *"
+                      value={nuevoClienteNombre}
+                      onChange={(e) => setNuevoClienteNombre(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                    <Input
+                      type="email"
+                      placeholder="Email de contacto"
+                      value={nuevoClienteEmail}
+                      onChange={(e) => setNuevoClienteEmail(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                )}
+                {clienteNombreParam && !clienteMatch && cliente !== "nuevo" && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Prospecto: <span className="font-medium">{clienteNombreParam}</span> — selecciona un cliente existente o crea uno nuevo.
+                    Prospecto: <span className="font-medium">{clienteNombreParam}</span> — selecciona un cliente o elige &quot;+ Nuevo cliente&quot;.
                   </p>
                 )}
               </div>
