@@ -27,6 +27,14 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import {
   MOCK_COMUNICACIONES,
@@ -205,6 +213,37 @@ export default function ProyectoDetallePage({
       })
     } finally {
       setNotasSaving(false)
+    }
+  }
+
+  // Inline info edit state
+  const [editMode, setEditMode] = useState(false)
+  const [editEstado, setEditEstado] = useState(proyecto.estado)
+  const [editNumExp, setEditNumExp] = useState(proyecto.numero_expediente ?? "")
+  const [editFechaEst, setEditFechaEst] = useState(proyecto.fecha_estimada ?? "")
+  const [editSaving, setEditSaving] = useState(false)
+
+  const saveInfoEdit = async () => {
+    setEditSaving(true)
+    try {
+      await fetch(`/api/proyectos/${proyecto.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          estado: editEstado,
+          numero_expediente: editNumExp || null,
+          fecha_estimada: editFechaEst || null,
+        }),
+      })
+      setProyecto((prev) => ({
+        ...prev,
+        estado: editEstado,
+        numero_expediente: editNumExp || undefined,
+        fecha_estimada: editFechaEst || undefined,
+      }))
+      setEditMode(false)
+    } finally {
+      setEditSaving(false)
     }
   }
 
@@ -549,9 +588,41 @@ export default function ProyectoDetallePage({
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Información</CardTitle>
-              <Button variant="ghost" size="icon-sm" aria-label="Editar">
-                <Pencil className="size-4" />
-              </Button>
+              {editMode ? (
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditMode(false)}
+                    disabled={editSaving}
+                    className="text-muted-foreground text-xs"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => void saveInfoEdit()}
+                    disabled={editSaving}
+                    className="text-xs"
+                  >
+                    {editSaving ? "Guardando…" : "Guardar"}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Editar"
+                  onClick={() => {
+                    setEditEstado(proyecto.estado)
+                    setEditNumExp(proyecto.numero_expediente ?? "")
+                    setEditFechaEst(proyecto.fecha_estimada ?? "")
+                    setEditMode(true)
+                  }}
+                >
+                  <Pencil className="size-4" />
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <InfoRow icon={<Users className="size-4" />} label="Cliente">
@@ -560,15 +631,55 @@ export default function ProyectoDetallePage({
               <InfoRow icon={<MapPin className="size-4" />} label="Municipio">
                 {proyecto.municipio}
               </InfoRow>
-              <InfoRow label="N° Expediente">
-                {proyecto.numero_expediente ?? "—"}
-              </InfoRow>
-              <InfoRow label="Fecha inicio">
-                {formatDate(proyecto.fecha_inicio)}
-              </InfoRow>
-              <InfoRow label="Fecha estimada">
-                {formatDate(proyecto.fecha_estimada)}
-              </InfoRow>
+              {editMode ? (
+                <>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Estado</p>
+                    <Select value={editEstado} onValueChange={(v) => setEditEstado(v as typeof editEstado)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(["borrador", "ingresado", "en_revision", "con_observaciones", "aprobado", "rechazado"] as const).map((e) => (
+                          <SelectItem key={e} value={e} className="text-xs">
+                            {ESTADO_CONFIG[e]?.label ?? e}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">N° Expediente</p>
+                    <Input
+                      className="h-8 text-xs"
+                      value={editNumExp}
+                      onChange={(e) => setEditNumExp(e.target.value)}
+                      placeholder="EXP-2026-0001"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Fecha estimada resolución</p>
+                    <Input
+                      type="date"
+                      className="h-8 text-xs"
+                      value={editFechaEst}
+                      onChange={(e) => setEditFechaEst(e.target.value)}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <InfoRow label="N° Expediente">
+                    {proyecto.numero_expediente ?? "—"}
+                  </InfoRow>
+                  <InfoRow label="Fecha inicio">
+                    {formatDate(proyecto.fecha_inicio)}
+                  </InfoRow>
+                  <InfoRow label="Fecha estimada">
+                    {formatDate(proyecto.fecha_estimada)}
+                  </InfoRow>
+                </>
+              )}
 
               <div className="pt-2">
                 <button
