@@ -216,6 +216,36 @@ export default function ProyectoDetallePage({
     }
   }
 
+  // Nueva comunicación
+  const [comDialogOpen, setComDialogOpen] = useState(false)
+  const [comTipo, setComTipo] = useState("email")
+  const [comAsunto, setComAsunto] = useState("")
+  const [comDesc, setComDesc] = useState("")
+
+  const addComunicacion = async () => {
+    if (!comAsunto.trim()) return
+    const now = new Date().toISOString()
+    const nueva: Comunicacion = {
+      id: `com-${Date.now()}`,
+      proyecto_id: proyecto.id,
+      tipo: comTipo as Comunicacion["tipo"],
+      asunto: comAsunto.trim(),
+      descripcion: comDesc.trim() || undefined,
+      fecha: now.slice(0, 10),
+      created_at: now,
+    }
+    setComunicaciones((prev) => [nueva, ...prev])
+    setComDialogOpen(false)
+    setComAsunto("")
+    setComDesc("")
+    // Persist to Supabase (best-effort)
+    fetch(`/api/proyectos/${proyecto.id}/comunicaciones`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nueva),
+    }).catch(() => undefined)
+  }
+
   // Inline info edit state
   const [editMode, setEditMode] = useState(false)
   const [editEstado, setEditEstado] = useState(proyecto.estado)
@@ -541,10 +571,59 @@ export default function ProyectoDetallePage({
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Comunicaciones</CardTitle>
-              <Button variant="outline" size="sm">
-                <Plus className="size-4" />
-                Agregar comunicación
-              </Button>
+              <Dialog open={comDialogOpen} onOpenChange={setComDialogOpen}>
+                <DialogTrigger>
+                  <Button variant="outline" size="sm">
+                    <Plus className="size-4" />
+                    Agregar
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Nueva comunicación</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-2">
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">Tipo</p>
+                      <Select value={comTipo} onValueChange={(v) => setComTipo(v ?? "email")}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(COMUNICACION_LABELS).map(([k, v]) => (
+                            <SelectItem key={k} value={k}>{v}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">Asunto *</p>
+                      <Input
+                        value={comAsunto}
+                        onChange={(e) => setComAsunto(e.target.value)}
+                        placeholder="Email DOM solicitando estado expediente"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">Descripción (opcional)</p>
+                      <Textarea
+                        value={comDesc}
+                        onChange={(e) => setComDesc(e.target.value)}
+                        placeholder="Detalles adicionales..."
+                        rows={3}
+                      />
+                    </div>
+                    <Button
+                      className="w-full"
+                      onClick={() => void addComunicacion()}
+                      disabled={!comAsunto.trim()}
+                    >
+                      Guardar comunicación
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent className="space-y-4">
               {comunicaciones.map((c) => (
