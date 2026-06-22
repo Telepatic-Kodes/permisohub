@@ -81,14 +81,16 @@ const PLANS: Plan[] = [
     name: "Estudio",
     price: 149990,
     priceAnual: 124400,
-    description: "Para estudios con equipo",
-    cta: "Contactar ventas",
+    description: "Para estudios con equipo y empresas con múltiples proyectos",
+    cta: "Hablar con ventas",
     href: "mailto:tomas@aiaiai.cl?subject=PermisoHub Estudio",
     features: [
       { text: "Todo lo de Pro" },
-      { text: "Multiusuario (equipo completo)", highlight: true },
+      { text: "Multiusuario con roles (Admin / Arquitecto / Viewer)", highlight: true },
+      { text: "Portal de cliente — tus mandantes ven el avance", highlight: true },
+      { text: "Vista consolidada de cartera de proyectos" },
+      { text: "Trazabilidad por locatario o sucursal" },
       { text: "Reportes y analítica avanzada" },
-      { text: "Integraciones a medida" },
       { text: "Onboarding personalizado" },
       { text: "Gerente de cuenta dedicado" },
     ],
@@ -121,6 +123,10 @@ const FAQS = [
   {
     q: "¿La IA usa OGUC chileno real?",
     a: "Sí. El chat OGUC y el verificador de cumplimiento están entrenados sobre la OGUC vigente, DDUs y normativa sectorial chilena.",
+  },
+  {
+    q: "¿Puede usarlo una inmobiliaria para hacer seguimiento a sus arrendatarios?",
+    a: "Sí, con el plan Estudio. Una empresa como un mall o administradora de locales puede dar acceso a sus arrendatarios y tener trazabilidad de qué está pasando con cada local: estado del permiso, observaciones DOM, planos finales.",
   },
 ]
 
