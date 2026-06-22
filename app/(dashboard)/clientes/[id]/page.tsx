@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from "react"
+import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import {
   FileDown,
@@ -52,8 +52,26 @@ export default function ClienteDetallePage({
 }) {
   const { id } = use(params)
 
-  const cliente = MOCK_CLIENTES.find((c) => c.id === id)
-  const proyectos = MOCK_PROYECTOS.filter((p) => p.cliente_id === id)
+  const [cliente, setCliente] = useState(MOCK_CLIENTES.find((c) => c.id === id))
+  const [proyectos, setProyectos] = useState(MOCK_PROYECTOS.filter((p) => p.cliente_id === id))
+
+  useEffect(() => {
+    fetch(`/api/clientes/${id}`)
+      .then((r) => r.json())
+      .then((data: { cliente?: typeof cliente }) => {
+        if (data.cliente) setCliente(data.cliente)
+      })
+      .catch(() => undefined)
+
+    fetch('/api/proyectos')
+      .then((r) => r.json())
+      .then((data: { data?: typeof proyectos }) => {
+        if (data.data) {
+          setProyectos(data.data.filter((p) => p.cliente_id === id))
+        }
+      })
+      .catch(() => undefined)
+  }, [id])
 
   if (!cliente) {
     return (
