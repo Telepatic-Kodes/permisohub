@@ -292,15 +292,29 @@ function TimelineSection({
 
 export default async function DashboardPage() {
   let proyectos: Proyecto[] = MOCK_PROYECTOS
+  let nombreUsuario = "Arquitecto"
 
   try {
     const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('proyectos')
-      .select('*, cliente:clientes(*)')
-      .order('created_at', { ascending: false })
-    if (!error && data && data.length > 0) {
-      proyectos = data as unknown as Proyecto[]
+
+    const [proyectosRes, profileRes] = await Promise.all([
+      supabase
+        .from('proyectos')
+        .select('*, cliente:clientes(*)')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('profiles')
+        .select('nombre')
+        .single(),
+    ])
+
+    if (!proyectosRes.error && proyectosRes.data && proyectosRes.data.length > 0) {
+      proyectos = proyectosRes.data as unknown as Proyecto[]
+    }
+
+    if (!profileRes.error && profileRes.data?.nombre) {
+      // Use first name only for the greeting
+      nombreUsuario = profileRes.data.nombre.split(' ')[0]
     }
   } catch {
     // Supabase not configured — use mock data
@@ -326,7 +340,7 @@ export default async function DashboardPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <PageHeader
-        title={`${saludo}, Estefanía`}
+        title={`${saludo}, ${nombreUsuario}`}
         subtitle={fechaCorta}
         action={
           <Link
