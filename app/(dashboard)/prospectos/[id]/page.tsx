@@ -127,13 +127,20 @@ export default function ProspectoDetallePage({
   )
 
   function guardarActividad() {
-    console.log("Nueva actividad", {
-      prospecto_id: prospecto?.id,
-      tipo: actTipo,
-      descripcion: actDesc,
-      fecha: actFecha,
-      resultado: actResultado,
-    })
+    if (prospecto) {
+      fetch(`/api/prospectos/${prospecto.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actividad: {
+            tipo: actTipo,
+            descripcion: actDesc,
+            fecha: actFecha || new Date().toISOString().slice(0, 10),
+            resultado: actResultado,
+          },
+        }),
+      }).catch(() => undefined)
+    }
     setShowActForm(false)
     setActDesc("")
     setActFecha("")
@@ -469,7 +476,15 @@ export default function ProspectoDetallePage({
               <Button
                 size="sm"
                 className="w-full bg-[#1A3328] text-white hover:bg-[#1A3328]/90"
-                onClick={() => console.log("Guardar notas", notas)}
+                onClick={() => {
+                  if (prospecto) {
+                    fetch(`/api/prospectos/${prospecto.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ notas }),
+                    }).catch(() => undefined)
+                  }
+                }}
               >
                 Guardar notas
               </Button>

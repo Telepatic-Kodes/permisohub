@@ -431,7 +431,8 @@ export default function ProyectoDetallePage({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => console.log("TODO")}
+                nativeButton={false}
+                render={<a href={`/herramientas/auditor?proyectoId=${proyecto.id}`} />}
               >
                 <CheckCircle2 className="size-4" />
                 Responder con IA
