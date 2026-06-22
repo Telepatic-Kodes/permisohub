@@ -573,13 +573,11 @@ export default function ProyectoDetallePage({
                   <CheckCircle2 className="size-4" />
                   Responder con IA
                 </Button>
+                <Button variant="outline" size="sm" onClick={() => setObsDialogOpen(true)}>
+                  <Plus className="size-4" />
+                  Nueva
+                </Button>
                 <Dialog open={obsDialogOpen} onOpenChange={setObsDialogOpen}>
-                  <DialogTrigger>
-                    <Button variant="outline" size="sm">
-                      <Plus className="size-4" />
-                      Nueva
-                    </Button>
-                  </DialogTrigger>
                   <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle>Nueva observación DOM</DialogTitle>
@@ -674,13 +672,11 @@ export default function ProyectoDetallePage({
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Comunicaciones</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => setComDialogOpen(true)}>
+                <Plus className="size-4" />
+                Agregar
+              </Button>
               <Dialog open={comDialogOpen} onOpenChange={setComDialogOpen}>
-                <DialogTrigger>
-                  <Button variant="outline" size="sm">
-                    <Plus className="size-4" />
-                    Agregar
-                  </Button>
-                </DialogTrigger>
                 <DialogContent className="max-w-md">
                   <DialogHeader>
                     <DialogTitle>Nueva comunicación</DialogTitle>
@@ -981,13 +977,11 @@ export default function ProyectoDetallePage({
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Documentos</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => setUploadDialogOpen(true)}>
+                <Upload className="size-4" />
+                Subir
+              </Button>
               <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-                <DialogTrigger>
-                  <Button variant="outline" size="sm">
-                    <Upload className="size-4" />
-                    Subir
-                  </Button>
-                </DialogTrigger>
                 <DialogContent className="max-w-lg">
                   <DialogHeader>
                     <DialogTitle>Subir documentos</DialogTitle>
