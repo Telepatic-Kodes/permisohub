@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   BookMarked,
   Building2,
@@ -91,6 +91,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const onSearchOpen = () => window.dispatchEvent(new CustomEvent("ph:open-palette"))
   const pathname = usePathname()
+  const router = useRouter()
   const [perfil, setPerfil] = useState<{ nombre?: string; especialidad?: string } | null>(null)
 
   useEffect(() => {
@@ -246,6 +247,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 type="button"
                 aria-label="Cerrar sesión"
                 className="flex size-7 shrink-0 items-center justify-center rounded-md text-white/30 transition-colors hover:bg-white/10 hover:text-white"
+                onClick={async () => {
+                  await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined)
+                  router.push('/login')
+                }}
               >
                 <LogOut className="size-3.5" />
               </button>
