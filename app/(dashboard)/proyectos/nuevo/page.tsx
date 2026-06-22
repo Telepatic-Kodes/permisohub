@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react"
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { MOCK_CLIENTES } from "@/lib/mock-data"
+import type { Cliente } from "@/types"
 import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 import { ETAPAS_PERMISO, TIPO_PERMISO_LABELS, type TipoPermiso } from "@/types"
 
@@ -29,11 +30,32 @@ export default function NuevoProyectoPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const clienteNombreParam = searchParams.get("cliente") ?? ""
+  const [clientesDisponibles, setClientesDisponibles] = useState<Cliente[]>(MOCK_CLIENTES)
+
+  useEffect(() => {
+    fetch('/api/clientes')
+      .then((r) => r.json())
+      .then((d: { data?: Cliente[]; clientes?: Cliente[] }) => {
+        const list = d.data ?? d.clientes ?? []
+        if (list.length > 0) setClientesDisponibles(list)
+      })
+      .catch(() => undefined)
+  }, [])
+
   // Try to match an existing client by name; fall back to "" (user must pick/create)
-  const clienteMatch = clienteNombreParam
-    ? (MOCK_CLIENTES.find((c) => c.nombre.toLowerCase() === clienteNombreParam.toLowerCase())?.id ?? "")
-    : ""
-  const [cliente, setCliente] = useState(clienteMatch)
+  const [cliente, setCliente] = useState(() => {
+    if (!clienteNombreParam) return ""
+    return MOCK_CLIENTES.find((c) => c.nombre.toLowerCase() === clienteNombreParam.toLowerCase())?.id ?? ""
+  })
+
+  // Re-match if real clients loaded after mount
+  useEffect(() => {
+    if (!clienteNombreParam || cliente) return
+    const match = clientesDisponibles.find(
+      (c) => c.nombre.toLowerCase() === clienteNombreParam.toLowerCase()
+    )
+    if (match) setCliente(match.id)
+  }, [clientesDisponibles, clienteNombreParam, cliente])
   const [municipio, setMunicipio] = useState(searchParams.get("municipio") ?? "")
   const [tipo, setTipo] = useState("")
   const [etapas, setEtapas] = useState<Record<string, boolean>>(
@@ -149,7 +171,7 @@ export default function NuevoProyectoPage() {
                     <SelectValue placeholder="Seleccionar cliente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MOCK_CLIENTES.map((c) => (
+                    {clientesDisponibles.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.nombre}
                       </SelectItem>
@@ -175,7 +197,7 @@ export default function NuevoProyectoPage() {
                     />
                   </div>
                 )}
-                {clienteNombreParam && !clienteMatch && cliente !== "nuevo" && (
+                {clienteNombreParam && !cliente && cliente !== "nuevo" && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Prospecto: <span className="font-medium">{clienteNombreParam}</span> — selecciona un cliente o elige &quot;+ Nuevo cliente&quot;.
                   </p>

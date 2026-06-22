@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from "react"
+import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Printer } from "lucide-react"
 
@@ -10,6 +10,7 @@ import {
   ESTADO_CONFIG,
   ETAPAS_PERMISO,
   TIPO_PERMISO_LABELS,
+  type Cliente,
   type Proyecto,
 } from "@/types"
 
@@ -52,8 +53,23 @@ export default function InformeClientePage({
 }) {
   const { id } = use(params)
 
-  const cliente = MOCK_CLIENTES.find((c) => c.id === id)
-  const proyectos = MOCK_PROYECTOS.filter((p) => p.cliente_id === id)
+  const [cliente, setCliente] = useState<Cliente | undefined>(MOCK_CLIENTES.find((c) => c.id === id))
+  const [proyectos, setProyectos] = useState<Proyecto[]>(MOCK_PROYECTOS.filter((p) => p.cliente_id === id))
+
+  useEffect(() => {
+    fetch(`/api/clientes/${id}`)
+      .then((r) => r.json())
+      .then((d: { cliente?: Cliente }) => { if (d.cliente) setCliente(d.cliente) })
+      .catch(() => undefined)
+
+    fetch(`/api/proyectos?clienteId=${id}`)
+      .then((r) => r.json())
+      .then((d: { data?: Proyecto[]; proyectos?: Proyecto[] }) => {
+        const list = d.data ?? d.proyectos ?? []
+        if (list.length > 0) setProyectos(list.filter((p) => p.cliente_id === id))
+      })
+      .catch(() => undefined)
+  }, [id])
 
   const hoy = new Date()
   const fechaInforme = formatLongDate(hoy)
