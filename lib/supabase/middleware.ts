@@ -2,9 +2,9 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function updateSession(request: NextRequest) {
-  // If Supabase is not configured, allow all requests through.
-  // Auth will be enforced once env vars are set in Vercel.
+  // Bypass auth for demo/testing — set BYPASS_AUTH=true in Vercel to disable.
   if (
+    process.env.BYPASS_AUTH === 'true' ||
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     process.env.NODE_ENV === 'development'
