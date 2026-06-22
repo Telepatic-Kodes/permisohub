@@ -44,7 +44,8 @@ export async function updateSession(request: NextRequest) {
   const isPublicRoute =
     pathname === "/" ||
     pathname.startsWith("/login") ||
-    pathname.startsWith("/auth")
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/pricing")
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
@@ -52,12 +53,27 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Authenticated users hitting the public landing or the login page are
-  // sent to their dashboard.
+  // Authenticated users hitting public routes → dashboard
   if (user && (pathname === "/" || pathname.startsWith("/login"))) {
     const url = request.nextUrl.clone()
     url.pathname = "/dashboard"
     return NextResponse.redirect(url)
+  }
+
+  // Authenticated users on protected routes: if profile incomplete → onboarding
+  // Skip the check when already on /onboarding to avoid redirect loops.
+  if (user && !pathname.startsWith("/onboarding") && !isPublicRoute) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("nombre")
+      .eq("id", user.id)
+      .single<{ nombre: string | null }>()
+
+    if (!profile?.nombre) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/onboarding"
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

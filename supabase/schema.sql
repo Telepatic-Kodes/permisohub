@@ -160,6 +160,20 @@ CREATE TABLE IF NOT EXISTS actividades_crm (
   created_at timestamptz DEFAULT now()
 );
 
+-- subscriptions (un registro por usuario, gestionado por el webhook de Stripe)
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  plan text NOT NULL DEFAULT 'free',
+  billing_interval text DEFAULT 'monthly',
+  status text NOT NULL DEFAULT 'active',
+  current_period_end timestamptz,
+  created_at timestamptz DEFAULT now() NOT NULL,
+  updated_at timestamptz DEFAULT now() NOT NULL
+);
+
 -- ----------------------------------------------------------------------------
 -- Índices
 -- ----------------------------------------------------------------------------
@@ -173,6 +187,8 @@ CREATE INDEX IF NOT EXISTS idx_documentos_proyecto_id ON documentos(proyecto_id)
 CREATE INDEX IF NOT EXISTS idx_comunicaciones_proyecto_id ON comunicaciones(proyecto_id);
 CREATE INDEX IF NOT EXISTS idx_actividades_prospecto_id ON actividades_crm(prospecto_id);
 CREATE INDEX IF NOT EXISTS idx_requisitos_municipio_id ON requisitos_municipio(municipio_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
 
 -- ----------------------------------------------------------------------------
 -- Trigger: mantener updated_at
@@ -197,6 +213,10 @@ CREATE OR REPLACE TRIGGER trg_profiles_updated_at
   BEFORE UPDATE ON profiles
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE OR REPLACE TRIGGER trg_subscriptions_updated_at
+  BEFORE UPDATE ON subscriptions
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 -- ----------------------------------------------------------------------------
 -- Row Level Security
 -- ----------------------------------------------------------------------------
@@ -210,6 +230,7 @@ ALTER TABLE documentos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comunicaciones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prospectos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE actividades_crm ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: cada usuario solo ve/edita su propio perfil
 CREATE POLICY "profiles_own" ON profiles
@@ -262,6 +283,12 @@ CREATE POLICY "actividades_own" ON actividades_crm
   FOR ALL TO authenticated USING (
     EXISTS (SELECT 1 FROM prospectos pr WHERE pr.id = prospecto_id AND pr.user_id = auth.uid())
   );
+
+-- Subscriptions: cada usuario solo ve la suya; el service role (webhook) puede escribir
+CREATE POLICY "subscriptions_own_read" ON subscriptions
+  FOR SELECT TO authenticated USING (user_id = auth.uid());
+CREATE POLICY "subscriptions_service_write" ON subscriptions
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ============================================================================
 -- Seed: 10 municipios principales de Chile
