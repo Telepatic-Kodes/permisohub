@@ -1,6 +1,7 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import {
   AlertCircle,
   CheckCircle2,
@@ -63,6 +64,8 @@ function getPuntajeColor(puntaje: number): string {
 }
 
 export default function AuditorPage() {
+  const searchParams = useSearchParams()
+  const proyectoId = searchParams.get("proyectoId")
   const [files, setFiles] = useState<File[]>([])
   const [municipio, setMunicipio] = useState("")
   const [tipoObra, setTipoObra] = useState("permiso_edificacion")
@@ -71,6 +74,17 @@ export default function AuditorPage() {
   const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!proyectoId) return
+    fetch(`/api/proyectos/${proyectoId}`)
+      .then((r) => r.json())
+      .then((data: { proyecto?: { municipio?: string; tipo?: string } }) => {
+        if (data.proyecto?.municipio) setMunicipio(data.proyecto.municipio)
+        if (data.proyecto?.tipo) setTipoObra(data.proyecto.tipo)
+      })
+      .catch(() => undefined)
+  }, [proyectoId])
 
   function addFiles(newFiles: FileList | null) {
     if (!newFiles) return
