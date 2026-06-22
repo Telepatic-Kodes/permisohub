@@ -38,6 +38,7 @@ import { ESTADO_CONFIG, TIPO_PERMISO_LABELS, type Proyecto, type Etapa, type Com
 import { getEstadoPlazoLey21718, formatFecha } from "@/lib/dias-habiles"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/dashboard/page-header"
+import { DocumentUpload } from "@/components/dashboard/document-upload"
 import { WhatsAppDialog } from "@/components/dashboard/whatsapp-dialog"
 import { ExpedienteScore } from "@/components/proyecto/expediente-score"
 import { setCommandContext, clearCommandContext } from "@/hooks/use-command-context"
@@ -46,6 +47,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
 
 interface Observacion {
@@ -189,6 +191,7 @@ export default function ProyectoDetallePage({
     expedienteNumero?: string
   } | null>(null)
   const [waDialogOpen, setWaDialogOpen] = useState(false)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
 
   const handleVerificarEstado = async () => {
     setVerificando(true)
@@ -633,10 +636,36 @@ export default function ProyectoDetallePage({
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Documentos</CardTitle>
-              <Button variant="outline" size="sm">
-                <Upload className="size-4" />
-                Subir
-              </Button>
+              <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                <DialogTrigger>
+                  <Button variant="outline" size="sm">
+                    <Upload className="size-4" />
+                    Subir
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Subir documentos</DialogTitle>
+                  </DialogHeader>
+                  <DocumentUpload
+                    proyectoId={proyecto.id}
+                    onUploadComplete={(doc) => {
+                      setDocumentos((prev) => [
+                        ...prev,
+                        {
+                          id: `new-${Date.now()}`,
+                          proyecto_id: proyecto.id,
+                          nombre: doc.nombre,
+                          tipo: doc.tipo,
+                          url: doc.url,
+                          tamano: doc.tamano,
+                          created_at: new Date().toISOString(),
+                        },
+                      ])
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent className="space-y-2">
               {documentos.map((d) => (
