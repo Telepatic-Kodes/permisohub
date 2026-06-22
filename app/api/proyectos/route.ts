@@ -3,20 +3,30 @@ import { MOCK_PROYECTOS } from '@/lib/mock-data'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const clienteId = searchParams.get('clienteId')
+
   try {
     const supabase = await createClient()
-    const { data, error } = await supabase
+    let query = supabase
       .from('proyectos')
       .select('*, cliente:clientes(*)')
       .order('created_at', { ascending: false })
+
+    if (clienteId) query = query.eq('cliente_id', clienteId)
+
+    const { data, error } = await query
 
     if (error) throw error
 
     return Response.json({ data: data ?? [], source: 'db' })
   } catch {
     if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ data: MOCK_PROYECTOS, source: 'mock' })
+      const list = clienteId
+        ? MOCK_PROYECTOS.filter((p) => p.cliente_id === clienteId)
+        : MOCK_PROYECTOS
+      return Response.json({ data: list, source: 'mock' })
     }
     return Response.json({ error: 'Error al obtener proyectos' }, { status: 500 })
   }
