@@ -1,11 +1,13 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import Link from "next/link"
 import {
   AlertTriangle,
   BarChart3,
   BookOpen,
   ChevronDown,
+  ChevronRight,
   Clock,
   ExternalLink,
   Globe,
@@ -466,17 +468,26 @@ export default function MunicipiosPage() {
                     </p>
                   )}
 
-                  {comuna.domStatus === "dom_en_linea" && (
-                    <a
-                      href={comuna.urlDom ?? DOM_EN_LINEA_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                  <div className="mt-4 flex items-center gap-3 flex-wrap">
+                    <Link
+                      href={`/municipios/${comuna.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors"
                     >
-                      Ir a domenlinea.minvu.cl
-                      <ExternalLink className="size-3.5" />
-                    </a>
-                  )}
+                      Ver ficha completa + PRC
+                      <ChevronRight className="size-3" />
+                    </Link>
+                    {comuna.domStatus === "dom_en_linea" && (
+                      <a
+                        href={comuna.urlDom ?? DOM_EN_LINEA_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                      >
+                        Ir a domenlinea.minvu.cl
+                        <ExternalLink className="size-3.5" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
