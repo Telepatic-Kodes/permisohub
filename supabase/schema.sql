@@ -14,6 +14,14 @@ CREATE TABLE IF NOT EXISTS profiles (
   onboarding_completed boolean DEFAULT false,
   onboarding_step int DEFAULT 0,
   plan text DEFAULT 'starter',
+  -- Notification preferences
+  notif_observaciones_dom boolean DEFAULT true,
+  notif_vencimiento_plazo boolean DEFAULT true,
+  notif_cambio_estado boolean DEFAULT true,
+  notif_resumen_semanal boolean DEFAULT false,
+  notif_clientes boolean DEFAULT false,
+  email_notificaciones text,
+  email_remitente text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -209,12 +217,13 @@ CREATE TABLE IF NOT EXISTS workspace_members (
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS workspace_invites (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid REFERENCES workspaces(id) ON DELETE CASCADE NOT NULL,
-  email text NOT NULL,
-  role text NOT NULL DEFAULT 'arquitecto',
+  workspace_id uuid REFERENCES workspaces(id) ON DELETE CASCADE,
+  email text,
+  rol text NOT NULL DEFAULT 'viewer',
   invited_by uuid REFERENCES auth.users(id),
   token text UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
-  expires_at timestamptz DEFAULT now() + interval '7 days',
+  metadata jsonb,
+  expires_at timestamptz DEFAULT now() + interval '30 days',
   accepted_at timestamptz,
   created_at timestamptz DEFAULT now() NOT NULL
 );
