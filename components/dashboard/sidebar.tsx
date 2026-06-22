@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -90,6 +91,16 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const onSearchOpen = () => window.dispatchEvent(new CustomEvent("ph:open-palette"))
   const pathname = usePathname()
+  const [perfil, setPerfil] = useState<{ nombre?: string; especialidad?: string } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/configuracion/perfil')
+      .then((r) => r.json())
+      .then((d: { perfil?: { nombre?: string; especialidad?: string } }) => {
+        if (d.perfil) setPerfil(d.perfil)
+      })
+      .catch(() => undefined)
+  }, [])
 
   return (
     <aside
@@ -215,14 +226,20 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         >
           <Avatar size="sm">
             <AvatarFallback className="bg-[oklch(0.78_0.16_78)] text-[10px] font-bold text-[oklch(0.28_0.055_158)]">
-              EP
+              {perfil?.nombre
+                ? perfil.nombre.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
+                : "?"}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-white/90">Estefanía Parada</p>
-                <p className="truncate text-[10px] text-white/40">Arquitecta</p>
+                <p className="truncate text-xs font-medium text-white/90">
+                  {perfil?.nombre ?? "Mi perfil"}
+                </p>
+                <p className="truncate text-[10px] text-white/40">
+                  {perfil?.especialidad ?? "Arquitecto/a"}
+                </p>
               </div>
               <ThemeToggle />
               <button
