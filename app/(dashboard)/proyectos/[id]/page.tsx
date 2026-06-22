@@ -39,6 +39,7 @@ import { getEstadoPlazoLey21718, formatFecha } from "@/lib/dias-habiles"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { WhatsAppDialog } from "@/components/dashboard/whatsapp-dialog"
+import { ExpedienteScore } from "@/components/proyecto/expediente-score"
 import { setCommandContext, clearCommandContext } from "@/hooks/use-command-context"
 import {
   Dialog,
@@ -610,6 +611,14 @@ export default function ProyectoDetallePage({
               )}
             </CardContent>
           </Card>
+
+          {/* Expediente Score */}
+          <ExpedienteScore
+            tipo={proyecto.tipo}
+            municipio={proyecto.municipio}
+            documentos={documentos}
+            proyectoId={proyecto.id}
+          />
 
           {/* Plazo Ley 21.718 */}
           {proyecto.fecha_inicio && (
