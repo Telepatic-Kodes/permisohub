@@ -165,6 +165,68 @@ export const TIPO_PERMISO_DESCRIPCION: Partial<Record<TipoPermiso, string>> = {
   recepcion_parcial:      'Recepción de una etapa de obra mientras continúa la construcción.',
 }
 
+// ============================================================================
+// Workspace / Enterprise
+// ============================================================================
+
+export type RolWorkspace = 'admin' | 'arquitecto' | 'viewer'
+
+export type TipoWorkspace = 'estudio' | 'inmobiliaria' | 'independiente'
+
+export interface Workspace {
+  id: string
+  nombre: string
+  tipo: TipoWorkspace
+  plan: string
+  owner_id: string
+  created_at: string
+}
+
+export interface WorkspaceMember {
+  id: string
+  workspace_id: string
+  user_id: string
+  role: RolWorkspace
+  nombre?: string
+  email?: string
+  avatar?: string
+  joined_at: string
+}
+
+export interface WorkspaceInvite {
+  id: string
+  workspace_id: string
+  email: string
+  role: RolWorkspace
+  invited_by?: string
+  token: string
+  expires_at: string
+  accepted_at?: string
+  created_at: string
+}
+
+export const ROL_LABELS: Record<RolWorkspace, string> = {
+  admin:       'Administrador',
+  arquitecto:  'Arquitecto',
+  viewer:      'Sólo lectura',
+}
+
+export const ROL_DESCRIPCION: Record<RolWorkspace, string> = {
+  admin:       'Gestiona el workspace, equipo, proyectos y configuración.',
+  arquitecto:  'Crea y edita proyectos. No puede gestionar el equipo.',
+  viewer:      'Ve el avance de proyectos sin poder editar. Ideal para mandantes y locatarios.',
+}
+
+export const TIPO_WORKSPACE_LABELS: Record<TipoWorkspace, string> = {
+  estudio:       'Estudio de Arquitectura',
+  inmobiliaria:  'Administradora / Inmobiliaria',
+  independiente: 'Arquitecto Independiente',
+}
+
+// ============================================================================
+// CRM
+// ============================================================================
+
 export type EtapaCRM =
   | 'nuevo_contacto'
   | 'contactado'

@@ -160,6 +160,47 @@ CREATE TABLE IF NOT EXISTS actividades_crm (
   created_at timestamptz DEFAULT now()
 );
 
+-- ----------------------------------------------------------------------------
+-- workspaces (espacio de trabajo: estudio, inmobiliaria, o independiente)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS workspaces (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre text NOT NULL,
+  tipo text NOT NULL DEFAULT 'estudio',    -- estudio | inmobiliaria | independiente
+  plan text NOT NULL DEFAULT 'free',
+  owner_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at timestamptz DEFAULT now() NOT NULL,
+  updated_at timestamptz DEFAULT now() NOT NULL
+);
+
+-- ----------------------------------------------------------------------------
+-- workspace_members (usuarios dentro de un workspace con roles)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS workspace_members (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid REFERENCES workspaces(id) ON DELETE CASCADE NOT NULL,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  role text NOT NULL DEFAULT 'arquitecto',  -- admin | arquitecto | viewer
+  invited_by uuid REFERENCES auth.users(id),
+  joined_at timestamptz DEFAULT now() NOT NULL,
+  UNIQUE(workspace_id, user_id)
+);
+
+-- ----------------------------------------------------------------------------
+-- workspace_invites (invitaciones pendientes por email)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS workspace_invites (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid REFERENCES workspaces(id) ON DELETE CASCADE NOT NULL,
+  email text NOT NULL,
+  role text NOT NULL DEFAULT 'arquitecto',
+  invited_by uuid REFERENCES auth.users(id),
+  token text UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
+  expires_at timestamptz DEFAULT now() + interval '7 days',
+  accepted_at timestamptz,
+  created_at timestamptz DEFAULT now() NOT NULL
+);
+
 -- subscriptions (un registro por usuario, gestionado por el webhook de Stripe)
 CREATE TABLE IF NOT EXISTS subscriptions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -187,6 +228,11 @@ CREATE INDEX IF NOT EXISTS idx_documentos_proyecto_id ON documentos(proyecto_id)
 CREATE INDEX IF NOT EXISTS idx_comunicaciones_proyecto_id ON comunicaciones(proyecto_id);
 CREATE INDEX IF NOT EXISTS idx_actividades_prospecto_id ON actividades_crm(prospecto_id);
 CREATE INDEX IF NOT EXISTS idx_requisitos_municipio_id ON requisitos_municipio(municipio_id);
+CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces(owner_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_members_workspace_id ON workspace_members(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_members_user_id ON workspace_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_invites_workspace_id ON workspace_invites(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_invites_token ON workspace_invites(token);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
 
@@ -230,6 +276,9 @@ ALTER TABLE documentos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comunicaciones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prospectos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE actividades_crm ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workspace_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workspace_invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: cada usuario solo ve/edita su propio perfil
@@ -283,6 +332,45 @@ CREATE POLICY "actividades_own" ON actividades_crm
   FOR ALL TO authenticated USING (
     EXISTS (SELECT 1 FROM prospectos pr WHERE pr.id = prospecto_id AND pr.user_id = auth.uid())
   );
+
+-- Workspaces: miembros pueden ver, solo owner puede editar
+CREATE POLICY "workspaces_member_read" ON workspaces
+  FOR SELECT TO authenticated USING (
+    owner_id = auth.uid() OR
+    EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = id AND wm.user_id = auth.uid())
+  );
+CREATE POLICY "workspaces_owner_write" ON workspaces
+  FOR ALL TO authenticated USING (owner_id = auth.uid()) WITH CHECK (owner_id = auth.uid());
+
+-- workspace_members: miembros ven su propio workspace, admin gestiona
+CREATE POLICY "workspace_members_read" ON workspace_members
+  FOR SELECT TO authenticated USING (
+    user_id = auth.uid() OR
+    EXISTS (SELECT 1 FROM workspace_members wm2 WHERE wm2.workspace_id = workspace_id AND wm2.user_id = auth.uid())
+  );
+CREATE POLICY "workspace_members_admin_write" ON workspace_members
+  FOR ALL TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id
+      AND wm.user_id = auth.uid() AND wm.role = 'admin'
+    )
+  );
+
+-- workspace_invites: admin del workspace gestiona
+CREATE POLICY "workspace_invites_read" ON workspace_invites
+  FOR SELECT TO authenticated USING (
+    EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id AND wm.user_id = auth.uid())
+  );
+CREATE POLICY "workspace_invites_admin_write" ON workspace_invites
+  FOR ALL TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id
+      AND wm.user_id = auth.uid() AND wm.role = 'admin'
+    )
+  );
+-- Token público para aceptar invitación (sin auth)
+CREATE POLICY "workspace_invites_token_accept" ON workspace_invites
+  FOR SELECT USING (accepted_at IS NULL AND expires_at > now());
 
 -- Subscriptions: cada usuario solo ve la suya; el service role (webhook) puede escribir
 CREATE POLICY "subscriptions_own_read" ON subscriptions

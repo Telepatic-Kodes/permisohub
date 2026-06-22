@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
+  BookMarked,
   Building2,
   Calculator,
   FileText,
@@ -16,6 +17,7 @@ import {
   Search,
   Settings,
   Sparkles,
+  Users,
   type LucideIcon,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -47,6 +49,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/proyectos", label: "Proyectos", icon: FolderOpen, newHref: "/proyectos/nuevo" },
       { href: "/clientes",  label: "Clientes",  icon: Building2, matchPaths: ["/prospectos"] },
+      { href: "/cartera",   label: "Cartera",   icon: BookMarked },
     ],
   },
   {
@@ -65,8 +68,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Sistema",
     items: [
-      { href: "/documentos",    label: "Documentos",    icon: FileText },
-      { href: "/configuracion", label: "Configuración", icon: Settings },
+      { href: "/documentos",            label: "Documentos",    icon: FileText },
+      { href: "/configuracion/equipo",  label: "Equipo",        icon: Users, matchPaths: ["/configuracion"] },
     ],
   },
 ]
