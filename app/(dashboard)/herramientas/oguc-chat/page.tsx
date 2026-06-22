@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Send, Bot, User, AlertCircle, BookOpen, Loader2 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
@@ -28,6 +29,8 @@ interface UsageInfo {
 }
 
 export default function OgucChatPage() {
+  const searchParams = useSearchParams()
+  const municipioCtx = searchParams.get("municipio")
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -38,6 +41,10 @@ export default function OgucChatPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
+    if (municipioCtx) {
+      setInput(`En el municipio de ${municipioCtx}, `)
+    }
+
     fetch('/api/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: [] }) })
       .then(r => { setAiAvailable(r.status !== 503) })
       .catch(() => setAiAvailable(false))
