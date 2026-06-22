@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -94,12 +94,26 @@ export default function ProspectoDetallePage({
 }) {
   const { id } = use(params)
   const router = useRouter()
-  const prospecto = MOCK_PROSPECTOS.find((p) => p.id === id)
+  const mockProspecto = MOCK_PROSPECTOS.find((p) => p.id === id)
 
+  const [prospecto, setProspecto] = useState(mockProspecto ?? null)
   const [etapa, setEtapa] = useState<EtapaCRM>(
-    prospecto?.etapa ?? "nuevo_contacto"
+    mockProspecto?.etapa ?? "nuevo_contacto"
   )
-  const [notas, setNotas] = useState(prospecto?.notas ?? "")
+  const [notas, setNotas] = useState(mockProspecto?.notas ?? "")
+
+  useEffect(() => {
+    fetch(`/api/prospectos/${id}`)
+      .then((r) => r.json())
+      .then((data: { prospecto?: typeof mockProspecto }) => {
+        if (data.prospecto) {
+          setProspecto(data.prospecto)
+          setEtapa(data.prospecto.etapa)
+          setNotas(data.prospecto.notas ?? "")
+        }
+      })
+      .catch(() => undefined)
+  }, [id])
   const [showActForm, setShowActForm] = useState(false)
   const [actTipo, setActTipo] = useState<TipoActividad>("email")
   const [actDesc, setActDesc] = useState("")

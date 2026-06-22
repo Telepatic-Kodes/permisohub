@@ -1,6 +1,32 @@
 import { createClient } from '@/lib/supabase/server'
+import { MOCK_PROSPECTOS } from '@/lib/mock-data'
 
 export const dynamic = 'force-dynamic'
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params
+
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('prospectos')
+      .select('*, actividades:actividades_crm(*)')
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
+    return Response.json({ prospecto: data, source: 'db' })
+  } catch {
+    if (process.env.NODE_ENV !== 'production') {
+      const prospecto = MOCK_PROSPECTOS.find((p) => p.id === id) ?? null
+      return Response.json({ prospecto, source: 'mock' })
+    }
+    return Response.json({ error: 'No encontrado' }, { status: 404 })
+  }
+}
 
 interface PatchBody {
   etapa?: string
