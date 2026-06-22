@@ -339,14 +339,16 @@ export default function IngresoPage({
 
           {/* Actions */}
           <div className="grid grid-cols-2 gap-3">
-            <Card className="cursor-pointer hover:border-[#1A3328]/30 transition-colors">
-              <CardContent className="flex flex-col items-center justify-center gap-2 py-6 text-center">
-                <Package className="size-8 text-[#1A3328]" />
-                <p className="text-sm font-semibold text-[#1A3328]">Descargar paquete ZIP</p>
-                <p className="text-xs text-muted-foreground">Todos los docs con nomenclatura DOM</p>
-                <Badge variant="outline" className="text-xs">Próximamente</Badge>
-              </CardContent>
-            </Card>
+            <a href={`/api/proyectos/${id}/export-zip`} download>
+              <Card className="cursor-pointer hover:border-[#1A3328]/30 transition-colors h-full">
+                <CardContent className="flex flex-col items-center justify-center gap-2 py-6 text-center h-full">
+                  <Package className="size-8 text-[#1A3328]" />
+                  <p className="text-sm font-semibold text-[#1A3328]">Descargar paquete ZIP</p>
+                  <p className="text-xs text-muted-foreground">Todos los docs con nomenclatura DOM</p>
+                  <Badge className="text-xs bg-[#1A3328] text-white">Exportar →</Badge>
+                </CardContent>
+              </Card>
+            </a>
             <Card
               className="cursor-pointer hover:border-[#1A3328]/30 transition-colors"
               onClick={openDomEnLinea}
