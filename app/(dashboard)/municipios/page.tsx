@@ -2,14 +2,19 @@
 
 import { useMemo, useState } from "react"
 import {
+  AlertTriangle,
+  BarChart3,
   ChevronDown,
   Clock,
   ExternalLink,
   Globe,
+  Info,
+  Lightbulb,
   Mail,
   MapPin,
   Phone,
   Search,
+  TrendingUp,
 } from "lucide-react"
 
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -21,12 +26,109 @@ import {
   type ComunaChile,
   type DomStatus,
 } from "@/lib/comunas-chile"
+import { getInteligenciaMunicipio, type InteligenciaMunicipio } from "@/lib/inteligencia-dom"
 import { MOCK_MUNICIPIOS, type MunicipioInfo } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 
 const DOM_EN_LINEA_URL = "https://domenlinea.minvu.cl"
 
 type StatusFilter = "todas" | "dom_en_linea" | "presencial"
+
+function InteligenciaDOMSection({ data }: { data: InteligenciaMunicipio }) {
+  const NIVEL_CONFIG = {
+    danger: { className: "bg-red-50 border-red-200 text-red-800", Icon: AlertTriangle, iconClass: "text-red-500" },
+    warning: { className: "bg-amber-50 border-amber-200 text-amber-800", Icon: AlertTriangle, iconClass: "text-amber-500" },
+    info: { className: "bg-blue-50 border-blue-200 text-blue-800", Icon: Info, iconClass: "text-blue-500" },
+  } as const
+
+  return (
+    <div className="mt-3 rounded-lg border border-primary/15 bg-white p-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <BarChart3 className="size-4 text-primary" />
+        <p className="text-xs font-semibold text-primary">Inteligencia DOM</p>
+        <span className="ml-auto text-[10px] text-muted-foreground/50">Actualizado {data.ultimaActualizacion}</span>
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-lg bg-[#F9F7F3] p-2.5 text-center">
+          <p className="text-lg font-semibold text-primary">{data.tasaObservaciones}%</p>
+          <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">proyectos con observaciones</p>
+        </div>
+        <div className="rounded-lg bg-[#F9F7F3] p-2.5 text-center">
+          <p className="text-lg font-semibold text-primary">{data.tiempoRespuestaPromedio}d</p>
+          <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">días hábiles primera respuesta</p>
+        </div>
+        <div className="rounded-lg bg-[#F9F7F3] p-2.5 text-center">
+          <p className="text-lg font-semibold text-primary">{data.promedioObservaciones}</p>
+          <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">obs promedio por expediente</p>
+        </div>
+      </div>
+
+      {/* Top observations */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-2">
+          <TrendingUp className="size-3.5 text-muted-foreground" />
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Observaciones más frecuentes</p>
+        </div>
+        <div className="space-y-2">
+          {data.observacionesFrecuentes.slice(0, 5).map((obs) => (
+            <div key={obs.tipo} className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-primary truncate">{obs.tipo}</p>
+                <span className="shrink-0 text-[10px] font-semibold text-primary/60">{obs.porcentaje}%</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary/40 transition-all"
+                  style={{ width: `${obs.porcentaje}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground/70 leading-tight">{obs.descripcion}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Alertas */}
+      {data.alertas.length > 0 && (
+        <div className="space-y-1.5">
+          {data.alertas.map((alerta, i) => {
+            const cfg = NIVEL_CONFIG[alerta.nivel]
+            return (
+              <div key={i} className={cn("flex items-start gap-2 rounded-lg border px-3 py-2", cfg.className)}>
+                <cfg.Icon className={cn("size-3.5 shrink-0 mt-0.5", cfg.iconClass)} />
+                <p className="text-[11px] leading-snug">{alerta.texto}</p>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Consejos */}
+      {data.consejos.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Lightbulb className="size-3.5 text-amber-500" />
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Consejos para este municipio</p>
+          </div>
+          <ul className="space-y-1">
+            {data.consejos.map((c, i) => (
+              <li key={i} className="flex items-start gap-2 text-[11px] text-muted-foreground">
+                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-amber-400" />
+                {c}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <p className="text-[9px] text-muted-foreground/40 text-right">
+        Base: {data.totalExpedientesBase} expedientes históricos · Datos sintéticos beta
+      </p>
+    </div>
+  )
+}
 
 const STATUS_BADGE: Record<DomStatus, { label: string; className: string }> = {
   dom_en_linea: { label: "DOM en Línea", className: "bg-green-100 text-green-700" },
@@ -209,8 +311,12 @@ export default function MunicipiosPage() {
 
               {isOpen && (
                 <div className="bg-[#F9F7F3] px-4 pt-1 pb-4">
+                  {(() => {
+                    const inteligencia = getInteligenciaMunicipio(comuna.nombre)
+                    return inteligencia ? <InteligenciaDOMSection data={inteligencia} /> : null
+                  })()}
                   {info ? (
-                    <div className="space-y-3">
+                    <div className="space-y-3 mt-3">
                       <div className="grid gap-1.5 text-sm text-muted-foreground">
                         {info.dom_telefono && (
                           <span className="flex items-center gap-2">

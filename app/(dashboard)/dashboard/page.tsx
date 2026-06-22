@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 import { MOCK_PROYECTOS } from "@/lib/mock-data"
 import type { EstadoExpediente, Proyecto } from "@/types"
 import { createClient } from "@/lib/supabase/server"
+import { getEstadoPlazoLey21718 } from "@/lib/dias-habiles"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -52,9 +53,33 @@ interface AlertaItem {
   diasRestantes: number
 }
 
-const ALERTAS: AlertaItem[] = [
-  { titulo: "Obs. DOM por responder", detalle: "Mall Plaza Egaña", href: "/proyectos/p1", diasRestantes: 3 },
-]
+function buildAlertasLey21718(proyectos: Proyecto[]): AlertaItem[] {
+  const estados = new Set(['ingresado', 'en_revision', 'con_observaciones'])
+  const alertas: AlertaItem[] = []
+  for (const p of proyectos) {
+    if (!p.fecha_inicio || !estados.has(p.estado)) continue
+    const plazo = getEstadoPlazoLey21718(
+      new Date(`${p.fecha_inicio}T00:00:00`),
+      false
+    )
+    if (plazo.estado === 'VENCIDO') {
+      alertas.push({
+        titulo: `Plazo DOM VENCIDO — ${p.nombre}`,
+        detalle: `${p.municipio} · ${plazo.diasHabilesDesdeIngreso} días hábiles transcurridos (límite 30)`,
+        href: `/proyectos/${p.id}`,
+        diasRestantes: 0,
+      })
+    } else if (plazo.estado === 'PROXIMO_VENCER') {
+      alertas.push({
+        titulo: `Plazo DOM próximo a vencer — ${p.nombre}`,
+        detalle: `${p.municipio} · ${plazo.diasHabilesRestantes} días hábiles restantes`,
+        href: `/proyectos/${p.id}`,
+        diasRestantes: plazo.diasHabilesRestantes,
+      })
+    }
+  }
+  return alertas
+}
 
 type TimelineRow =
   | { kind: "proyecto"; proyecto: Proyecto; dias: number | null }
@@ -67,7 +92,7 @@ interface TimelineSections {
   completado: TimelineRow[]
 }
 
-function buildTimeline(proyectos: Proyecto[]): { sections: TimelineSections; stats: { activos: number; urgentes: number; diasPromedio: number; byEstado: Partial<Record<EstadoExpediente, number>> } } {
+function buildTimeline(proyectos: Proyecto[]): { sections: TimelineSections; stats: { activos: number; urgentes: number; diasPromedio: number; byEstado: Partial<Record<EstadoExpediente, number>>; alertasLey: number } } {
   const now = new Date()
   now.setHours(0, 0, 0, 0)
   const en30dias = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
@@ -109,8 +134,9 @@ function buildTimeline(proyectos: Proyecto[]): { sections: TimelineSections; sta
     }
   }
 
-  // Add alerts to ACCIÓN REQUERIDA (avoid duplicating projects already there)
-  for (const alerta of ALERTAS) {
+  // Add Ley 21.718 deadline alerts to ACCIÓN REQUERIDA
+  const alertasLey = buildAlertasLey21718(proyectos)
+  for (const alerta of alertasLey) {
     accionRequerida.push({ kind: "alerta", alerta })
   }
 
@@ -132,7 +158,7 @@ function buildTimeline(proyectos: Proyecto[]): { sections: TimelineSections; sta
 
   return {
     sections: { accionRequerida, proximos30d, enProceso, completado },
-    stats: { activos, urgentes, diasPromedio, byEstado },
+    stats: { activos, urgentes, diasPromedio, byEstado, alertasLey: alertasLey.length },
   }
 }
 

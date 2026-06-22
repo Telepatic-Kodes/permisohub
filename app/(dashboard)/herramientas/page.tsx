@@ -4,6 +4,7 @@ import {
   CalendarClock,
   ChevronRight,
   FileSearch,
+  FileSignature,
   MessageSquare,
   ShieldCheck,
   Target,
@@ -77,6 +78,14 @@ const TOOLS: Tool[] = [
     Icon: CalendarClock,
     color: "text-rose-600",
     iconBg: "bg-rose-50",
+  },
+  {
+    label: "Declaración Jurada",
+    description: "Genera declaración para obras menores exentas de permiso (Art. 5.1.2 OGUC)",
+    href: "/herramientas/declaracion-jurada",
+    Icon: FileSignature,
+    color: "text-teal-600",
+    iconBg: "bg-teal-50",
   },
 ]
 
