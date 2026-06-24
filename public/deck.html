@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PermisoHub — Pitch Deck</title>
+<style>
+  :root {
+    --forest: #1A3328;
+    --green: #2D6A4F;
+    --cream: #F9F7F3;
+    --gold: #E9C46A;
+    --muted: rgba(26,51,40,0.55);
+    --card-border: rgba(26,51,40,0.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #0d1f18;
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ── Slides ── */
+  .deck { width: 100vw; height: 100vh; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 60px 80px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    transform: translateY(20px);
+  }
+  .slide.active {
+    opacity: 1; pointer-events: all; transform: translateY(0);
+  }
+  .slide.exit {
+    opacity: 0; transform: translateY(-20px);
+  }
+
+  /* ── Backgrounds ── */
+  .bg-dark  { background: var(--forest); }
+  .bg-cream { background: var(--cream); color: var(--forest); }
+  .bg-green { background: var(--green); }
+  .bg-gold  { background: var(--gold); color: var(--forest); }
+  .bg-black { background: #0a1510; }
+
+  /* ── Cover ── */
+  .cover-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    padding: 6px 16px; border-radius: 100px;
+    font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase;
+    margin-bottom: 32px; color: var(--gold);
+  }
+  .cover-badge span { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+  .cover-title {
+    font-size: clamp(52px, 8vw, 96px);
+    font-weight: 700; letter-spacing: -0.03em;
+    line-height: 0.95;
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .cover-sub {
+    font-size: clamp(16px, 2vw, 22px);
+    color: rgba(255,255,255,0.6);
+    max-width: 580px; text-align: center; line-height: 1.5;
+    margin-bottom: 48px;
+  }
+  .dot-green { color: var(--gold); }
+
+  /* ── Section label ── */
+  .label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; opacity: 0.45; margin-bottom: 18px;
+  }
+
+  /* ── Big stat ── */
+  .stat-row {
+    display: flex; gap: 40px; justify-content: center; flex-wrap: wrap;
+    margin-top: 40px;
+  }
+  .stat-card {
+    text-align: center; flex: 1; min-width: 180px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; padding: 32px 24px;
+  }
+  .stat-card.cream {
+    background: rgba(26,51,40,0.06); border-color: var(--card-border);
+  }
+  .stat-num {
+    font-size: clamp(36px,5vw,56px); font-weight: 700;
+    letter-spacing: -0.03em; color: var(--gold); line-height: 1;
+    margin-bottom: 10px;
+  }
+  .stat-card.cream .stat-num { color: var(--green); }
+  .stat-label { font-size: 13px; opacity: 0.65; line-height: 1.4; }
+
+  /* ── Slide title ── */
+  .slide-title {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 700; letter-spacing: -0.025em; line-height: 1.08;
+    text-align: center; max-width: 760px; margin-bottom: 16px;
+  }
+  .slide-sub {
+    font-size: 18px; opacity: 0.6; max-width: 560px;
+    text-align: center; line-height: 1.55; margin-bottom: 40px;
+  }
+
+  /* ── Problem cards ── */
+  .problem-grid {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 20px;
+    width: 100%; max-width: 960px; margin-top: 8px;
+  }
+  .prob-card {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px; padding: 28px 24px;
+  }
+  .prob-num { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.08em; margin-bottom: 14px; }
+  .prob-title { font-size: 17px; font-weight: 600; margin-bottom: 10px; line-height: 1.3; }
+  .prob-desc { font-size: 13px; opacity: 0.55; line-height: 1.6; }
+
+  /* ── Feature grid ── */
+  .feat-grid {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 16px;
+    width: 100%; max-width: 960px;
+  }
+  .feat-card {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 22px 20px;
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .feat-card.cream-card {
+    background: rgba(26,51,40,0.05); border-color: var(--card-border);
+  }
+  .feat-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--forest); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .feat-card.cream-card .feat-icon { background: var(--green); }
+  .feat-text .ft { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .feat-text .fd { font-size: 12px; opacity: 0.55; line-height: 1.5; }
+
+  /* ── Market ── */
+  .market-row { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; max-width: 900px; width: 100%; }
+  .m-box {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; padding: 36px 32px;
+  }
+  .m-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+  .m-num { font-size: 48px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 10px; line-height: 1; }
+  .m-desc { font-size: 14px; opacity: 0.55; line-height: 1.6; }
+  .competitors { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+  .comp-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+  .comp-name { opacity: 0.7; }
+  .comp-gap { background: rgba(233,196,106,0.15); border: 1px solid rgba(233,196,106,0.3); color: var(--gold); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 100px; }
+  .comp-gap.none { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.4); }
+
+  /* ── Pricing ── */
+  .pricing-row { display: grid; grid-template-columns: 1fr 1.08fr 1fr; gap: 16px; max-width: 880px; width: 100%; }
+  .plan-card {
+    border-radius: 20px; padding: 32px 28px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    display: flex; flex-direction: column;
+  }
+  .plan-card.featured { background: var(--cream); color: var(--forest); border: none; }
+  .plan-name { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.5; margin-bottom: 14px; }
+  .plan-card.featured .plan-name { color: var(--forest); }
+  .plan-price { font-size: 36px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 4px; line-height: 1; }
+  .plan-period { font-size: 13px; opacity: 0.4; margin-bottom: 24px; }
+  .plan-feats { flex: 1; display: flex; flex-direction: column; gap: 9px; margin-bottom: 24px; }
+  .plan-feat { font-size: 13px; opacity: 0.7; display: flex; align-items: flex-start; gap: 8px; }
+  .plan-feat::before { content: "✓"; color: var(--green); font-weight: 700; flex-shrink: 0; }
+  .plan-card.featured .plan-feat::before { color: var(--green); }
+  .plan-cta {
+    border-radius: 10px; padding: 12px; text-align: center; font-size: 14px; font-weight: 600;
+    background: var(--forest); color: var(--cream);
+  }
+  .plan-card.featured .plan-cta { background: var(--forest); color: var(--cream); }
+  .badge-rec {
+    display: inline-block; background: var(--gold); color: var(--forest);
+    font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 100px;
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px;
+  }
+
+  /* ── Roadmap ── */
+  .roadmap { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; max-width: 900px; width: 100%; }
+  .rmap-card {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px; padding: 28px 24px;
+  }
+  .rmap-phase { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .rmap-title { font-size: 17px; font-weight: 600; margin-bottom: 14px; }
+  .rmap-items { display: flex; flex-direction: column; gap: 7px; }
+  .rmap-item { font-size: 13px; opacity: 0.6; display: flex; gap: 8px; }
+  .rmap-item::before { content: "→"; opacity: 0.4; flex-shrink: 0; }
+  .done { opacity: 1 !important; }
+  .done::before { content: "✓" !important; color: var(--gold); opacity: 1 !important; }
+
+  /* ── CTA slide ── */
+  .cta-title { font-size: clamp(48px,7vw,86px); font-weight: 700; letter-spacing: -0.03em; line-height: 0.95; text-align: center; margin-bottom: 32px; }
+  .cta-items { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-bottom: 48px; }
+  .cta-item {
+    display: flex; align-items: center; gap: 10px; font-size: 15px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px; padding: 10px 20px;
+  }
+  .cta-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+
+  /* ── Progress dots ── */
+  .progress {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; z-index: 100;
+  }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.2); transition: all 0.3s;
+    cursor: pointer;
+  }
+  .dot.active { background: var(--gold); width: 20px; border-radius: 3px; }
+
+  /* ── Nav arrows ── */
+  .nav-btn {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.6); cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; z-index: 100;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+  .nav-prev { left: 20px; }
+  .nav-next { right: 20px; }
+  .nav-btn:disabled { opacity: 0.2; pointer-events: none; }
+
+  /* ── Slide counter ── */
+  .counter {
+    position: fixed; top: 24px; right: 28px;
+    font-size: 12px; color: rgba(255,255,255,0.3); z-index: 100;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Logo watermark ── */
+  .logo-mark {
+    position: fixed; top: 22px; left: 28px;
+    font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.35);
+    z-index: 100; display: flex; align-items: center; gap: 6px;
+  }
+  .logo-mark span { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+
+  /* ── Divider line ── */
+  .divider { width: 48px; height: 3px; background: var(--gold); border-radius: 2px; margin: 0 auto 28px; }
+  .divider.left { margin: 0 0 28px; }
+
+  /* highlight text */
+  .hl { color: var(--gold); }
+  .hl-green { color: #4ade80; }
+
+  /* ── Comparison table ── */
+  .comp-table { width: 100%; max-width: 860px; border-collapse: collapse; margin-top: 16px; }
+  .comp-table th { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.4; padding: 10px 16px; text-align: left; }
+  .comp-table td { padding: 12px 16px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .comp-table td:first-child { font-weight: 600; opacity: 0.85; }
+  .check { color: #4ade80; font-size: 15px; }
+  .cross { color: rgba(255,255,255,0.2); font-size: 15px; }
+  .ph-col { background: rgba(233,196,106,0.06); }
+</style>
+</head>
+<body>
+
+<div class="logo-mark">PermisoHub <span></span></div>
+<div class="counter" id="counter">1 / 10</div>
+
+<button class="nav-btn nav-prev" id="prev" onclick="go(-1)">‹</button>
+<button class="nav-btn nav-next" id="next" onclick="go(1)">›</button>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1. COVER -->
+  <div class="slide bg-black active">
+    <div class="cover-badge"><span></span> Plataforma SaaS · Chile · 2026</div>
+    <div class="cover-title">
+      Permiso<span class="dot-green">Hub</span>
+    </div>
+    <div class="cover-sub">
+      El OS del arquitecto chileno.<br/>
+      Proyectos, observaciones, IA y Ley 21.718 en un solo lugar.
+    </div>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-num">449</div>
+        <div class="stat-label">días promedio<br/>para aprobar en Santiago</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">7.000+</div>
+        <div class="stat-label">estudios de arquitectura<br/>sin herramienta dedicada</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">30</div>
+        <div class="stat-label">días hábiles límite legal<br/>(Ley 21.718 — nunca cumplido)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. PROBLEMA -->
+  <div class="slide bg-dark">
+    <div class="label">El problema</div>
+    <div class="slide-title">El trámite DOM destruye el tiempo del arquitecto</div>
+    <div class="slide-sub">30–50% de la jornada laboral se pierde en papeleo, seguimiento y observaciones manuales.</div>
+    <div class="problem-grid">
+      <div class="prob-card">
+        <div class="prob-num">01</div>
+        <div class="prob-title">Expediente armado de memoria</div>
+        <div class="prob-desc">Sin guía, cada arquitecto reconstruye desde cero qué exige cada DOM para cada tipo de proyecto. 8–20 hrs perdidas.</div>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">02</div>
+        <div class="prob-title">449 días en caja negra</div>
+        <div class="prob-desc">El mandante llama dos veces por semana. La Ley 21.718 fija 30 días hábiles, pero nadie lo hace cumplir.</div>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">03</div>
+        <div class="prob-title">Observaciones desde cero</div>
+        <div class="prob-desc">Cada ronda DOM se redacta manualmente. Sin historial, el ciclo se repite sin aprender. Facturación atrapada.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. SOLUCIÓN -->
+  <div class="slide bg-green">
+    <div class="label" style="opacity:0.6">La solución</div>
+    <div class="slide-title" style="max-width:700px">Un OS completo para el ciclo de permisos DOM</div>
+    <div class="slide-sub">Desde el primer prospecto hasta la recepción definitiva — con IA en cada paso.</div>
+    <div class="stat-row" style="max-width:860px;width:100%">
+      <div class="stat-card">
+        <div class="stat-num" style="font-size:36px">CRM</div>
+        <div class="stat-label">Prospectos → proyectos<br/>con un click</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="font-size:36px">9 IA</div>
+        <div class="stat-label">Herramientas: OGUC,<br/>Predictor, Memoria, ZIP</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="font-size:36px">21.718</div>
+        <div class="stat-label">Countdown de plazos<br/>y silencio administrativo</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="font-size:36px">Portal</div>
+        <div class="stat-label">Mandante ve el estado<br/>sin crear cuenta</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. PRODUCTO / FEATURES -->
+  <div class="slide bg-cream" style="padding: 48px 80px">
+    <div class="label">Producto</div>
+    <div class="slide-title" style="font-size:clamp(26px,3.5vw,42px); margin-bottom:28px">9 módulos listos. Un workflow unificado.</div>
+    <div class="feat-grid">
+      <div class="feat-card cream-card">
+        <div class="feat-icon">🤖</div>
+        <div class="feat-text"><div class="ft">Chat OGUC con IA</div><div class="fd">Cita la norma exacta en segundos</div></div>
+      </div>
+      <div class="feat-card cream-card">
+        <div class="feat-icon">📋</div>
+        <div class="feat-text"><div class="ft">Observaciones DOM</div><div class="fd">Registra, responde y hace seguimiento</div></div>
+      </div>
+      <div class="feat-card cream-card">
+        <div class="feat-icon">📦</div>
+        <div class="feat-text"><div class="ft">Export ZIP expediente</div><div class="fd">Naming DOM automático, un click</div></div>
+      </div>
+      <div class="feat-card cream-card">
+        <div class="feat-icon">⏱️</div>
+        <div class="feat-text"><div class="ft">Toolkit Ley 21.718</div><div class="fd">Countdown, alertas, silencio admin.</div></div>
+      </div>
+      <div class="feat-card cream-card">
+        <div class="feat-icon">🗺️</div>
+        <div class="feat-text"><div class="ft">Inteligencia municipal</div><div class="fd">PRC, zonas y obs. frecuentes por DOM</div></div>
+      </div>
+      <div class="feat-card cream-card">
+        <div class="feat-icon">📈</div>
+        <div class="feat-text"><div class="ft">CRM de prospectos</div><div class="fd">Pipeline visual → proyecto automático</div></div>
+      </div>
+      <div class="feat-card cream-card">
+        <div class="feat-icon">🔗</div>
+        <div class="feat-text"><div class="ft">Portal del mandante</div><div class="fd">Link único, sin login, en tiempo real</div></div>
+      </div>
+      <div class="feat-card cream-card">
+        <div class="feat-icon">✅</div>
+        <div class="feat-text"><div class="ft">Score de expediente</div><div class="fd">Completitud documental en % visual</div></div>
+      </div>
+      <div class="feat-card cream-card">
+        <div class="feat-icon">⌘</div>
+        <div class="feat-text"><div class="ft">Búsqueda global ⌘K</div><div class="fd">Cualquier proyecto o cliente al instante</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. MERCADO -->
+  <div class="slide bg-dark">
+    <div class="label">Mercado</div>
+    <div class="slide-title">Un mercado de $6.7M ARR sin competidor directo</div>
+    <div class="market-row" style="margin-top:16px">
+      <div>
+        <div class="m-box" style="margin-bottom:16px">
+          <div class="m-label">TAM Chile</div>
+          <div class="m-num">7.000+</div>
+          <div class="m-desc">estudios de arquitectura registrados en el Colegio de Arquitectos. Ninguno tiene herramienta dedicada para permisos DOM.</div>
+        </div>
+        <div class="m-box">
+          <div class="m-label">ARR potencial (20% penetración)</div>
+          <div class="m-num" style="font-size:36px">$6.7M</div>
+          <div class="m-desc">Con plan Pro $79.990/mes y 700 estudios. Escala a LatAm: Colombia, Perú, México suman +80.000 estudios.</div>
+        </div>
+      </div>
+      <div class="m-box">
+        <div class="m-label">Paisaje competitivo</div>
+        <div class="competitors">
+          <div class="comp-row"><span class="comp-name">DOM en Línea (MINVU)</span><span class="comp-gap none">buzón, no herramienta</span></div>
+          <div class="comp-row"><span class="comp-name">Revi / Clara (CChC)</span><span class="comp-gap none">chatbot, sin workflow</span></div>
+          <div class="comp-row"><span class="comp-name">OGUC-GPT</span><span class="comp-gap none">solo Q&A, sin proyectos</span></div>
+          <div class="comp-row"><span class="comp-name">Accela, Tyler EnerGov</span><span class="comp-gap none">B2G, sin LatAm</span></div>
+          <div class="comp-row"><span class="comp-name">UpCodes, CivCheck</span><span class="comp-gap none">IBC/NFPA, no OGUC</span></div>
+          <div style="margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08)">
+            <div class="m-label" style="color:#4ade80;margin-bottom:8px">PermisoHub</div>
+            <div style="font-size:14px;opacity:0.7">Primer SaaS para el arquitecto chileno en el ciclo completo DOM. Cero competidores directos.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. COMPARATIVA -->
+  <div class="slide bg-black">
+    <div class="label">vs Alternativas</div>
+    <div class="slide-title" style="margin-bottom:24px">PermisoHub es la única plataforma completa</div>
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Capacidad</th>
+          <th class="ph-col" style="color:var(--gold)">PermisoHub</th>
+          <th>Revi / Clara</th>
+          <th>OGUC-GPT</th>
+          <th>Notion / Excel</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Gestión de proyectos DOM</td>
+          <td class="ph-col"><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td>adaptado</td>
+        </tr>
+        <tr>
+          <td>CRM de prospectos</td>
+          <td class="ph-col"><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td>adaptado</td>
+        </tr>
+        <tr>
+          <td>AI Chat OGUC</td>
+          <td class="ph-col"><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+        </tr>
+        <tr>
+          <td>Observaciones + respuesta IA</td>
+          <td class="ph-col"><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+        </tr>
+        <tr>
+          <td>Toolkit Ley 21.718</td>
+          <td class="ph-col"><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+        </tr>
+        <tr>
+          <td>Inteligencia por municipio</td>
+          <td class="ph-col"><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+        </tr>
+        <tr>
+          <td>Portal cliente sin login</td>
+          <td class="ph-col"><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 7. PRICING -->
+  <div class="slide bg-dark">
+    <div class="label">Modelo de negocio</div>
+    <div class="slide-title" style="margin-bottom:32px">SaaS mensual. Sin fricción. Cancela cuando quieras.</div>
+    <div class="pricing-row">
+      <div class="plan-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">$29.990</div>
+        <div class="plan-period">CLP / mes</div>
+        <div class="plan-feats">
+          <div class="plan-feat">5 proyectos activos</div>
+          <div class="plan-feat">Chat OGUC · 20 consultas</div>
+          <div class="plan-feat">Predictor, Checklist, Timeline</div>
+          <div class="plan-feat">Observaciones y comunicaciones</div>
+          <div class="plan-feat">Toolkit Ley 21.718</div>
+        </div>
+        <div class="plan-cta">Empezar con Starter</div>
+      </div>
+      <div class="plan-card featured">
+        <div class="badge-rec">⭐ Recomendado</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">$79.990</div>
+        <div class="plan-period" style="color:var(--forest);opacity:0.4">CLP / mes</div>
+        <div class="plan-feats">
+          <div class="plan-feat">Proyectos ilimitados</div>
+          <div class="plan-feat">IA ilimitada (9 herramientas)</div>
+          <div class="plan-feat">Inteligencia DOM por municipio</div>
+          <div class="plan-feat">Portal del mandante</div>
+          <div class="plan-feat">Export ZIP con naming DOM</div>
+          <div class="plan-feat">CRM de prospectos</div>
+        </div>
+        <div class="plan-cta">Empezar con Pro</div>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Estudio</div>
+        <div class="plan-price">$149.990</div>
+        <div class="plan-period">CLP / mes</div>
+        <div class="plan-feats">
+          <div class="plan-feat">Todo lo de Pro</div>
+          <div class="plan-feat">Hasta 5 usuarios</div>
+          <div class="plan-feat">Invitaciones con acceso custom</div>
+          <div class="plan-feat">Analytics avanzados</div>
+          <div class="plan-feat">Soporte SLA 4h</div>
+        </div>
+        <div class="plan-cta">Empezar con Estudio</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. ROADMAP / TRACCIÓN -->
+  <div class="slide bg-green">
+    <div class="label" style="opacity:0.6">Estado actual · Roadmap</div>
+    <div class="slide-title" style="margin-bottom:28px">Producto funcional. Pronto al mercado.</div>
+    <div class="roadmap">
+      <div class="rmap-card">
+        <div class="rmap-phase">✅ Completado</div>
+        <div class="rmap-title">v1.0 — Plataforma base</div>
+        <div class="rmap-items">
+          <div class="rmap-item done">32 páginas implementadas</div>
+          <div class="rmap-item done">9 herramientas IA funcionando</div>
+          <div class="rmap-item done">Auth Supabase + RLS</div>
+          <div class="rmap-item done">CRM → Proyecto conectado</div>
+          <div class="rmap-item done">Portal mandante con token</div>
+          <div class="rmap-item done">Stripe billing integrado</div>
+        </div>
+      </div>
+      <div class="rmap-card">
+        <div class="rmap-phase">🔄 En curso — Q3 2026</div>
+        <div class="rmap-title">v2.0 — Datos reales</div>
+        <div class="rmap-items">
+          <div class="rmap-item">Beta privada: 20 estudios</div>
+          <div class="rmap-item">File uploads Supabase Storage</div>
+          <div class="rmap-item">Notificaciones WhatsApp</div>
+          <div class="rmap-item">Export PDF informe cliente</div>
+          <div class="rmap-item">Predictor obs. con datos reales</div>
+        </div>
+      </div>
+      <div class="rmap-card">
+        <div class="rmap-phase">📅 Próximo — Q4 2026</div>
+        <div class="rmap-title">v3.0 — Go to Market</div>
+        <div class="rmap-items">
+          <div class="rmap-item">Partnership Colegio Arquitectos</div>
+          <div class="rmap-item">Alianza con IROs</div>
+          <div class="rmap-item">Expansión Colombia / Perú</div>
+          <div class="rmap-item">Revisión de planos con OGUC-IA</div>
+          <div class="rmap-item">API pública para integraciones</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. MOAT -->
+  <div class="slide bg-black">
+    <div class="label">Ventaja competitiva</div>
+    <div class="slide-title" style="margin-bottom: 40px">El <span class="hl">data flywheel</span> es el moat</div>
+    <div class="feat-grid" style="max-width:780px">
+      <div class="feat-card" style="flex-direction:column; gap:12px">
+        <div style="font-size:32px">📊</div>
+        <div class="feat-text">
+          <div class="ft" style="font-size:16px; margin-bottom:8px">Observaciones reales por municipio</div>
+          <div class="fd">Cada proyecto ingresado alimenta la base de datos. El predictor mejora con el uso — nadie puede replicarlo desde cero.</div>
+        </div>
+      </div>
+      <div class="feat-card" style="flex-direction:column; gap:12px">
+        <div style="font-size:32px">⚖️</div>
+        <div class="feat-text">
+          <div class="ft" style="font-size:16px; margin-bottom:8px">OGUC + DDU entrenados</div>
+          <div class="fd">Herramientas globales (UpCodes, CivCheck) trabajan con normativa americana. Nuestro modelo es el único entrenado en OGUC chileno.</div>
+        </div>
+      </div>
+      <div class="feat-card" style="flex-direction:column; gap:12px">
+        <div style="font-size:32px">🏛️</div>
+        <div class="feat-text">
+          <div class="ft" style="font-size:16px; margin-bottom:8px">Relaciones institucionales</div>
+          <div class="fd">Colegio de Arquitectos + 7.000 inscritos como canal. IROs recomiendan la herramienta a sus clientes arquitectos.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. CTA -->
+  <div class="slide bg-dark">
+    <div class="label">Próximos pasos</div>
+    <div class="cta-title">
+      Arquitectos chilenos<br/>
+      <span class="hl">merecen mejores herramientas.</span>
+    </div>
+    <div class="cta-items">
+      <div class="cta-item"><div class="cta-dot"></div> Beta privada abierta — 20 estudios</div>
+      <div class="cta-item"><div class="cta-dot"></div> Primera versión paga: Q3 2026</div>
+      <div class="cta-item"><div class="cta-dot"></div> Buscamos early adopters y advisors</div>
+    </div>
+    <div style="font-size:28px; font-weight:700; letter-spacing:-0.02em; color:var(--gold)">permisohub.cl</div>
+    <div style="font-size:15px; opacity:0.4; margin-top:10px">contacto@permisohub.cl</div>
+  </div>
+
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide')
+  const dots = document.getElementById('progress')
+  const counter = document.getElementById('counter')
+  const total = slides.length
+  let current = 0
+
+  // Build dots
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('div')
+    d.className = 'dot' + (i === 0 ? ' active' : '')
+    d.onclick = () => goTo(i)
+    dots.appendChild(d)
+  }
+
+  function goTo(n) {
+    if (n < 0 || n >= total) return
+    slides[current].classList.remove('active')
+    slides[current].classList.add('exit')
+    setTimeout(() => slides[current].classList.remove('exit'), 400)
+    current = n
+    slides[current].classList.add('active')
+    dots.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current))
+    counter.textContent = `${current + 1} / ${total}`
+    document.getElementById('prev').disabled = current === 0
+    document.getElementById('next').disabled = current === total - 1
+  }
+
+  function go(dir) { goTo(current + dir) }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') go(1)
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') go(-1)
+  })
+
+  // Touch swipe
+  let tx = 0
+  document.addEventListener('touchstart', e => { tx = e.touches[0].clientX })
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1)
+  })
+
+  goTo(0)
+</script>
+
+</body>
+</html>
