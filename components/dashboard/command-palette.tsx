@@ -105,11 +105,37 @@ export function CommandPalette() {
   const [query, setQuery] = useState("")
   const [activeIndex, setActiveIndex] = useState(0)
   const [contextItems, setContextItems] = useState<CommandItem[]>([])
+  const [dynamicItems, setDynamicItems] = useState<CommandItem[]>(buildDynamicItems())
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
-  const allWithContext = [...contextItems, ...ALL_ITEMS]
+  // Load real projects/clients for search
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/proyectos').then((r) => r.json()).catch(() => ({ data: [] })),
+      fetch('/api/clientes').then((r) => r.json()).catch(() => ({ data: [] })),
+    ]).then(([proyRes, cliRes]) => {
+      type PrItem = { id: string; nombre: string; cliente?: { nombre?: string }; municipio?: string }
+      type CliItem = { id: string; nombre: string; contacto_nombre?: string }
+      const proyectos: PrItem[] = proyRes.data ?? []
+      const clientes: CliItem[] = cliRes.data ?? []
+      if (proyectos.length === 0 && clientes.length === 0) return
+      const projects: CommandItem[] = proyectos.map((p) => ({
+        id: `p-${p.id}`, group: "Proyectos", label: p.nombre,
+        sublabel: p.cliente?.nombre ?? p.municipio ?? undefined,
+        href: `/proyectos/${p.id}`, icon: FolderOpen, emoji: "📄",
+      }))
+      const clientItems: CommandItem[] = clientes.map((c) => ({
+        id: `c-${c.id}`, group: "Clientes", label: c.nombre,
+        sublabel: c.contacto_nombre ?? undefined,
+        href: `/clientes/${c.id}`, icon: Building2, emoji: "🏢",
+      }))
+      setDynamicItems([...projects, ...clientItems])
+    })
+  }, [])
+
+  const allWithContext = [...contextItems, ...NAV_ITEMS, ...ACTION_ITEMS, ...dynamicItems]
 
   const filtered = query.trim()
     ? allWithContext.filter(
