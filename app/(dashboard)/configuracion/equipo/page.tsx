@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Check,
   Clock,
@@ -129,6 +129,16 @@ export default function EquipoPage() {
   const [members, setMembers] = useState<WorkspaceMember[]>(MOCK_MEMBERS)
   const [invites, setInvites] = useState<WorkspaceInvite[]>(MOCK_INVITES)
   const [showInvite, setShowInvite] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/workspace/members')
+      .then((r) => r.json())
+      .then((d: { members?: WorkspaceMember[]; invites?: WorkspaceInvite[] }) => {
+        if (d.members && d.members.length > 0) setMembers(d.members)
+        if (d.invites) setInvites(d.invites)
+      })
+      .catch(() => undefined)
+  }, [])
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteRol, setInviteRol] = useState<RolWorkspace>("arquitecto")
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
@@ -141,7 +151,7 @@ export default function EquipoPage() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  function handleInvite() {
+  async function handleInvite() {
     if (!inviteEmail.trim()) return
     const newInvite: WorkspaceInvite = {
       id: `i${Date.now()}`,
@@ -156,6 +166,12 @@ export default function EquipoPage() {
     setInviteEmail("")
     setInviteSent(true)
     setTimeout(() => { setInviteSent(false); setShowInvite(false) }, 2000)
+
+    fetch('/api/workspace/invites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: newInvite.email, role: inviteRol }),
+    }).catch(() => undefined)
   }
 
   function removeInvite(id: string) {
