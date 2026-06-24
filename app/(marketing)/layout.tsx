@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "PermisoHub — El copiloto IA del arquitecto chileno",
+  title: "PermisoHub — El OS del arquitecto chileno",
   description:
-    "Gestión inteligente de permisos de edificación municipales. IA entrenada en OGUC y Ley 21.718. Acelera tus trámites DOM de 124 a menos de 60 días.",
+    "Gestión completa de permisos DOM: proyectos, clientes, observaciones, plazos Ley 21.718 y 9 herramientas IA. El software que los arquitectos chilenos necesitaban.",
   openGraph: {
-    title: "PermisoHub — El copiloto IA del arquitecto chileno",
+    title: "PermisoHub — El OS del arquitecto chileno",
     description:
-      "Gestión inteligente de permisos de edificación municipales. IA entrenada en OGUC y Ley 21.718.",
+      "Proyectos, clientes, IA y permisos DOM en un solo lugar. Ley 21.718, OGUC y 345 municipios cubiertos.",
     type: "website",
     locale: "es_CL",
   },
