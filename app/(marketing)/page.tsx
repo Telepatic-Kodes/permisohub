@@ -399,7 +399,7 @@ export default async function MarketingPage({
         </div>
 
         <div className="mt-12 overflow-x-auto rounded-2xl border border-[#1A3328]/10 bg-white">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[600px] text-sm">
             <thead>
               <tr className="border-b border-[#1A3328]/8">
                 <th className="px-6 py-4 text-left font-semibold text-[#1A3328]">Solución</th>
