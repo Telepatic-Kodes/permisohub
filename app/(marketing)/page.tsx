@@ -700,6 +700,14 @@ export default async function MarketingPage({
                       Contacto
                     </a>
                   </li>
+                  <li>
+                    <Link
+                      href="/docs"
+                      className="transition-colors hover:text-[#E9C46A]"
+                    >
+                      Cómo funciona
+                    </Link>
+                  </li>
                 </ul>
               </div>
 
