@@ -3,15 +3,15 @@
 ## Current Position
 
 Phase: 7 — Foundation
-Plan: —
-Status: Roadmap created, ready to plan Phase 7
-Last activity: 2026-06-25 — Milestone v1.3 Army of Skills roadmap created
+Plan: 02 (checkpoint — awaiting human verification of Supabase migration)
+Status: In progress — 07-02 Task 1 complete, paused at checkpoint:human-verify
+Last activity: 2026-06-25 — 07-02 document_checklist_items DDL appended to schema.sql (c0121e5)
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
-| 7 | Foundation | Not started |
+| 7 | Foundation | In progress — 07-02 at checkpoint (schema.sql updated, awaiting Supabase apply) |
 | 8 | Copiloto Core | Not started |
 | 9 | Automatizaciones | Not started |
 | 6 | Dashboard Timeline View | ✅ app/(dashboard)/dashboard/page.tsx — Timeline View con 4 secciones |
@@ -40,7 +40,7 @@ See: .planning/PROJECT.md
 - [v1.3] CRIT live bug: cron routes use anon client → 0 rows on all RLS tables in production. Fix is FOUND-01 (Phase 7 must complete first).
 - [v1.3] AI provider is OpenAI GPT-4o via `lib/ai.ts` — `@anthropic-ai/sdk` installed but dormant. Do NOT migrate provider during this milestone.
 - [v1.3] Copiloto analysis uses `Promise.all` for 4 concurrent AI calls — set `export const maxDuration = 90` on the route segment to avoid Vercel timeout.
-- [v1.3] `document_checklist_items` table does not exist yet — FOUND-02 migration is a Phase 7 blocker for SKILL-04.
+- [v1.3] `document_checklist_items` DDL added to schema.sql (07-02, c0121e5) — awaiting manual apply in Supabase Dashboard to resolve FOUND-02. Once applied, SKILL-04 (Phase 8) is unblocked.
 - [v1.3] DOM write-back is partially done (estado write at line 149 of daily-check) — AUTO-01 adds idempotent `.neq()` guard and observaciones INSERT for `con_observaciones` transitions.
 - [v1.3] Weekly email (AUTO-04) sends to `ADMIN_EMAIL` only for MVP — external recipient opt-in blocked until unsubscribe flow exists (CAN-SPAM compliance).
 - [v1.3] `SUPABASE_SERVICE_ROLE_KEY` must NOT have `NEXT_PUBLIC_` prefix — server-only secret.
