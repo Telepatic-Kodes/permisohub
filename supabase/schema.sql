@@ -452,3 +452,131 @@ VALUES
    'https://www.rancagua.cl/direccion-de-obras/', 45,
    'Capital regional de O''Higgins; coordinar con SEREMI cuando aplique.')
 ON CONFLICT DO NOTHING;
+
+-- ============================================================================
+-- Enterprise: Cadenas de Centros Comerciales
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS cadenas (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id  uuid REFERENCES workspaces(id) ON DELETE CASCADE,
+  nombre        text NOT NULL,
+  rut           text,
+  contacto_nombre text,
+  email         text,
+  logo_url      text,
+  municipios    text[],
+  created_at    timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS centros_comerciales (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cadena_id     uuid NOT NULL REFERENCES cadenas(id) ON DELETE CASCADE,
+  nombre        text NOT NULL,
+  direccion     text,
+  municipio     text NOT NULL,
+  region        text,
+  area_m2       int,
+  num_locales   int,
+  gerente_nombre text,
+  gerente_email text,
+  created_at    timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS locales (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  centro_id       uuid NOT NULL REFERENCES centros_comerciales(id) ON DELETE CASCADE,
+  numero          text NOT NULL,
+  nombre_negocio  text,
+  tenant_email    text,
+  tenant_nombre   text,
+  area_m2         int,
+  uso             text CHECK (uso IN ('retail','food','servicio','entretenimiento','otro')),
+  created_at      timestamptz DEFAULT now()
+);
+
+-- Columnas enterprise en proyectos (soft references para no romper schema existente)
+ALTER TABLE proyectos
+  ADD COLUMN IF NOT EXISTS local_id  uuid REFERENCES locales(id),
+  ADD COLUMN IF NOT EXISTS centro_id uuid REFERENCES centros_comerciales(id),
+  ADD COLUMN IF NOT EXISTS cadena_id uuid REFERENCES cadenas(id);
+
+-- ── RLS ──────────────────────────────────────────────────────────────────────
+
+ALTER TABLE cadenas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE centros_comerciales ENABLE ROW LEVEL SECURITY;
+ALTER TABLE locales ENABLE ROW LEVEL SECURITY;
+
+-- Cadenas: solo el owner del workspace puede leer/escribir
+CREATE POLICY "cadenas_workspace_owner" ON cadenas
+  FOR ALL TO authenticated
+  USING (workspace_id = auth.uid());
+
+-- Centros: acceso via cadena del workspace
+CREATE POLICY "centros_via_cadena" ON centros_comerciales
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM cadenas c
+      WHERE c.id = centros_comerciales.cadena_id
+        AND c.workspace_id = auth.uid()
+    )
+  );
+
+-- Locales: acceso via centro → cadena del workspace
+CREATE POLICY "locales_via_centro" ON locales
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM centros_comerciales cc
+      JOIN cadenas c ON c.id = cc.cadena_id
+      WHERE cc.id = locales.centro_id
+        AND c.workspace_id = auth.uid()
+    )
+  );
+
+-- ── Índices ──────────────────────────────────────────────────────────────────
+
+CREATE INDEX IF NOT EXISTS idx_centros_cadena ON centros_comerciales(cadena_id);
+CREATE INDEX IF NOT EXISTS idx_locales_centro ON locales(centro_id);
+CREATE INDEX IF NOT EXISTS idx_proyectos_local ON proyectos(local_id);
+CREATE INDEX IF NOT EXISTS idx_proyectos_cadena ON proyectos(cadena_id);
+
+-- ----------------------------------------------------------------------------
+-- document_checklist_items (AI-generated + manual document checklist per project)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS document_checklist_items (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  proyecto_id   uuid NOT NULL REFERENCES proyectos(id) ON DELETE CASCADE,
+  item_key      text NOT NULL,
+  label         text NOT NULL,
+  articulo_oguc text,
+  estado        text NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'ok')),
+  source        text NOT NULL DEFAULT 'ai'       CHECK (source IN ('ai', 'manual')),
+  created_at    timestamptz DEFAULT now(),
+  updated_at    timestamptz DEFAULT now()
+);
+
+ALTER TABLE document_checklist_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "checklist_items_own" ON document_checklist_items
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM proyectos p
+      WHERE p.id = proyecto_id AND p.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM proyectos p
+      WHERE p.id = proyecto_id AND p.user_id = auth.uid()
+    )
+  );
+
+CREATE INDEX IF NOT EXISTS idx_checklist_items_proyecto_id
+  ON document_checklist_items(proyecto_id);
+
+CREATE TRIGGER trg_checklist_items_updated_at
+  BEFORE UPDATE ON document_checklist_items
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
