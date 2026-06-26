@@ -156,6 +156,23 @@ const PLANES: Plan[] = [
     ],
     cta: "Empezar con Estudio",
   },
+  {
+    nombre: "Enterprise",
+    precioMensual: 349990,
+    precioAnual: 290400,
+    features: [
+      "Todo lo de Estudio +",
+      "Módulo Cadenas Comerciales",
+      "Jerarquía Cadena → Centro → Local",
+      "Portal por locatario con token único",
+      "Importación CSV de locales (bulk)",
+      "Dashboard de cobertura de permisos",
+      "Hasta 20 usuarios en el workspace",
+      "Reportes ejecutivos PDF por cadena",
+      "Soporte dedicado SLA 2h",
+    ],
+    cta: "Contactar ventas",
+  },
 ];
 
 const CLP = new Intl.NumberFormat("es-CL", {
@@ -371,7 +388,7 @@ export default async function MarketingPage({
             </div>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">
             {PLANES.map((plan) => {
               const precio = isAnnual ? plan.precioAnual : plan.precioMensual;
               return (

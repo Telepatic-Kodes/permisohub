@@ -68,23 +68,40 @@ const ESTADO_TEXT: Record<string, string> = {
   rechazado:         "text-red-700",
 }
 
+type ResolveResponse = {
+  nombre?: string
+  proyectos?: typeof MOCK_PROYECTOS
+  localContext?: { numero?: string; negocio?: string; centro?: string; cadena?: string }
+}
+
 export default function PortalTokenPage() {
   const params  = useParams<{ token: string }>()
   const [selected, setSelected] = useState<string | null>(null)
   const [clienteNombre, setClienteNombre] = useState<string | null>(null)
+  const [localCtx, setLocalCtx] = useState<ResolveResponse['localContext']>(undefined)
   const [proyectosReales, setProyectosReales] = useState<typeof MOCK_PROYECTOS | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
-  // Try to load real data from Supabase via the token
   useEffect(() => {
     fetch(`/api/portal/resolve?token=${params.token}`)
       .then((r) => r.json())
-      .then((data: { nombre?: string; proyectos?: typeof MOCK_PROYECTOS }) => {
+      .then((data: ResolveResponse) => {
         if (data.proyectos) {
           setProyectosReales(data.proyectos)
           setClienteNombre(data.nombre ?? null)
+          setLocalCtx(data.localContext)
+        } else {
+          // check mock tokens as fallback
+          const meta = TOKEN_META[params.token]
+          if (!meta) setNotFound(true)
         }
       })
-      .catch(() => undefined)
+      .catch(() => {
+        const meta = TOKEN_META[params.token]
+        if (!meta) setNotFound(true)
+      })
+      .finally(() => setLoading(false))
   }, [params.token])
 
   const meta = TOKEN_META[params.token]
@@ -102,8 +119,17 @@ export default function PortalTokenPage() {
   }), [proyectos])
 
   const selectedProyecto = proyectos.find((p) => p.id === selected)
+  const displayNombre = clienteNombre ?? meta?.nombre ?? "Portal de proyectos"
 
-  if (!meta) {
+  if (loading) {
+    return (
+      <main className="flex min-h-[calc(100vh-56px)] items-center justify-center px-4">
+        <div className="size-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </main>
+    )
+  }
+
+  if (notFound) {
     return (
       <main className="flex min-h-[calc(100vh-56px)] items-center justify-center px-4">
         <div className="max-w-sm text-center space-y-3">
@@ -122,10 +148,27 @@ export default function PortalTokenPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 space-y-6">
+      {/* Contexto de local comercial (cadenas) */}
+      {localCtx && (
+        <div className="rounded-xl border border-primary/20 bg-primary/4 px-4 py-3 flex items-center gap-3">
+          <div className="size-9 rounded-lg bg-primary/10 flex items-center justify-center text-lg shrink-0">🏪</div>
+          <div>
+            <p className="text-sm font-semibold text-primary">
+              Local {localCtx.numero}{localCtx.negocio ? ` — ${localCtx.negocio}` : ''}
+            </p>
+            {localCtx.centro && (
+              <p className="text-xs text-muted-foreground">
+                {localCtx.centro}{localCtx.cadena ? ` · ${localCtx.cadena}` : ''}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Welcome */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-primary">{clienteNombre ?? meta?.nombre ?? "Portal de proyectos"}</h1>
+          <h1 className="text-xl font-semibold text-primary">{displayNombre}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Seguimiento de permisos · Solo lectura
           </p>

@@ -7,6 +7,7 @@ export interface PlanLimits {
   whatsapp: boolean
   clientPortal: boolean
   municipalIntelligence: boolean
+  cadenaModule: boolean // módulo cadenas comerciales
   seats: number // usuarios por workspace
 }
 
@@ -18,6 +19,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     whatsapp: false,
     clientPortal: false,
     municipalIntelligence: false,
+    cadenaModule: false,
     seats: 1,
   },
   starter: {
@@ -27,6 +29,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     whatsapp: false,
     clientPortal: false,
     municipalIntelligence: false,
+    cadenaModule: false,
     seats: 1,
   },
   pro: {
@@ -36,6 +39,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     whatsapp: true,
     clientPortal: true,
     municipalIntelligence: true,
+    cadenaModule: false,
     seats: 1,
   },
   estudio: {
@@ -45,7 +49,18 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     whatsapp: true,
     clientPortal: true,
     municipalIntelligence: true,
+    cadenaModule: false,
     seats: 5,
+  },
+  enterprise: {
+    projects: Infinity,
+    aiChatsPerMonth: Infinity,
+    pdfExtractionsPerMonth: Infinity,
+    whatsapp: true,
+    clientPortal: true,
+    municipalIntelligence: true,
+    cadenaModule: true,
+    seats: 20,
   },
 }
 

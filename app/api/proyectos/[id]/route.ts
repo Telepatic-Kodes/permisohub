@@ -78,6 +78,19 @@ interface PatchProyectoBody {
   fecha_inicio?: string
   fecha_estimada?: string
   notas?: string
+  // Permiso otorgado
+  numero_permiso?: string
+  fecha_otorgamiento?: string
+  fecha_vencimiento_permiso?: string
+  // Desarchivo
+  esta_archivado?: boolean
+  fecha_archivado?: string
+  // Patente
+  numero_patente?: string
+  giro_sii?: string
+  año_ejercicio?: number
+  valor_derechos?: number
+  fecha_pago_derechos?: string
 }
 
 export async function PATCH(
@@ -95,7 +108,13 @@ export async function PATCH(
     }
 
     const updates: Record<string, unknown> = {}
-    const fields = ['nombre', 'estado', 'municipio', 'tipo', 'direccion', 'numero_expediente', 'fecha_inicio', 'fecha_estimada', 'notas'] as const
+    const fields = [
+      'nombre', 'estado', 'municipio', 'tipo', 'direccion', 'numero_expediente',
+      'fecha_inicio', 'fecha_estimada', 'notas',
+      'numero_permiso', 'fecha_otorgamiento', 'fecha_vencimiento_permiso',
+      'esta_archivado', 'fecha_archivado',
+      'numero_patente', 'giro_sii', 'año_ejercicio', 'valor_derechos', 'fecha_pago_derechos',
+    ] as const
     for (const f of fields) {
       if (body[f] !== undefined) updates[f] = body[f]
     }

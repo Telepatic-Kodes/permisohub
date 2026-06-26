@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
     if (inviteError || !invite) throw inviteError ?? new Error('Token inválido')
 
-    const meta = invite.metadata as { proyecto_id?: string; cliente_id?: string } | null
+    const meta = invite.metadata as { proyecto_id?: string; cliente_id?: string; local_id?: string } | null
 
     if (meta?.proyecto_id) {
       // Single project view
@@ -51,6 +51,33 @@ export async function GET(request: Request) {
       return Response.json({
         nombre: clienteRes.data?.nombre ?? null,
         proyectos: proyectosRes.data ?? [],
+        source: 'db',
+      })
+    }
+
+    if (meta?.local_id) {
+      // Tenant portal: all projects for a local
+      const { data: local, error: localError } = await supabase
+        .from('locales')
+        .select('numero, nombre_negocio, proyectos(*), centro:centros_comerciales(nombre, cadena:cadenas(nombre))')
+        .eq('id', meta.local_id)
+        .single()
+
+      if (localError || !local) throw localError ?? new Error('Local no encontrado')
+
+      type LocalRow = {
+        numero: string
+        nombre_negocio?: string | null
+        proyectos?: unknown[]
+        centro?: { nombre?: string; cadena?: { nombre?: string } } | null
+      }
+      const row = local as LocalRow
+      const centroNombre = row.centro?.nombre ?? ''
+      const cadenaNombre = row.centro?.cadena?.nombre ?? ''
+
+      return Response.json({
+        nombre: `${row.nombre_negocio ?? row.numero} — ${centroNombre}${cadenaNombre ? ` (${cadenaNombre})` : ''}`,
+        proyectos: row.proyectos ?? [],
         source: 'db',
       })
     }

@@ -163,7 +163,7 @@ const BASE: InteligenciaMunicipio[] = [
       'La fotocopia del título del arquitecto debe ser notariada.',
     ],
     planRegulador: {
-      urlPRC: 'https://www.lascondes.cl/contenido/plan-regulador-comunal',
+      urlPRC: 'https://www.lascondes.cl/tramites/obras-municipales/',
       ultimaModificacion: '2024',
       notaGeneral: 'El PRC de Las Condes define zonas residenciales exclusivas (ZR), mixtas (ZM) y de equipamiento. La zonificación determina la relación entre rasante, CUS y CUT. Es esencial verificar el plano de zonificación vigente antes de cualquier anteproyecto.',
       seccionales: [
@@ -208,7 +208,7 @@ const BASE: InteligenciaMunicipio[] = [
       'La imagen urbana es revisada en paralelo por la Unidad de Obras — coordinar desde el diseño.',
     ],
     planRegulador: {
-      urlPRC: 'https://www.vitacura.cl/municipalidad/plan-regulador-comunal',
+      urlPRC: 'https://vitacura.cl/municipalidad/planificacion-urbana/plan-regulador-comunal/que-es-el-plan-regulador-comunal',
       ultimaModificacion: '2025',
       notaGeneral: 'El PRC de Vitacura es uno de los más detallados de la RM. Regula imagen urbana, arborización, y materialidad de fachadas además de los índices urbanísticos habituales. La Unidad de Urbanismo puede solicitar correcciones de diseño aunque los índices sean correctos.',
       seccionales: [

@@ -24,7 +24,7 @@ export function isStripeAvailable(): boolean {
   return !!process.env.STRIPE_SECRET_KEY
 }
 
-export type PlanId = "free" | "starter" | "pro" | "estudio"
+export type PlanId = "free" | "starter" | "pro" | "estudio" | "enterprise"
 
 export type BillingInterval = "monthly" | "annual"
 
@@ -42,6 +42,8 @@ export const PLAN_PRICES: Record<string, PlanId> = (() => {
     [process.env.STRIPE_PRICE_PRO_ANNUAL, "pro"],
     [process.env.STRIPE_PRICE_ESTUDIO_MONTHLY, "estudio"],
     [process.env.STRIPE_PRICE_ESTUDIO_ANNUAL, "estudio"],
+    [process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY, "enterprise"],
+    [process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL, "enterprise"],
   ]
   const map: Record<string, PlanId> = {}
   for (const [priceId, plan] of entries) {
@@ -61,6 +63,8 @@ export const PLAN_INTERVALS: Record<string, BillingInterval> = (() => {
     [process.env.STRIPE_PRICE_PRO_ANNUAL, "annual"],
     [process.env.STRIPE_PRICE_ESTUDIO_MONTHLY, "monthly"],
     [process.env.STRIPE_PRICE_ESTUDIO_ANNUAL, "annual"],
+    [process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY, "monthly"],
+    [process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL, "annual"],
   ]
   const map: Record<string, BillingInterval> = {}
   for (const [priceId, interval] of entries) {
@@ -74,6 +78,7 @@ export const PLAN_NAMES: Record<PlanId, string> = {
   starter: "Starter",
   pro: "Pro",
   estudio: "Estudio",
+  enterprise: "Enterprise",
 }
 
 export const PLAN_AMOUNTS: Record<PlanId, { monthly: number; annual: number }> =
@@ -82,6 +87,7 @@ export const PLAN_AMOUNTS: Record<PlanId, { monthly: number; annual: number }> =
     starter: { monthly: 29990, annual: 24900 },
     pro: { monthly: 79990, annual: 66300 },
     estudio: { monthly: 149990, annual: 124400 },
+    enterprise: { monthly: 349990, annual: 290400 },
   }
 
 /**

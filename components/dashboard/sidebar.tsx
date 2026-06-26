@@ -15,10 +15,14 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  Receipt,
   Search,
   Settings,
+  Shield,
   Sparkles,
+  Store,
   Users,
+  Zap,
   type LucideIcon,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -49,8 +53,12 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Gestión",
     items: [
       { href: "/proyectos", label: "Proyectos", icon: FolderOpen, newHref: "/proyectos/nuevo" },
+      { href: "/permisos",  label: "Permisos",  icon: Shield },
+      { href: "/patentes",  label: "Patentes",  icon: Receipt },
       { href: "/clientes",  label: "Clientes",  icon: Building2, matchPaths: ["/prospectos"] },
-      { href: "/cartera",   label: "Cartera",   icon: BookMarked },
+      { href: "/cartera",             label: "Cartera",    icon: BookMarked },
+      { href: "/cadenas-comerciales", label: "Cadenas",    icon: Store },
+      { href: "/boletas",             label: "Boletas",    icon: Zap, matchPaths: ["/cadenas"] },
     ],
   },
   {

@@ -395,3 +395,48 @@ export const TIPO_ACTIVIDAD_LABELS: Record<TipoActividad, string> = {
   linkedin: 'LinkedIn DM',
   nota:     'Nota interna',
 }
+
+// ── Boletas de Servicios Básicos ──────────────────────────────────────────────
+
+export type TipoServicioBasico = 'agua' | 'electricidad' | 'gas'
+
+export type ProveedorServicio =
+  | 'aguas_andinas' | 'essbio' | 'esval' | 'smapa' | 'aguas_del_valle'
+  | 'enel' | 'cge' | 'chilquinta' | 'frontel' | 'saesa' | 'luz_osorno'
+  | 'metrogas' | 'gasco' | 'lipigas' | 'abastible'
+
+export type EstadoBoleta = 'pendiente' | 'vigente' | 'por_vencer' | 'vencida'
+
+export type TramiteBoleta =
+  | 'informe_sanitario'
+  | 'autorizacion_sanitaria_alimentos'
+  | 'patente_comercial'
+  | 'otro'
+
+export interface BoletaServicio {
+  id: string
+  local_id: string
+  tipo_servicio: TipoServicioBasico
+  proveedor: ProveedorServicio | string
+  numero_cuenta?: string
+  periodo: string
+  url?: string
+  fecha_emision?: string
+  fecha_vencimiento?: string
+  monto_clp?: number
+  estado: EstadoBoleta
+  tramite_tipo?: TramiteBoleta
+  notas?: string
+  created_at: string
+  local?: Local
+}
+
+export interface ResumenCumplimientoBoletas {
+  local_id: string
+  local_numero: string
+  centro_nombre: string
+  agua: EstadoBoleta
+  electricidad: EstadoBoleta
+  gas: EstadoBoleta
+  cumplimiento_pct: number
+}

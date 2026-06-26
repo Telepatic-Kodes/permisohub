@@ -3,10 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
-  const body = await request.json() as { proyectoId?: string; clienteId?: string }
+  const body = await request.json() as { proyectoId?: string; clienteId?: string; local_id?: string }
 
-  if (!body.proyectoId && !body.clienteId) {
-    return Response.json({ error: 'proyectoId o clienteId requerido' }, { status: 400 })
+  if (!body.proyectoId && !body.clienteId && !body.local_id) {
+    return Response.json({ error: 'proyectoId, clienteId o local_id requerido' }, { status: 400 })
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
@@ -27,7 +27,9 @@ export async function POST(request: Request) {
       rol: 'viewer',
       metadata: body.proyectoId
         ? { proyecto_id: body.proyectoId }
-        : { cliente_id: body.clienteId },
+        : body.local_id
+          ? { local_id: body.local_id }
+          : { cliente_id: body.clienteId },
     })
 
     if (error && process.env.NODE_ENV === 'production') {

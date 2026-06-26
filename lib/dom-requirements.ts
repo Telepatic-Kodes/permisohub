@@ -331,3 +331,42 @@ export const CATEGORIAS_LABEL: Record<CategoriaDocumento, string> = {
   formularios: 'Formularios',
   legales: 'Documentos legales',
 }
+
+// ── Boletas de servicios básicos requeridas por trámite ───────────────────────
+// Fuente: ChileAtiende Ficha 163 (Informe Sanitario) y Ficha 172 (Aut. Sanitaria Alimentos).
+
+import type { TipoServicioBasico } from '@/types'
+
+export interface RequisitoBoletaServicio {
+  tipo_servicio: TipoServicioBasico
+  obligatorio: boolean
+  fundamento: string
+}
+
+export const BOLETAS_POR_TRAMITE: Record<string, RequisitoBoletaServicio[]> = {
+  informe_sanitario: [
+    {
+      tipo_servicio: 'agua',
+      obligatorio: true,
+      fundamento: 'ChileAtiende Ficha 163: "boleta de agua que incluya sistema de alcantarillado"',
+    },
+  ],
+  autorizacion_sanitaria_alimentos: [
+    {
+      tipo_servicio: 'agua',
+      obligatorio: true,
+      fundamento: 'ChileAtiende Ficha 172: "Comprobante de pago de agua potable de la red pública"',
+    },
+  ],
+  patente_comercial: [
+    {
+      tipo_servicio: 'agua',
+      obligatorio: false,
+      fundamento: 'Requerido por algunos municipios como acreditación de domicilio',
+    },
+  ],
+}
+
+export function getBoletasRequeridas(tramiteTipo: string): RequisitoBoletaServicio[] {
+  return BOLETAS_POR_TRAMITE[tramiteTipo] ?? []
+}
