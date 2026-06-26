@@ -7,7 +7,7 @@
 
 - [ ] **Phase 7: Foundation** — Precondiciones críticas: service client, tabla DB y Sheet instalado
 - [ ] **Phase 8: Copiloto Core** — Drawer IA embebido con 4 análisis de expediente
-- [ ] **Phase 9: Automatizaciones** — Procesos de fondo que corren sin intervención del arquitecto
+- [x] **Phase 9: Automatizaciones** — Procesos de fondo que corren sin intervención del arquitecto (completed 2026-06-26)
 
 ## Phase Details
 
@@ -71,7 +71,7 @@ Plans:
 3. Al crear una patente comercial, el formulario responde inmediatamente y `giro_sii` y `rol_avaluo` se pre-llenan en DB segundos después via enriquecimiento SII asíncrono
 4. Cada lunes a las 08:00 America/Santiago el arquitecto recibe un email con el estado de todos sus proyectos activos más un tip/insight generado por IA
 
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 09-01-PLAN.md — AUTO-01+02: idempotency + etapa_actual + decouple DOM scraper from WA guard
@@ -84,7 +84,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 7. Foundation | 0/3 | Not started | - |
 | 8. Copiloto Core | 0/3 | Not started | - |
-| 9. Automatizaciones | 0/3 | Not started | - |
+| 9. Automatizaciones | 0/3 | Complete    | 2026-06-26 |
 
 ---
 

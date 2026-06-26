@@ -7,9 +7,9 @@
 
 ### FOUND — Foundation (Preconditions)
 
-- [ ] **FOUND-01**: Los crons `daily-check` y `weekly-summary` usan `createServiceClient()` con `SUPABASE_SERVICE_ROLE_KEY` (no cliente anon) — corrige bug de 0 filas silenciosas en contexto sin cookies
-- [ ] **FOUND-02**: Tabla `document_checklist_items` existe en Supabase con columnas: `id`, `proyecto_id`, `item_key`, `label`, `articulo_oguc`, `estado` (pendiente | ok), `source` (ai | manual)
-- [ ] **FOUND-03**: Componente `Sheet` de shadcn/ui instalado y disponible para el drawer del copiloto
+- [x] **FOUND-01**: Los crons `daily-check` y `weekly-summary` usan `createServiceClient()` con `SUPABASE_SERVICE_ROLE_KEY` (no cliente anon) — corrige bug de 0 filas silenciosas en contexto sin cookies
+- [x] **FOUND-02**: Tabla `document_checklist_items` existe en Supabase con columnas: `id`, `proyecto_id`, `item_key`, `label`, `articulo_oguc`, `estado` (pendiente | ok), `source` (ai | manual)
+- [x] **FOUND-03**: Componente `Sheet` de shadcn/ui instalado y disponible para el drawer del copiloto
 
 ### SKILL — Copiloto IA Drawer
 
@@ -43,9 +43,9 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| FOUND-01 | 7 | Pending |
-| FOUND-02 | 7 | Pending |
-| FOUND-03 | 7 | Pending |
+| FOUND-01 | 7 | Complete |
+| FOUND-02 | 7 | Complete |
+| FOUND-03 | 7 | Complete |
 | SKILL-01 | 8 | Pending |
 | SKILL-02 | 8 | Pending |
 | SKILL-03 | 8 | Pending |
