@@ -2,17 +2,17 @@
 
 ## Current Position
 
-Phase: 7 — Foundation
-Plan: 03 — COMPLETE
-Status: In progress — 07-01 ✅, 07-02 ✅, 07-03 ✅ (Sheet component verified, FOUND-03 resolved)
-Last activity: 2026-06-25 — 07-03 complete: Sheet component verified by user (base-nova @base-ui/react/dialog, 8 exports)
+Phase: 8 — Copiloto Core
+Plan: 01 — COMPLETE
+Status: In progress — 08-01 ✅ (API routes committed, tsc clean)
+Last activity: 2026-06-25 — 08-01 complete: POST /api/ai/copiloto (4-skill concurrent) + PATCH /api/ai/copiloto/checklist/[itemId]
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
-| 7 | Foundation | In progress — 07-01 ✅, 07-02 ✅ (document_checklist_items live, FOUND-02 resolved), 07-03 ✅ (Sheet component, FOUND-03 resolved) |
-| 8 | Copiloto Core | Not started |
+| 7 | Foundation | ✅ 07-01 service client, 07-02 checklist table, 07-03 Sheet component |
+| 8 | Copiloto Core | In progress — 08-01 ✅ (API routes: POST copiloto + PATCH checklist/[itemId]) |
 | 9 | Automatizaciones | Not started |
 | 6 | Dashboard Timeline View | ✅ app/(dashboard)/dashboard/page.tsx — Timeline View con 4 secciones |
 | 1 | Stripe Billing | ✅ app/api/billing/{checkout,portal,webhook}, lib/stripe.ts, /configuracion/billing |
@@ -45,3 +45,4 @@ See: .planning/PROJECT.md
 - [v1.3] Weekly email (AUTO-04) sends to `ADMIN_EMAIL` only for MVP — external recipient opt-in blocked until unsubscribe flow exists (CAN-SPAM compliance).
 - [v1.3] `SUPABASE_SERVICE_ROLE_KEY` must NOT have `NEXT_PUBLIC_` prefix — server-only secret.
 - [v1.3] Sheet component live (07-03, d855f60) — `@/components/ui/sheet` exports Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose, SheetTrigger. Primitive: `@base-ui/react/dialog` (base-nova style). No new npm deps. FOUND-03 resolved, SKILL-01 (Phase 8) unblocked.
+- [v1.3] Copiloto API live (08-01, 2726f33) — POST /api/ai/copiloto runs 4 concurrent aiComplete calls via Promise.all with maxDuration=90. Checklist idempotency: queries document_checklist_items before AI, skips call and returns DB rows if count > 0. PATCH /api/ai/copiloto/checklist/[itemId] toggles estado. TIPO_PERMISO_TO_OBRA lookup map used for type coercion. stats?.tiempoPromedioHabiles (NOT plazoTipicoDias). await params pattern (Next.js 16). SKILL-02/03/04/05 (Phase 8) unblocked.
