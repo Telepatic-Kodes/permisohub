@@ -3,15 +3,15 @@
 ## Current Position
 
 Phase: 7 — Foundation
-Plan: 02 (checkpoint — awaiting human verification of Supabase migration)
-Status: In progress — 07-02 Task 1 complete, paused at checkpoint:human-verify
-Last activity: 2026-06-25 — 07-01 complete (createServiceClient + cron patches), 07-02 at checkpoint:human-verify
+Plan: 03 — COMPLETE
+Status: In progress — 07-01 ✅, 07-02 ✅, 07-03 ✅ (Sheet component verified, FOUND-03 resolved)
+Last activity: 2026-06-25 — 07-03 complete: Sheet component verified by user (base-nova @base-ui/react/dialog, 8 exports)
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
-| 7 | Foundation | In progress — 07-02 at checkpoint (schema.sql updated, awaiting Supabase apply) |
+| 7 | Foundation | In progress — 07-01 ✅, 07-02 ✅ (document_checklist_items live, FOUND-02 resolved), 07-03 ✅ (Sheet component, FOUND-03 resolved) |
 | 8 | Copiloto Core | Not started |
 | 9 | Automatizaciones | Not started |
 | 6 | Dashboard Timeline View | ✅ app/(dashboard)/dashboard/page.tsx — Timeline View con 4 secciones |
@@ -40,7 +40,8 @@ See: .planning/PROJECT.md
 - [v1.3] CRIT live bug RESOLVED (07-01): cron routes now use createServiceClient() from lib/supabase/service.ts with SUPABASE_SERVICE_ROLE_KEY — bypasses RLS. NEXT_PUBLIC_SUPABASE_ANON_KEY must be set in Vercel for crons to work. Commits: 30a88b2, 775e417.
 - [v1.3] AI provider is OpenAI GPT-4o via `lib/ai.ts` — `@anthropic-ai/sdk` installed but dormant. Do NOT migrate provider during this milestone.
 - [v1.3] Copiloto analysis uses `Promise.all` for 4 concurrent AI calls — set `export const maxDuration = 90` on the route segment to avoid Vercel timeout.
-- [v1.3] `document_checklist_items` DDL added to schema.sql (07-02, c0121e5) — awaiting manual apply in Supabase Dashboard to resolve FOUND-02. Once applied, SKILL-04 (Phase 8) is unblocked.
+- [v1.3] `document_checklist_items` table live in Supabase (07-02, c0121e5) — FOUND-02 resolved. RLS policy checklist_items_own active. SKILL-04 (Phase 8) is unblocked.
 - [v1.3] DOM write-back is partially done (estado write at line 149 of daily-check) — AUTO-01 adds idempotent `.neq()` guard and observaciones INSERT for `con_observaciones` transitions.
 - [v1.3] Weekly email (AUTO-04) sends to `ADMIN_EMAIL` only for MVP — external recipient opt-in blocked until unsubscribe flow exists (CAN-SPAM compliance).
 - [v1.3] `SUPABASE_SERVICE_ROLE_KEY` must NOT have `NEXT_PUBLIC_` prefix — server-only secret.
+- [v1.3] Sheet component live (07-03, d855f60) — `@/components/ui/sheet` exports Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose, SheetTrigger. Primitive: `@base-ui/react/dialog` (base-nova style). No new npm deps. FOUND-03 resolved, SKILL-01 (Phase 8) unblocked.

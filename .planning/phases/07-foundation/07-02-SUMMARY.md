@@ -48,10 +48,10 @@ completed: 2026-06-25
 
 ## Performance
 
-- **Duration:** ~5 min
+- **Duration:** ~10 min (Task 1 automated, Task 2 manual checkpoint by user)
 - **Started:** 2026-06-25T00:00:00Z
-- **Completed:** 2026-06-25T00:05:00Z
-- **Tasks:** 1 auto (Task 2 paused at checkpoint)
+- **Completed:** 2026-06-25 (user confirmed checkpoint)
+- **Tasks:** 2 (1 auto + 1 checkpoint:human-verify — both complete)
 - **Files modified:** 1
 
 ## Accomplishments
@@ -59,10 +59,14 @@ completed: 2026-06-25
 - RLS enabled with `checklist_items_own` policy (USING + WITH CHECK) following same pattern as etapas/documentos/comunicaciones
 - Index `idx_checklist_items_proyecto_id` added for query performance
 - Trigger `trg_checklist_items_updated_at` wired to existing `set_updated_at()` function
+- **Table applied to live Supabase instance** — user confirmed via SQL Editor (Task 2 checkpoint complete)
+- Test INSERT with real `proyecto_id` succeeded and cleaned up
+- **FOUND-02 resolved** — table is live; SKILL-04 (Phase 8) is now unblocked
 
 ## Task Commits
 
 1. **Task 1: Append document_checklist_items DDL to supabase/schema.sql** - `c0121e5` (feat)
+2. **Task 2: Apply migration in Supabase SQL Editor** - checkpoint:human-verify confirmed by user (no code commit — manual Supabase Dashboard action)
 
 ## Files Created/Modified
 - `supabase/schema.sql` - Appended document_checklist_items table, RLS policy, index, and trigger
@@ -81,80 +85,17 @@ None.
 
 ## User Setup Required
 
-**Task 2 (checkpoint:human-verify) — Apply migration manually in Supabase SQL Editor.**
+Task 2 was a checkpoint:human-verify. The user applied the migration manually in the Supabase Dashboard SQL Editor and confirmed:
+- `document_checklist_items` visible in Table Editor with 9 columns
+- `checklist_items_own` policy listed in Authentication > Policies
+- Test INSERT with real `proyecto_id` succeeded and was cleaned up
 
-The DDL is in `supabase/schema.sql` but has NOT been applied to the live database yet. This project does not use `supabase db push` or migrations — DDL is applied manually from the Supabase Dashboard SQL Editor.
-
-**Steps to apply:**
-
-1. Open your Supabase Dashboard for this project
-2. Go to **SQL Editor > New Query**
-3. Paste ONLY the new block below (do NOT re-run the full schema.sql — existing tables are already live):
-
-```sql
--- ----------------------------------------------------------------------------
--- document_checklist_items (AI-generated + manual document checklist per project)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS document_checklist_items (
-  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  proyecto_id   uuid NOT NULL REFERENCES proyectos(id) ON DELETE CASCADE,
-  item_key      text NOT NULL,
-  label         text NOT NULL,
-  articulo_oguc text,
-  estado        text NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'ok')),
-  source        text NOT NULL DEFAULT 'ai'       CHECK (source IN ('ai', 'manual')),
-  created_at    timestamptz DEFAULT now(),
-  updated_at    timestamptz DEFAULT now()
-);
-
-ALTER TABLE document_checklist_items ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "checklist_items_own" ON document_checklist_items
-  FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM proyectos p
-      WHERE p.id = proyecto_id AND p.user_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM proyectos p
-      WHERE p.id = proyecto_id AND p.user_id = auth.uid()
-    )
-  );
-
-CREATE INDEX IF NOT EXISTS idx_checklist_items_proyecto_id
-  ON document_checklist_items(proyecto_id);
-
-CREATE TRIGGER trg_checklist_items_updated_at
-  BEFORE UPDATE ON document_checklist_items
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-```
-
-4. Run the query — expect: "Success. No rows returned."
-5. Go to **Table Editor** — confirm `document_checklist_items` appears with 9 columns
-6. Go to **Authentication > Policies** — confirm `checklist_items_own` policy is listed
-7. Run this INSERT test in SQL Editor:
-
-```sql
-INSERT INTO document_checklist_items (proyecto_id, item_key, label)
-SELECT id, 'test_item', 'Test label'
-FROM proyectos LIMIT 1;
-```
-
-8. Then clean up:
-
-```sql
-DELETE FROM document_checklist_items WHERE item_key = 'test_item';
-```
-
-Both statements must succeed. Then reply "done" to continue.
+No further setup required.
 
 ## Next Phase Readiness
-- `supabase/schema.sql` has the canonical DDL — Phase 8 SKILL-04 can reference it
-- Once user applies the migration, the table is live and Phase 8 can INSERT checklist items
-- Blocker FOUND-02 will be resolved once Task 2 checkpoint is confirmed
+- `supabase/schema.sql` has the canonical DDL for reference
+- Table is live — Phase 8 SKILL-04 can INSERT checklist items immediately
+- FOUND-02 resolved — no outstanding blockers for Phase 8 from this plan
 
 ---
 *Phase: 07-foundation*
