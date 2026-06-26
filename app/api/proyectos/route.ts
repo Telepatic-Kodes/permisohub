@@ -1,4 +1,6 @@
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { MOCK_PROYECTOS } from '@/lib/mock-data'
 
 export const dynamic = 'force-dynamic'
@@ -82,6 +84,43 @@ export async function POST(request: Request) {
         return Response.json({ ok: true, id: mockId, simulated: true, warning: error.message })
       }
       return Response.json({ error: error.message }, { status: 500 })
+    }
+
+    if (body.tipo === 'patente_comercial' && proyecto?.id && body.numero_expediente) {
+      const proyectoId = proyecto.id
+      const rol = body.numero_expediente
+      after(async () => {
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+          const siiRes = await fetch(
+            `${baseUrl}/api/sii/lookup?rol=${encodeURIComponent(rol)}`,
+            { method: 'GET' }
+          )
+          if (!siiRes.ok) return
+          const siiData = await siiRes.json() as {
+            ok?: boolean
+            data?: {
+              superficie_terreno_m2: number | null
+              superficie_construida_m2: number | null
+              destino: string
+              direccion_normalizada?: string
+            }
+          }
+          if (!siiData.ok || !siiData.data) return
+          const supabase = createServiceClient()
+          await supabase
+            .from('proyectos')
+            .update({
+              superficie_terreno_m2: siiData.data.superficie_terreno_m2 ?? null,
+              superficie_construida_m2: siiData.data.superficie_construida_m2 ?? null,
+              destino_sii: siiData.data.destino ?? null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', proyectoId)
+        } catch {
+          // Fire-and-forget — silent failure intentional
+        }
+      })
     }
 
     return Response.json({ ok: true, id: proyecto.id })
