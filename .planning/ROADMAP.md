@@ -1,3 +1,76 @@
+# Roadmap: Milestone v1.3 — Army of Skills
+
+**Started:** 2026-06-25
+**Phases:** 3 (numbered 7-9, continues from v1.2)
+
+## Phases
+
+- [ ] **Phase 7: Foundation** — Preconditions críticas: service client, tabla DB y Sheet instalado
+- [ ] **Phase 8: Copiloto Core** — Drawer IA embebido con 4 análisis de expediente
+- [ ] **Phase 9: Automatizaciones** — Procesos de fondo que corren sin intervención del arquitecto
+
+## Phase Details
+
+### Phase 7: Foundation
+
+**Goal:** Las tres precondiciones están resueltas para que el copiloto y las automatizaciones funcionen correctamente en producción.
+
+**Depends on:** Nothing (first phase of milestone)
+
+**Requirements:** FOUND-01, FOUND-02, FOUND-03
+
+**Success Criteria** (what must be TRUE):
+1. Los crons `daily-check` y `weekly-summary` leen filas reales de tablas RLS-protected en producción (no 0 filas silenciosas)
+2. La tabla `document_checklist_items` existe en Supabase y acepta INSERT con los campos definidos
+3. El componente `Sheet` de shadcn/ui está disponible para importar desde `@/components/ui/sheet`
+
+**Plans:** TBD
+
+---
+
+### Phase 8: Copiloto Core
+
+**Goal:** El arquitecto puede abrir un panel lateral desde cualquier proyecto y obtener 4 análisis IA específicos al expediente sin ingresar datos adicionales.
+
+**Depends on:** Phase 7 (Sheet component for drawer, `document_checklist_items` table for SKILL-04)
+
+**Requirements:** SKILL-01, SKILL-02, SKILL-03, SKILL-04, SKILL-05
+
+**Success Criteria** (what must be TRUE):
+1. Desde un proyecto de Permisos, Desarchivo o Patentes, el arquitecto abre el panel "Copiloto IA" con un click y ve task cards sugeridas (no input en blanco)
+2. La pestaña Diagnóstico OGUC muestra fórmulas normativas con los valores reales del proyecto interpolados y cita el artículo OGUC aplicable
+3. La pestaña Predicción de Observaciones lista observaciones probables cada una con categoría, señal de frecuencia, trigger específico en este expediente y acción preventiva
+4. La pestaña Checklist genera ítems con `item_key` y artículo normativo, persiste a DB y el estado pendiente/ok es modificable manualmente desde el drawer
+5. La pestaña Estimación muestra un rango de días hábiles y el monto de derechos en CLP y UF basado en datos del proyecto e inteligencia municipal
+
+**Plans:** TBD
+
+---
+
+### Phase 9: Automatizaciones
+
+**Goal:** Tres procesos corren de fondo sin intervención del arquitecto: actualización DOM diaria, notificación WhatsApp al cliente, enriquecimiento SII en patentes y resumen semanal por email.
+
+**Depends on:** Phase 7 (service client fix unblocks AUTO-01, AUTO-02, AUTO-04; `after()` pattern for AUTO-03 is independent but DB must be ready)
+
+**Requirements:** AUTO-01, AUTO-02, AUTO-03, AUTO-04
+
+**Success Criteria** (what must be TRUE):
+1. Cuando el scraper DOM detecta un cambio de estado, el campo `estado` y `etapa` del proyecto se actualiza en DB de forma idempotente (doble invocación de Vercel no genera duplicados)
+2. Cuando el estado DOM de un proyecto cambia en DB, el cliente del proyecto recibe un WhatsApp con el nuevo estado sin acción del arquitecto
+3. Al crear una patente comercial, el formulario responde inmediatamente y `giro_sii` y `rol_avaluo` se pre-llenan en DB segundos después via enriquecimiento SII asíncrono
+4. Cada lunes a las 08:00 America/Santiago el arquitecto recibe un email con el estado de todos sus proyectos activos más un tip/insight generado por IA
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 7. Foundation | 0/? | Not started | - |
+| 8. Copiloto Core | 0/? | Not started | - |
+| 9. Automatizaciones | 0/? | Not started | - |
+
+---
+
 # Roadmap: Milestone v1.2 — Dashboard Clarity
 
 **Started:** 2026-06-21
@@ -142,3 +215,4 @@
 
 ---
 *Roadmap created: 2026-06-20*
+*v1.3 section added: 2026-06-25*

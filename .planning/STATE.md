@@ -2,15 +2,18 @@
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 7 — Foundation
 Plan: —
-Status: Defining requirements for v1.3 Army of Skills
-Last activity: 2026-06-25 — Milestone v1.3 started
+Status: Roadmap created, ready to plan Phase 7
+Last activity: 2026-06-25 — Milestone v1.3 Army of Skills roadmap created
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
+| 7 | Foundation | Not started |
+| 8 | Copiloto Core | Not started |
+| 9 | Automatizaciones | Not started |
 | 6 | Dashboard Timeline View | ✅ app/(dashboard)/dashboard/page.tsx — Timeline View con 4 secciones |
 | 1 | Stripe Billing | ✅ app/api/billing/{checkout,portal,webhook}, lib/stripe.ts, /configuracion/billing |
 | 2 | Feature Gating | ✅ lib/plan-limits.ts, lib/usage.ts, upgrade prompt on /proyectos, API usage gate |
@@ -22,7 +25,7 @@ Last activity: 2026-06-25 — Milestone v1.3 started
 
 See: .planning/PROJECT.md
 **Core value:** El copiloto IA del arquitecto chileno — acelera y automatiza la tramitación de permisos DOM
-**Current focus:** Producción — configurar env vars en Vercel y SQL migrations en Supabase
+**Current focus:** v1.3 Army of Skills — copiloto drawer embebido + automatizaciones de fondo
 
 ## Accumulated Context
 
@@ -34,3 +37,10 @@ See: .planning/PROJECT.md
 - Twilio WhatsApp: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_NUMBER` needed in Vercel.
 - `GET /api/usage?metric=ai_chats|pdf_extractions` — returns {used, limit, plan} for current user. Used by Chat OGUC page to show "X/20 consultas este mes" badge. Returns 401 in dev (no session).
 - Chat OGUC usage badge: only shows for plans with finite limits (Free/Starter). Pro/Estudio users see nothing. Badge turns amber at 80%, red at 100%.
+- [v1.3] CRIT live bug: cron routes use anon client → 0 rows on all RLS tables in production. Fix is FOUND-01 (Phase 7 must complete first).
+- [v1.3] AI provider is OpenAI GPT-4o via `lib/ai.ts` — `@anthropic-ai/sdk` installed but dormant. Do NOT migrate provider during this milestone.
+- [v1.3] Copiloto analysis uses `Promise.all` for 4 concurrent AI calls — set `export const maxDuration = 90` on the route segment to avoid Vercel timeout.
+- [v1.3] `document_checklist_items` table does not exist yet — FOUND-02 migration is a Phase 7 blocker for SKILL-04.
+- [v1.3] DOM write-back is partially done (estado write at line 149 of daily-check) — AUTO-01 adds idempotent `.neq()` guard and observaciones INSERT for `con_observaciones` transitions.
+- [v1.3] Weekly email (AUTO-04) sends to `ADMIN_EMAIL` only for MVP — external recipient opt-in blocked until unsubscribe flow exists (CAN-SPAM compliance).
+- [v1.3] `SUPABASE_SERVICE_ROLE_KEY` must NOT have `NEXT_PUBLIC_` prefix — server-only secret.

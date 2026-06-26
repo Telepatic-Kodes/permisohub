@@ -41,20 +41,20 @@
 
 ### Traceability
 
-| REQ-ID | Phase |
-|--------|-------|
-| FOUND-01 | 7 |
-| FOUND-02 | 7 |
-| FOUND-03 | 7 |
-| SKILL-01 | 8 |
-| SKILL-02 | 8 |
-| SKILL-03 | 8 |
-| SKILL-04 | 8 |
-| SKILL-05 | 8 |
-| AUTO-01 | 9 |
-| AUTO-02 | 9 |
-| AUTO-03 | 9 |
-| AUTO-04 | 9 |
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| FOUND-01 | 7 | Pending |
+| FOUND-02 | 7 | Pending |
+| FOUND-03 | 7 | Pending |
+| SKILL-01 | 8 | Pending |
+| SKILL-02 | 8 | Pending |
+| SKILL-03 | 8 | Pending |
+| SKILL-04 | 8 | Pending |
+| SKILL-05 | 8 | Pending |
+| AUTO-01 | 9 | Pending |
+| AUTO-02 | 9 | Pending |
+| AUTO-03 | 9 | Pending |
+| AUTO-04 | 9 | Pending |
 
 ---
 
