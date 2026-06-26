@@ -71,13 +71,20 @@ Plans:
 3. Al crear una patente comercial, el formulario responde inmediatamente y `giro_sii` y `rol_avaluo` se pre-llenan en DB segundos después via enriquecimiento SII asíncrono
 4. Cada lunes a las 08:00 America/Santiago el arquitecto recibe un email con el estado de todos sus proyectos activos más un tip/insight generado por IA
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — AUTO-01+02: idempotency + etapa_actual + decouple DOM scraper from WA guard
+- [ ] 09-02-PLAN.md — AUTO-03: after() SII enrichment on patente_comercial creation
+- [ ] 09-03-PLAN.md — AUTO-04: AI tip generation in weekly-summary + schedule fix
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 7. Foundation | 0/3 | Not started | - |
 | 8. Copiloto Core | 0/3 | Not started | - |
-| 9. Automatizaciones | 0/? | Not started | - |
+| 9. Automatizaciones | 0/3 | Not started | - |
 
 ---
 
