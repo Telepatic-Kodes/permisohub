@@ -3,6 +3,61 @@
 **Defined:** 2026-06-20
 **Core Value:** El copiloto IA del arquitecto chileno
 
+## v1.3 Requirements — Army of Skills
+
+### FOUND — Foundation (Preconditions)
+
+- [ ] **FOUND-01**: Los crons `daily-check` y `weekly-summary` usan `createServiceClient()` con `SUPABASE_SERVICE_ROLE_KEY` (no cliente anon) — corrige bug de 0 filas silenciosas en contexto sin cookies
+- [ ] **FOUND-02**: Tabla `document_checklist_items` existe en Supabase con columnas: `id`, `proyecto_id`, `item_key`, `label`, `articulo_oguc`, `estado` (pendiente | ok), `source` (ai | manual)
+- [ ] **FOUND-03**: Componente `Sheet` de shadcn/ui instalado y disponible para el drawer del copiloto
+
+### SKILL — Copiloto IA Drawer
+
+- [ ] **SKILL-01**: Usuario puede abrir panel "Copiloto IA" (Sheet lateral derecho) desde cualquier proyecto en Permisos, Desarchivo o Patentes — muestra task cards sugeridas, no un input en blanco
+- [ ] **SKILL-02**: Copiloto ejecuta Diagnóstico OGUC con los datos reales del proyecto interpolados en las fórmulas normativas (no artículos genéricos)
+- [ ] **SKILL-03**: Copiloto predice observaciones probables de la DOM con: categoría, señal de frecuencia, trigger específico en este proyecto, y acción preventiva por ítem
+- [ ] **SKILL-04**: Copiloto genera Checklist de Documentos requeridos, persistido a DB con `item_key` y artículo normativo, con estado pendiente/ok modificable manualmente
+- [ ] **SKILL-05**: Copiloto calcula Estimación de Tiempo (días hábiles) y Derechos (CLP y UF) basado en datos del proyecto e inteligencia municipal
+
+### AUTO — Automatizaciones de Fondo
+
+- [ ] **AUTO-01**: El cron diario actualiza `estado` y `etapa` en DB cuando el scraper DOM detecta un cambio, usando write idempotente (`.neq()`) para tolerar double-invoke de Vercel
+- [ ] **AUTO-02**: Al cambiar el `estado` DOM del proyecto en DB, el cliente recibe WhatsApp automático con el nuevo estado
+- [ ] **AUTO-03**: Al crear una patente comercial, `after()` dispara enriquecimiento SII automáticamente para pre-llenar `giro_sii` y `rol_avaluo` sin bloquear la respuesta del formulario
+- [ ] **AUTO-04**: Cada lunes 08:00 America/Santiago, el arquitecto recibe email de resumen semanal con estados de proyectos desde DB más una sección de tip/insight escrita por IA
+
+### Future Requirements
+
+- Análisis OGUC con corpus curado y citaciones a documentos oficiales (Q4 2026)
+- Copiloto conversacional en el drawer con follow-up questions (Q4 2026)
+- DOM auto-update para todos los 346 municipios vía MINVU API (pendiente publicación API oficial)
+- Copiloto accesible vía `/herramientas/copiloto` como página standalone
+
+### Out of Scope (v1.3)
+
+- Migración de OpenAI GPT-4o a Claude Sonnet 4.6 — riesgo de migración mid-milestone; mantener OpenAI para este milestone
+- Copiloto con streaming SSE — análisis es JSON estructurado; streaming solo para el chat OGUC existente
+- WhatsApp hacia el arquitecto (no el cliente) — fuera de scope del mvp de notificaciones
+
+### Traceability
+
+| REQ-ID | Phase |
+|--------|-------|
+| FOUND-01 | 7 |
+| FOUND-02 | 7 |
+| FOUND-03 | 7 |
+| SKILL-01 | 8 |
+| SKILL-02 | 8 |
+| SKILL-03 | 8 |
+| SKILL-04 | 8 |
+| SKILL-05 | 8 |
+| AUTO-01 | 9 |
+| AUTO-02 | 9 |
+| AUTO-03 | 9 |
+| AUTO-04 | 9 |
+
+---
+
 ## v1.2 Requirements — Dashboard Clarity
 
 ### DASH — Dashboard Redesign
@@ -28,97 +83,30 @@
 - [ ] **BILL-06**: Webhook de Stripe actualiza el estado de suscripción en Supabase en tiempo real
 - [ ] **BILL-07**: Usuario ve su plan activo, fecha de renovación y monto en `/configuracion/billing`
 
-### GATE — Feature Gating por Plan
+### GATE — Feature Gating
 
-- [ ] **GATE-01**: Usuario Starter está limitado a 5 proyectos activos (el 6to muestra upgrade prompt)
-- [ ] **GATE-02**: Usuario Starter está limitado a 20 mensajes Chat OGUC por mes
-- [ ] **GATE-03**: Usuario Starter está limitado a 3 extracciones PDF por mes
-- [ ] **GATE-04**: Upgrade prompt invita a subir al plan Pro con CTA directo a Stripe Checkout
-- [ ] **GATE-05**: Usuario Pro tiene acceso ilimitado a todas las features de IA
-- [ ] **GATE-06**: Usuario Estudio puede invitar hasta 5 usuarios a su workspace
-
-### ONBD — Onboarding
-
-- [ ] **ONBD-01**: Usuario nuevo ve wizard de bienvenida post-signup (3 pasos lineales)
-- [ ] **ONBD-02**: Wizard guía al usuario a crear su primer proyecto con datos pre-rellenados
-- [ ] **ONBD-03**: Dashboard muestra checklist de setup con progreso visual hasta completar onboarding
-
-### PWA — Progressive Web App
-
-- [ ] **PWA-01**: App puede instalarse en móvil iOS y Android desde Chrome/Safari
-- [ ] **PWA-02**: `manifest.json` correcto con nombre, iconos (192×192, 512×512) y colores de marca (#1A3328)
-- [ ] **PWA-03**: Banner de instalación aparece en primera visita desde móvil
+- [ ] **GATE-01**: Proyectos del plan Starter limitados a 5; plan Pro ilimitados
+- [ ] **GATE-02**: AI chats limitados a 20/mes en Starter, 100 en Pro, ilimitados en Estudio
+- [ ] **GATE-03**: PDF extractions limitadas a 5/mes en Starter, 30 en Pro, ilimitadas en Estudio
+- [ ] **GATE-04**: Al alcanzar límite, el usuario ve un upgrade prompt con CTA a Stripe Checkout
+- [ ] **GATE-05**: El uso mensual se resetea automáticamente el día 1 de cada mes
+- [ ] **GATE-06**: Plan Free (sin suscripción) tiene límites menores que Starter
 
 ### LAND — Landing Page
 
-- [ ] **LAND-01**: Ruta `/` muestra landing page pública (sin auth requerida)
-- [ ] **LAND-02**: Landing tiene Hero con tagline "El copiloto IA del arquitecto chileno" y CTA a registro
-- [ ] **LAND-03**: Landing tiene sección pricing con los 3 tiers y botones que abren Stripe Checkout
-- [ ] **LAND-04**: Landing tiene meta tags SEO (title, description, og:image, og:title)
+- [ ] **LAND-01**: Página pública en `/` con hero, 6 features, 3 pricing tiers y footer — sin sidebar
+- [ ] **LAND-02**: Toggle mensual/anual en la sección de pricing
+- [ ] **LAND-03**: CTA "Suscribirse" en pricing conecta a Stripe Checkout
+- [ ] **LAND-04**: `/dashboard` redirige a /login si el usuario no está autenticado (landing en `/` es pública)
 
-## Future Requirements (v1.2+)
+### ONBD — Onboarding
 
-### MKTG — Marketing & Growth
+- [ ] **ONBD-01**: Usuario nuevo ve wizard de 3 pasos al primer login: Bienvenida → Primer proyecto → Tour
+- [ ] **ONBD-02**: Wizard redirige al dashboard con checklist visible al completarse
+- [ ] **ONBD-03**: Usuario que ya completó onboarding no ve el wizard al volver
 
-- **MKTG-01**: Programa de referidos ($50.000 CLP por referido activo)
-- **MKTG-02**: Blog/contenido SEO sobre normativa chilena
-- **MKTG-03**: Newsletter mensual a arquitectos
+### PWA — Progressive Web App
 
-### INTG — Integraciones
-
-- **INTG-01**: API DOM en Línea (cuando gobierno la publique)
-- **INTG-02**: Marketplace de revisores independientes
-- **INTG-03**: API pública PermisoHub para partners
-
-### ENT — Enterprise
-
-- **ENT-01**: Analytics dashboard para constructoras
-- **ENT-02**: Módulo de licitaciones
-- **ENT-03**: Integración ERP constructoras
-
-## Out of Scope (v1.1)
-
-| Feature | Reason |
-|---------|--------|
-| DOM en Línea API | Gobierno aún no la publica — Q4 2026+ |
-| Marketplace revisores | Q4 2026 — requiere legal + onboarding |
-| Analytics constructoras | Q1 2027 — después de tener datos suficientes |
-| API pública | Q2 2027 — después de estabilizar el modelo de datos |
-| App nativa iOS/Android | Web-first; PWA es suficiente para v1 |
-| Expansión LATAM | 2028+ |
-
-## Traceability
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| BILL-01 | Phase 1 | Pending |
-| BILL-02 | Phase 1 | Pending |
-| BILL-03 | Phase 1 | Pending |
-| BILL-04 | Phase 1 | Pending |
-| BILL-05 | Phase 1 | Pending |
-| BILL-06 | Phase 1 | Pending |
-| BILL-07 | Phase 1 | Pending |
-| GATE-01 | Phase 2 | Pending |
-| GATE-02 | Phase 2 | Pending |
-| GATE-03 | Phase 2 | Pending |
-| GATE-04 | Phase 2 | Pending |
-| GATE-05 | Phase 2 | Pending |
-| GATE-06 | Phase 2 | Pending |
-| LAND-01 | Phase 3 | Pending |
-| LAND-02 | Phase 3 | Pending |
-| LAND-03 | Phase 3 | Pending |
-| LAND-04 | Phase 3 | Pending |
-| ONBD-01 | Phase 4 | Pending |
-| ONBD-02 | Phase 4 | Pending |
-| ONBD-03 | Phase 4 | Pending |
-| PWA-01 | Phase 5 | Pending |
-| PWA-02 | Phase 5 | Pending |
-| PWA-03 | Phase 5 | Pending |
-
-**Coverage:**
-- v1.1 requirements: 23 total
-- Mapped to phases: 23
-- Unmapped: 0 ✓
-
----
-*Requirements defined: 2026-06-20*
+- [ ] **PWA-01**: Manifest.json completo con iconos 192x512
+- [ ] **PWA-02**: Prompt de instalación en mobile Chrome
+- [ ] **PWA-03**: App abre en modo standalone cuando está instalada (sin chrome del browser)
