@@ -102,68 +102,61 @@ export async function GET(request: Request) {
   results.staleAlerts = staleCount ?? 0
 
   // 4. DOM scraper loop + WhatsApp auto-trigger on state change
-  if (isWhatsAppAvailable()) {
-    const { data: activeProjects } = await supabase
-      .from('proyectos')
-      .select('*, clientes(*)')
-      .not('numero_expediente', 'is', null)
-      .not('estado', 'in', '("aprobado","rechazado","borrador")')
+  const { data: activeProjects } = await supabase
+    .from('proyectos')
+    .select('*, clientes(*)')
+    .not('numero_expediente', 'is', null)
+    .not('estado', 'in', '("aprobado","rechazado","borrador")')
 
-    if (activeProjects) {
-      for (const p of activeProjects) {
-        if (!p.numero_expediente || !p.municipio) continue
-
-        try {
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
-          const scraperRes = await fetch(`${baseUrl}/api/scraper/dom-en-linea`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ expediente: p.numero_expediente, municipio: p.municipio }),
+  if (activeProjects) {
+    for (const p of activeProjects) {
+      if (!p.numero_expediente || !p.municipio) continue
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+        const scraperRes = await fetch(`${baseUrl}/api/scraper/dom-en-linea`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expediente: p.numero_expediente, municipio: p.municipio }),
+        })
+        if (!scraperRes.ok) continue
+        const scraperData = await scraperRes.json() as {
+          ok: boolean
+          estado?: string
+          descripcion?: string
+        }
+        if (!scraperData.ok || !scraperData.estado) continue
+        const estadoNuevo = scraperData.estado
+        if (estadoNuevo === p.estado) continue
+        results.domStatusChanges++
+        await supabase
+          .from('proyectos')
+          .update({
+            estado: estadoNuevo,
+            etapa_actual: scraperData.descripcion ?? null,
+            updated_at: new Date().toISOString(),
           })
-
-          if (!scraperRes.ok) continue
-
-          const scraperData = await scraperRes.json() as {
-            ok: boolean
-            estado?: string
-            descripcion?: string
-          }
-
-          if (!scraperData.ok || !scraperData.estado) continue
-
-          const estadoNuevo = scraperData.estado
-          if (estadoNuevo === p.estado) continue
-
-          results.domStatusChanges++
-
-          await supabase
-            .from('proyectos')
-            .update({ estado: estadoNuevo, updated_at: new Date().toISOString() })
-            .eq('id', p.id)
-
+          .eq('id', p.id)
+          .neq('estado', estadoNuevo)
+        if (isWhatsAppAvailable()) {
           const telefono = p.clientes?.telefono
           if (!telefono) continue
-
           const tipoWA = estadoNuevo === 'aprobado' ? 'aprobado'
             : estadoNuevo === 'con_observaciones' ? 'con_observaciones'
             : estadoNuevo === 'en_revision' ? 'en_revision'
             : null
-
           if (!tipoWA) continue
-
           const waResult = await enviarWhatsApp(telefono, tipoWA, {
             proyectoNombre: p.nombre,
             municipio: p.municipio,
             etapa: scraperData.descripcion,
             arquitecta: 'Estefanía Parada',
           })
-
           if (waResult.ok) results.whatsappSent++
           else results.errors.push(`WA for ${p.id}: ${waResult.error}`)
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'scraper error'
-          results.errors.push(`scraper ${p.numero_expediente}: ${msg}`)
         }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'scraper error'
+        results.errors.push(`scraper ${p.numero_expediente}: ${msg}`)
       }
     }
   }
