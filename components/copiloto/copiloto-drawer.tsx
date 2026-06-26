@@ -1,19 +1,23 @@
 "use client"
 
 import { useState, useCallback } from 'react'
-import { X, Bot, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Bot, Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet'
-import { TabOguc } from './tabs/tab-oguc'
-import { TabObservaciones } from './tabs/tab-observaciones'
-import { TabChecklist } from './tabs/tab-checklist'
-import { TabEstimacion } from './tabs/tab-estimacion'
+import { TabOguc } from '@/components/copiloto/tabs/tab-oguc'
+import { TabObservaciones } from '@/components/copiloto/tabs/tab-observaciones'
+import { TabChecklist } from '@/components/copiloto/tabs/tab-checklist'
+import { TabEstimacion } from '@/components/copiloto/tabs/tab-estimacion'
 import type { Proyecto } from '@/types'
+
+export type TabId = 'oguc' | 'observaciones' | 'checklist' | 'estimacion'
+type DrawerState = 'idle' | 'loading' | 'loaded' | 'error'
 
 export interface OgucArticulo {
   numero: string
@@ -22,7 +26,7 @@ export interface OgucArticulo {
   valor_normativo: string
   valor_proyecto: string
   cumple: boolean | null
-  observacion: string
+  observacion?: string
 }
 
 export interface OgucResult {
@@ -50,7 +54,7 @@ export interface ChecklistItem {
   articulo_normativo: string
   descripcion: string
   obligatorio: boolean
-  estado: string
+  estado: 'pendiente' | 'ok'
 }
 
 export interface ChecklistResult {
@@ -75,168 +79,218 @@ export interface CopilotoResult {
   estimacion: EstimacionResult
 }
 
-type Tab = 'oguc' | 'observaciones' | 'checklist' | 'estimacion'
-type DrawerState = 'idle' | 'loading' | 'loaded' | 'error'
+const SKILL_CARDS: { id: TabId; title: string; description: string; icon: string }[] = [
+  {
+    id: 'oguc',
+    title: 'Diagnóstico OGUC',
+    description: 'Verifica FOT, FOS, rasantes y distanciamientos con artículos citados',
+    icon: '⚖️',
+  },
+  {
+    id: 'observaciones',
+    title: 'Predicción de Observaciones',
+    description: 'Anticípate a las observaciones más probables de la DOM con acciones preventivas',
+    icon: '🔮',
+  },
+  {
+    id: 'checklist',
+    title: 'Checklist de Documentos',
+    description: 'Lista completa de documentos requeridos, con seguimiento de estado',
+    icon: '📋',
+  },
+  {
+    id: 'estimacion',
+    title: 'Estimación de Plazo',
+    description: 'Días hábiles y derechos municipales en CLP y UF para este proyecto',
+    icon: '📅',
+  },
+]
 
-type ProyectoLike = Pick<Proyecto, 'id' | 'nombre' | 'municipio' | 'tipo' | 'estado'>
-
-interface CopilotoDrawerProps {
-  proyecto: ProyectoLike | null
-  open: boolean
-  onClose: () => void
-}
-
-const TABS: { id: Tab; label: string }[] = [
+const TABS: { id: TabId; label: string }[] = [
   { id: 'oguc', label: 'OGUC' },
   { id: 'observaciones', label: 'Observaciones' },
   { id: 'checklist', label: 'Checklist' },
-  { id: 'estimacion', label: 'Plazos y derechos' },
+  { id: 'estimacion', label: 'Estimación' },
 ]
 
-export function CopilotoDrawer({ proyecto, open, onClose }: CopilotoDrawerProps) {
-  const [tab, setTab] = useState<Tab>('oguc')
-  const [state, setState] = useState<DrawerState>('idle')
-  const [error, setError] = useState<string | null>(null)
-  const [cache, setCache] = useState<Map<string, CopilotoResult>>(new Map())
-  const [current, setCurrent] = useState<CopilotoResult | null>(null)
+interface CopilotoDrawerProps {
+  open: boolean
+  proyecto: Pick<Proyecto, 'id' | 'nombre' | 'municipio' | 'tipo' | 'estado'> | null
+  onClose: () => void
+}
 
-  const runAnalysis = useCallback(async (proyectoId: string) => {
-    const cached = cache.get(proyectoId)
+export function CopilotoDrawer({ open, proyecto, onClose }: CopilotoDrawerProps) {
+  const [drawerState, setDrawerState] = useState<DrawerState>('idle')
+  const [activeTab, setActiveTab] = useState<TabId>('oguc')
+  const [result, setResult] = useState<CopilotoResult | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  // Cache by proyectoId to avoid re-fetching on tab switch or re-open
+  const [cache, setCache] = useState<Map<string, CopilotoResult>>(new Map())
+
+  const handleCardClick = useCallback(async (tabId: TabId) => {
+    if (!proyecto) return
+
+    // Use cache if available — instant result display
+    const cached = cache.get(proyecto.id)
     if (cached) {
-      setCurrent(cached)
-      setState('loaded')
+      setResult(cached)
+      setDrawerState('loaded')
+      setActiveTab(tabId)
       return
     }
 
-    setState('loading')
-    setError(null)
-    setTab('oguc')
+    setDrawerState('loading')
+    setActiveTab(tabId)
+    setErrorMsg(null)
 
     try {
       const res = await fetch('/api/ai/copiloto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proyectoId }),
+        body: JSON.stringify({ proyectoId: proyecto.id }),
       })
-      const data = await res.json() as { ok?: boolean; error?: string } & Partial<CopilotoResult>
+      const json = await res.json() as { ok?: boolean; error?: string } & Partial<CopilotoResult>
 
-      if (!res.ok || data.error) {
-        throw new Error(data.error ?? 'Error al analizar el proyecto')
+      if (!json.ok || !json.oguc) {
+        throw new Error(json.error ?? 'Error al cargar análisis')
       }
 
-      const result = data as CopilotoResult
-      setCache(prev => new Map(prev).set(proyectoId, result))
-      setCurrent(result)
-      setState('loaded')
+      const data: CopilotoResult = {
+        oguc: json.oguc,
+        observaciones: json.observaciones!,
+        checklist: json.checklist!,
+        estimacion: json.estimacion!,
+      }
+
+      setCache((prev) => new Map(prev).set(proyecto.id, data))
+      setResult(data)
+      setDrawerState('loaded')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido')
-      setState('error')
+      setErrorMsg(err instanceof Error ? err.message : 'Error desconocido')
+      setDrawerState('error')
     }
-  }, [cache])
+  }, [proyecto, cache])
 
-  const handleOpenChange = useCallback((isOpen: boolean) => {
-    if (!isOpen) {
-      onClose()
-    } else if (proyecto) {
-      void runAnalysis(proyecto.id)
-    }
-  }, [onClose, proyecto, runAnalysis])
-
-  const handleRetry = useCallback(() => {
-    if (proyecto) void runAnalysis(proyecto.id)
-  }, [proyecto, runAnalysis])
-
-  const handleItemToggle = useCallback((itemKey: string, newEstado: string) => {
-    if (!current || !proyecto) return
+  const handleItemToggle = useCallback((itemKey: string, newEstado: 'pendiente' | 'ok') => {
+    if (!result || !proyecto) return
     const updated: CopilotoResult = {
-      ...current,
+      ...result,
       checklist: {
-        items: current.checklist.items.map(it =>
+        items: result.checklist.items.map((it) =>
           it.item_key === itemKey ? { ...it, estado: newEstado } : it
         ),
       },
     }
-    setCurrent(updated)
-    setCache(prev => new Map(prev).set(proyecto.id, updated))
-  }, [current, proyecto])
+    setResult(updated)
+    setCache((prev) => new Map(prev).set(proyecto.id, updated))
+  }, [result, proyecto])
+
+  function handleOpenChange(isOpen: boolean) {
+    if (!isOpen) {
+      onClose()
+      // Reset to idle so next open starts with skill cards
+      // Cache is preserved — reopening same project will hit cache instantly
+      setDrawerState('idle')
+      setResult(null)
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="flex w-full flex-col sm:max-w-xl">
-        <SheetHeader className="flex-row items-center justify-between border-b pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
-              <Bot className="size-4 text-primary" />
-            </div>
-            <div>
-              <SheetTitle className="text-base">Copiloto IA</SheetTitle>
-              {proyecto && (
-                <p className="text-xs text-muted-foreground">{proyecto.nombre}</p>
-              )}
-            </div>
+      <SheetContent side="right" className="w-[480px] sm:max-w-[480px] overflow-y-auto p-0">
+        <SheetHeader className="border-b border-border px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Bot className="size-5 text-primary" />
+            <SheetTitle>Copiloto IA</SheetTitle>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose} className="size-8 p-0">
-            <X className="size-4" />
-          </Button>
+          {proyecto && (
+            <SheetDescription className="text-left">
+              {proyecto.nombre} · {proyecto.municipio}
+            </SheetDescription>
+          )}
         </SheetHeader>
 
-        {/* Tab nav */}
-        <div className="flex gap-1 border-b px-1 pb-0 pt-2">
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={`rounded-t-md px-3 py-2 text-xs font-medium transition-colors ${
-                tab === t.id
-                  ? 'bg-primary/8 text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <div className="px-6 py-4">
+          {/* IDLE: show 4 skill cards — never blank */}
+          {drawerState === 'idle' && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Selecciona un análisis para iniciar. Todos los datos provienen del expediente — no necesitas ingresar información adicional.
+              </p>
+              <div className="grid grid-cols-1 gap-2.5">
+                {SKILL_CARDS.map((card) => (
+                  <button
+                    key={card.id}
+                    type="button"
+                    onClick={() => void handleCardClick(card.id)}
+                    className="flex items-start gap-3 rounded-xl border border-border bg-white px-4 py-3 text-left transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
+                  >
+                    <span className="mt-0.5 text-xl leading-none">{card.icon}</span>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{card.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{card.description}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto py-4">
-          {state === 'loading' && (
-            <div className="flex h-full flex-col items-center justify-center gap-3">
+          {/* LOADING */}
+          {drawerState === 'loading' && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
               <Loader2 className="size-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Analizando con IA…</p>
-              <p className="text-xs text-muted-foreground/60">Puede tomar hasta 30 segundos</p>
+              <p className="text-sm font-medium">Analizando expediente…</p>
+              <p className="text-xs text-muted-foreground">
+                Ejecutando 4 análisis con GPT-4o. Esto toma 20–40 segundos.
+              </p>
             </div>
           )}
 
-          {state === 'error' && (
-            <div className="flex h-full flex-col items-center justify-center gap-4">
-              <AlertCircle className="size-8 text-destructive" />
-              <p className="text-sm text-muted-foreground">{error}</p>
-              <Button variant="outline" size="sm" onClick={handleRetry}>
-                <RefreshCw className="size-3.5" />
-                Reintentar
-              </Button>
+          {/* ERROR */}
+          {drawerState === 'error' && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              <p className="font-medium">Error al analizar</p>
+              <p className="mt-1 text-xs">{errorMsg}</p>
+              <button
+                type="button"
+                onClick={() => setDrawerState('idle')}
+                className="mt-3 text-xs underline hover:no-underline"
+              >
+                Volver a intentar
+              </button>
             </div>
           )}
 
-          {state === 'loaded' && current && (
-            <>
-              {tab === 'oguc' && <TabOguc data={current.oguc} />}
-              {tab === 'observaciones' && <TabObservaciones data={current.observaciones} />}
-              {tab === 'checklist' && (
-                <TabChecklist
-                  data={current.checklist}
-                  onToggle={handleItemToggle}
-                />
+          {/* LOADED: tab nav + tab content */}
+          {drawerState === 'loaded' && result && (
+            <div className="space-y-4">
+              {/* Tab navigation — plain controlled buttons (NOT shadcn Tabs) */}
+              <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
+                      activeTab === tab.id
+                        ? 'bg-white text-primary shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab content */}
+              {activeTab === 'oguc' && <TabOguc data={result.oguc} />}
+              {activeTab === 'observaciones' && <TabObservaciones data={result.observaciones} />}
+              {activeTab === 'checklist' && (
+                <TabChecklist data={result.checklist} onToggle={handleItemToggle} />
               )}
-              {tab === 'estimacion' && <TabEstimacion data={current.estimacion} />}
-            </>
-          )}
-
-          {state === 'idle' && (
-            <div className="flex h-full flex-col items-center justify-center gap-3">
-              <Bot className="size-8 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">Selecciona un proyecto para analizar</p>
+              {activeTab === 'estimacion' && <TabEstimacion data={result.estimacion} />}
             </div>
           )}
         </div>

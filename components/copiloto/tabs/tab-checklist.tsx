@@ -7,7 +7,7 @@ import type { ChecklistResult } from '../copiloto-drawer'
 
 interface TabChecklistProps {
   data: ChecklistResult
-  onToggle: (itemKey: string, newEstado: string) => void
+  onToggle: (itemKey: string, newEstado: 'pendiente' | 'ok') => void
 }
 
 export function TabChecklist({ data, onToggle }: TabChecklistProps) {
@@ -15,11 +15,11 @@ export function TabChecklist({ data, onToggle }: TabChecklistProps) {
 
   const doneCount = data.items.filter(it => it.estado === 'ok').length
 
-  async function handleToggle(item: typeof data.items[number]) {
+  async function handleToggle(item: ChecklistResult['items'][number]) {
     if (toggling) return
-    const newEstado = item.estado === 'ok' ? 'pendiente' : 'ok'
+    const newEstado: 'pendiente' | 'ok' = item.estado === 'ok' ? 'pendiente' : 'ok'
 
-    // Optimistic update
+    // Optimistic update via parent state
     onToggle(item.item_key, newEstado)
 
     if (!item.id) return
@@ -32,7 +32,7 @@ export function TabChecklist({ data, onToggle }: TabChecklistProps) {
         body: JSON.stringify({ estado: newEstado }),
       })
       if (!res.ok) {
-        // Revert on error
+        // Revert on PATCH error
         onToggle(item.item_key, item.estado)
       }
     } catch {
