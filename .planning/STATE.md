@@ -2,10 +2,10 @@
 
 ## Current Position
 
-Phase: 8 — Copiloto Core
-Plan: 03 — COMPLETE
-Status: COMPLETE — 08-01 ✅ 08-02 ✅ 08-03 ✅ (page integration: CopilotoTrigger + CopilotoDrawer in permisos, patentes, proyectos/[id], tsc clean)
-Last activity: 2026-06-25 — 08-03 complete: CopilotoTrigger per row in permisos + patentes, trigger in proyectos/[id] header, shared CopilotoDrawer at page level in all three pages
+Phase: 9 — Automatizaciones
+Plan: 01 — COMPLETE
+Status: COMPLETE — 09-01 ✅ (DOM scraper idempotency + WA guard decoupled, tsc clean)
+Last activity: 2026-06-26 — 09-01 complete: .neq() idempotent update + etapa_actual field + outer WA guard removed from scraper loop
 
 ## Phases Status
 
@@ -13,7 +13,7 @@ Last activity: 2026-06-25 — 08-03 complete: CopilotoTrigger per row in permiso
 |---|---|---|
 | 7 | Foundation | ✅ 07-01 service client, 07-02 checklist table, 07-03 Sheet component |
 | 8 | Copiloto Core | ✅ 08-01 ✅ (API) 08-02 ✅ (UI: drawer, trigger, 4 tabs) 08-03 ✅ (page integration: permisos, patentes, proyectos/[id]) |
-| 9 | Automatizaciones | Not started |
+| 9 | Automatizaciones | 09-01 ✅ (DOM scraper idempotency + WA guard decoupled) |
 | 6 | Dashboard Timeline View | ✅ app/(dashboard)/dashboard/page.tsx — Timeline View con 4 secciones |
 | 1 | Stripe Billing | ✅ app/api/billing/{checkout,portal,webhook}, lib/stripe.ts, /configuracion/billing |
 | 2 | Feature Gating | ✅ lib/plan-limits.ts, lib/usage.ts, upgrade prompt on /proyectos, API usage gate |
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md
 - [v1.3] AI provider is OpenAI GPT-4o via `lib/ai.ts` — `@anthropic-ai/sdk` installed but dormant. Do NOT migrate provider during this milestone.
 - [v1.3] Copiloto analysis uses `Promise.all` for 4 concurrent AI calls — set `export const maxDuration = 90` on the route segment to avoid Vercel timeout.
 - [v1.3] `document_checklist_items` table live in Supabase (07-02, c0121e5) — FOUND-02 resolved. RLS policy checklist_items_own active. SKILL-04 (Phase 8) is unblocked.
-- [v1.3] DOM write-back is partially done (estado write at line 149 of daily-check) — AUTO-01 adds idempotent `.neq()` guard and observaciones INSERT for `con_observaciones` transitions.
+- [v1.3] DOM write-back complete (09-01, f51dee4) — daily-check section 4: outer `isWhatsAppAvailable()` guard removed, `.neq('estado', estadoNuevo)` added for idempotency, `etapa_actual` field written on every estado transition. `results.domStatusChanges++` runs unconditionally.
 - [v1.3] Weekly email (AUTO-04) sends to `ADMIN_EMAIL` only for MVP — external recipient opt-in blocked until unsubscribe flow exists (CAN-SPAM compliance).
 - [v1.3] `SUPABASE_SERVICE_ROLE_KEY` must NOT have `NEXT_PUBLIC_` prefix — server-only secret.
 - [v1.3] Sheet component live (07-03, d855f60) — `@/components/ui/sheet` exports Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose, SheetTrigger. Primitive: `@base-ui/react/dialog` (base-nova style). No new npm deps. FOUND-03 resolved, SKILL-01 (Phase 8) unblocked.
