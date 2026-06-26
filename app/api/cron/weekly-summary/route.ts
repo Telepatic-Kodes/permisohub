@@ -1,6 +1,7 @@
 import { validateCronSecret } from '@/lib/scraper'
 import { createServiceClient } from '@/lib/supabase/service'
 import { sendResumenSemanal } from '@/lib/email'
+import { aiComplete, isAIAvailable } from '@/lib/ai'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,10 +38,33 @@ export async function GET(request: Request) {
     tieneAlerta: p.estado === 'con_observaciones',
   }))
 
+  let tipSemanal = ''
+  if (isAIAvailable()) {
+    try {
+      const resumenTexto = proyectosResumen
+        .map(p =>
+          `${p.nombre} (${p.municipio}): ${p.estado}${p.tieneAlerta ? ' — ALERTA' : ''}`
+        )
+        .join('\n')
+      tipSemanal = await aiComplete(
+        [
+          {
+            role: 'user' as const,
+            content: `Eres un experto en tramitación DOM chilena. Analiza estos proyectos activos y entrega UN consejo práctico breve (2-3 oraciones) para la semana:\n\n${resumenTexto}\n\nEl consejo debe ser específico y accionable para la arquitecta.`,
+          },
+        ],
+        { max_tokens: 200 }
+      )
+    } catch {
+      tipSemanal = ''
+    }
+  }
+
   const result = await sendResumenSemanal({
     to: ESTEFANIA_EMAIL,
     clienteNombre: 'Estefanía Parada',
     proyectos: proyectosResumen,
+    tipSemanal,
   })
 
   return Response.json({
