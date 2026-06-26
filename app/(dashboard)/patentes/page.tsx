@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import {
   Clock,
   HelpCircle,
+  History,
   Receipt,
   RefreshCw,
   ShieldCheck,
@@ -37,6 +38,12 @@ import { cn } from "@/lib/utils"
 import type { Proyecto } from "@/types"
 import { CopilotoTrigger } from "@/components/copiloto/copiloto-trigger"
 import { CopilotoDrawer } from "@/components/copiloto/copiloto-drawer"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 
 type EstadoVigencia = "vigente" | "por_vencer" | "vencida" | "sin_datos"
 
@@ -121,6 +128,8 @@ export default function PatentesPage() {
   const [ufValor, setUfValor] = useState<number | null>(null)
   const [copilotoProyecto, setCopilotoProyecto] = useState<CopilotoProyecto | null>(null)
   const [copilotoOpen, setCopilotoOpen] = useState(false)
+  const [historialPatente, setHistorialPatente] = useState<PatenteConVigencia | null>(null)
+  const [historialOpen, setHistorialOpen] = useState(false)
 
   const fetchPatentes = useCallback(() => {
     setLoading(true)
@@ -402,6 +411,17 @@ export default function PatentesPage() {
                             <RefreshCw className="size-3.5" />
                             Renovar {proximoAño}
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Ver historial de renovaciones"
+                            onClick={() => {
+                              setHistorialPatente(p)
+                              setHistorialOpen(true)
+                            }}
+                          >
+                            <History className="size-3.5" />
+                          </Button>
                           <CopilotoTrigger
                             proyecto={p as unknown as CopilotoProyecto}
                             onClick={handleCopiloto}
@@ -427,6 +447,20 @@ export default function PatentesPage() {
         open={copilotoOpen}
         onClose={() => setCopilotoOpen(false)}
       />
+
+      <Sheet open={historialOpen} onOpenChange={setHistorialOpen}>
+        <SheetContent side="right" className="w-full max-w-md">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <History className="size-4" />
+              Historial de renovaciones
+            </SheetTitle>
+          </SheetHeader>
+          {historialPatente && (
+            <HistorialRenovaciones patente={historialPatente} todas={patentes} />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
@@ -509,5 +543,96 @@ function RegistrarNumeroDialog({ patente, onSaved }: RegistrarNumeroDialogProps)
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// ─── Historial de renovaciones ────────────────────────────────────────────────
+
+function buildChain(patente: PatenteConVigencia, todas: PatenteConVigencia[]): PatenteConVigencia[] {
+  const chain: PatenteConVigencia[] = [patente]
+  let current = patente
+  let guard = 0
+  while (current.patente_anterior_id && guard < 5) {
+    const prev = todas.find((p) => p.id === current.patente_anterior_id)
+    if (!prev) break
+    chain.unshift(prev)
+    current = prev
+    guard++
+  }
+  return chain
+}
+
+function HistorialRenovaciones({
+  patente,
+  todas,
+}: {
+  patente: PatenteConVigencia
+  todas: PatenteConVigencia[]
+}) {
+  const chain = buildChain(patente, todas)
+  const tieneAntecedente = !!patente.patente_anterior_id && !todas.find((p) => p.id === patente.patente_anterior_id)
+
+  return (
+    <div className="mt-4 space-y-3 px-1">
+      {tieneAntecedente && (
+        <p className="text-xs text-muted-foreground">
+          Hay años anteriores fuera del filtro actual. Selecciona "Todos" para ver la cadena completa.
+        </p>
+      )}
+      <ol className="relative border-l border-border pl-5 space-y-6">
+        {chain.map((p, i) => {
+          const badge = VIGENCIA_BADGE[p.estado_vigencia]
+          const esCurrent = p.id === patente.id
+          return (
+            <li key={p.id} className="relative">
+              <span
+                className={cn(
+                  "absolute -left-[1.2rem] mt-1 flex size-4 items-center justify-center rounded-full border",
+                  esCurrent
+                    ? "border-primary bg-primary text-white"
+                    : "border-border bg-background",
+                )}
+              >
+                <span className={cn("size-1.5 rounded-full", esCurrent ? "bg-white" : "bg-muted-foreground/50")} />
+              </span>
+              <div className={cn("rounded-lg border p-3 text-sm", esCurrent && "border-primary/20 bg-primary/[0.03]")}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-foreground">
+                    Año {p.año_ejercicio ?? "—"}
+                    {esCurrent && (
+                      <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary font-medium">actual</span>
+                    )}
+                  </span>
+                  <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium", badge.className)}>
+                    {badge.label}
+                  </span>
+                </div>
+                <p className="mt-1 text-muted-foreground">{p.nombre}</p>
+                {p.numero_patente && (
+                  <p className="mt-0.5 font-mono text-xs text-muted-foreground">N° {p.numero_patente}</p>
+                )}
+                <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
+                  {p.valor_derechos != null && (
+                    <span>{CLP.format(p.valor_derechos)}</span>
+                  )}
+                  {p.fecha_pago_derechos && (
+                    <span>Pagado: {new Date(`${p.fecha_pago_derechos}T00:00:00`).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  )}
+                </div>
+              </div>
+              {i < chain.length - 1 && (
+                <div className="mt-1.5 ml-1 flex items-center gap-1 text-[10px] text-muted-foreground/60">
+                  <RefreshCw className="size-2.5" />
+                  <span>renovado</span>
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+      <p className="text-xs text-muted-foreground pt-2">
+        {chain.length === 1 ? "Sin renovaciones anteriores cargadas." : `${chain.length} años en la cadena.`}
+      </p>
+    </div>
   )
 }

@@ -678,7 +678,13 @@ export default function ProyectoDetallePage({
           </Card>
 
           {/* Desarchivo de expediente */}
-          <DesarchivoPanel proyectoId={proyecto.id} estadoProyecto={proyecto.estado} />
+          <DesarchivoPanel
+            proyectoId={proyecto.id}
+            estadoProyecto={proyecto.estado}
+            proyectoNombre={proyecto.nombre}
+            municipio={proyecto.municipio}
+            numeroExpediente={proyecto.numero_expediente}
+          />
 
           {/* Comunicaciones */}
           <Card>

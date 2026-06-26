@@ -6,6 +6,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Circle,
+  Copy,
+  FileText,
   Loader2,
   CalendarClock,
   Hash,
@@ -54,6 +56,9 @@ interface DesarchivoData {
 interface DesarchivoPanelProps {
   proyectoId: string
   estadoProyecto: string
+  proyectoNombre?: string
+  municipio?: string
+  numeroExpediente?: string
 }
 
 // ──────────────────────────────────────────────────
@@ -99,7 +104,7 @@ function fechaLegible(fecha: string): string {
 // ──────────────────────────────────────────────────
 // Componente
 // ──────────────────────────────────────────────────
-export function DesarchivoPanel({ proyectoId, estadoProyecto }: DesarchivoPanelProps) {
+export function DesarchivoPanel({ proyectoId, estadoProyecto, proyectoNombre, municipio, numeroExpediente }: DesarchivoPanelProps) {
   const [data, setData] = useState<DesarchivoData | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -109,6 +114,12 @@ export function DesarchivoPanel({ proyectoId, estadoProyecto }: DesarchivoPanelP
   const [numeroSolicitud, setNumeroSolicitud] = useState("")
   const [costoUf, setCostoUf] = useState("")
   const [observaciones, setObservaciones] = useState("")
+
+  // Carta IA
+  const [cartaOpen, setCartaOpen] = useState(false)
+  const [cartaTexto, setCartaTexto] = useState("")
+  const [cartaBusy, setCartaBusy] = useState(false)
+  const [cartaCopiada, setCartaCopiada] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -145,6 +156,31 @@ export function DesarchivoPanel({ proyectoId, estadoProyecto }: DesarchivoPanelP
       await fetchData()
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function generarCarta() {
+    setCartaBusy(true)
+    setCartaOpen(true)
+    setCartaTexto("")
+    try {
+      const res = await fetch("/api/ai/generate-communication", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipo: "carta_formal",
+          proyectoNombre: proyectoNombre ?? "Expediente archivado",
+          municipio: municipio ?? "la DOM",
+          numeroExpediente,
+          observaciones: "Solicitud de desarchivo del expediente para retomar tramitación.",
+        }),
+      })
+      const json = (await res.json()) as { ok: boolean; texto?: string; error?: string }
+      setCartaTexto(json.texto ?? json.error ?? "No se pudo generar la carta.")
+    } catch {
+      setCartaTexto("Error al conectar con el servicio de IA.")
+    } finally {
+      setCartaBusy(false)
     }
   }
 
@@ -412,7 +448,13 @@ export function DesarchivoPanel({ proyectoId, estadoProyecto }: DesarchivoPanelP
             </p>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => void generarCarta()}>
+              <FileText className="size-3.5" />
+              Generar carta de solicitud
+            </Button>
+
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger render={<Button />}>Solicitar Desarchivo</DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -461,6 +503,47 @@ export function DesarchivoPanel({ proyectoId, estadoProyecto }: DesarchivoPanelP
                   {busy && <Loader2 className="size-3.5 animate-spin" />}
                   Enviar solicitud
                 </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          </div>
+
+          {/* Modal carta IA */}
+          <Dialog open={cartaOpen} onOpenChange={setCartaOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="size-4" />
+                  Carta de solicitud de desarchivo
+                </DialogTitle>
+                <DialogDescription>
+                  Generada por IA. Revisa y personaliza antes de enviar.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="relative max-h-[60vh] overflow-y-auto rounded-lg border bg-muted/30 p-4">
+                {cartaBusy ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Generando carta…
+                  </div>
+                ) : (
+                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{cartaTexto}</pre>
+                )}
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  disabled={cartaBusy || !cartaTexto}
+                  onClick={() => {
+                    void navigator.clipboard.writeText(cartaTexto)
+                    setCartaCopiada(true)
+                    setTimeout(() => setCartaCopiada(false), 2000)
+                  }}
+                >
+                  <Copy className="size-3.5" />
+                  {cartaCopiada ? "¡Copiado!" : "Copiar texto"}
+                </Button>
+                <Button variant="outline" onClick={() => setCartaOpen(false)}>Cerrar</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
