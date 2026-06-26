@@ -9,8 +9,12 @@ import {
   FileText,
   FolderDown,
   MessageCircle,
+  Scale,
   Search,
+  Sparkles,
   TrendingUp,
+  X,
+  Zap,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -18,9 +22,46 @@ import {
 // ---------------------------------------------------------------------------
 
 const STATS = [
-  { value: "449 días", label: "promedio en Santiago para aprobar un permiso en 2024" },
-  { value: "30 hábiles", label: "límite legal DOM (Ley 21.718) — raras veces cumplido" },
+  { value: "124 días", label: "promedio para aprobar un permiso en 2024 (vs 45 días en 2009)" },
+  { value: "US$2B", label: "en pérdidas anuales por demoras de tramitación en Chile" },
   { value: "7.000+", label: "estudios de arquitectura chilenos sin herramienta dedicada" },
+];
+
+const COMPETENCIA = [
+  { solucion: "PermisoHub", para_arq: true, ia: true, nacional: true, saas: true, auto: true, destacado: true },
+  { solucion: "REVI (CChC+Google)", para_arq: false, ia: true, nacional: false, saas: false, auto: false },
+  { solucion: "DOM en Línea (MINVU)", para_arq: false, ia: false, nacional: true, saas: false, auto: false },
+  { solucion: "Consultoría tradicional", para_arq: true, ia: false, nacional: false, saas: false, auto: false },
+];
+
+const OPORTUNIDAD = [
+  {
+    icon: Scale,
+    titulo: "Ley 21.718 vigente",
+    descripcion: "Desde enero 2025 fija 30 días hábiles máximo para la DOM. Nueva urgencia de cumplimiento para todos los arquitectos del país.",
+  },
+  {
+    icon: TrendingUp,
+    titulo: "REVI cubre solo el 3.5%",
+    descripcion: "La IA municipal existe en 12 de 346 municipios — y ayuda a la DOM, no al arquitecto. Hay una ventana de 2–3 años antes de que el mercado madure.",
+  },
+  {
+    icon: FileSearch,
+    titulo: "CBR Digital 2026",
+    descripcion: "La digitalización del Conservador de Bienes Raíces acelera todo el flujo documental del sector. El timing es ahora.",
+  },
+  {
+    icon: Zap,
+    titulo: "Mercado en crisis",
+    descripcion: "El dolor de la permisología es agudo y creciente. Crisis = adopción acelerada de soluciones que funcionan.",
+  },
+];
+
+const TRACTION = [
+  { value: "Jun 2026", label: "MVP lanzado y operativo en producción" },
+  { value: "25+", label: "módulos construidos y funcionales" },
+  { value: "100%", label: "bootstrapped — fundadora-arquitecta" },
+  { value: "US$2B", label: "en dolor de mercado sin solución dedicada" },
 ];
 
 const FEATURES = [
@@ -240,18 +281,19 @@ export default async function MarketingPage({
       {/* ------------------------------------------------------------------ */}
       <section className="mx-auto max-w-6xl px-6 pt-20 pb-16 text-center md:pt-28">
         <span className="inline-flex items-center gap-2 rounded-full border border-[#1A3328]/15 bg-white px-4 py-1.5 text-xs font-medium text-[#2D6A4F]">
-          <span className="size-1.5 rounded-full bg-[#E9C46A]" />
-          9 herramientas IA · Ley 21.718 · OGUC · 345 municipios
+          <span className="size-1.5 rounded-full bg-[#E9C46A] animate-pulse" />
+          MVP en producción · Ley 21.718 · OGUC · 346 municipios
         </span>
 
         <h1 className="mx-auto mt-6 max-w-4xl text-5xl font-semibold leading-[1.05] tracking-tight text-[#1A3328] md:text-7xl">
-          El OS del{" "}
-          <span className="text-[#2D6A4F]">arquitecto chileno</span>
+          El copiloto{" "}
+          <span className="italic text-[#2D6A4F]">IA</span>{" "}
+          del arquitecto chileno
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg text-[#1A3328]/70 md:text-xl">
-          Gestión completa de permisos DOM: proyectos, clientes, observaciones,
-          plazos Ley 21.718 y 9 herramientas IA en un solo lugar.
+          Prepara, predice, responde y acelera. La capa inteligente entre el
+          arquitecto y la burocracia DOM — de principio a fin.
         </p>
 
         <div className="mt-9 flex items-center justify-center">
@@ -339,6 +381,138 @@ export default async function MarketingPage({
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Competencia                                                        */}
+      {/* ------------------------------------------------------------------ */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="text-center">
+          <h2 className="text-3xl font-semibold tracking-tight text-[#1A3328] md:text-4xl">
+            Somos el único enfocado en el arquitecto
+          </h2>
+          <p className="mt-3 text-[#1A3328]/65">
+            REVI ayuda a la DOM a revisar. PermisoHub ayuda al arquitecto a triunfar.
+          </p>
+        </div>
+
+        <div className="mt-12 overflow-x-auto rounded-2xl border border-[#1A3328]/10 bg-white">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[#1A3328]/8">
+                <th className="px-6 py-4 text-left font-semibold text-[#1A3328]">Solución</th>
+                <th className="px-4 py-4 text-center font-medium text-[#1A3328]/70">Para arquitectos</th>
+                <th className="px-4 py-4 text-center font-medium text-[#1A3328]/70">IA integrada</th>
+                <th className="px-4 py-4 text-center font-medium text-[#1A3328]/70">Cobertura nacional</th>
+                <th className="px-4 py-4 text-center font-medium text-[#1A3328]/70">Modelo SaaS</th>
+                <th className="px-4 py-4 text-center font-medium text-[#1A3328]/70">Automatización</th>
+              </tr>
+            </thead>
+            <tbody>
+              {COMPETENCIA.map((row) => (
+                <tr
+                  key={row.solucion}
+                  className={`border-b border-[#1A3328]/8 last:border-0 ${
+                    row.destacado ? "bg-[#1A3328]" : ""
+                  }`}
+                >
+                  <td className={`px-6 py-4 font-semibold ${row.destacado ? "text-[#E9C46A]" : "text-[#1A3328]"}`}>
+                    {row.solucion}
+                  </td>
+                  {[row.para_arq, row.ia, row.nacional, row.saas, row.auto].map((val, i) => (
+                    <td key={i} className="px-4 py-4 text-center">
+                      {val ? (
+                        <CheckCircle2 className={`mx-auto size-5 ${row.destacado ? "text-[#E9C46A]" : "text-[#2D6A4F]"}`} />
+                      ) : (
+                        <X className="mx-auto size-5 text-[#1A3328]/25" />
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="mt-4 text-center text-xs text-[#1A3328]/50">
+          REVI cubre solo 12 de 346 municipios (3.5%) y sirve a los funcionarios — no al arquitecto.
+        </p>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Oportunidad                                                        */}
+      {/* ------------------------------------------------------------------ */}
+      <section className="bg-[#1A3328] py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#E9C46A]/30 bg-[#E9C46A]/10 px-4 py-1.5 text-xs font-medium text-[#E9C46A]">
+              <Sparkles className="size-3.5" />
+              Timing perfecto
+            </span>
+            <h2 className="mt-5 text-3xl font-semibold tracking-tight text-[#F9F7F3] md:text-4xl">
+              Una ventana de 2–3 años
+            </h2>
+            <p className="mt-3 text-[#F9F7F3]/60">
+              Cuatro fuerzas convergentes que crean una oportunidad única ahora.
+            </p>
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {OPORTUNIDAD.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.titulo} className="rounded-2xl border border-[#F9F7F3]/10 bg-[#F9F7F3]/5 p-7">
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-[#E9C46A]/15">
+                    <Icon className="size-5 text-[#E9C46A]" />
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold text-[#F9F7F3]">{item.titulo}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#F9F7F3]/60">{item.descripcion}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Tracción                                                           */}
+      {/* ------------------------------------------------------------------ */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="text-center">
+          <h2 className="text-3xl font-semibold tracking-tight text-[#1A3328] md:text-4xl">
+            MVP en producción, listo para escalar
+          </h2>
+          <p className="mt-3 text-[#1A3328]/65">
+            Construido por una arquitecta que vivió el problema desde adentro.
+          </p>
+        </div>
+
+        <div className="mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-px overflow-hidden rounded-2xl bg-[#1A3328]/10 md:grid-cols-4">
+          {TRACTION.map((item) => (
+            <div key={item.label} className="bg-[#F9F7F3] px-6 py-8 text-center">
+              <p className="text-3xl font-semibold tracking-tight text-[#1A3328]">{item.value}</p>
+              <p className="mt-2 text-xs leading-relaxed text-[#1A3328]/60">{item.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10 flex justify-center">
+          <div className="max-w-2xl rounded-2xl border border-[#2D6A4F]/20 bg-white p-8 text-center">
+            <p className="text-base leading-relaxed text-[#1A3328]/80">
+              "Arquitecta con experiencia directa en tramitación DOM. Construí PermisoHub desde el dolor propio:
+              conozco cada cuello de botella del proceso porque lo viví."
+            </p>
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-full bg-[#1A3328] text-sm font-semibold text-[#E9C46A]">
+                EP
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-[#1A3328]">Estefanía Parada</p>
+                <p className="text-xs text-[#1A3328]/55">Fundadora · Arquitecta</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
