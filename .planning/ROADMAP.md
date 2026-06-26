@@ -5,7 +5,7 @@
 
 ## Phases
 
-- [ ] **Phase 7: Foundation** — Preconditions críticas: service client, tabla DB y Sheet instalado
+- [ ] **Phase 7: Foundation** — Precondiciones críticas: service client, tabla DB y Sheet instalado
 - [ ] **Phase 8: Copiloto Core** — Drawer IA embebido con 4 análisis de expediente
 - [ ] **Phase 9: Automatizaciones** — Procesos de fondo que corren sin intervención del arquitecto
 
@@ -48,7 +48,12 @@ Plans:
 4. La pestaña Checklist genera ítems con `item_key` y artículo normativo, persiste a DB y el estado pendiente/ok es modificable manualmente desde el drawer
 5. La pestaña Estimación muestra un rango de días hábiles y el monto de derechos en CLP y UF basado en datos del proyecto e inteligencia municipal
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — POST /api/ai/copiloto (4 concurrent AI skills) + PATCH checklist toggle endpoint
+- [ ] 08-02-PLAN.md — CopilotoDrawer + CopilotoTrigger + 4 tab components
+- [ ] 08-03-PLAN.md — Wire CopilotoTrigger + CopilotoDrawer into permisos, patentes, proyectos/[id] pages
 
 ---
 
@@ -71,7 +76,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 7. Foundation | 0/3 | Not started | - |
-| 8. Copiloto Core | 0/? | Not started | - |
+| 8. Copiloto Core | 0/3 | Not started | - |
 | 9. Automatizaciones | 0/? | Not started | - |
 
 ---
