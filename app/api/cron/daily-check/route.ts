@@ -1,6 +1,5 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { validateCronSecret } from '@/lib/scraper'
+import { createServiceClient } from '@/lib/supabase/service'
 import {
   sendDeadlineAlert,
   sendObservacionAlert,
@@ -14,17 +13,7 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cs) => cs.forEach(({ name, value, options }) => cookieStore.set(name, value, options)),
-      },
-    }
-  )
+  const supabase = createServiceClient()
 
   const today = new Date()
   const todayISO = today.toISOString().split('T')[0]
@@ -175,6 +164,75 @@ export async function GET(request: Request) {
           const msg = err instanceof Error ? err.message : 'scraper error'
           results.errors.push(`scraper ${p.numero_expediente}: ${msg}`)
         }
+      }
+    }
+  }
+
+  // 5. Alertas de vencimiento de permisos otorgados (fecha_vencimiento_permiso en próximos 30 días)
+  const in30Days = new Date(today)
+  in30Days.setDate(in30Days.getDate() + 30)
+  const in30DaysISO = in30Days.toISOString().split('T')[0]
+
+  const { data: permisosVenciendo } = await supabase
+    .from('proyectos')
+    .select('*, clientes(*)')
+    .eq('estado', 'aprobado')
+    .not('fecha_vencimiento_permiso', 'is', null)
+    .gte('fecha_vencimiento_permiso', todayISO)
+    .lte('fecha_vencimiento_permiso', in30DaysISO)
+
+  if (permisosVenciendo) {
+    for (const p of permisosVenciendo) {
+      const clientEmail = (p.clientes as Record<string, unknown>)?.email as string | undefined
+      if (!clientEmail) continue
+      const diasRestantes = Math.ceil(
+        (new Date(p.fecha_vencimiento_permiso as string).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      )
+      const result = await sendDeadlineAlert({
+        to: clientEmail,
+        clienteNombre: ((p.clientes as Record<string, unknown>)?.nombre as string | undefined) ?? 'Cliente',
+        proyectoNombre: `Permiso ${(p.numero_permiso as string | null) ?? (p.nombre as string)}`,
+        municipio: (p.municipio as string | null) ?? '',
+        diasRestantes,
+        fechaEstimada: p.fecha_vencimiento_permiso as string,
+      })
+      if (result.success) results.deadlineAlerts++
+      else results.errors.push(`permiso vencimiento email for ${p.id as string}: ${result.error}`)
+    }
+  }
+
+  // 6. Alertas de renovación de patentes (solo en noviembre y diciembre)
+  const mesActual = today.getMonth() // 0-indexed; noviembre=10, diciembre=11
+  if (mesActual >= 10) {
+    const añoActual = today.getFullYear()
+    const { data: patentesPendientes } = await supabase
+      .from('proyectos')
+      .select('*, clientes(*)')
+      .eq('tipo', 'patente_comercial')
+      .eq('año_ejercicio', añoActual)
+      .not('estado', 'eq', 'borrador')
+
+    if (patentesPendientes && patentesPendientes.length > 0) {
+      // Verificar cuáles no tienen renovación (no hay hijo con año+1)
+      const { data: renovaciones } = await supabase
+        .from('proyectos')
+        .select('patente_anterior_id')
+        .eq('año_ejercicio', añoActual + 1)
+        .not('patente_anterior_id', 'is', null)
+
+      const renovadas = new Set((renovaciones ?? []).map((r) => r.patente_anterior_id as string))
+      const sinRenovar = patentesPendientes.filter((p) => !renovadas.has(p.id as string))
+
+      const adminEmail = process.env.ADMIN_EMAIL ?? 'estefania@epgestion.cl'
+      if (sinRenovar.length > 0) {
+        await sendDeadlineAlert({
+          to: adminEmail,
+          clienteNombre: 'Equipo EP Gestión',
+          proyectoNombre: `${sinRenovar.length} patente(s) sin renovar para ${añoActual + 1}`,
+          municipio: 'Múltiples municipios',
+          diasRestantes: 31 - today.getDate(),
+          fechaEstimada: `${añoActual}-12-31`,
+        })
       }
     }
   }
