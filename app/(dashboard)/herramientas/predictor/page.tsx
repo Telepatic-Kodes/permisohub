@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { AlertCircle, Calendar, Loader2, Target, TrendingDown, TrendingUp } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -46,7 +46,7 @@ const TIPOS_OBRA = [
   { value: 'recepcion_final', label: 'Recepción final' },
 ]
 
-export default function PredictorPage() {
+function PredictorPageInner() {
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<PredictResult | null>(null)
@@ -375,5 +375,13 @@ export default function PredictorPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function PredictorPage() {
+  return (
+    <Suspense>
+      <PredictorPageInner />
+    </Suspense>
   )
 }

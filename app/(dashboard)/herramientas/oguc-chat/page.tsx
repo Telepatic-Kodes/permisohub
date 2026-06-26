@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Send, Bot, User, AlertCircle, BookOpen, Loader2 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -28,7 +28,7 @@ interface UsageInfo {
   plan: string
 }
 
-export default function OgucChatPage() {
+function OgucChatPageInner() {
   const searchParams = useSearchParams()
   const municipioCtx = searchParams.get("municipio")
   const [messages, setMessages] = useState<Message[]>([])
@@ -260,5 +260,13 @@ export default function OgucChatPage() {
       </p>
       </div>
     </div>
+  )
+}
+
+export default function OgucChatPage() {
+  return (
+    <Suspense>
+      <OgucChatPageInner />
+    </Suspense>
   )
 }

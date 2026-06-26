@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, type FormEvent } from "react"
+import { useEffect, useState, Suspense, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react"
@@ -28,7 +28,7 @@ import type { SIIData } from "@/lib/sii-lookup"
 
 const TIPOS = Object.entries(TIPO_PERMISO_LABELS) as [TipoPermiso, string][]
 
-export default function NuevoProyectoPage() {
+function NuevoProyectoPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const clienteNombreParam = searchParams.get("cliente") ?? ""
@@ -379,5 +379,13 @@ export default function NuevoProyectoPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function NuevoProyectoPage() {
+  return (
+    <Suspense>
+      <NuevoProyectoPageInner />
+    </Suspense>
   )
 }

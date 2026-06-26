@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import {
   AlertCircle,
@@ -63,7 +63,7 @@ function getPuntajeColor(puntaje: number): string {
   return "#dc2626"
 }
 
-export default function AuditorPage() {
+function AuditorPageInner() {
   const searchParams = useSearchParams()
   const proyectoId = searchParams.get("proyectoId")
   const [files, setFiles] = useState<File[]>([])
@@ -402,5 +402,13 @@ export default function AuditorPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AuditorPage() {
+  return (
+    <Suspense>
+      <AuditorPageInner />
+    </Suspense>
   )
 }

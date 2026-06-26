@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import type { ReactNode } from "react"
 import { BookText, Download, Loader2 } from "lucide-react"
@@ -138,7 +138,7 @@ function MemoriaPreview({ text }: { text: string }) {
   return <div className="space-y-0">{nodes}</div>
 }
 
-export default function MemoriaDescriptivaPage() {
+function MemoriaDescriptivaPageInner() {
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [downloading, setDownloading] = useState(false)
@@ -605,5 +605,13 @@ export default function MemoriaDescriptivaPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function MemoriaDescriptivaPage() {
+  return (
+    <Suspense>
+      <MemoriaDescriptivaPageInner />
+    </Suspense>
   )
 }
