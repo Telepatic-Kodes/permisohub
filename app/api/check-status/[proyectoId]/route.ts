@@ -1,6 +1,6 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 import { sendEstadoChangeAlert } from '@/lib/email'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,26 +10,21 @@ export async function GET(
 ) {
   const { proyectoId } = await params
 
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cs) =>
-          cs.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          ),
-      },
-    }
-  )
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return Response.json({ error: 'No autenticado' }, { status: 401 })
+  }
 
-  // Get project with client
+  const rateLimit = await checkRateLimit(`general:${user.id}`)
+  if (rateLimit) return rateLimit
+
+  // Get project — RLS + explicit user_id filter for defense-in-depth
   const { data: proyecto, error: fetchError } = await supabase
     .from('proyectos')
     .select('*, clientes(*)')
     .eq('id', proyectoId)
+    .eq('user_id', user.id)
     .single()
 
   if (fetchError || !proyecto) {

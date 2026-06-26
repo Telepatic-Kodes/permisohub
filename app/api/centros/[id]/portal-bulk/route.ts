@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { MOCK_LOCALES } from '@/lib/mock-data'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +30,9 @@ export async function POST(
       if (process.env.NODE_ENV !== 'production') throw new Error('dev-no-auth')
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     // Fetch locales for this centro (filtered by localIds if provided)
     let query = supabase

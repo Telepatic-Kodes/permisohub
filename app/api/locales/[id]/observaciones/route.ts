@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +33,9 @@ export async function GET(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('dev-no-auth')
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit as unknown as NextResponse
+
     const { data, error } = await supabase
       .from('observaciones_local')
       .select('*')
@@ -59,6 +63,9 @@ export async function POST(
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('dev-no-auth')
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit as unknown as NextResponse
 
     const { data, error } = await supabase
       .from('observaciones_local')

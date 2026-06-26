@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
+  BarChart2,
   BookMarked,
   Building2,
   Calculator,
@@ -101,12 +102,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [perfil, setPerfil] = useState<{ nombre?: string; especialidad?: string } | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     fetch('/api/configuracion/perfil')
       .then((r) => r.json())
-      .then((d: { perfil?: { nombre?: string; especialidad?: string } }) => {
+      .then((d: { perfil?: { nombre?: string; especialidad?: string }; is_admin?: boolean }) => {
         if (d.perfil) setPerfil(d.perfil)
+        if (d.is_admin) setIsAdmin(true)
       })
       .catch(() => undefined)
   }, [])
@@ -223,6 +226,30 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             })}
           </div>
         ))}
+
+        {isAdmin && (
+          <div className="mt-1">
+            {!collapsed && <div className="my-1.5 mx-2 h-px bg-white/10" />}
+            {collapsed && <div className="my-1.5 mx-2 h-px bg-white/10" />}
+            <Link
+              href="/admin"
+              title={collapsed ? "Admin" : undefined}
+              className={cn(
+                "relative flex items-center gap-2.5 overflow-hidden rounded-lg px-2.5 py-[7px] text-sm transition-all duration-150",
+                collapsed ? "justify-center px-0 py-2" : "",
+                pathname.startsWith("/admin")
+                  ? "bg-white/15 text-white font-medium shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]"
+                  : "text-white/40 hover:bg-white/8 hover:text-white/90"
+              )}
+            >
+              {pathname.startsWith("/admin") && !collapsed && (
+                <span className="absolute inset-y-1.5 left-0 w-[2.5px] rounded-r-full bg-[oklch(0.78_0.16_78)]" />
+              )}
+              <BarChart2 className={cn("size-4 shrink-0", pathname.startsWith("/admin") ? "text-white" : "text-white/40", collapsed && "mx-auto")} />
+              {!collapsed && <span className="truncate">Admin</span>}
+            </Link>
+          </div>
+        )}
       </nav>
 
       {/* User */}

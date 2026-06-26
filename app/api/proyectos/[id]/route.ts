@@ -5,6 +5,8 @@ import {
   MOCK_COMUNICACIONES,
   MOCK_DOCUMENTOS,
 } from '@/lib/mock-data'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -107,6 +109,9 @@ export async function PATCH(
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const updates: Record<string, unknown> = {}
     const fields = [
       'nombre', 'estado', 'municipio', 'tipo', 'direccion', 'numero_expediente',
@@ -130,14 +135,14 @@ export async function PATCH(
       .eq('user_id', user.id)
 
     if (error && process.env.NODE_ENV === 'production') {
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
-  } catch {
+  } catch (err) {
     if (process.env.NODE_ENV !== 'production') {
       return Response.json({ ok: true, simulated: true })
     }
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }

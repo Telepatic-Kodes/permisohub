@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,6 +59,12 @@ export async function GET(
 
   try {
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit as unknown as NextResponse
+
     const { data, error } = await supabase
       .from('especialidades_local')
       .select('*')
@@ -96,6 +103,12 @@ export async function PUT(
 
   try {
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit as unknown as NextResponse
+
     const { error } = await supabase.from('especialidades_local').upsert(
       {
         local_id: id,

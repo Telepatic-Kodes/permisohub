@@ -2,6 +2,9 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { MOCK_PROYECTOS } from '@/lib/mock-data'
+import { NuevoProyectoSchema } from '@/lib/schemas'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +14,12 @@ export async function GET(request: Request) {
 
   try {
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     let query = supabase
       .from('proyectos')
       .select('*, cliente:clientes(*)')
@@ -34,11 +43,7 @@ export async function GET(request: Request) {
   }
 }
 
-interface NuevoProyectoBody {
-  nombre: string
-  cliente_id: string
-  municipio: string
-  tipo: string
+interface NuevoProyectoExtra {
   direccion: string
   numero_expediente?: string
   fecha_inicio: string
@@ -47,9 +52,17 @@ interface NuevoProyectoBody {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json() as NuevoProyectoBody
+  const raw = await request.json()
+  const parsed = NuevoProyectoSchema.safeParse(raw)
+  if (!parsed.success) {
+    return Response.json({ error: 'Datos inválidos', issues: parsed.error.issues }, { status: 400 })
+  }
 
-  const required = ['nombre', 'cliente_id', 'municipio', 'tipo', 'direccion', 'fecha_inicio'] as const
+  // Merge Zod-validated core fields with the extra fields present in the raw body
+  const extra = raw as NuevoProyectoExtra
+  const body = { ...parsed.data, ...extra }
+
+  const required = ['direccion', 'fecha_inicio'] as const
   for (const field of required) {
     if (!body[field]) {
       return Response.json({ error: `Campo requerido: ${field}` }, { status: 400 })
@@ -58,6 +71,11 @@ export async function POST(request: Request) {
 
   try {
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     const { data: proyecto, error } = await supabase
       .from('proyectos')
@@ -83,7 +101,7 @@ export async function POST(request: Request) {
         const mockId = `p${Date.now()}`
         return Response.json({ ok: true, id: mockId, simulated: true, warning: error.message })
       }
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error al crear proyecto', 500, error)
     }
 
     if (body.tipo === 'patente_comercial' && proyecto?.id && body.numero_expediente) {
@@ -130,7 +148,6 @@ export async function POST(request: Request) {
       const mockId = `p${Date.now()}`
       return Response.json({ ok: true, id: mockId, simulated: true })
     }
-    const msg = err instanceof Error ? err.message : 'Error desconocido'
-    return Response.json({ error: msg }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }

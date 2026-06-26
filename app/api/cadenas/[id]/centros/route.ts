@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { MOCK_CENTROS } from '@/lib/mock-data'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +15,9 @@ export async function GET(
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     const { data, error } = await supabase
       .from('centros_comerciales')
@@ -56,6 +61,9 @@ export async function POST(
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const { data, error } = await supabase.from('centros_comerciales').insert({
       cadena_id: id,
       nombre: body.nombre,
@@ -71,7 +79,7 @@ export async function POST(
       if (process.env.NODE_ENV !== 'production') {
         return Response.json({ ok: true, id: `cc${Date.now()}`, simulated: true })
       }
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true, id: data.id, centro: data })

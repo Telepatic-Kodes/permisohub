@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { MOCK_PROSPECTOS } from '@/lib/mock-data'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,6 +57,9 @@ export async function POST(request: Request) {
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const { data: prospecto, error } = await supabase
       .from('prospectos')
       .insert({
@@ -84,7 +89,7 @@ export async function POST(request: Request) {
           warning: error.message,
         })
       }
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error al crear prospecto', 500, error)
     }
 
     return Response.json({ ok: true, id: prospecto.id, prospecto })
@@ -92,7 +97,6 @@ export async function POST(request: Request) {
     if (process.env.NODE_ENV !== 'production') {
       return Response.json({ ok: true, id: `pr${Date.now()}`, simulated: true })
     }
-    const msg = err instanceof Error ? err.message : 'Error desconocido'
-    return Response.json({ error: msg }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }

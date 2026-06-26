@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,6 +21,9 @@ export async function POST(request: Request) {
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     // Upsert invite in workspace_invites with the generated token
     const { error } = await supabase.from('workspace_invites').insert({
       token,
@@ -33,12 +38,12 @@ export async function POST(request: Request) {
     })
 
     if (error && process.env.NODE_ENV === 'production') {
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error al generar token', 500, error)
     }
-  } catch {
+  } catch (err) {
     // Dev without DB: fall through to return mock token
     if (process.env.NODE_ENV === 'production') {
-      return Response.json({ error: 'Error al generar token' }, { status: 500 })
+      return apiError('Error al generar token', 500, err)
     }
   }
 

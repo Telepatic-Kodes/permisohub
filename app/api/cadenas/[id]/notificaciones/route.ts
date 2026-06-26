@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { MOCK_CENTROS, MOCK_LOCALES, MOCK_PROYECTOS } from '@/lib/mock-data'
 import { Resend } from 'resend'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +26,9 @@ export async function POST(
       if (process.env.NODE_ENV !== 'production') throw new Error('dev-no-auth')
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     // Fetch locales with tenant_email for this cadena via centros
     const { data: centrosData, error: centrosError } = await supabase
@@ -130,7 +135,6 @@ Equipo PermisoHub`
 
     return Response.json({ ok: true, enviados, sin_email: sinEmail, errors })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
     if (process.env.NODE_ENV !== 'production') {
       // Dev fallback: simulate using mock data
       const centros = MOCK_CENTROS.filter((c) => c.cadena_id === id)
@@ -167,6 +171,6 @@ Equipo PermisoHub`
         simulated: true,
       })
     }
-    return Response.json({ error: msg || 'Error al enviar notificaciones' }, { status: 500 })
+    return apiError('Error al enviar notificaciones', 500, err)
   }
 }

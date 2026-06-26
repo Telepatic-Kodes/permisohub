@@ -1,4 +1,7 @@
 import { isAIAvailable, aiComplete } from '@/lib/ai'
+import { aiAuthGuard } from '@/lib/ai-guard'
+import { recordUsage } from '@/lib/usage'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +19,12 @@ interface DeclaracionRequest {
 }
 
 export async function POST(request: Request) {
+  const auth = await aiAuthGuard()
+  if (auth instanceof Response) return auth
+
+  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
+  if (rateLimit) return rateLimit
+
   const body = await request.json() as DeclaracionRequest
 
   if (!isAIAvailable()) {
@@ -54,6 +63,7 @@ El documento debe ser formal, en primera persona para el propietario, citar corr
       [{ role: 'user', content: prompt }],
       { max_tokens: 1500 }
     )
+    recordUsage(auth.userId, 'ai_chats').catch(console.error)
     return Response.json({ ok: true, texto, source: 'ai' })
   } catch {
     return Response.json({ ok: false, error: 'Error al generar declaración' }, { status: 500 })

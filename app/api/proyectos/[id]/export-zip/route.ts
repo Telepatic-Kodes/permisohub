@@ -1,7 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
 import JSZip from 'jszip'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
+
+// SSRF guard: only allow fetching from the project's own Supabase Storage bucket.
+// This prevents a malicious document URL (e.g. injected via a compromised Supabase row)
+// from being used to make the server fetch arbitrary internal or external hosts.
+const SUPABASE_STORAGE_HOST = new URL(
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
+).hostname
+
+function isAllowedStorageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return parsed.hostname === SUPABASE_STORAGE_HOST
+  } catch {
+    return false
+  }
+}
 
 // DOM file naming convention: DOC_NNN_nombre-descriptivo.ext
 function sanitize(str: string) {
@@ -26,6 +43,9 @@ export async function GET(
     if (authError || !user) {
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     // Fetch proyecto + documentos
     const [proyectoRes, docsRes] = await Promise.all([
@@ -57,6 +77,11 @@ export async function GET(
           const ext = doc.url.split('.').pop() ?? 'pdf'
           const filename = `DOC_${String(idx + 1).padStart(3, '0')}_${sanitize(doc.tipo)}.${ext}`
           try {
+            // SSRF guard: reject URLs that don't point to our Supabase Storage bucket
+            if (!isAllowedStorageUrl(doc.url)) {
+              folder.file(filename.replace(`.${ext}`, '.error.txt'), `URL no permitida: ${doc.nombre}`)
+              return
+            }
             const res = await fetch(doc.url)
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const buffer = await res.arrayBuffer()

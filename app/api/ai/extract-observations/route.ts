@@ -4,6 +4,7 @@ import { getUserPlan } from '@/lib/subscription'
 import { getLimits, isWithinLimit } from '@/lib/plan-limits'
 import { getUsageThisMonth, recordUsage } from '@/lib/usage'
 import type { PlanId } from '@/lib/stripe'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,33 +13,28 @@ export async function POST(request: Request) {
     return Response.json({ error: 'OPENAI_API_KEY no configurado' }, { status: 503 })
   }
 
-  // Feature gating: enforce per-plan monthly PDF extraction limits.
-  // In development we always treat the user as 'pro' and skip the usage
-  // check so local development is never blocked.
-  const isDev = process.env.NODE_ENV === 'development'
-  let userId: string | null = null
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (!isDev) {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+  if (!user) {
+    return Response.json({ error: 'No autenticado' }, { status: 401 })
+  }
+  const userId = user.id
 
-    if (!user) {
-      return Response.json({ error: 'No autenticado' }, { status: 401 })
-    }
-    userId = user.id
+  const rateLimit = await checkRateLimit(`ai:${userId}`)
+  if (rateLimit) return rateLimit
 
-    const userPlan: PlanId = await getUserPlan(user.id)
-    const limits = getLimits(userPlan)
-    const usage = await getUsageThisMonth(user.id, 'pdf_extractions')
+  const userPlan: PlanId = await getUserPlan(user.id)
+  const limits = getLimits(userPlan)
+  const usage = await getUsageThisMonth(user.id, 'pdf_extractions')
 
-    if (!isWithinLimit(usage, limits.pdfExtractionsPerMonth)) {
-      return Response.json(
-        { error: 'LIMIT_EXCEEDED', metric: 'pdf_extractions', plan: userPlan },
-        { status: 402 },
-      )
-    }
+  if (!isWithinLimit(usage, limits.pdfExtractionsPerMonth)) {
+    return Response.json(
+      { error: 'LIMIT_EXCEEDED', metric: 'pdf_extractions', plan: userPlan },
+      { status: 402 },
+    )
   }
 
   let pdfBase64: string
@@ -111,9 +107,7 @@ Si el documento no contiene observaciones (ya fue aprobado o es otro tipo de doc
     }
 
     // Register a successful extraction against the user's monthly quota.
-    if (userId) {
-      await recordUsage(userId, 'pdf_extractions')
-    }
+    await recordUsage(userId, 'pdf_extractions')
 
     return Response.json({
       ok: true,

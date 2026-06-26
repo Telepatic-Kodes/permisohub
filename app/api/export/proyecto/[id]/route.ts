@@ -1,5 +1,7 @@
 import PDFDocument from 'pdfkit'
 import { NextRequest } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { MOCK_PROYECTOS, MOCK_CLIENTES, MOCK_DOCUMENTOS, MOCK_ETAPAS } from '@/lib/mock-data'
 import { TIPO_PERMISO_LABELS, ESTADO_CONFIG } from '@/types'
 
@@ -10,6 +12,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+  const rateLimit = await checkRateLimit(`general:${user.id}`)
+  if (rateLimit) return rateLimit
+
   const proyecto = MOCK_PROYECTOS.find((p) => p.id === id) ?? MOCK_PROYECTOS[0]
   const cliente = MOCK_CLIENTES.find((c) => c.id === proyecto.cliente_id)
   const estadoCfg = ESTADO_CONFIG[proyecto.estado]

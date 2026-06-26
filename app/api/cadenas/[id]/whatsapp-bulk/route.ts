@@ -1,6 +1,7 @@
 import { enviarWhatsApp, isWhatsAppAvailable } from '@/lib/whatsapp'
 import { MOCK_LOCALES, MOCK_CENTROS } from '@/lib/mock-data'
 import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,6 +63,9 @@ export async function POST(
       error: authError,
     } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('dev-no-auth')
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     type LocalRow = {
       id: string

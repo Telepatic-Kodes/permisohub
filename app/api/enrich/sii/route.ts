@@ -1,4 +1,6 @@
 import { fetchWithTimeout, extractBetween, stripTags } from '@/lib/scraper'
+import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +15,13 @@ interface SIIData {
 }
 
 export async function POST(request: Request) {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+  const rateLimit = await checkRateLimit(`general:${user.id}`)
+  if (rateLimit) return rateLimit
+
   const body = (await request.json().catch(() => ({}))) as Record<
     string,
     string

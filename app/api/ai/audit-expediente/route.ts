@@ -1,5 +1,8 @@
 import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
+import { aiAuthGuard } from '@/lib/ai-guard'
+import { recordUsage } from '@/lib/usage'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,6 +34,12 @@ interface ClaudeAuditPayload {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const auth = await aiAuthGuard()
+  if (auth instanceof Response) return auth
+
+  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
+  if (rateLimit) return rateLimit
+
   if (!isAIAvailable()) {
     return Response.json({ error: 'OPENAI_API_KEY no configurado' }, { status: 503 })
   }
@@ -121,6 +130,7 @@ Responde SOLO con JSON válido (sin markdown, sin texto adicional):
       resumen: parsed.resumen ?? '',
     }
 
+    recordUsage(auth.userId, 'ai_chats').catch(console.error)
     return Response.json(result)
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error desconocido'

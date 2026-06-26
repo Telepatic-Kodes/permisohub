@@ -2,6 +2,7 @@ import { aiComplete, isAIAvailable } from '@/lib/ai'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
 import { MOCK_CADENAS, MOCK_CENTROS, MOCK_LOCALES } from '@/lib/mock-data'
 import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,8 @@ export async function POST(
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('dev-no-auth')
     userId = user.id
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
   } catch {
     userId = null
   }

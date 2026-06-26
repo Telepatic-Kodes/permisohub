@@ -1,4 +1,7 @@
 import { isAIAvailable, aiComplete } from '@/lib/ai'
+import { aiAuthGuard } from '@/lib/ai-guard'
+import { recordUsage } from '@/lib/usage'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,6 +53,12 @@ const USO_LABELS: Record<string, string> = {
 }
 
 export async function POST(request: Request) {
+  const auth = await aiAuthGuard()
+  if (auth instanceof Response) return auth
+
+  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
+  if (rateLimit) return rateLimit
+
   const body = (await request.json()) as MemoriaRequest
 
   if (!isAIAvailable()) {
@@ -103,6 +112,7 @@ Usa formato formal con mayúsculas para títulos de sección. Sé técnico y pre
       .map((line) => line.trim())
       .filter((line) => line.length > 3 && line === line.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(line))
 
+    recordUsage(auth.userId, 'ai_chats').catch(console.error)
     return Response.json({ ok: true, memoria, secciones })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error desconocido'

@@ -3,6 +3,9 @@ export const maxDuration = 90
 
 import { createClient } from '@/lib/supabase/server'
 import { isAIAvailable, aiComplete } from '@/lib/ai'
+import { aiAuthGuard } from '@/lib/ai-guard'
+import { recordUsage } from '@/lib/usage'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
 import { ESTADISTICAS_MUNICIPIOS } from '@/lib/municipios-stats'
 import { getInteligenciaMunicipio } from '@/lib/inteligencia-dom'
@@ -148,6 +151,12 @@ Responde SOLO con JSON válido:
 }
 
 export async function POST(request: Request) {
+  const auth = await aiAuthGuard()
+  if (auth instanceof Response) return auth
+
+  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
+  if (rateLimit) return rateLimit
+
   if (!isAIAvailable()) {
     return Response.json({ error: 'OpenAI no configurado' }, { status: 503 })
   }
@@ -286,6 +295,7 @@ export async function POST(request: Request) {
       derechosAdvertencias: derechos.advertencias,
     }
 
+    recordUsage(auth.userId, 'ai_chats').catch(console.error)
     return Response.json({ ok: true, oguc, observaciones, checklist, estimacion })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error desconocido'

@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { calcularEstadoBoleta } from '@/lib/boletas'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { BoletaServicio } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +15,11 @@ export async function GET(request: Request) {
 
   try {
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     let query = supabase
       .from('boletas_servicios')
@@ -49,8 +56,7 @@ export async function GET(request: Request) {
     if (process.env.NODE_ENV !== 'production') {
       return Response.json({ data: MOCK_BOLETAS })
     }
-    const msg = err instanceof Error ? err.message : 'Error desconocido'
-    return Response.json({ error: msg }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }
 
@@ -79,6 +85,11 @@ export async function POST(request: Request) {
 
   try {
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     const { data: boleta, error } = await supabase
       .from('boletas_servicios')
@@ -106,7 +117,7 @@ export async function POST(request: Request) {
       if (process.env.NODE_ENV !== 'production') {
         return Response.json({ ok: true, id: `b${Date.now()}`, simulated: true, warning: error.message })
       }
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true, id: boleta.id, boleta })
@@ -114,8 +125,7 @@ export async function POST(request: Request) {
     if (process.env.NODE_ENV !== 'production') {
       return Response.json({ ok: true, id: `b${Date.now()}`, simulated: true })
     }
-    const msg = err instanceof Error ? err.message : 'Error desconocido'
-    return Response.json({ error: msg }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }
 

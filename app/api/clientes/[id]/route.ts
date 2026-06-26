@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +51,9 @@ export async function PATCH(
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const updates: Record<string, unknown> = {}
     const fields = ['nombre', 'email', 'telefono', 'rut', 'direccion', 'notas'] as const
     for (const f of fields) {
@@ -66,7 +71,7 @@ export async function PATCH(
       .eq('user_id', user.id)
 
     if (error && process.env.NODE_ENV === 'production') {
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
@@ -91,6 +96,9 @@ export async function DELETE(
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const { error } = await supabase
       .from('clientes')
       .delete()
@@ -98,7 +106,7 @@ export async function DELETE(
       .eq('user_id', user.id)
 
     if (error && process.env.NODE_ENV === 'production') {
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })

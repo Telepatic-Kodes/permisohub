@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { MOCK_PROSPECTOS } from '@/lib/mock-data'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,6 +56,9 @@ export async function PATCH(
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     // Insert activity log if provided
     if (body.actividad) {
       const { error: actError } = await supabase.from('actividades_crm').insert({
@@ -65,7 +70,7 @@ export async function PATCH(
         user_id: user.id,
       })
       if (actError && process.env.NODE_ENV === 'production') {
-        return Response.json({ error: actError.message }, { status: 500 })
+        return apiError('Error interno', 500, actError)
       }
     }
 
@@ -83,7 +88,7 @@ export async function PATCH(
         .eq('user_id', user.id)
 
       if (updateError && process.env.NODE_ENV === 'production') {
-        return Response.json({ error: updateError.message }, { status: 500 })
+        return apiError('Error interno', 500, updateError)
       }
     }
 

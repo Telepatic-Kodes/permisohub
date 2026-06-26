@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +12,9 @@ export async function GET() {
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const { data, error } = await supabase
       .from('profiles')
       .select('nombre, especialidad, municipio_principal, email_notificaciones')
@@ -18,7 +23,7 @@ export async function GET() {
 
     if (error) throw error
 
-    return Response.json({ perfil: data ?? {}, email: user.email })
+    return Response.json({ perfil: data ?? {}, email: user.email, is_admin: user.email === process.env.ADMIN_EMAIL })
   } catch {
     if (process.env.NODE_ENV !== 'production') {
       return Response.json({ perfil: null, email: null, source: 'mock' })
@@ -41,6 +46,9 @@ export async function PATCH(request: Request) {
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const updates: Record<string, unknown> = {}
     if (body.nombre !== undefined) updates.nombre = body.nombre
     if (body.especialidad !== undefined) updates.especialidad = body.especialidad
@@ -51,7 +59,7 @@ export async function PATCH(request: Request) {
       .upsert({ id: user.id, ...updates }, { onConflict: 'id' })
 
     if (error && process.env.NODE_ENV === 'production') {
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })

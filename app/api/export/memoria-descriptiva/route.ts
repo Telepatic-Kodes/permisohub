@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,6 +11,13 @@ interface MemoriaPDFRequest {
 }
 
 export async function POST(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+  const rateLimit = await checkRateLimit(`general:${user.id}`)
+  if (rateLimit) return rateLimit
+
   const body = (await req.json()) as MemoriaPDFRequest
   const {
     memoria,

@@ -1,6 +1,9 @@
 export const dynamic = 'force-dynamic'
 
 import { createClient } from '@/lib/supabase/server'
+import { aiAuthGuard } from '@/lib/ai-guard'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 interface ToggleBody {
   estado: 'pendiente' | 'ok'
@@ -10,6 +13,12 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
+  const auth = await aiAuthGuard()
+  if (auth instanceof Response) return auth
+
+  const rateLimit = await checkRateLimit(`general:${auth.userId}`)
+  if (rateLimit) return rateLimit
+
   const { itemId } = await params
   const body = await request.json() as ToggleBody
 
@@ -27,7 +36,7 @@ export async function PATCH(
     .single()
 
   if (error) {
-    return Response.json({ error: error.message }, { status: 500 })
+    return apiError('Error interno', 500, error)
   }
 
   return Response.json({ ok: true, item: data })

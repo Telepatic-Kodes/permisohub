@@ -1,10 +1,8 @@
 import { getAI, AI_MODEL, isAIAvailable } from '@/lib/ai'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
-import { createClient } from '@/lib/supabase/server'
-import { getUserPlan } from '@/lib/subscription'
-import { getLimits, isWithinLimit } from '@/lib/plan-limits'
-import { getUsageThisMonth, recordUsage } from '@/lib/usage'
-import type { PlanId } from '@/lib/stripe'
+import { recordUsage } from '@/lib/usage'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { aiAuthGuard } from '@/lib/ai-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,31 +37,11 @@ export async function POST(request: Request) {
 
   const ai = getAI()!
 
-  const isDev = process.env.NODE_ENV === 'development'
-  let userId: string | null = null
+  const auth = await aiAuthGuard()
+  if (auth instanceof Response) return auth
 
-  if (!isDev) {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return Response.json({ error: 'No autenticado' }, { status: 401 })
-    }
-    userId = user.id
-
-    const userPlan: PlanId = await getUserPlan(user.id)
-    const limits = getLimits(userPlan)
-    const usage = await getUsageThisMonth(user.id, 'ai_chats')
-
-    if (!isWithinLimit(usage, limits.aiChatsPerMonth)) {
-      return Response.json(
-        { error: 'LIMIT_EXCEEDED', metric: 'ai_chats', plan: userPlan },
-        { status: 402 }
-      )
-    }
-  }
+  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
+  if (rateLimit) return rateLimit
 
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content ?? ''
   const ogucContext = getContextoOGUC(lastUserMsg)
@@ -109,9 +87,7 @@ ${ogucContext}`
     },
   })
 
-  if (userId) {
-    await recordUsage(userId, 'ai_chats')
-  }
+  await recordUsage(auth.userId, 'ai_chats')
 
   return new Response(stream, {
     headers: {

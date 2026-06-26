@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { MOCK_CADENAS, MOCK_CENTROS, MOCK_LOCALES } from '@/lib/mock-data'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export interface AlertaItem {
   id: string
@@ -91,6 +92,9 @@ export async function GET() {
       if (process.env.NODE_ENV !== 'production') throw new Error('dev-no-auth')
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)

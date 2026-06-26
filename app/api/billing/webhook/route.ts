@@ -14,20 +14,15 @@ import {
 export const dynamic = "force-dynamic"
 
 /**
- * Admin Supabase client (service role).
- *
- * The webhook has no user session, so it uses the service role key to write to
- * the `subscriptions` table. Falls back to the anon key only if the service
- * role key is absent (RLS policy `Service role manages subscriptions` allows
- * the service role to bypass row-level checks).
+ * Admin Supabase client (service role only — no fallback to anon key).
+ * The webhook has no user session, so it requires the service role key to
+ * bypass RLS and write to the `subscriptions` table.
  */
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) {
-    throw new Error("Supabase admin credentials not set")
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for webhook processing")
   }
   return createServiceClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },

@@ -1,5 +1,8 @@
 import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
+import { aiAuthGuard } from '@/lib/ai-guard'
+import { recordUsage } from '@/lib/usage'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +17,12 @@ interface ObservationRequest {
 }
 
 export async function POST(request: Request) {
+  const auth = await aiAuthGuard()
+  if (auth instanceof Response) return auth
+
+  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
+  if (rateLimit) return rateLimit
+
   const body = await request.json() as ObservationRequest
 
   if (!isAIAvailable()) {
@@ -52,6 +61,7 @@ Si la observación de la DOM parece incorrecta o aplicó mal la norma, indícalo
   try {
     const texto = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 2000 })
 
+    recordUsage(auth.userId, 'ai_chats').catch(console.error)
     return Response.json({
       ok: true,
       respuesta: texto,

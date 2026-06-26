@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { EstadoExpediente } from '@/types'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,6 +43,9 @@ export async function GET(
       if (process.env.NODE_ENV !== 'production') throw new Error('dev-no-auth')
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     // Fetch local info
     const { data: localData, error: localError } = await supabase

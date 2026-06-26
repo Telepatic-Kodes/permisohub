@@ -1,5 +1,5 @@
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createClient } from "@/lib/supabase/server"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 // Tamaño máximo permitido por archivo: 50MB.
 const MAX_FILE_SIZE = 50 * 1024 * 1024
@@ -37,6 +37,27 @@ export async function POST(request: Request) {
     )
   }
 
+  // Verify authentication and project ownership before touching storage
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return Response.json({ error: "No autenticado." }, { status: 401 })
+  }
+
+  const rateLimit = await checkRateLimit(`general:${user.id}`)
+  if (rateLimit) return rateLimit
+
+  const { data: proyecto } = await supabase
+    .from("proyectos")
+    .select("id")
+    .eq("id", proyectoId)
+    .eq("user_id", user.id)
+    .single()
+
+  if (!proyecto) {
+    return Response.json({ error: "Proyecto no encontrado." }, { status: 403 })
+  }
+
   // 2. Validaciones de archivo: tamaño y extensión.
   if (file.size === 0) {
     return Response.json({ error: "El archivo está vacío." }, { status: 400 })
@@ -63,28 +84,7 @@ export async function POST(request: Request) {
     )
   }
 
-  // 3. Create Supabase server client
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) =>
-          cookiesToSet.forEach(({ name, value, options }) => {
-            try {
-              cookieStore.set(name, value, options)
-            } catch {
-              // setAll llamado desde un contexto de solo lectura; lo refresca
-              // el middleware.
-            }
-          }),
-      },
-    },
-  )
-
-  // 4. Upload to Supabase Storage
+  // 3. Upload to Supabase Storage (reuse authenticated client from above)
   const safeName = file.name.replace(/\s+/g, "-")
   const fileName = `${proyectoId}/${Date.now()}-${safeName}`
   const arrayBuffer = await file.arrayBuffer()

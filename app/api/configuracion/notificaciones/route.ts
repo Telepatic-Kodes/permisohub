@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,6 +24,9 @@ export async function PATCH(request: Request) {
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const updates: Record<string, unknown> = {}
     if (body.observaciones_dom !== undefined) updates.notif_observaciones_dom = body.observaciones_dom
     if (body.vencimiento_plazo !== undefined) updates.notif_vencimiento_plazo = body.vencimiento_plazo
@@ -36,7 +41,7 @@ export async function PATCH(request: Request) {
       .upsert({ id: user.id, ...updates }, { onConflict: 'id' })
 
     if (error && process.env.NODE_ENV === 'production') {
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })

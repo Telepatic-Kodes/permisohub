@@ -1,6 +1,9 @@
 import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
 import { ESTADISTICAS_MUNICIPIOS } from '@/lib/municipios-stats'
+import { aiAuthGuard } from '@/lib/ai-guard'
+import { recordUsage } from '@/lib/usage'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,6 +43,12 @@ interface PredictResult {
 }
 
 export async function POST(request: Request) {
+  const auth = await aiAuthGuard()
+  if (auth instanceof Response) return auth
+
+  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
+  if (rateLimit) return rateLimit
+
   const body = await request.json() as PredictRequest
 
   if (!isAIAvailable()) {
@@ -138,6 +147,7 @@ Ordena predicciones de mayor a menor probabilidad. Máximo 6 predicciones. Sé e
       resumen: text,
     }
 
+    recordUsage(auth.userId, 'ai_chats').catch(console.error)
     return Response.json({ ok: true, ...parsed })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error desconocido'

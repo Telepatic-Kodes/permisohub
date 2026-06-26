@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +26,9 @@ export async function POST(
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const { error } = await supabase.from('comunicaciones').insert({
       proyecto_id: id,
       tipo: body.tipo,
@@ -34,14 +39,14 @@ export async function POST(
     })
 
     if (error && process.env.NODE_ENV === 'production') {
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
-  } catch {
+  } catch (err) {
     if (process.env.NODE_ENV !== 'production') {
       return Response.json({ ok: true, simulated: true })
     }
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }

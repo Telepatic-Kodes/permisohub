@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUsageThisMonth, type UsageMetric } from '@/lib/usage'
 import { getUserPlan } from '@/lib/subscription'
 import { getLimits } from '@/lib/plan-limits'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -18,6 +19,9 @@ export async function GET(req: Request) {
   if (!user) {
     return NextResponse.json({ error: 'no autenticado' }, { status: 401 })
   }
+
+  const rateLimit = await checkRateLimit(`general:${user.id}`)
+  if (rateLimit) return rateLimit
 
   const [plan, used] = await Promise.all([
     getUserPlan(user.id),

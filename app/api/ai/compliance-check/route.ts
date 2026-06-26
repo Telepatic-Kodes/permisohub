@@ -1,5 +1,8 @@
 import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { ARTICULOS_OGUC } from '@/lib/oguc-knowledge'
+import { aiAuthGuard } from '@/lib/ai-guard'
+import { recordUsage } from '@/lib/usage'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +23,12 @@ interface ComplianceRequest {
 }
 
 export async function POST(request: Request) {
+  const auth = await aiAuthGuard()
+  if (auth instanceof Response) return auth
+
+  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
+  if (rateLimit) return rateLimit
+
   const body = await request.json() as ComplianceRequest
 
   if (!isAIAvailable()) {
@@ -87,6 +96,7 @@ Si no tienes datos suficientes para verificar algo, ponlo como "VERIFICAR" con i
       recomendaciones: string[]
     } : { riesgoGeneral: 'VERIFICAR', resumen: text, checks: [], recomendaciones: [] }
 
+    recordUsage(auth.userId, 'ai_chats').catch(console.error)
     return Response.json({ ok: true, ...result })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error desconocido'

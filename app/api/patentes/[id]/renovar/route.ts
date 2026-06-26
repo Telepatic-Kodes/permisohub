@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { MOCK_PROYECTOS } from '@/lib/mock-data'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { Proyecto } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -65,6 +66,9 @@ export async function POST(
     if (authError || !user) {
       return Response.json({ ok: false, error: 'No autenticado' }, { status: 401 })
     }
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     const { data, error: fetchError } = await supabase
       .from('proyectos')

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { calcularEstadoBoleta, calcularCumplimientoPct } from '@/lib/boletas'
 import type { EstadoBoleta, ResumenCumplimientoBoletas } from '@/types'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +14,11 @@ export async function GET(
 
   try {
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     // Obtener locales de la cadena con sus centros
     const { data: locales, error: localesError } = await supabase
@@ -74,8 +81,7 @@ export async function GET(
     if (process.env.NODE_ENV !== 'production') {
       return Response.json({ data: MOCK_RESUMEN })
     }
-    const msg = err instanceof Error ? err.message : 'Error desconocido'
-    return Response.json({ error: msg }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }
 

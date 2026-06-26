@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { MOCK_LOCALES, MOCK_CENTROS, MOCK_CADENAS } from '@/lib/mock-data'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,6 +45,9 @@ export async function GET(
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('dev-no-auth')
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     const { data: localData, error: localError } = await supabase
       .from('locales')
@@ -160,6 +164,9 @@ export async function POST(
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('dev-no-auth')
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
 
     const resultado = calcularResultado(body.items)
 

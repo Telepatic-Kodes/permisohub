@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,6 +53,9 @@ export async function POST(
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const { data, error } = await supabase.from('observaciones_dom').insert({
       proyecto_id: id,
       user_id: user.id,
@@ -61,15 +66,15 @@ export async function POST(
     }).select('id').single()
 
     if (error && process.env.NODE_ENV === 'production') {
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true, id: data?.id ?? `obs-${Date.now()}` })
-  } catch {
+  } catch (err) {
     if (process.env.NODE_ENV !== 'production') {
       return Response.json({ ok: true, id: `obs-${Date.now()}`, simulated: true })
     }
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }
 
@@ -91,6 +96,9 @@ export async function PATCH(
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const updates: Record<string, unknown> = {}
     if (body.estado) updates.estado = body.estado
     if (body.respuesta !== undefined) updates.respuesta = body.respuesta
@@ -103,14 +111,14 @@ export async function PATCH(
       .eq('user_id', user.id)
 
     if (error && process.env.NODE_ENV === 'production') {
-      return Response.json({ error: error.message }, { status: 500 })
+      return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
-  } catch {
+  } catch (err) {
     if (process.env.NODE_ENV !== 'production') {
       return Response.json({ ok: true, simulated: true })
     }
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }

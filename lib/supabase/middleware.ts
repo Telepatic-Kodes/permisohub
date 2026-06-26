@@ -2,14 +2,16 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function updateSession(request: NextRequest) {
-  // Bypass auth for demo/testing — set BYPASS_AUTH=true in Vercel to disable.
-  if (
-    process.env.BYPASS_AUTH === 'true' ||
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NODE_ENV === 'development'
-  ) {
+  // BYPASS_AUTH only works outside production — never allow in Vercel prod env.
+  if (process.env.BYPASS_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
     return NextResponse.next({ request })
+  }
+
+  // If Supabase is not configured, redirect to login (fail-closed, not fail-open).
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
   }
 
   let supabaseResponse = NextResponse.next({ request })

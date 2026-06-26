@@ -2,6 +2,7 @@ import { validateCronSecret } from '@/lib/scraper'
 import { createServiceClient } from '@/lib/supabase/service'
 import { sendResumenSemanal } from '@/lib/email'
 import { aiComplete, isAIAvailable } from '@/lib/ai'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
     .order('fecha_estimada', { ascending: true })
 
   if (error) {
-    return Response.json({ error: error.message }, { status: 500 })
+    return apiError('Error al obtener proyectos', 500, error)
   }
 
   // Send to Estefanía (internal summary)

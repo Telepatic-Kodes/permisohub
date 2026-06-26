@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { calcularEstadoBoleta } from '@/lib/boletas'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +12,12 @@ export async function GET(
   const { id } = await params
   try {
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const { data, error } = await supabase
       .from('boletas_servicios')
       .select(`*, local:locales(id, numero, uso, centro:centros_comerciales(id, nombre))`)
@@ -19,8 +27,7 @@ export async function GET(
     if (error) throw error
     return Response.json({ data })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Error desconocido'
-    return Response.json({ error: msg }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }
 
@@ -49,6 +56,12 @@ export async function PATCH(
 
   try {
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const { data, error } = await supabase
       .from('boletas_servicios')
       .update(updates)
@@ -62,8 +75,7 @@ export async function PATCH(
     if (process.env.NODE_ENV !== 'production') {
       return Response.json({ ok: true, simulated: true })
     }
-    const msg = err instanceof Error ? err.message : 'Error desconocido'
-    return Response.json({ error: msg }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }
 
@@ -74,6 +86,12 @@ export async function DELETE(
   const { id } = await params
   try {
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     const { error } = await supabase
       .from('boletas_servicios')
       .delete()
@@ -85,7 +103,6 @@ export async function DELETE(
     if (process.env.NODE_ENV !== 'production') {
       return Response.json({ ok: true, simulated: true })
     }
-    const msg = err instanceof Error ? err.message : 'Error desconocido'
-    return Response.json({ error: msg }, { status: 500 })
+    return apiError('Error interno', 500, err)
   }
 }

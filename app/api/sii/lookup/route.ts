@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { fetchWithTimeout, extractBetween, stripTags } from '@/lib/scraper'
+import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,6 +38,13 @@ function parseM2(raw: string): number | null {
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse<LookupResult>> {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return NextResponse.json({ ok: false, error: 'No autenticado' }, { status: 401 })
+
+  const rateLimit = await checkRateLimit(`general:${user.id}`)
+  if (rateLimit) return rateLimit as NextResponse<LookupResult>
+
   const { searchParams } = new URL(request.url)
   const rolRaw = searchParams.get('rol')
 

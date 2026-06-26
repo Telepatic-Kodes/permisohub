@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { MOCK_PROYECTOS } from '@/lib/mock-data'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { Proyecto } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -107,6 +108,12 @@ export async function GET(request: Request) {
 
   try {
     const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
     // Dev: forzar el fallback a mock data sin Supabase configurado
     if (process.env.NODE_ENV !== 'production') throw new Error('dev-no-auth')
 
