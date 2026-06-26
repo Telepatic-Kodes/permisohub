@@ -5,7 +5,7 @@
 Phase: 7 — Foundation
 Plan: 02 (checkpoint — awaiting human verification of Supabase migration)
 Status: In progress — 07-02 Task 1 complete, paused at checkpoint:human-verify
-Last activity: 2026-06-25 — 07-02 document_checklist_items DDL appended to schema.sql (c0121e5)
+Last activity: 2026-06-25 — 07-01 complete (createServiceClient + cron patches), 07-02 at checkpoint:human-verify
 
 ## Phases Status
 
@@ -37,7 +37,7 @@ See: .planning/PROJECT.md
 - Twilio WhatsApp: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_NUMBER` needed in Vercel.
 - `GET /api/usage?metric=ai_chats|pdf_extractions` — returns {used, limit, plan} for current user. Used by Chat OGUC page to show "X/20 consultas este mes" badge. Returns 401 in dev (no session).
 - Chat OGUC usage badge: only shows for plans with finite limits (Free/Starter). Pro/Estudio users see nothing. Badge turns amber at 80%, red at 100%.
-- [v1.3] CRIT live bug: cron routes use anon client → 0 rows on all RLS tables in production. Fix is FOUND-01 (Phase 7 must complete first).
+- [v1.3] CRIT live bug RESOLVED (07-01): cron routes now use createServiceClient() from lib/supabase/service.ts with SUPABASE_SERVICE_ROLE_KEY — bypasses RLS. NEXT_PUBLIC_SUPABASE_ANON_KEY must be set in Vercel for crons to work. Commits: 30a88b2, 775e417.
 - [v1.3] AI provider is OpenAI GPT-4o via `lib/ai.ts` — `@anthropic-ai/sdk` installed but dormant. Do NOT migrate provider during this milestone.
 - [v1.3] Copiloto analysis uses `Promise.all` for 4 concurrent AI calls — set `export const maxDuration = 90` on the route segment to avoid Vercel timeout.
 - [v1.3] `document_checklist_items` DDL added to schema.sql (07-02, c0121e5) — awaiting manual apply in Supabase Dashboard to resolve FOUND-02. Once applied, SKILL-04 (Phase 8) is unblocked.
