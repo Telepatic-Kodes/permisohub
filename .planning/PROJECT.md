@@ -79,15 +79,23 @@ El copiloto IA del arquitecto chileno — reduce el tiempo de tramitación DOM d
 | Route: `/calculadora` no `/calculadora-derechos` | Turbopack unicode bug workaround | ✓ Good |
 | Dashboard en `/dashboard` (v1.1) | Landing page pública en `/` | — Pending |
 
-## Current Milestone: v1.2 Dashboard Clarity
+## Previous Milestone: v1.2 Dashboard Clarity (Complete ✅)
 
-**Goal:** Rediseñar el dashboard a Timeline View — información organizada por urgencia/tiempo, flujo único sin paneles separados.
-
-**Target features:**
-- Timeline View: ACCIÓN REQUERIDA / PRÓXIMOS 30D / EN PROCESO / COMPLETADO
-- 3 hero stats prominentes (Urgentes, Activos, Días prom.)
-- Quick actions como pills horizontales
-- Status bar minimalista al fondo con conteos por estado
+**Shipped:** 2026-06-21 — Timeline View con 4 secciones de urgencia, 3 hero stats, quick actions, status bar.
 
 ---
-*Last updated: 2026-06-21 — Milestone v1.2 started*
+
+## Current Milestone: v1.3 Army of Skills
+
+**Goal:** Crear el ejército de skills de IA específicas para cada módulo — un copiloto embebido (drawer) + automatizaciones de fondo que resuelven la brecha actual entre datos disponibles y valor entregado.
+
+**Target features:**
+- Copiloto IA drawer en Permisos, Desarchivo y Patentes
+- Análisis de expediente: diagnóstico OGUC, predicción de observaciones, checklist documentos, estimación tiempo/derechos
+- Verificación DOM diaria auto-actualiza DB (sin click del arquitecto)
+- WhatsApp automático al cliente cuando cambia estado DOM
+- Enriquecimiento SII al crear patente comercial
+- Resumen semanal IA por email (todos los lunes)
+
+---
+*Last updated: 2026-06-25 — Milestone v1.3 started*

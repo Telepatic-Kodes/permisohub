@@ -2,10 +2,10 @@
 
 ## Current Position
 
-Phase: v1.2 Phase 6 — COMPLETE ✅
-Plan: .planning/ROADMAP.md
-Status: Dashboard Timeline View implemented and browser-verified
-Last activity: 2026-06-21 — Milestone v1.2 Dashboard Clarity complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v1.3 Army of Skills
+Last activity: 2026-06-25 — Milestone v1.3 started
 
 ## Phases Status
 
