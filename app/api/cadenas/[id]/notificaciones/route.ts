@@ -6,7 +6,10 @@ import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend(): Resend | null {
+  if (!process.env.RESEND_API_KEY) return null
+  return new Resend(process.env.RESEND_API_KEY)
+}
 
 export async function POST(
   request: Request,
@@ -105,7 +108,12 @@ Por favor, tome las acciones necesarias para regularizar la situación o póngas
 Saludos,
 Equipo PermisoHub`
 
-      const sendPromise = resend.emails
+      const resendClient = getResend()
+      if (!resendClient) {
+        errors.push(`${local.tenant_email}: RESEND_API_KEY no configurado`)
+        continue
+      }
+      const sendPromise = resendClient.emails
         .send({
           from: 'PermisoHub <noreply@permisohub.cl>',
           to: local.tenant_email,
