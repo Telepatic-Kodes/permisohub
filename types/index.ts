@@ -59,6 +59,22 @@ export interface RequisitoDOM {
   notas?: string
 }
 
+// Vigencia de un permiso otorgado (campo computado, no persistido)
+export type VigenciaPermiso = 'vigente' | 'por_vencer' | 'vencido' | 'sin_fecha'
+
+// Estado del proceso de desarchivo ante la DOM
+export type EstadoDesarchivo = 'solicitado' | 'pagado' | 'en_proceso' | 'completado' | 'rechazado'
+
+export interface SolicitudDesarchivo {
+  fecha_solicitud: string
+  estado: EstadoDesarchivo
+  numero_solicitud?: string       // número que da el municipio al recibir la solicitud
+  costo_uf?: number               // derechos de desarchivo en UF
+  fecha_pago?: string
+  fecha_estimada_entrega?: string
+  observaciones?: string
+}
+
 export interface Proyecto {
   id: string
   cliente_id: string
@@ -73,7 +89,35 @@ export interface Proyecto {
   numero_expediente?: string
   etapa_actual?: string
   created_at: string
+  // Campos de permiso otorgado
+  numero_permiso?: string             // número asignado por el municipio al otorgar
+  fecha_otorgamiento?: string         // fecha en que DOM aprobó/otorgó el permiso
+  fecha_vencimiento_permiso?: string  // fecha de vencimiento del permiso
+  // Campos de desarchivo
+  esta_archivado?: boolean
+  fecha_archivado?: string
+  solicitud_desarchivo?: SolicitudDesarchivo
+  // Campos de patente comercial
+  numero_patente?: string             // número de patente asignado por el municipio
+  giro_sii?: string                   // giro comercial SII
+  año_ejercicio?: number              // año fiscal de la patente (2025, 2026…)
+  valor_derechos?: number             // derechos municipales en CLP
+  fecha_pago_derechos?: string        // fecha de pago de los derechos
+  patente_anterior_id?: string        // FK al proyecto del año anterior
+  // Campos SII del predio (enriquecimiento catastral)
+  rol_sii?: string                    // rol del predio ej. "1234-056"
+  avaluo_fiscal_clp?: number          // avalúo fiscal en CLP (fuente: SII)
+  superficie_terreno_m2?: number      // superficie del terreno en m²
+  superficie_construida_m2?: number   // superficie construida en m²
+  destino_sii?: string                // destino SII: CASA HABITACION, COMERCIO…
+  lat?: number                        // latitud del predio (para mapa)
+  lng?: number                        // longitud del predio (para mapa)
+  // Campos enterprise (cadena comercial)
+  local_id?: string
+  centro_id?: string
+  cadena_id?: string
   cliente?: Cliente
+  local?: Local
   documentos?: Documento[]
   etapas?: Etapa[]
   comunicaciones?: Comunicacion[]
@@ -171,7 +215,7 @@ export const TIPO_PERMISO_DESCRIPCION: Partial<Record<TipoPermiso, string>> = {
 
 export type RolWorkspace = 'admin' | 'arquitecto' | 'viewer'
 
-export type TipoWorkspace = 'estudio' | 'inmobiliaria' | 'independiente'
+export type TipoWorkspace = 'estudio' | 'inmobiliaria' | 'independiente' | 'cadena_comercial'
 
 export interface Workspace {
   id: string
@@ -218,9 +262,67 @@ export const ROL_DESCRIPCION: Record<RolWorkspace, string> = {
 }
 
 export const TIPO_WORKSPACE_LABELS: Record<TipoWorkspace, string> = {
-  estudio:       'Estudio de Arquitectura',
-  inmobiliaria:  'Administradora / Inmobiliaria',
-  independiente: 'Arquitecto Independiente',
+  estudio:          'Estudio de Arquitectura',
+  inmobiliaria:     'Administradora / Inmobiliaria',
+  independiente:    'Arquitecto Independiente',
+  cadena_comercial: 'Cadena Comercial / Centro Comercial',
+}
+
+// ============================================================================
+// Cadenas de Centros Comerciales — vertical enterprise
+// ============================================================================
+
+export type UsoLocal = 'retail' | 'food' | 'servicio' | 'entretenimiento' | 'otro'
+
+export interface Cadena {
+  id: string
+  workspace_id: string
+  nombre: string
+  rut?: string
+  contacto_nombre?: string
+  email?: string
+  logo_url?: string
+  municipios?: string[]
+  centros?: CentroComercial[]
+  created_at: string
+}
+
+export interface CentroComercial {
+  id: string
+  cadena_id: string
+  nombre: string
+  direccion?: string
+  municipio: string
+  region?: string
+  area_m2?: number
+  num_locales?: number
+  gerente_nombre?: string
+  gerente_email?: string
+  locales?: Local[]
+  cadena?: Cadena
+  created_at: string
+}
+
+export interface Local {
+  id: string
+  centro_id: string
+  numero: string
+  nombre_negocio?: string
+  tenant_email?: string
+  tenant_nombre?: string
+  area_m2?: number
+  uso?: UsoLocal
+  proyectos?: Proyecto[]
+  centro?: CentroComercial
+  created_at: string
+}
+
+export const USO_LOCAL_LABELS: Record<UsoLocal, string> = {
+  retail:         'Retail',
+  food:           'Gastronomía',
+  servicio:       'Servicio',
+  entretenimiento:'Entretenimiento',
+  otro:           'Otro',
 }
 
 // ============================================================================

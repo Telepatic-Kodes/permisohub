@@ -15,6 +15,12 @@ interface PredictRequest {
   distanciamientoFrontal: number
   distanciamientoLateral: number
   tipoObra: string
+  // SII enrichment (optional — populated when architect used SIIEnricher)
+  rolSII?: string
+  destinoActualSII?: string
+  avaluoFiscalCLP?: number
+  superficieTerrenoSII?: number
+  superficieConstruidaSII?: number
 }
 
 interface Prediccion {
@@ -53,6 +59,32 @@ export async function POST(request: Request) {
 - Notas clave de la DOM: ${stats.notas}`
     : ''
 
+  // Build SII section if catastral data was provided
+  const hasSII = Boolean(body.rolSII ?? body.destinoActualSII ?? body.avaluoFiscalCLP)
+  const CLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 })
+  const destinoConflicto =
+    body.destinoActualSII &&
+    body.tipoObra === 'cambio_destino' &&
+    body.destinoActualSII.toUpperCase() !== 'COMERCIO'
+  const superficieConflicto =
+    body.superficieTerrenoSII &&
+    body.superficieTerreno > 0 &&
+    Math.abs(body.superficieTerrenoSII - body.superficieTerreno) / body.superficieTerrenoSII > 0.05
+
+  const siiSection = hasSII
+    ? `## Datos catastrales SII del predio (Rol ${body.rolSII ?? 'no especificado'}):
+- Destino actual según SII: ${body.destinoActualSII ?? 'No disponible'}
+- Tipo de obra solicitada: ${body.tipoObra}${destinoConflicto ? ' ⚠️ CAMBIO DE DESTINO — el predio es actualmente NO COMERCIAL, la DOM revisará el cumplimiento de la normativa de cambio de uso' : ''}
+- Avalúo fiscal: ${body.avaluoFiscalCLP ? CLP.format(body.avaluoFiscalCLP) : 'No disponible'}
+- Superficie terreno SII: ${body.superficieTerrenoSII ? `${body.superficieTerrenoSII} m²` : 'No disponible'}${superficieConflicto ? ` ⚠️ DISCREPANCIA con superficie declarada (${body.superficieTerreno} m²) — diferencia >5%, la DOM puede solicitar plano actualizado` : ''}
+- Superficie construida SII: ${body.superficieConstruidaSII ? `${body.superficieConstruidaSII} m²` : 'No disponible'}
+
+IMPORTANTE: Usa estos datos catastrales para identificar observaciones específicas relacionadas con:
+1. Si el destino SII no coincide con el uso propuesto → riesgo de observación por cambio no autorizado
+2. Si la superficie propuesta supera la superficie registrada en el SII → posible discrepancia con escrituras
+3. Si el avalúo fiscal es muy bajo vs. presupuesto de obra → la DOM puede cuestionar el valor declarado`
+    : ''
+
   const prompt = `Eres un experto en permisos de edificación chilenos. Analiza este proyecto y predice las observaciones más probables que recibirá de la DOM (Dirección de Obras Municipales).
 
 ## Datos del proyecto:
@@ -68,6 +100,8 @@ export async function POST(request: Request) {
 - Altura máxima: ${body.alturaMaxima} m
 - Distanciamiento frontal: ${body.distanciamientoFrontal} m
 - Distanciamiento lateral: ${body.distanciamientoLateral} m
+
+${siiSection}
 
 ${statsSection}
 

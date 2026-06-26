@@ -49,6 +49,8 @@ import { PageHeader } from "@/components/dashboard/page-header"
 import { DocumentUpload } from "@/components/dashboard/document-upload"
 import { WhatsAppDialog } from "@/components/dashboard/whatsapp-dialog"
 import { ExpedienteScore } from "@/components/proyecto/expediente-score"
+import { DesarchivoPanel } from "@/components/proyecto/desarchivo-panel"
+import { PredioMap } from "@/components/proyecto/predio-map"
 import { setCommandContext, clearCommandContext } from "@/hooks/use-command-context"
 import {
   Dialog,
@@ -668,6 +670,9 @@ export default function ProyectoDetallePage({
             </CardContent>
           </Card>
 
+          {/* Desarchivo de expediente */}
+          <DesarchivoPanel proyectoId={proyecto.id} estadoProyecto={proyecto.estado} />
+
           {/* Comunicaciones */}
           <Card>
             <CardHeader className="flex-row items-center justify-between">
@@ -809,6 +814,40 @@ export default function ProyectoDetallePage({
               <InfoRow icon={<MapPin className="size-4" />} label="Municipio">
                 {proyecto.municipio}
               </InfoRow>
+
+              {/* SII Cadastral Data */}
+              {proyecto.rol_sii && (
+                <>
+                  <div className="my-1 border-t border-dashed border-border/60" />
+                  {proyecto.rol_sii && (
+                    <InfoRow label="Rol SII">
+                      <span className="font-mono">{proyecto.rol_sii}</span>
+                    </InfoRow>
+                  )}
+                  {proyecto.destino_sii && (
+                    <InfoRow label="Destino SII">
+                      <span className="capitalize">{proyecto.destino_sii.toLowerCase()}</span>
+                    </InfoRow>
+                  )}
+                  {proyecto.avaluo_fiscal_clp && (
+                    <InfoRow label="Avalúo fiscal">
+                      {new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(proyecto.avaluo_fiscal_clp)}
+                    </InfoRow>
+                  )}
+                  {proyecto.superficie_terreno_m2 && (
+                    <InfoRow label="Sup. terreno">
+                      {proyecto.superficie_terreno_m2.toLocaleString("es-CL")} m²
+                    </InfoRow>
+                  )}
+                  {proyecto.superficie_construida_m2 && (
+                    <InfoRow label="Sup. construida">
+                      {proyecto.superficie_construida_m2.toLocaleString("es-CL")} m²
+                    </InfoRow>
+                  )}
+                  <div className="my-1 border-t border-dashed border-border/60" />
+                </>
+              )}
+
               {editMode ? (
                 <>
                   <div className="space-y-1">
@@ -927,6 +966,23 @@ export default function ProyectoDetallePage({
             documentos={documentos}
             proyectoId={proyecto.id}
           />
+
+          {/* Mapa del predio */}
+          {proyecto.direccion && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Ubicación del predio</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <PredioMap
+                  direccion={proyecto.direccion}
+                  municipio={proyecto.municipio}
+                  lat={proyecto.lat}
+                  lng={proyecto.lng}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Herramientas IA del proyecto */}
           <div className="rounded-xl border border-border bg-white p-4 space-y-2">

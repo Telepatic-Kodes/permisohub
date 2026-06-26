@@ -23,6 +23,8 @@ import { MOCK_CLIENTES } from "@/lib/mock-data"
 import type { Cliente } from "@/types"
 import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 import { ETAPAS_PERMISO, TIPO_PERMISO_LABELS, type TipoPermiso } from "@/types"
+import { SIIEnricher } from "@/components/proyecto/sii-enricher"
+import type { SIIData } from "@/lib/sii-lookup"
 
 const TIPOS = Object.entries(TIPO_PERMISO_LABELS) as [TipoPermiso, string][]
 
@@ -63,6 +65,7 @@ export default function NuevoProyectoPage() {
   )
   const [guardando, setGuardando] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [siiData, setSIIData] = useState<SIIData | null>(null)
   const [nuevoClienteNombre, setNuevoClienteNombre] = useState(clienteNombreParam)
   const [nuevoClienteEmail, setNuevoClienteEmail] = useState(searchParams.get("email") ?? "")
 
@@ -113,6 +116,16 @@ export default function NuevoProyectoPage() {
       fecha_inicio: form.get("fecha_inicio") as string,
       fecha_estimada: (form.get("fecha_estimada") as string) || undefined,
       notas: (form.get("notas") as string) || undefined,
+      // SII enrichment (optional)
+      ...(siiData && {
+        rol_sii: siiData.rol,
+        avaluo_fiscal_clp: siiData.avaluo_fiscal_clp || undefined,
+        superficie_terreno_m2: siiData.superficie_terreno_m2 || undefined,
+        superficie_construida_m2: siiData.superficie_construida_m2 || undefined,
+        destino_sii: siiData.destino || undefined,
+        lat: siiData.lat,
+        lng: siiData.lng,
+      }),
     }
 
     try {
@@ -258,6 +271,13 @@ export default function NuevoProyectoPage() {
                 placeholder="Ej: Av. Providencia 1455, Local 3"
               />
             </div>
+
+            <SIIEnricher
+              municipio={municipio}
+              onEnrich={(data) => {
+                setSIIData(data)
+              }}
+            />
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">

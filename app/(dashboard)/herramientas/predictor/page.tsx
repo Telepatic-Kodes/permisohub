@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ESTADISTICAS_MUNICIPIOS } from "@/lib/municipios-stats"
 import { cn } from "@/lib/utils"
+import { SIIEnricher } from "@/components/proyecto/sii-enricher"
+import type { SIIData } from "@/lib/sii-lookup"
 
 interface Prediccion {
   categoria: string
@@ -49,6 +51,7 @@ export default function PredictorPage() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<PredictResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [siiData, setSIIData] = useState<SIIData | null>(null)
 
   const [form, setForm] = useState({
     municipio: searchParams.get("municipio") ?? '',
@@ -93,6 +96,14 @@ export default function PredictorPage() {
           distanciamientoFrontal: parseFloat(form.distanciamientoFrontal || '0'),
           distanciamientoLateral: parseFloat(form.distanciamientoLateral || '0'),
           tipoObra: form.tipoObra,
+          // SII enrichment
+          ...(siiData && {
+            rolSII: siiData.rol,
+            destinoActualSII: siiData.destino,
+            avaluoFiscalCLP: siiData.avaluo_fiscal_clp || undefined,
+            superficieTerrenoSII: siiData.superficie_terreno_m2 || undefined,
+            superficieConstruidaSII: siiData.superficie_construida_m2 || undefined,
+          }),
         }),
       })
       const data = await res.json() as PredictResult
@@ -195,6 +206,21 @@ export default function PredictorPage() {
                     <Input type="number" placeholder="ej: 3" value={form.distanciamientoLateral} onChange={e => setField('distanciamientoLateral', e.target.value)} />
                   </div>
                 </div>
+
+                {/* SII Enricher — auto-populates superficie fields and sends catastral context to AI */}
+                <SIIEnricher
+                  municipio={form.municipio}
+                  onEnrich={(data) => {
+                    setSIIData(data)
+                    // Auto-fill surfaces if architect hasn't entered them yet
+                    if (!form.superficieTerreno && data.superficie_terreno_m2 > 0) {
+                      setField('superficieTerreno', String(data.superficie_terreno_m2))
+                    }
+                    if (!form.superficieConstruida && data.superficie_construida_m2 > 0) {
+                      setField('superficieConstruida', String(data.superficie_construida_m2))
+                    }
+                  }}
+                />
 
                 {/* Quick stats del municipio seleccionado */}
                 {municipioStats && (
