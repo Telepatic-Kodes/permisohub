@@ -7,6 +7,7 @@ import { getContextoOGUC } from '@/lib/oguc-knowledge'
 import { ESTADISTICAS_MUNICIPIOS } from '@/lib/municipios-stats'
 import { getInteligenciaMunicipio } from '@/lib/inteligencia-dom'
 import { calcularDerechosMunicipales, type TipoObra } from '@/lib/derechos-municipales'
+import { sumarDiasHabiles } from '@/lib/dias-habiles'
 import type { Proyecto } from '@/types'
 
 interface CopilotoRequest {
@@ -269,9 +270,14 @@ export async function POST(request: Request) {
 
     const estMatch = estimacionText.match(/\{[\s\S]*\}/)
     const estimacionParsed = estMatch ? JSON.parse(estMatch[0]) : {}
+    const plazoMinDias: number = estimacionParsed.plazoMinDias ?? 30
+    const plazoMaxDias: number = estimacionParsed.plazoMaxDias ?? 90
+    const hoy = new Date()
     const estimacion = {
-      plazoMinDias: estimacionParsed.plazoMinDias ?? 30,
-      plazoMaxDias: estimacionParsed.plazoMaxDias ?? 90,
+      plazoMinDias,
+      plazoMaxDias,
+      fechaEstimadaMin: sumarDiasHabiles(hoy, plazoMinDias).toISOString().split('T')[0],
+      fechaEstimadaMax: sumarDiasHabiles(hoy, plazoMaxDias).toISOString().split('T')[0],
       factores: estimacionParsed.factores ?? [],
       recomendacion: estimacionParsed.recomendacion ?? '',
       derechosCLP: derechos.montoDerechos,
