@@ -3,9 +3,9 @@
 ## Current Position
 
 Phase: 9 — Automatizaciones
-Plan: 01 — COMPLETE
-Status: COMPLETE — 09-01 ✅ (DOM scraper idempotency + WA guard decoupled, tsc clean)
-Last activity: 2026-06-26 — 09-01 complete: .neq() idempotent update + etapa_actual field + outer WA guard removed from scraper loop
+Plan: 02 — COMPLETE
+Status: IN PROGRESS — 09-01 ✅ 09-02 ✅
+Last activity: 2026-06-26 — 09-02 complete: after() fire-and-forget SII enrichment on POST /api/proyectos for patente_comercial (writes superficie_terreno_m2, superficie_construida_m2, destino_sii via createServiceClient; tsc clean)
 
 ## Phases Status
 
@@ -13,7 +13,7 @@ Last activity: 2026-06-26 — 09-01 complete: .neq() idempotent update + etapa_a
 |---|---|---|
 | 7 | Foundation | ✅ 07-01 service client, 07-02 checklist table, 07-03 Sheet component |
 | 8 | Copiloto Core | ✅ 08-01 ✅ (API) 08-02 ✅ (UI: drawer, trigger, 4 tabs) 08-03 ✅ (page integration: permisos, patentes, proyectos/[id]) |
-| 9 | Automatizaciones | 09-01 ✅ (DOM scraper idempotency + WA guard decoupled) |
+| 9 | Automatizaciones | 09-01 ✅ (DOM scraper idempotency + WA guard decoupled) 09-02 ✅ (after() SII enrichment on patente_comercial creation) |
 | 6 | Dashboard Timeline View | ✅ app/(dashboard)/dashboard/page.tsx — Timeline View con 4 secciones |
 | 1 | Stripe Billing | ✅ app/api/billing/{checkout,portal,webhook}, lib/stripe.ts, /configuracion/billing |
 | 2 | Feature Gating | ✅ lib/plan-limits.ts, lib/usage.ts, upgrade prompt on /proyectos, API usage gate |
@@ -42,6 +42,7 @@ See: .planning/PROJECT.md
 - [v1.3] Copiloto analysis uses `Promise.all` for 4 concurrent AI calls — set `export const maxDuration = 90` on the route segment to avoid Vercel timeout.
 - [v1.3] `document_checklist_items` table live in Supabase (07-02, c0121e5) — FOUND-02 resolved. RLS policy checklist_items_own active. SKILL-04 (Phase 8) is unblocked.
 - [v1.3] DOM write-back complete (09-01, f51dee4) — daily-check section 4: outer `isWhatsAppAvailable()` guard removed, `.neq('estado', estadoNuevo)` added for idempotency, `etapa_actual` field written on every estado transition. `results.domStatusChanges++` runs unconditionally.
+- [v1.3] SII auto-enrichment live (09-02, 1f1ed83) — POST /api/proyectos: after() block fires on patente_comercial creation when numero_expediente present. Calls GET /api/sii/lookup?rol=..., writes superficie_terreno_m2, superficie_construida_m2, destino_sii via createServiceClient(). giro_sii NOT auto-populated (manual field). HTTP 200 returns immediately, enrichment is fire-and-forget.
 - [v1.3] Weekly email (AUTO-04) sends to `ADMIN_EMAIL` only for MVP — external recipient opt-in blocked until unsubscribe flow exists (CAN-SPAM compliance).
 - [v1.3] `SUPABASE_SERVICE_ROLE_KEY` must NOT have `NEXT_PUBLIC_` prefix — server-only secret.
 - [v1.3] Sheet component live (07-03, d855f60) — `@/components/ui/sheet` exports Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose, SheetTrigger. Primitive: `@base-ui/react/dialog` (base-nova style). No new npm deps. FOUND-03 resolved, SKILL-01 (Phase 8) unblocked.
