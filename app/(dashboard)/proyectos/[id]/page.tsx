@@ -46,6 +46,8 @@ import { ESTADO_CONFIG, TIPO_PERMISO_LABELS, type Proyecto, type Etapa, type Com
 import { getEstadoPlazoLey21718, formatFecha } from "@/lib/dias-habiles"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/dashboard/page-header"
+import { CopilotoTrigger } from "@/components/copiloto/copiloto-trigger"
+import { CopilotoDrawer } from "@/components/copiloto/copiloto-drawer"
 import { DocumentUpload } from "@/components/dashboard/document-upload"
 import { WhatsAppDialog } from "@/components/dashboard/whatsapp-dialog"
 import { ExpedienteScore } from "@/components/proyecto/expediente-score"
@@ -135,6 +137,7 @@ export default function ProyectoDetallePage({
     MOCK_DOCUMENTOS.filter((d) => d.proyecto_id === id),
   )
   const [observaciones, setObservaciones] = useState<Observacion[]>(MOCK_OBSERVACIONES.filter(() => false))
+  const [copilotoOpen, setCopilotoOpen] = useState(false)
 
   useEffect(() => {
     fetch(`/api/proyectos/${id}`)
@@ -407,6 +410,10 @@ export default function ProyectoDetallePage({
               <Download className="size-4" />
               Exportar PDF
             </Button>
+            <CopilotoTrigger
+              proyecto={proyecto}
+              onClick={() => setCopilotoOpen(true)}
+            />
           </div>
         }
       />
@@ -1125,6 +1132,12 @@ export default function ProyectoDetallePage({
           />
         )}
       </div>
+
+      <CopilotoDrawer
+        proyecto={proyecto}
+        open={copilotoOpen}
+        onClose={() => setCopilotoOpen(false)}
+      />
     </div>
   )
 }
