@@ -3,16 +3,16 @@
 ## Current Position
 
 Phase: 8 — Copiloto Core
-Plan: 02 — COMPLETE
-Status: In progress — 08-01 ✅ 08-02 ✅ (UI components: drawer + trigger + 4 tabs committed, tsc clean)
-Last activity: 2026-06-25 — 08-02 complete: CopilotoDrawer (idle skill cards + state machine) + 4 tab components (OGUC, observaciones, checklist, estimacion)
+Plan: 03 — COMPLETE
+Status: COMPLETE — 08-01 ✅ 08-02 ✅ 08-03 ✅ (page integration: CopilotoTrigger + CopilotoDrawer in permisos, patentes, proyectos/[id], tsc clean)
+Last activity: 2026-06-25 — 08-03 complete: CopilotoTrigger per row in permisos + patentes, trigger in proyectos/[id] header, shared CopilotoDrawer at page level in all three pages
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
 | 7 | Foundation | ✅ 07-01 service client, 07-02 checklist table, 07-03 Sheet component |
-| 8 | Copiloto Core | In progress — 08-01 ✅ (API) 08-02 ✅ (UI: drawer, trigger, 4 tabs) — 08-03 pending (page integration) |
+| 8 | Copiloto Core | ✅ 08-01 ✅ (API) 08-02 ✅ (UI: drawer, trigger, 4 tabs) 08-03 ✅ (page integration: permisos, patentes, proyectos/[id]) |
 | 9 | Automatizaciones | Not started |
 | 6 | Dashboard Timeline View | ✅ app/(dashboard)/dashboard/page.tsx — Timeline View con 4 secciones |
 | 1 | Stripe Billing | ✅ app/api/billing/{checkout,portal,webhook}, lib/stripe.ts, /configuracion/billing |
@@ -47,3 +47,4 @@ See: .planning/PROJECT.md
 - [v1.3] Sheet component live (07-03, d855f60) — `@/components/ui/sheet` exports Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose, SheetTrigger. Primitive: `@base-ui/react/dialog` (base-nova style). No new npm deps. FOUND-03 resolved, SKILL-01 (Phase 8) unblocked.
 - [v1.3] Copiloto API live (08-01, 2726f33) — POST /api/ai/copiloto runs 4 concurrent aiComplete calls via Promise.all with maxDuration=90. Checklist idempotency: queries document_checklist_items before AI, skips call and returns DB rows if count > 0. PATCH /api/ai/copiloto/checklist/[itemId] toggles estado. TIPO_PERMISO_TO_OBRA lookup map used for type coercion. stats?.tiempoPromedioHabiles (NOT plazoTipicoDias). await params pattern (Next.js 16). SKILL-02/03/04/05 (Phase 8) unblocked.
 - [v1.3] Copiloto UI live (08-02, 18eaa75) — CopilotoDrawer: idle shows 4 skill cards, card-click→loading→loaded state machine, Map<string,CopilotoResult> cache by proyectoId. CopilotoTrigger: thin Bot-icon button. 4 tab components: TabOguc (articles+cumple), TabObservaciones (riesgoGlobal+predictions), TabChecklist (optimistic PATCH toggle, 'pendiente'|'ok' union), TabEstimacion (plazo+derechos CLP/UF). All interfaces exported from copiloto-drawer.tsx. No shadcn Tabs. tsc exits 0. SKILL-01 complete.
+- [v1.3] Copiloto page integration live (08-03, a8576f7) — CopilotoTrigger per row in permisos + patentes list pages, CopilotoTrigger in PageHeader action div in proyectos/[id]. Shared CopilotoDrawer at page level (single instance). State pattern: copilotoProyecto (nullable Pick) + copilotoOpen (bool). Desarchivo covered by proyectos/[id] — no dedicated desarchivo list page exists. SKILL-01 fully operational across all views.
