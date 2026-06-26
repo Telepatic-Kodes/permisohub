@@ -3,9 +3,9 @@
 ## Current Position
 
 Phase: 9 — Automatizaciones
-Plan: 02 — COMPLETE
-Status: IN PROGRESS — 09-01 ✅ 09-02 ✅
-Last activity: 2026-06-26 — 09-02 complete: after() fire-and-forget SII enrichment on POST /api/proyectos for patente_comercial (writes superficie_terreno_m2, superficie_construida_m2, destino_sii via createServiceClient; tsc clean)
+Plan: 03 — COMPLETE
+Status: IN PROGRESS — 09-01 ✅ 09-02 ✅ 09-03 ✅
+Last activity: 2026-06-26 — 09-03 complete: sendResumenSemanal extended with tipSemanal? param + blue card HTML block; weekly-summary route adds AI tip via aiComplete with isAIAvailable guard; vercel.json schedule fixed to 0 11 * * 1 (08:00 Santiago UTC-3); tsc clean
 
 ## Phases Status
 
@@ -13,7 +13,7 @@ Last activity: 2026-06-26 — 09-02 complete: after() fire-and-forget SII enrich
 |---|---|---|
 | 7 | Foundation | ✅ 07-01 service client, 07-02 checklist table, 07-03 Sheet component |
 | 8 | Copiloto Core | ✅ 08-01 ✅ (API) 08-02 ✅ (UI: drawer, trigger, 4 tabs) 08-03 ✅ (page integration: permisos, patentes, proyectos/[id]) |
-| 9 | Automatizaciones | 09-01 ✅ (DOM scraper idempotency + WA guard decoupled) 09-02 ✅ (after() SII enrichment on patente_comercial creation) |
+| 9 | Automatizaciones | 09-01 ✅ (DOM scraper idempotency + WA guard decoupled) 09-02 ✅ (after() SII enrichment on patente_comercial creation) 09-03 ✅ (AI tip in weekly email + schedule fix) |
 | 6 | Dashboard Timeline View | ✅ app/(dashboard)/dashboard/page.tsx — Timeline View con 4 secciones |
 | 1 | Stripe Billing | ✅ app/api/billing/{checkout,portal,webhook}, lib/stripe.ts, /configuracion/billing |
 | 2 | Feature Gating | ✅ lib/plan-limits.ts, lib/usage.ts, upgrade prompt on /proyectos, API usage gate |
@@ -49,3 +49,4 @@ See: .planning/PROJECT.md
 - [v1.3] Copiloto API live (08-01, 2726f33) — POST /api/ai/copiloto runs 4 concurrent aiComplete calls via Promise.all with maxDuration=90. Checklist idempotency: queries document_checklist_items before AI, skips call and returns DB rows if count > 0. PATCH /api/ai/copiloto/checklist/[itemId] toggles estado. TIPO_PERMISO_TO_OBRA lookup map used for type coercion. stats?.tiempoPromedioHabiles (NOT plazoTipicoDias). await params pattern (Next.js 16). SKILL-02/03/04/05 (Phase 8) unblocked.
 - [v1.3] Copiloto UI live (08-02, 18eaa75) — CopilotoDrawer: idle shows 4 skill cards, card-click→loading→loaded state machine, Map<string,CopilotoResult> cache by proyectoId. CopilotoTrigger: thin Bot-icon button. 4 tab components: TabOguc (articles+cumple), TabObservaciones (riesgoGlobal+predictions), TabChecklist (optimistic PATCH toggle, 'pendiente'|'ok' union), TabEstimacion (plazo+derechos CLP/UF). All interfaces exported from copiloto-drawer.tsx. No shadcn Tabs. tsc exits 0. SKILL-01 complete.
 - [v1.3] Copiloto page integration live (08-03, a8576f7) — CopilotoTrigger per row in permisos + patentes list pages, CopilotoTrigger in PageHeader action div in proyectos/[id]. Shared CopilotoDrawer at page level (single instance). State pattern: copilotoProyecto (nullable Pick) + copilotoOpen (bool). Desarchivo covered by proyectos/[id] — no dedicated desarchivo list page exists. SKILL-01 fully operational across all views.
+- [v1.3] Weekly email AI tip live (09-03, ef5972e + e99aeb9) — sendResumenSemanal accepts tipSemanal?: string, renders blue card (#EFF6FF border #BFDBFE) via escapeHtml. weekly-summary route generates tip with isAIAvailable() guard + try/catch fallback to ''. vercel.json weekly-summary schedule corrected to 0 11 * * 1 (08:00 Santiago UTC-3, was 12:00 UTC). Pattern: isAIAvailable() guard + try/catch = safe AI feature degradation.
