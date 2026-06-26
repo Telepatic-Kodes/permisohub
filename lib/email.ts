@@ -261,6 +261,7 @@ export async function sendResumenSemanal(params: {
     fechaEstimada?: string
     tieneAlerta?: boolean
   }>
+  tipSemanal?: string
 }): Promise<EmailResult> {
   const rows = params.proyectos
     .map((p) => {
@@ -290,6 +291,13 @@ export async function sendResumenSemanal(params: {
 
   const emptyState = `<p>No tienes proyectos activos esta semana.</p>`
 
+  const tipBlock = params.tipSemanal
+    ? `<div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+        <div style="color: #1E40AF; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Tip IA para esta semana</div>
+        <p style="color: #1E3A8A; font-size: 14px; line-height: 1.6; margin: 0;">${escapeHtml(params.tipSemanal)}</p>
+      </div>`
+    : ''
+
   const content = `
     <span class="badge badge-green">Resumen semanal</span>
     <h2 style="margin-top: 16px;">Tus proyectos activos</h2>
@@ -297,6 +305,7 @@ export async function sendResumenSemanal(params: {
     <p>Este es el resumen de tus ${
       params.proyectos.length
     } proyecto${params.proyectos.length === 1 ? "" : "s"} en gestión.</p>
+    ${tipBlock}
     ${
       params.proyectos.length === 0
         ? emptyState
