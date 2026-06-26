@@ -24,7 +24,12 @@
 2. La tabla `document_checklist_items` existe en Supabase y acepta INSERT con los campos definidos
 3. El componente `Sheet` de shadcn/ui está disponible para importar desde `@/components/ui/sheet`
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — FOUND-01: create lib/supabase/service.ts + patch both cron files
+- [ ] 07-02-PLAN.md — FOUND-02: add document_checklist_items table to schema.sql + apply migration
+- [ ] 07-03-PLAN.md — FOUND-03: install Sheet component via shadcn CLI
 
 ---
 
@@ -65,7 +70,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 7. Foundation | 0/? | Not started | - |
+| 7. Foundation | 0/3 | Not started | - |
 | 8. Copiloto Core | 0/? | Not started | - |
 | 9. Automatizaciones | 0/? | Not started | - |
 
