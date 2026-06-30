@@ -2,6 +2,15 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function updateSession(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  const isPublicRoute =
+    pathname === "/" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/pricing") ||
+    pathname.startsWith("/docs")
+
   // BYPASS_AUTH only works outside production — never allow in Vercel prod env.
   if (process.env.BYPASS_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
     return NextResponse.next({ request })
@@ -12,8 +21,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
-  // If Supabase is not configured, redirect to login (fail-closed, not fail-open).
+  // If Supabase is not configured, allow public routes through to avoid redirect loops.
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (isPublicRoute) return NextResponse.next({ request })
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
@@ -45,15 +55,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  const { pathname } = request.nextUrl
-
-  const isPublicRoute =
-    pathname === "/" ||
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/pricing") ||
-    pathname.startsWith("/docs")
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
