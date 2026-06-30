@@ -7,6 +7,11 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // DEMO_MODE bypasses auth in all environments — controlled via env var in Vercel.
+  if (process.env.DEMO_MODE === 'true') {
+    return NextResponse.next({ request })
+  }
+
   // If Supabase is not configured, redirect to login (fail-closed, not fail-open).
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     const url = request.nextUrl.clone()
