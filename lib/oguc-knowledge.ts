@@ -6,24 +6,37 @@ export interface ArticuloOGUC {
   categoria: 'definiciones' | 'rasantes' | 'coeficientes' | 'permisos' | 'recepciones' | 'regularizaciones' | 'distanciamientos' | 'estacionamientos'
 }
 
+// OGUC D.S. N°47/1992 con modificaciones hasta D.S. N°2, D.O. 16.03.2026
+// Knowledge base actualizado: 2026-06 (vigencia de última modificación: 25.04.2026)
+
 export const ARTICULOS_OGUC: ArticuloOGUC[] = [
   {
     id: '1.1.2',
     titulo: 'Definiciones',
-    texto: `Para los efectos de la presente Ordenanza, los términos que se indican tendrán los siguientes significados:
+    texto: `Para los efectos de la presente Ordenanza (OGUC D.S. N°47/1992, modificada hasta D.S. N°2, D.O. 16.03.2026), los términos que se indican tendrán los siguientes significados:
 
-COEFICIENTE DE CONSTRUCTIBILIDAD (FOT - Factor de Ocupación Total): Número que multiplicado por la superficie total del predio, fija la superficie máxima posible de construir sobre él. Ejemplo: terreno 400m², FOT 0.8 → superficie máxima construida = 320m².
+COEFICIENTE DE CONSTRUCTIBILIDAD (FOT - Factor de Ocupación Total): "Número que multiplicado por la superficie total del predio, descontadas de esta última las áreas declaradas de utilidad pública, fija el máximo de metros cuadrados posibles de construir sobre el terreno." Ejemplo: terreno 400m², FOT 0.8 → superficie máxima construida = 320m².
 
-COEFICIENTE DE OCUPACIÓN DE SUELO (FOS - Factor de Ocupación del Suelo): Número que multiplicado por la superficie total del predio fija la superficie máxima que puede ser ocupada por las edificaciones en el nivel del terreno natural. Ejemplo: terreno 400m², FOS 0.4 → huella máxima = 160m².
+COEFICIENTE DE OCUPACIÓN DEL SUELO (FOS - Factor de Ocupación del Suelo): "Número que, multiplicado por la superficie total del predio, descontadas de esta última las áreas declaradas de utilidad pública, fija el máximo de metros cuadrados posibles de construir en el nivel de primer piso." Ejemplo: terreno 400m², FOS 0.4 → huella máxima = 160m².
 
-RASANTE: Línea inclinada que, a partir de cualquier punto del deslinde del predio con el espacio de uso público, sube con una inclinación determinada por el Instrumento de Planificación Territorial respectivo, o en su defecto, por la OGUC. Si no hay disposición expresa: 70° (relación 2.75 horizontal / 1 vertical) medidos desde el nivel de acera.
+COEFICIENTE DE OCUPACIÓN DE PISOS SUPERIORES: "Número que multiplicado por la superficie total del predio, descontadas de ésta las áreas declaradas de utilidad pública, fija el máximo de superficie edificada posible de construir en cada uno de los pisos superiores al primero."
+
+RASANTE: "Recta imaginaria que, mediante un determinado ángulo de inclinación, define la envolvente teórica dentro de la cual puede desarrollarse un proyecto de edificación." Si el Instrumento de Planificación Territorial no establece otro valor: ángulo de 70° (pendiente 2.75/1), medido desde el nivel del deslinde.
+
+DISTANCIAMIENTO: "Distancia mínima horizontal entre el deslinde del predio y el punto más cercano de la edificación, sin contar los elementos de techumbre en volado, aleros, vigas, jardineras o marquesinas."
 
 ALTURA DE EDIFICACIÓN: Dimensión vertical de una edificación, medida desde el nivel de suelo hasta el punto más alto de la misma. No se incluyen chimeneas, antenas, ni elementos de instalaciones.
 
-ADOSAMIENTO: Edificación que se construye pegada al deslinde del predio vecino. Requiere cumplir con la altura máxima permitida en el deslinde y acuerdo de los vecinos en muchos casos.
+ADOSAMIENTO: Edificación que se construye pegada al deslinde del predio vecino. Requiere cumplir con la altura máxima permitida en el deslinde.
 
-DISTANCIAMIENTO: Separación mínima exigida entre una edificación y los deslindes del predio o entre edificaciones dentro de un mismo predio.`,
-    keywords: ['FOT', 'FOS', 'coeficiente', 'constructibilidad', 'ocupación', 'suelo', 'rasante', 'altura', 'adosamiento', 'distanciamiento', 'definición'],
+MODIFICACIÓN DE PROYECTO (vigente desde 25.04.2026 por D.S. N°10, D.O. 23.02.2026): "Variantes, alteraciones o cambios que se requiera introducir a un proyecto o a una obra de construcción entre la fecha del permiso y la recepción definitiva de las obras, o entre el archivo de la declaración jurada de inicio de obra y el archivo de la declaración jurada de término de ejecución, según corresponda, signifiquen o no un aumento de superficie, o cambios en la clasificación o destino de las construcciones."
+
+OBRA MENOR: "Obras al interior o en la fachada de una edificación existente que no alteran su estructura, y que implican el aumento o disminución de la carga de ocupación; el cambio de destino o la modificación del destino o actividad; y las ampliaciones que se ejecuten por una sola vez o en forma sucesiva en el tiempo, hasta alcanzar un máximo de 100 m² de superficie ampliada."
+
+OBRA NUEVA: "La que se construye sin utilizar partes o elementos de alguna construcción preexistente en el predio."
+
+CONSTRUCCIÓN: Obras de edificación o de urbanización.`,
+    keywords: ['FOT', 'FOS', 'coeficiente', 'constructibilidad', 'ocupación', 'suelo', 'rasante', 'altura', 'adosamiento', 'distanciamiento', 'definición', 'modificación de proyecto', 'obra menor', 'obra nueva'],
     categoria: 'definiciones',
   },
   {
@@ -121,6 +134,11 @@ PLAZOS LEGALES DE LA DOM (Ley 21.718, vigente 2025):
 - Sin Revisor Independiente: 30 días hábiles para primer pronunciamiento.
 - Si la DOM no se pronuncia en el plazo → silencio negativo (arquitecto puede declarar denegación).
 - Publicación mensual obligatoria de todos los permisos otorgados.
+
+PRÓRROGA DE PERMISOS (D.S. N°2, D.O. 16.03.2026, vigente desde 25.04.2026):
+- El D.S. N°2 de 2026 extiende las prórrogas de permisos de edificación a un máximo de 30 meses.
+- Esta modificación aplica a permisos que soliciten prórroga a partir del 25.04.2026.
+- Antes de esta fecha, el plazo era menor. Verificar siempre la fecha de vigencia según la fecha de ingreso del permiso (Art. 1.1.3 OGUC: se aplica la norma vigente a la fecha de ingreso).
 
 OBSERVACIONES DE LA DOM:
 - La DOM puede emitir observaciones técnicas (no aprobaciones ni rechazos) indicando deficiencias.
@@ -299,6 +317,48 @@ PROCEDIMIENTO DE MODIFICACIÓN:
 
 Construcción sin permiso de modificación = obra clandestina = multa + obligación de regularizar o demoler.`,
     keywords: ['modificación', 'permiso', 'cambio', 'obra', 'mayor', 'menor', 'fachada', 'superficie', 'destino'],
+    categoria: 'permisos',
+  },
+  {
+    id: '1.1.3',
+    titulo: 'Norma aplicable: vigente a la fecha de ingreso de la solicitud',
+    texto: `Las solicitudes de aprobaciones o permisos presentadas ante las Direcciones de Obras Municipales serán evaluadas y resueltas conforme a las normas vigentes en la fecha de su ingreso.
+
+Los permisos, aprobaciones y autorizaciones emitidas por los Directores de Obras Municipales gozan de una presunción de legalidad, de imperio y exigibilidad frente a sus destinatarios, desde su entrada en vigencia.
+
+Tratándose de normas técnicas de instalaciones o de urbanización, deberán ser evaluadas y resueltas por los organismos competentes de conformidad a las normas vigentes en la fecha de ingreso de la solicitud del permiso respectivo ante la Dirección de Obras Municipales.
+
+IMPLICANCIA PRÁCTICA: Si un proyecto se ingresó antes del 25.04.2026 (fecha de vigencia de D.S. N°2 y N°10 de 2026), se evalúa con las normas anteriores a esa fecha. Si se ingresa después del 25.04.2026, aplican las nuevas normas incluyendo la prórroga de 30 meses y la nueva definición de "Modificación de proyecto".`,
+    keywords: ['norma aplicable', 'fecha ingreso', 'vigencia', 'legalidad', 'permiso', 'evaluación', 'transitorio'],
+    categoria: 'permisos',
+  },
+  {
+    id: '1.2.4',
+    titulo: 'Responsabilidad del proyectista sobre coeficientes y superficies declaradas',
+    texto: `El proyectista será responsable respecto de los cálculos de superficie edificada, de los coeficientes de constructibilidad y de ocupación del suelo, porcentajes, superficies de sombra y demás antecedentes declarados, cuyo cálculo no corresponderá verificar a las Direcciones de Obras Municipales.
+
+CONSECUENCIA CLAVE: La DOM no está obligada a verificar ni validar el FOT, FOS, superficies edificadas ni el cálculo de rasantes. Estos son declarados bajo responsabilidad exclusiva del proyectista (arquitecto o ingeniero). Si los datos son incorrectos, la responsabilidad civil recae en el proyectista.
+
+Esto es fundamental al responder observaciones DOM: si la DOM cuestiona un coeficiente, el arquitecto debe defender sus cálculos citando las normas del PRC y la OGUC, ya que fue él quien los declaró.
+
+Los Revisores Independientes (cuando participan) son subsidiariamente responsables junto al proyectista respecto de la correcta aplicación de las normas pertinentes.`,
+    keywords: ['proyectista', 'responsabilidad', 'FOT', 'FOS', 'superficie edificada', 'coeficientes', 'DOM no verifica', 'arquitecto', 'cálculo'],
+    categoria: 'definiciones',
+  },
+  {
+    id: '5.1.x-prorroga-2026',
+    titulo: 'Prórroga de permiso de edificación — 30 meses máximo (D.S. N°2, 2026)',
+    texto: `El D.S. N°2 (D.O. 16.03.2026, vigente desde 25.04.2026) modificó las disposiciones sobre la vigencia y prórroga de permisos de edificación en Chile, extendiendo el plazo máximo de prórroga a 30 meses.
+
+RÉGIMEN VIGENTE (para permisos que soliciten prórroga desde el 25.04.2026):
+- Prórroga máxima: 30 meses.
+- La solicitud de prórroga debe presentarse antes del vencimiento del permiso.
+- El permiso se prorroga automáticamente si se cumplen los requisitos; la DOM no puede negar la prórroga sin fundamento legal.
+
+NORMA APLICABLE: Según Art. 1.1.3 OGUC, la norma que aplica es la vigente a la fecha de ingreso del permiso original o de la solicitud de prórroga, según corresponda. Si el permiso fue otorgado antes del 25.04.2026 y la prórroga se solicita después de esa fecha, aplica el nuevo plazo de 30 meses.
+
+ANTES DE LA MODIFICACIÓN: Los plazos eran menores. Consultar el texto del permiso original para confirmar la normativa específica bajo la cual fue otorgado.`,
+    keywords: ['prórroga', 'vigencia permiso', 'plazo', '30 meses', 'DS 2 2026', 'vencimiento', 'caducidad', 'permiso edificación'],
     categoria: 'permisos',
   },
 ]

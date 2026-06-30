@@ -94,7 +94,7 @@ IMPORTANTE: Usa estos datos catastrales para identificar observaciones específi
 3. Si el avalúo fiscal es muy bajo vs. presupuesto de obra → la DOM puede cuestionar el valor declarado`
     : ''
 
-  const prompt = `Eres un experto en permisos de edificación chilenos. Analiza este proyecto y predice las observaciones más probables que recibirá de la DOM (Dirección de Obras Municipales).
+  const prompt = `Eres un experto en permisos de edificación chilenos. Analiza este proyecto y predice las observaciones más probables que recibirá de la DOM (Dirección de Obras Municipales). Normativa de referencia: OGUC D.S. N°47/1992 con modificaciones hasta D.S. N°2, D.O. 16.03.2026 (vigente 25.04.2026).
 
 ## Datos del proyecto:
 - Municipio: ${body.municipio}

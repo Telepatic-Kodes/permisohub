@@ -9,7 +9,13 @@ export interface AIGuardResult {
   userPlan: PlanId
 }
 
+const DEMO_USER_ID = 'demo-bypass-user'
+
 export async function aiAuthGuard(): Promise<AIGuardResult | Response> {
+  if (process.env.BYPASS_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+    return { userId: DEMO_USER_ID, userPlan: 'pro' as PlanId }
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

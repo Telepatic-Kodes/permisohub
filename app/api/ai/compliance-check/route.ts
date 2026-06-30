@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   const fotReal = body.superficieConstruida / body.superficieTerreno
   const fosReal = body.huellaEdificacion / body.superficieTerreno
 
-  const prompt = `Eres un experto en normativa de construcción chilena. Analiza el siguiente proyecto y verifica su cumplimiento con la OGUC.
+  const prompt = `Eres un experto en normativa de construcción chilena. Analiza el siguiente proyecto y verifica su cumplimiento con la OGUC (D.S. N°47/1992 con modificaciones hasta D.S. N°2, D.O. 16.03.2026, vigente desde 25.04.2026).
 
 ## DATOS DEL PROYECTO:
 - Municipio: ${body.municipio}
