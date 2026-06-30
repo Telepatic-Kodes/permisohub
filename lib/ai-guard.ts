@@ -16,7 +16,7 @@ export async function aiAuthGuard(): Promise<AIGuardResult | Response> {
     return { userId: DEMO_USER_ID, userPlan: 'pro' as PlanId }
   }
 
-  if (process.env.DEMO_MODE === 'true') {
+  if (process.env.DEMO_MODE === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
     return { userId: DEMO_USER_ID, userPlan: 'pro' as PlanId }
   }
 

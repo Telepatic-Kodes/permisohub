@@ -16,17 +16,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
-  // DEMO_MODE bypasses auth in all environments — controlled via env var in Vercel.
-  if (process.env.DEMO_MODE === 'true') {
+  // DEMO_MODE (runtime) or NEXT_PUBLIC_DEMO_MODE (baked at build) bypass auth.
+  if (process.env.DEMO_MODE === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
     return NextResponse.next({ request })
   }
 
-  // If Supabase is not configured, allow public routes through to avoid redirect loops.
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    if (isPublicRoute) return NextResponse.next({ request })
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+  // If Supabase is not configured or still has placeholder URL, open access (no auth loop).
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+  const supabaseReady = supabaseUrl && !supabaseUrl.includes('your-project') && supabaseKey
+  if (!supabaseReady) {
+    return NextResponse.next({ request })
   }
 
   let supabaseResponse = NextResponse.next({ request })
