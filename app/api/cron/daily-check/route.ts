@@ -230,6 +230,23 @@ export async function GET(request: Request) {
     }
   }
 
+  // 7. Weekly plan_reguladores sync from datos.gob.cl (Mondays only — data changes infrequently)
+  if (today.getDay() === 1) {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+      const syncRes = await fetch(`${baseUrl}/api/scraper/plan-reguladores`, {
+        headers: { Authorization: `Bearer ${process.env.CRON_SECRET ?? ''}` },
+      })
+      if (!syncRes.ok) {
+        results.errors.push(`plan-reguladores sync: HTTP ${syncRes.status}`)
+      }
+    } catch (err) {
+      results.errors.push(
+        `plan-reguladores sync: ${err instanceof Error ? err.message : 'failed'}`
+      )
+    }
+  }
+
   return Response.json({
     ok: true,
     timestamp: new Date().toISOString(),
