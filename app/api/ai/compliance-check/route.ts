@@ -1,5 +1,6 @@
 import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { ARTICULOS_OGUC } from '@/lib/oguc-knowledge'
+import { ARTICULOS_LGUC } from '@/lib/lguc-knowledge'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -40,6 +41,10 @@ export async function POST(request: Request) {
     ['2.7.1', '2.6.3', '2.6.6', '1.1.2'].includes(a.id)
   )
 
+  // Enrich with LGUC framing articles: permiso de edificación (116) y
+  // responsabilidad del proyectista sobre lo declarado (18).
+  const articulosLGUC = ARTICULOS_LGUC.filter((a) => ['116', '18'].includes(a.id))
+
   const fotReal = body.superficieConstruida / body.superficieTerreno
   const fosReal = body.huellaEdificacion / body.superficieTerreno
 
@@ -61,7 +66,10 @@ ${body.distanciamientoPoniente !== undefined ? `- Distanciamiento Poniente: ${bo
 - Tiene adosamiento: ${body.tieneAdosamiento ? 'Sí' : 'No'}
 
 ## ARTÍCULOS OGUC DE REFERENCIA:
-${articulosRelevantes.map((a) => `**Art. ${a.id} — ${a.titulo}**\n${a.texto}`).join('\n\n---\n\n')}
+${articulosRelevantes.map((a) => `**Art. ${a.id} OGUC — ${a.titulo}**\n${a.texto}`).join('\n\n---\n\n')}
+
+## MARCO LEGAL LGUC (DFL N°458/1975):
+${articulosLGUC.map((a) => `**Art. ${a.id} LGUC — ${a.titulo}**\n${a.texto}`).join('\n\n---\n\n')}
 
 ## INSTRUCCIÓN:
 Responde EXACTAMENTE en este formato JSON (sin markdown, solo el JSON puro):

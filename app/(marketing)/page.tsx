@@ -3,15 +3,18 @@ import {
   ArrowRight,
   BarChart3,
   Bot,
+  Building2,
   CheckCircle2,
   Clock,
   FileSearch,
   FileText,
   FolderDown,
   MessageCircle,
+  Plug,
   Scale,
   Search,
   Sparkles,
+  Stamp,
   TrendingUp,
   X,
   Zap,
@@ -25,6 +28,15 @@ const STATS = [
   { value: "124 días", label: "promedio para aprobar un permiso en 2024 (vs 45 días en 2009)" },
   { value: "US$2B", label: "en pérdidas anuales por demoras de tramitación en Chile" },
   { value: "7.000+", label: "estudios de arquitectura chilenos sin herramienta dedicada" },
+];
+
+// Señales de confianza — SOLO hechos ya presentes en la landing (normativa,
+// cobertura de datos, integraciones). NO son métricas de tracción inventadas.
+const CONFIANZA = [
+  { icon: Building2, valor: "346", label: "municipios con inteligencia DOM" },
+  { icon: Bot, valor: "10", label: "herramientas con IA integradas" },
+  { icon: Scale, valor: "Ley 21.718", label: "OGUC vigente 2026" },
+  { icon: Sparkles, valor: "100%", label: "bootstrapped · arquitecta-fundadora" },
 ];
 
 const COMPETENCIA = [
@@ -66,8 +78,14 @@ const TRACTION = [
 
 const FEATURES = [
   {
+    icon: Stamp,
+    title: "Pre-revisión DOM",
+    description:
+      "Simula el acta de observaciones de la DOM antes de ingresar. Recibes la misma revisión que hará el municipio — con artículo citado y cómo subsanar — pero de tu lado.",
+  },
+  {
     icon: Bot,
-    title: "9 herramientas con IA",
+    title: "10 herramientas con IA",
     description:
       "Chat OGUC, predictor de observaciones, memoria descriptiva, declaración jurada, checklist y más. Todo conectado con los datos de tu proyecto.",
   },
@@ -119,6 +137,20 @@ const FEATURES = [
     description:
       "Accede a cualquier proyecto, cliente o herramienta desde el teclado. La paleta de comandos aprende del contexto de la página.",
   },
+];
+
+// Alcance honesto — qué hace hoy y qué está en el roadmap (espejo del "Alcance actual" de REVI)
+const ALCANCE_HACE = [
+  "Revisión normativa de documentos de texto del expediente (OGUC, Ley 21.718).",
+  "Pre-revisión DOM: acta de observaciones simulada con artículo citado y cómo subsanar.",
+  "Inteligencia por municipio: PRC, zonas típicas y observaciones frecuentes de cada DOM.",
+  "Seguimiento del estado del trámite conectándose a DOM en Línea.",
+];
+
+const ALCANCE_ROADMAP = [
+  "Lectura automática de planos arquitectónicos y verificación gráfica (BIM/DWG).",
+  "Cobertura normativa ampliada: LGUC, circulares DDU y PRC de más comunas.",
+  "Integración con la API oficial de DOM en Línea cuando el MINVU la publique.",
 ];
 
 const PROBLEMA = [
@@ -320,6 +352,54 @@ export default async function MarketingPage({
       </section>
 
       {/* ------------------------------------------------------------------ */}
+      {/* Banda de confianza — señales reales, sin métricas de tracción      */}
+      {/* ------------------------------------------------------------------ */}
+      <section className="border-y border-[#1A3328]/10 bg-white">
+        <div className="mx-auto max-w-6xl px-6 py-12">
+          <p className="text-center text-xs font-medium uppercase tracking-[0.15em] text-[#1A3328]/45">
+            Construido sobre la normativa y los datos oficiales de Chile
+          </p>
+
+          <div className="mt-8 grid grid-cols-2 gap-6 md:grid-cols-4">
+            {CONFIANZA.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.label}
+                  className="flex flex-col items-center gap-2 text-center"
+                >
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-[#1A3328]/5">
+                    <Icon className="size-5 text-[#2D6A4F]" />
+                  </div>
+                  <p className="text-2xl font-semibold tracking-tight text-[#1A3328]">
+                    {item.valor}
+                  </p>
+                  <p className="text-xs leading-relaxed text-[#1A3328]/60">
+                    {item.label}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* TODO Estefanía: métrica real de tracción cuando esté disponible */}
+
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-2.5 text-[11px] font-medium text-[#1A3328]/60">
+            <span className="mr-1 text-[#1A3328]/40">Integrado con</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#1A3328]/12 bg-[#F9F7F3] px-3 py-1">
+              <Building2 className="size-3.5 text-[#2D6A4F]" /> DOM en Línea
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#1A3328]/12 bg-[#F9F7F3] px-3 py-1">
+              <FileSearch className="size-3.5 text-[#2D6A4F]" /> SII
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#1A3328]/12 bg-[#F9F7F3] px-3 py-1">
+              <Scale className="size-3.5 text-[#2D6A4F]" /> OGUC · Ley 21.718
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
       {/* Problema                                                           */}
       {/* ------------------------------------------------------------------ */}
       <section className="mx-auto max-w-6xl px-6 py-20">
@@ -439,6 +519,93 @@ export default async function MarketingPage({
         <p className="mt-4 text-center text-xs text-[#1A3328]/50">
           REVI cubre solo 12 de 346 municipios (3.5%) y sirve a los funcionarios — no al arquitecto.
         </p>
+
+        {/* Contraste con Norman (el revisor DOM de REVI) */}
+        <div className="mt-10 flex items-start gap-4 rounded-2xl border border-[#2D6A4F]/25 bg-[#2D6A4F]/5 p-6 md:p-7">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#1A3328]">
+            <Stamp className="size-5 text-[#E9C46A]" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-[#1A3328]">
+              El revisor de la DOM, pero de tu lado
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-[#1A3328]/70">
+              Norman (REVI) revisa el expediente <em>para</em> la DOM. Con <strong>Pre-revisión DOM</strong>,
+              PermisoHub te entrega esa misma acta de observaciones <strong>antes</strong> de ingresar —
+              con el artículo citado y cómo subsanar cada punto. Llegas a la ventanilla con el expediente limpio.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Alcance honesto — qué hace y qué no (todavía)                      */}
+      {/* ------------------------------------------------------------------ */}
+      <section className="bg-white py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="text-center">
+            <h2 className="text-3xl font-semibold tracking-tight text-[#1A3328] md:text-4xl">
+              Claros con lo que hacemos — y lo que viene
+            </h2>
+            <p className="mt-3 text-[#1A3328]/65">
+              Sin humo. Esto es lo que PermisoHub resuelve hoy y lo que está en el roadmap.
+            </p>
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Qué hace hoy */}
+            <div className="rounded-2xl border border-[#2D6A4F]/20 bg-[#F9F7F3] p-7">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="size-5 text-[#2D6A4F]" />
+                <h3 className="text-lg font-semibold text-[#1A3328]">Lo que hace hoy</h3>
+              </div>
+              <ul className="mt-5 space-y-3">
+                {ALCANCE_HACE.map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-[#1A3328]/75">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#2D6A4F]" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Roadmap */}
+            <div className="rounded-2xl border border-[#1A3328]/10 bg-[#F9F7F3] p-7">
+              <div className="flex items-center gap-2.5">
+                <Clock className="size-5 text-[#E9C46A]" />
+                <h3 className="text-lg font-semibold text-[#1A3328]">En el roadmap</h3>
+              </div>
+              <ul className="mt-5 space-y-3">
+                {ALCANCE_ROADMAP.map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-[#1A3328]/65">
+                    <Clock className="mt-0.5 size-4 shrink-0 text-[#E9C46A]" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Historia de integración */}
+          <div className="mt-6 flex flex-col items-start gap-4 rounded-2xl border border-[#1A3328]/10 bg-[#1A3328] p-7 text-[#F9F7F3] md:flex-row md:items-center">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#E9C46A]/15">
+              <Plug className="size-5 text-[#E9C46A]" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-[#F9F7F3]">Se conecta con tu flujo DOM</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-[#F9F7F3]/65">
+                PermisoHub consulta <strong>DOM en Línea</strong> para seguir el estado de tus expedientes
+                automáticamente y avisarte por WhatsApp cuando algo cambia. Se apoya en datos de SII, OGUC
+                y los planes reguladores comunales.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-[#F9F7F3]/70">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F9F7F3]/15 px-3 py-1"><Building2 className="size-3.5 text-[#E9C46A]" /> DOM en Línea</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F9F7F3]/15 px-3 py-1"><Scale className="size-3.5 text-[#E9C46A]" /> OGUC · Ley 21.718</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F9F7F3]/15 px-3 py-1"><FileSearch className="size-3.5 text-[#E9C46A]" /> SII</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ------------------------------------------------------------------ */}
@@ -670,7 +837,7 @@ export default async function MarketingPage({
               </p>
             </div>
 
-            <div className="flex gap-16">
+            <div className="flex flex-wrap gap-12 sm:gap-16">
               <div>
                 <h4 className="text-sm font-semibold text-[#F9F7F3]">
                   Navegación
@@ -706,6 +873,30 @@ export default async function MarketingPage({
                       className="transition-colors hover:text-[#E9C46A]"
                     >
                       Cómo funciona
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-[#F9F7F3]">
+                  Legal
+                </h4>
+                <ul className="mt-4 space-y-2.5 text-sm text-[#F9F7F3]/65">
+                  <li>
+                    <Link
+                      href="/terminos-y-condiciones"
+                      className="transition-colors hover:text-[#E9C46A]"
+                    >
+                      Términos y condiciones
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/politica-de-privacidad"
+                      className="transition-colors hover:text-[#E9C46A]"
+                    >
+                      Política de privacidad
                     </Link>
                   </li>
                 </ul>

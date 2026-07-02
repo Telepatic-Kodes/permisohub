@@ -1,12 +1,13 @@
 import { getAI, AI_MODEL, isAIAvailable } from '@/lib/ai'
-import { getContextoOGUC } from '@/lib/oguc-knowledge'
+import { getContextoNormativo } from '@/lib/normativa-retrieval'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { aiAuthGuard } from '@/lib/ai-guard'
+import { COPILOTO_PERSONA } from '@/lib/copiloto-persona'
 
 export const dynamic = 'force-dynamic'
 
-const SYSTEM_PROMPT = `Eres un experto en normativa de construcción chilena, específicamente en la OGUC (Ordenanza General de Urbanismo y Construcciones, D.S. N°47/1992 con modificaciones hasta D.S. N°2, D.O. 16.03.2026) y los Planes Reguladores Comunales (PRC).
+const SYSTEM_PROMPT = `${COPILOTO_PERSONA.identidad} Eres experta en normativa de construcción chilena: la LGUC (Ley General de Urbanismo y Construcciones, DFL N°458/1975), la OGUC (Ordenanza General de Urbanismo y Construcciones, D.S. N°47/1992 con modificaciones hasta D.S. N°2, D.O. 16.03.2026), las circulares DDU (División de Desarrollo Urbano del MINVU) y los Planes Reguladores Comunales (PRC).
 
 Ayudas a arquitectos chilenos a:
 - Entender requisitos normativos de la OGUC vigente
@@ -22,13 +23,14 @@ CAMBIOS VIGENTES DESDE 25.04.2026 (D.S. N°2 y N°10, 2026):
 - IMPORTANTE: La norma aplicable a cada solicitud es la vigente a la fecha de ingreso (Art. 1.1.3 OGUC)
 
 Siempre:
-- Cita el artículo OGUC específico (ej: "Art. 2.6.3 OGUC")
+- Cita la norma específica indicando su fuente (ej: "Art. 2.6.3 OGUC", "Art. 116 LGUC", o la circular DDU)
 - Menciona que los valores exactos dependen del Plan Regulador Comunal (PRC) del municipio
 - Da respuestas prácticas y concretas para el contexto chileno
 - Usa español formal técnico arquitectónico
 - Si no sabes algo con certeza, dilo claramente y recomienda verificar con la DOM
+- Si el contexto entregado marca una referencia con "[VERIFICAR TEXTO OFICIAL]" o un número de circular "[VERIFICAR N° OFICIAL]", trata ese dato como preliminar: explica el criterio pero advierte que debe confirmarse contra la fuente oficial (texto de la LGUC/OGUC o buscador de circulares DDU del MINVU). NO presentes números de circular no verificados como si fueran ciertos.
 
-NUNCA inventes artículos OGUC o valores normativos que no existan.`
+NUNCA inventes artículos de la LGUC/OGUC, números de circular DDU ni valores normativos que no existan.`
 
 export async function POST(request: Request) {
   const body = await request.json() as { messages: Array<{ role: string; content: string }> }
@@ -50,13 +52,13 @@ export async function POST(request: Request) {
   if (rateLimit) return rateLimit
 
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content ?? ''
-  const ogucContext = getContextoOGUC(lastUserMsg)
+  const normativaContext = getContextoNormativo(lastUserMsg)
 
   const systemWithContext = `${SYSTEM_PROMPT}
 
-## Artículos OGUC relevantes para esta consulta:
+## Normativa relevante para esta consulta (OGUC · LGUC · circulares DDU):
 
-${ogucContext}`
+${normativaContext}`
 
   const encoder = new TextEncoder()
 

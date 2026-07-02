@@ -8,11 +8,13 @@ import {
   FileSignature,
   MessageSquare,
   ShieldCheck,
+  Stamp,
   Target,
   Wrench,
   type LucideIcon,
 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
+import { COPILOTO_PERSONA } from "@/lib/copiloto-persona"
 
 interface Tool {
   label: string
@@ -25,8 +27,16 @@ interface Tool {
 
 const TOOLS: Tool[] = [
   {
+    label: "Pre-revisión DOM",
+    description: "Simula el acta de observaciones de la DOM antes de ingresar tu expediente",
+    href: "/herramientas/pre-revision",
+    Icon: Stamp,
+    color: "text-primary",
+    iconBg: "bg-primary/8",
+  },
+  {
     label: "Chat OGUC",
-    description: "Consultas normativas con IA en tiempo real",
+    description: "Consultas normativas OGUC · LGUC · circulares DDU en tiempo real",
     href: "/herramientas/oguc-chat",
     Icon: MessageSquare,
     color: "text-primary",
@@ -103,7 +113,7 @@ export default function HerramientasPage() {
     <div className="flex min-h-screen flex-col">
       <PageHeader
         title="Herramientas IA"
-        subtitle="El copiloto del arquitecto chileno"
+        subtitle={`${COPILOTO_PERSONA.nombre} · ${COPILOTO_PERSONA.rol}`}
       />
 
       <div className="flex-1 px-6 py-8">

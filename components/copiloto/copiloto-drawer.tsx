@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useCallback } from 'react'
-import { Bot, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { COPILOTO_PERSONA } from '@/lib/copiloto-persona'
 import {
   Sheet,
   SheetContent,
@@ -199,9 +200,14 @@ export function CopilotoDrawer({ open, proyecto, onClose }: CopilotoDrawerProps)
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="right" className="w-[480px] sm:max-w-[480px] overflow-y-auto p-0">
         <SheetHeader className="border-b border-border px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Bot className="size-5 text-primary" />
-            <SheetTitle>Copiloto IA</SheetTitle>
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
+              {COPILOTO_PERSONA.inicial}
+            </div>
+            <div className="flex flex-col">
+              <SheetTitle>{COPILOTO_PERSONA.nombre}</SheetTitle>
+              <span className="text-[11px] font-normal text-muted-foreground">{COPILOTO_PERSONA.rol}</span>
+            </div>
           </div>
           {proyecto && (
             <SheetDescription className="text-left">
