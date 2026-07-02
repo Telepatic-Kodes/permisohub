@@ -81,7 +81,11 @@ export function getContextoNormativo(query: string, limit = 8): string {
   const dduScored = scoreSource(
     query,
     'DDU',
-    CIRCULARES_DDU.map((c) => ({ ...c, displayId: `Circular ${c.numero}` }))
+    CIRCULARES_DDU.map((c) => ({
+      ...c,
+      displayId: `Circular ${c.numero}${c.verificado ? '' : ' [n° por verificar]'}`,
+      texto: c.verificado && c.fuente ? `${c.texto}\nFuente oficial: ${c.fuente}` : c.texto,
+    }))
   )
 
   const relevant = [...ogucScored, ...lgucScored, ...dduScored]
@@ -98,3 +102,32 @@ export function getContextoNormativo(query: string, limit = 8): string {
 
   return relevant.map(formatBlock).join('\n\n---\n\n')
 }
+
+// Tokens numéricos de las circulares DDU verificadas contra MINVU (solo dígitos,
+// ej. "DDU-ESP 091-07" → "09107"). Sirven para distinguir una cita real de un
+// número inventado por el modelo.
+const VERIFIED_DDU_TOKENS = new Set(
+  CIRCULARES_DDU.filter((c) => c.verificado)
+    .map((c) => c.numero.replace(/\D/g, ''))
+    .filter(Boolean)
+)
+
+// Marca como NO verificada una cita a circular DDU con un número que NO coincide
+// con ninguna circular verificada de la base. Cualquier "DDU 1234" inventado se
+// anota como "(n° por verificar)"; una cita a una DDU real (ej. "DDU-ESP 091-07")
+// pasa intacta. Una cita por materia (sin número) no se toca.
+export function flagUnverifiedDDU(code: string): string {
+  if (!code) return code
+  const m = code.match(/\bDDU\b[^A-Za-z0-9]*(?:ESP[^A-Za-z0-9]*)?N?[°º]?\s*([\d-]+)/i)
+  if (!m) return code // cita por materia, sin número → nada que marcar
+  const digits = m[1].replace(/\D/g, '')
+  if (digits && VERIFIED_DDU_TOKENS.has(digits)) return code // DDU real verificada
+  if (/por verificar/i.test(code)) return code
+  return `${code.trim()} (n° por verificar)`
+}
+
+// Regla reutilizable para inyectar en los prompts: evita inventar normativa.
+export const REGLAS_CITACION = `## Reglas de citación (no inventar normativa)
+- Cita SOLO artículos y circulares presentes en el CONTEXTO NORMATIVO de arriba.
+- Los números oficiales de las circulares DDU NO están confirmados: NUNCA inventes un número tipo "DDU 253" o "DDU 1234". Refiere la DDU por su MATERIA/título (ej. "DDU — modificación de proyecto") y da por hecho que el número exacto debe verificarse.
+- Si ninguna circular del contexto aplica, no cites ninguna DDU.`

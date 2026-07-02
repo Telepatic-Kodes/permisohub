@@ -5,7 +5,7 @@ import { isAIAvailable, aiCompleteWithImages } from '@/lib/ai'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { getContextoOGUC } from '@/lib/oguc-knowledge'
+import { getContextoNormativo, flagUnverifiedDDU, REGLAS_CITACION } from '@/lib/normativa-retrieval'
 import type { Anotacion, LaminaAnotada } from '@/lib/anotacion-convenciones'
 
 // ---------------------------------------------------------------------------
@@ -29,8 +29,8 @@ interface AnotacionPlanoRequest {
 }
 
 function buildPrompt(nombre: string, observaciones?: string, contexto?: string): string {
-  const ogucCtx = getContextoOGUC(
-    'muros perimetrales aleros rasante distanciamiento elevacion emplazamiento destino uso proyeccion cotas',
+  const normativaCtx = getContextoNormativo(
+    `${observaciones ?? ''} ${contexto ?? ''} muros perimetrales aleros rasante distanciamiento elevacion emplazamiento destino uso proyeccion cotas`,
   )
 
   const obsSection = observaciones?.trim()
@@ -47,8 +47,10 @@ ${obsSection}
 
 ${ctxSection}
 
-## Artículos OGUC de referencia
-${ogucCtx}
+## Contexto normativo (OGUC · LGUC · DDU)
+${normativaCtx}
+
+${REGLAS_CITACION}
 
 ## Convención gráfica (obligatoria)
 - Línea roja segmentada ("rojo_segmentado") = muros perimetrales que se prolongan.
@@ -116,7 +118,7 @@ function parseAnotaciones(text: string, laminaId: string): Anotacion[] {
         a.severidad === 'crítica' || a.severidad === 'media' ? a.severidad : 'menor',
       textoCorto: typeof a.textoCorto === 'string' ? a.textoCorto : `Obs. ${i + 1}`,
       observacion: typeof a.observacion === 'string' ? a.observacion : '',
-      articulo: typeof a.articulo === 'string' ? a.articulo : '',
+      articulo: flagUnverifiedDDU(typeof a.articulo === 'string' ? a.articulo : ''),
       fundamento: typeof a.fundamento === 'string' ? a.fundamento : '',
       sugerencia: typeof a.sugerencia === 'string' ? a.sugerencia : '',
       confianza: clamp(a.confianza, 0.5),

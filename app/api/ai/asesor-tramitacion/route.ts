@@ -5,7 +5,7 @@ import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { getContextoOGUC } from '@/lib/oguc-knowledge'
+import { getContextoNormativo, flagUnverifiedDDU, REGLAS_CITACION } from '@/lib/normativa-retrieval'
 
 // ---------------------------------------------------------------------------
 // Asesor de tramitación — qué VÍA conviene, no solo qué dice la norma.
@@ -54,8 +54,8 @@ interface AsesorResult {
 }
 
 function buildPrompt(req: AsesorRequest): string {
-  const ogucCtx = getContextoOGUC(
-    'obras menores alteración cambio de destino uso regularización patente 5.1.2 5.2.5 permiso edificación recepción',
+  const normativaCtx = getContextoNormativo(
+    `${req.situacion} ${req.objetivo ?? ''} obras menores alteración cambio de destino uso regularización patente 5.1.2 5.2.5 permiso edificación recepción`,
   )
 
   const muni = req.municipio?.trim() ? ` en ${req.municipio.trim()}` : ''
@@ -77,8 +77,10 @@ ${objetivo}
 
 ${restr}
 
-## Artículos OGUC de referencia
-${ogucCtx}
+## Contexto normativo (OGUC · LGUC · DDU)
+${normativaCtx}
+
+${REGLAS_CITACION}
 
 ## Instrucción
 Compara las vías de tramitación realmente aplicables a este caso, de la más liviana a la más pesada. Para cada una: viabilidad real, tiempo estimado, costo relativo, requisitos, pros y contras, y fundamento normativo. Recomienda la vía que mejor equilibra legalidad + costo + tiempo dado el objetivo y las restricciones. Da pasos concretos y accionables. Si la vía liviana exige un ajuste de proyecto (ej. redibujar un alero, revertir una modificación de fachada), dilo explícitamente como paso.
@@ -101,7 +103,7 @@ Responde SOLO con JSON válido (sin markdown):
   "estrategia": "2-4 oraciones: la jugada recomendada y por qué, considerando costo/tiempo/objetivo",
   "pasos": [ { "orden": 1, "accion": "acción concreta", "porque": "para qué sirve" } ],
   "riesgos": ["riesgos o supuestos que hay que verificar"],
-  "ddu": [ { "codigo": "DDU N", "porque": "qué resuelve en este caso" } ],
+  "ddu": [ { "codigo": "DDU — <materia/título de la circular, SIN número inventado>", "porque": "qué resuelve en este caso" } ],
   "advertencia": "1 oración: qué verificar con la DOM antes de comprometerse"
 }
 
@@ -160,6 +162,8 @@ export async function POST(request: Request) {
       max_tokens: 2800,
     })
     const result = parse(text)
+    // Defensa en profundidad: marca cualquier número de DDU no verificado.
+    result.ddu = result.ddu.map((d) => ({ ...d, codigo: flagUnverifiedDDU(d.codigo) }))
     recordUsage(auth.userId, 'ai_chats').catch(console.error)
     return Response.json({ ok: true, ...result })
   } catch (err) {
