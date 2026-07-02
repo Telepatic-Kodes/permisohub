@@ -53,6 +53,7 @@ import { WhatsAppDialog } from "@/components/dashboard/whatsapp-dialog"
 import { ExpedienteScore } from "@/components/proyecto/expediente-score"
 import { DesarchivoPanel } from "@/components/proyecto/desarchivo-panel"
 import { PredioMap } from "@/components/proyecto/predio-map"
+import DueDiligenceReport from "@/components/proyecto/due-diligence-report"
 import { setCommandContext, clearCommandContext } from "@/hooks/use-command-context"
 import {
   Dialog,
@@ -1125,6 +1126,11 @@ export default function ProyectoDetallePage({
             </CardContent>
           </Card>
         </div>
+        </div>
+
+        {/* Due Diligence documental */}
+        <div className="mt-6">
+          <DueDiligenceReport proyectoId={proyecto.id} />
         </div>
 
         {proyecto.cliente?.telefono && (

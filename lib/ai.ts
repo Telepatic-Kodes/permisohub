@@ -57,3 +57,32 @@ export async function aiCompleteWithPDF(
   })
   return response.choices[0].message.content ?? ''
 }
+
+// Visión: analiza una o más imágenes (láminas de plano) con gpt-4o.
+// `images` son data URLs (data:image/png;base64,...). Se pide `detail: high`
+// para no perder el detalle del dibujo — dolor explícito del arquitecto.
+export async function aiCompleteWithImages(
+  prompt: string,
+  images: string[],
+  options?: { max_tokens?: number }
+): Promise<string> {
+  const ai = getAI()
+  if (!ai) throw new Error('OPENAI_API_KEY no configurado')
+
+  const content: OpenAI.Chat.ChatCompletionContentPart[] = [
+    { type: 'text', text: prompt },
+    ...images.map(
+      (url): OpenAI.Chat.ChatCompletionContentPart => ({
+        type: 'image_url',
+        image_url: { url, detail: 'high' },
+      }),
+    ),
+  ]
+
+  const response = await ai.chat.completions.create({
+    model: AI_MODEL,
+    max_tokens: options?.max_tokens ?? 3000,
+    messages: [{ role: 'user', content }],
+  })
+  return response.choices[0].message.content ?? ''
+}
