@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { AlertCircle, Download, Loader2, PencilRuler, RefreshCw } from "lucide-react"
-import type { jsPDF as JsPDF } from "jspdf"
 
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
@@ -14,6 +13,12 @@ import {
   colorDeMarca,
   type Anotacion,
 } from "@/lib/anotacion-convenciones"
+import {
+  generarInformePDF,
+  observacionesDesdeReporte,
+  pdfUrlToImages,
+  type CoverInfo,
+} from "@/lib/informe-pdf"
 import type { DueDiligenceResult } from "@/lib/due-diligence"
 
 interface PlanoDoc {
@@ -21,13 +26,6 @@ interface PlanoDoc {
   nombre: string
   url: string
   tipo?: string
-}
-
-interface CoverInfo {
-  cliente?: string | null
-  numeroExpediente?: string | null
-  tipo?: string | null
-  documentos: { nombre: string; tipo: string }[]
 }
 
 interface LaminaConImagen {
@@ -42,353 +40,6 @@ interface LaminaConImagen {
 interface Props {
   proyectoId: string
   result: DueDiligenceResult
-}
-
-// Rasteriza cada página de un PDF (por URL) a imagen PNG en el cliente.
-async function pdfUrlToImages(url: string, base: string): Promise<{ nombre: string; dataUrl: string }[]> {
-  const pdfjs = await import("pdfjs-dist")
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url,
-  ).toString()
-  const buf = await (await fetch(url)).arrayBuffer()
-  const doc = await pdfjs.getDocument({ data: buf }).promise
-  const out: { nombre: string; dataUrl: string }[] = []
-  const MAX_W = 1600 // gpt-4o reescala a ~1536px; JPEG para no exceder el límite de body
-  for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i)
-    const base1 = page.getViewport({ scale: 1 })
-    const scale = Math.min(2, MAX_W / base1.width)
-    const viewport = page.getViewport({ scale })
-    const canvas = document.createElement("canvas")
-    canvas.width = viewport.width
-    canvas.height = viewport.height
-    const ctx = canvas.getContext("2d")
-    if (!ctx) continue
-    await page.render({ canvasContext: ctx, viewport }).promise
-    out.push({
-      nombre: doc.numPages > 1 ? `${base} · lámina ${i}` : base,
-      dataUrl: canvas.toDataURL("image/jpeg", 0.85),
-    })
-  }
-  return out
-}
-
-// Observaciones para marcar = estado DOM + hallazgos del due diligence.
-function observacionesDesdeReporte(result: DueDiligenceResult): string {
-  const lines: string[] = []
-  if (result.estadoDOM?.detalle) lines.push(result.estadoDOM.detalle)
-  for (const h of result.hallazgos) {
-    lines.push(`${h.titulo}: ${h.descripcion}${h.refDOM ? ` (${h.refDOM})` : ""}`)
-  }
-  return lines.join("\n")
-}
-
-// Quema las marcas sobre la lámina a resolución natural y devuelve JPEG + dims.
-async function burnLamina(l: LaminaConImagen): Promise<{ dataUrl: string; w: number; h: number }> {
-  const img = new Image()
-  img.src = l.dataUrl
-  await new Promise((r) => {
-    img.onload = r
-  })
-  const canvas = document.createElement("canvas")
-  canvas.width = img.naturalWidth
-  canvas.height = img.naturalHeight
-  const ctx = canvas.getContext("2d")
-  if (!ctx) return { dataUrl: l.dataUrl, w: canvas.width, h: canvas.height }
-  ctx.drawImage(img, 0, 0)
-  const W = canvas.width
-  const H = canvas.height
-  ctx.lineWidth = Math.max(2, W * 0.003)
-  ctx.font = `bold ${Math.max(14, W * 0.014)}px sans-serif`
-  l.anotaciones.forEach((a, i) => {
-    const color = colorDeMarca(a.convencionLinea, a.severidad)
-    const x = a.bbox.x * W
-    const y = a.bbox.y * H
-    const w = a.bbox.w * W
-    const h = a.bbox.h * H
-    ctx.strokeStyle = color
-    ctx.setLineDash(a.convencionLinea ? [W * 0.012, W * 0.008] : [])
-    if (a.tipoMarca === "circulo") {
-      ctx.beginPath()
-      ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2)
-      ctx.stroke()
-    } else {
-      ctx.strokeRect(x, y, w, h)
-    }
-    ctx.setLineDash([])
-    const r = Math.max(10, W * 0.012)
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.arc(x, y, r, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.fillStyle = "#fff"
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
-    ctx.fillText(String(i + 1), x, y)
-  })
-  return { dataUrl: canvas.toDataURL("image/jpeg", 0.9), w: W, h: H }
-}
-
-const COVER_W = 794
-const COVER_H = 1123
-
-function riesgoRGB(r: DueDiligenceResult["riesgoGlobal"]): [number, number, number] {
-  if (r === "ALTO") return [239, 68, 68]
-  if (r === "MEDIO") return [245, 158, 11]
-  return [16, 163, 74]
-}
-function sevRGB(s: Anotacion["severidad"] | "critico" | "alto" | "medio"): [number, number, number] {
-  if (s === "critico" || s === "crítica") return [239, 68, 68]
-  if (s === "alto" || s === "media") return [245, 158, 11]
-  return [59, 130, 246]
-}
-
-// Dibuja la portada del informe (resumen del due diligence) en la página actual.
-function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult, info: CoverInfo): void {
-  const M = 48
-  const CW = COVER_W - M * 2
-  let y = 62
-  const ensure = (need: number) => {
-    if (y + need > COVER_H - 44) {
-      pdf.addPage([COVER_W, COVER_H], "portrait")
-      y = 62
-    }
-  }
-
-  // Encabezado
-  pdf.setTextColor(26, 51, 40)
-  pdf.setFont("helvetica", "bold")
-  pdf.setFontSize(20)
-  pdf.text("Informe de Due Diligence", M, y)
-  y += 22
-  pdf.setFontSize(13)
-  pdf.setTextColor(20, 20, 20)
-  pdf.splitTextToSize(result.proyecto.nombre, CW).slice(0, 2).forEach((ln: string) => {
-    pdf.text(ln, M, y)
-    y += 16
-  })
-  const sub = [result.proyecto.direccion, result.proyecto.municipio, result.proyecto.rol]
-    .filter(Boolean)
-    .join("  ·  ")
-  if (sub) {
-    pdf.setFont("helvetica", "normal")
-    pdf.setFontSize(9)
-    pdf.setTextColor(120, 120, 120)
-    pdf.text(sub, M, y)
-    y += 8
-  }
-  y += 16
-
-  // Tarjeta de datos del proyecto
-  const infoRows: [string, string][] = [
-    ["Cliente", info.cliente ?? "—"],
-    ["Municipio", result.proyecto.municipio ?? "—"],
-    ["Dirección", result.proyecto.direccion ?? "—"],
-    ["N° Expediente", info.numeroExpediente ?? "—"],
-    ["Tipo", info.tipo ?? "—"],
-  ]
-  const cardH = 14 + Math.ceil(infoRows.length / 2) * 26
-  pdf.setFillColor(247, 247, 245)
-  pdf.roundedRect(M, y, CW, cardH, 5, 5, "F")
-  infoRows.forEach(([label, value], i) => {
-    const col = i % 2
-    const cx = M + 14 + col * (CW / 2)
-    const cy = y + 13 + Math.floor(i / 2) * 26
-    pdf.setFont("helvetica", "normal")
-    pdf.setFontSize(7)
-    pdf.setTextColor(140, 140, 140)
-    pdf.text(label.toUpperCase(), cx, cy)
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(9)
-    pdf.setTextColor(30, 30, 30)
-    pdf.text(pdf.splitTextToSize(value, CW / 2 - 26)[0] ?? value, cx, cy + 9)
-  })
-  y += cardH + 20
-
-  // Fila de métricas: riesgo · completitud · conteos
-  const boxW = (CW - 24) / 3
-  const boxH = 44
-  const [rr, rg, rb] = riesgoRGB(result.riesgoGlobal)
-  pdf.setFillColor(rr, rg, rb)
-  pdf.roundedRect(M, y, boxW, boxH, 4, 4, "F")
-  pdf.setTextColor(255, 255, 255)
-  pdf.setFont("helvetica", "bold")
-  pdf.setFontSize(7)
-  pdf.text("RIESGO GLOBAL", M + 12, y + 16)
-  pdf.setFontSize(15)
-  pdf.text(result.riesgoGlobal, M + 12, y + 34)
-
-  const x2 = M + boxW + 12
-  pdf.setDrawColor(224, 224, 224)
-  pdf.setFillColor(248, 248, 248)
-  pdf.roundedRect(x2, y, boxW, boxH, 4, 4, "FD")
-  pdf.setTextColor(120, 120, 120)
-  pdf.setFontSize(7)
-  pdf.text("COMPLETITUD", x2 + 12, y + 16)
-  pdf.setTextColor(26, 51, 40)
-  pdf.setFontSize(15)
-  pdf.text(`${result.completitud.presentes}/${result.completitud.esperados} docs`, x2 + 12, y + 34)
-
-  const x3 = x2 + boxW + 12
-  pdf.setFillColor(248, 248, 248)
-  pdf.roundedRect(x3, y, boxW, boxH, 4, 4, "FD")
-  pdf.setTextColor(120, 120, 120)
-  pdf.setFontSize(7)
-  pdf.text("HALLAZGOS", x3 + 12, y + 16)
-  pdf.setTextColor(26, 51, 40)
-  pdf.setFontSize(11)
-  pdf.text(
-    `${result.conteos.criticos} crít · ${result.conteos.altos} altos · ${result.conteos.medios} medios`,
-    x3 + 12,
-    y + 33,
-  )
-  y += boxH + 22
-
-  // Estado DOM
-  if (result.estadoDOM?.rechazado || result.estadoDOM?.detalle) {
-    const detalle = result.estadoDOM.detalle ?? ""
-    const meta = [
-      result.estadoDOM.resolucion,
-      result.estadoDOM.fecha,
-      result.estadoDOM.expediente ? `Exp. ${result.estadoDOM.expediente}` : null,
-    ]
-      .filter(Boolean)
-      .join("  ·  ")
-    pdf.setFontSize(9)
-    const lines = pdf.splitTextToSize(detalle, CW - 24)
-    const h = 34 + lines.length * 12
-    ensure(h)
-    pdf.setFillColor(254, 242, 242)
-    pdf.setDrawColor(239, 68, 68)
-    pdf.roundedRect(M, y, CW, h, 4, 4, "FD")
-    pdf.setTextColor(185, 28, 28)
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(9)
-    pdf.text(result.estadoDOM.rechazado ? "Estado DOM: RECHAZADO" : "Estado DOM", M + 12, y + 18)
-    if (meta) {
-      pdf.setFont("helvetica", "normal")
-      pdf.setFontSize(7.5)
-      pdf.text(meta, M + 12, y + 30)
-    }
-    pdf.setTextColor(60, 60, 60)
-    pdf.setFontSize(9)
-    pdf.text(lines, M + 12, y + 44)
-    y += h + 18
-  }
-
-  // Resumen ejecutivo
-  if (result.resumenEjecutivo) {
-    pdf.setFontSize(9.5)
-    const lines = pdf.splitTextToSize(result.resumenEjecutivo, CW)
-    ensure(20 + lines.length * 12)
-    pdf.setTextColor(26, 51, 40)
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(10)
-    pdf.text("Resumen ejecutivo", M, y)
-    y += 15
-    pdf.setFont("helvetica", "normal")
-    pdf.setFontSize(9.5)
-    pdf.setTextColor(50, 50, 50)
-    pdf.text(lines, M, y)
-    y += lines.length * 12 + 16
-  }
-
-  // Hallazgos
-  if (result.hallazgos.length > 0) {
-    ensure(24)
-    pdf.setTextColor(26, 51, 40)
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(10)
-    pdf.text(`Hallazgos (${result.hallazgos.length})`, M, y)
-    y += 16
-    result.hallazgos.forEach((h) => {
-      pdf.setFont("helvetica", "normal")
-      pdf.setFontSize(8.5)
-      const desc = pdf.splitTextToSize(h.descripcion, CW - 20)
-      const blockH = 18 + desc.length * 11
-      ensure(blockH)
-      const [sr, sg, sb] = sevRGB(h.severidad)
-      pdf.setFillColor(sr, sg, sb)
-      pdf.rect(M, y - 6, 4, blockH - 4, "F")
-      pdf.setTextColor(sr, sg, sb)
-      pdf.setFont("helvetica", "bold")
-      pdf.setFontSize(8.5)
-      pdf.text(`${h.codigo} · ${h.titulo}`, M + 12, y)
-      if (h.refDOM) {
-        pdf.setFont("helvetica", "normal")
-        pdf.setTextColor(150, 150, 150)
-        pdf.setFontSize(7)
-        pdf.text(h.refDOM, M + 12, y + 9)
-      }
-      pdf.setFont("helvetica", "normal")
-      pdf.setTextColor(70, 70, 70)
-      pdf.setFontSize(8.5)
-      pdf.text(desc, M + 12, y + (h.refDOM ? 19 : 11))
-      y += blockH + (h.refDOM ? 10 : 4)
-    })
-    y += 10
-  }
-
-  // Próximos pasos
-  if (result.proximosPasos.length > 0) {
-    ensure(24)
-    pdf.setTextColor(26, 51, 40)
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(10)
-    pdf.text("Próximos pasos", M, y)
-    y += 16
-    result.proximosPasos.forEach((p, i) => {
-      pdf.setFontSize(8.5)
-      const det = pdf.splitTextToSize(p.detalle, CW - 24)
-      const blockH = 14 + det.length * 11
-      ensure(blockH)
-      pdf.setTextColor(p.critico ? 185 : 26, p.critico ? 28 : 51, p.critico ? 28 : 40)
-      pdf.setFont("helvetica", "bold")
-      pdf.text(`${i + 1}. ${p.titulo}`, M, y)
-      pdf.setFont("helvetica", "normal")
-      pdf.setTextColor(70, 70, 70)
-      pdf.text(det, M + 14, y + 11)
-      y += blockH + 4
-    })
-    y += 6
-  }
-
-  // Documentos del expediente
-  if (info.documentos.length > 0) {
-    ensure(24)
-    pdf.setTextColor(26, 51, 40)
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(10)
-    pdf.text(`Documentos del expediente (${info.documentos.length})`, M, y)
-    y += 14
-    info.documentos.forEach((d, i) => {
-      ensure(13)
-      if (i % 2 === 0) {
-        pdf.setFillColor(250, 250, 249)
-        pdf.rect(M, y - 8, CW, 12, "F")
-      }
-      pdf.setFont("helvetica", "normal")
-      pdf.setFontSize(8)
-      pdf.setTextColor(30, 30, 30)
-      pdf.text(pdf.splitTextToSize(d.nombre, CW - 130)[0] ?? d.nombre, M + 6, y)
-      pdf.setTextColor(140, 140, 140)
-      pdf.setFontSize(7.5)
-      pdf.text(d.tipo, M + CW - 6, y, { align: "right" })
-      y += 13
-    })
-    y += 8
-  }
-
-  // Pie
-  pdf.setTextColor(150, 150, 150)
-  pdf.setFont("helvetica", "italic")
-  pdf.setFontSize(7.5)
-  pdf.text(
-    `Generado el ${result.generadoEl} · Revisión preliminar, no constituye pronunciamiento de la DOM.`,
-    M,
-    COVER_H - 30,
-  )
 }
 
 export default function PlanosAnotados({ proyectoId, result }: Props) {
@@ -551,23 +202,11 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
     if (laminas.length === 0) return
     setExporting(true)
     try {
-      const mod = await import("jspdf")
-      // Portada = resumen del due diligence (página A4 vertical).
-      const pdf = new mod.jsPDF({ orientation: "portrait", unit: "px", format: [COVER_W, COVER_H] })
-      drawCoverPage(pdf, result, info)
-      // Una página por lámina anotada.
-      for (const l of laminas) {
-        const { dataUrl, w, h } = await burnLamina(l)
-        const orientation = w >= h ? "landscape" : "portrait"
-        pdf.addPage([w, h], orientation)
-        pdf.addImage(dataUrl, "JPEG", 0, 0, w, h)
-      }
-      const safe = result.proyecto.nombre.replace(/[^\w.-]+/g, "-").slice(0, 60)
-      pdf.save(`informe-due-diligence-${safe}.pdf`)
+      await generarInformePDF(proyectoId, result)
     } finally {
       setExporting(false)
     }
-  }, [laminas, result.proyecto.nombre])
+  }, [laminas.length, proyectoId, result])
 
   const active = laminas[activeIdx]
 

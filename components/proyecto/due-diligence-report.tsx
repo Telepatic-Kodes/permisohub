@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   AlertTriangle,
   Ban,
@@ -30,6 +30,8 @@ import type {
 
 export interface DueDiligenceReportProps {
   proyectoId: string
+  // Se llama tras poblar la PMO (etapas/observaciones) al completar un run nuevo.
+  onApplied?: () => void
 }
 
 /** Estado de UI: incluye 'idle' además de los estados de la fila. */
@@ -96,7 +98,8 @@ function vigenciaClasses(nivel: Vigencia["nivel"]): string {
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export default function DueDiligenceReport({ proyectoId }: DueDiligenceReportProps) {
+export default function DueDiligenceReport({ proyectoId, onApplied }: DueDiligenceReportProps) {
+  const appliedRef = useRef(false)
   const [reportId, setReportId] = useState<string | null>(null)
   const [status, setStatus] = useState<UiStatus>("idle")
   const [progress, setProgress] = useState<DueDiligenceReportRow["progress"]>(null)
@@ -151,6 +154,13 @@ export default function DueDiligenceReport({ proyectoId }: DueDiligenceReportPro
         if (row.status === "done") {
           setResult(row.result)
           clearInterval(intervalId)
+          // Run recién completado → poblar la PMO (una sola vez).
+          if (!appliedRef.current) {
+            appliedRef.current = true
+            void fetch(`/api/proyectos/${proyectoId}/aplicar-dd`, { method: "POST" })
+              .then(() => onApplied?.())
+              .catch(() => undefined)
+          }
         } else if (row.status === "error") {
           toast.error(row.error ?? "Ocurrió un error al generar el due diligence")
           clearInterval(intervalId)
