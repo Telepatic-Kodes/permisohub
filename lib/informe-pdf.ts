@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client"
 import { esPlano } from "@/lib/planos"
 import { colorDeMarca, type Anotacion } from "@/lib/anotacion-convenciones"
 import type { DueDiligenceResult } from "@/lib/due-diligence"
+import { calcularCuadro, type CuadroInput, type CuadroResultado } from "@/lib/cuadros-calculo"
 
 export const COVER_W = 794
 export const COVER_H = 1123
@@ -125,6 +126,63 @@ async function burnLamina(l: Lamina): Promise<{ dataUrl: string; w: number; h: n
     ctx.fillText(String(i + 1), x, y)
   })
   return { dataUrl: canvas.toDataURL("image/jpeg", 0.9), w: W, h: H }
+}
+
+// Dibuja el cuadro de cálculo normativo como viñeta (esquina inferior derecha)
+// sobre la página de una lámina — como un cuadro de superficies en un plano real.
+function drawCuadroBlock(pdf: JsPDF, cuadro: CuadroResultado, W: number, H: number): void {
+  const pad = W * 0.012
+  const boxW = Math.min(W * 0.34, 330)
+  const titleFs = Math.max(9, W / 110)
+  const rowFs = Math.max(8, W / 135)
+  const lh = rowFs * 1.7
+
+  const relevantes = cuadro.filas.filter((f) =>
+    ["Constructibilidad", "Ocupación de suelo", "Altura de edificación"].includes(f.concepto),
+  )
+  const corto: Record<string, string> = {
+    "Ocupación de suelo": "Ocupación",
+    "Altura de edificación": "Altura",
+  }
+  const rows: { label: string; val: string; color: [number, number, number] }[] = [
+    { label: "Sup. edificada", val: `${cuadro.superficieTotalEdificada} m²`, color: [30, 30, 30] },
+    ...relevantes.map((f) => ({
+      label: corto[f.concepto] ?? f.concepto,
+      val: `${f.valor}${f.unidad}${f.limite !== null ? ` / ${f.limite}${f.unidad}` : ""}`,
+      color: (f.veredicto === "excede"
+        ? [220, 38, 38]
+        : f.veredicto === "cumple"
+          ? [22, 163, 74]
+          : [90, 90, 90]) as [number, number, number],
+    })),
+  ]
+
+  const headerH = titleFs * 2.2
+  const boxH = headerH + rows.length * lh + pad
+  const x = W - boxW - pad
+  const y = H - boxH - pad
+
+  pdf.setFillColor(255, 255, 255)
+  pdf.setDrawColor(60, 60, 60)
+  pdf.setLineWidth(Math.max(1, W * 0.001))
+  pdf.roundedRect(x, y, boxW, boxH, 4, 4, "FD")
+
+  pdf.setFont("helvetica", "bold")
+  pdf.setFontSize(titleFs)
+  pdf.setTextColor(26, 51, 40)
+  pdf.text("CUADRO DE CÁLCULO NORMATIVO", x + pad, y + titleFs + 4)
+
+  let ry = y + headerH + rowFs
+  for (const r of rows) {
+    pdf.setFont("helvetica", "normal")
+    pdf.setFontSize(rowFs)
+    pdf.setTextColor(90, 90, 90)
+    pdf.text(r.label, x + pad, ry)
+    pdf.setFont("helvetica", "bold")
+    pdf.setTextColor(r.color[0], r.color[1], r.color[2])
+    pdf.text(r.val, x + boxW - pad, ry, { align: "right" })
+    ry += lh
+  }
 }
 
 // Dibuja la portada del informe (resumen del due diligence) en la página actual.
@@ -402,6 +460,18 @@ export async function generarInformePDF(
     (stored ?? []).map((s) => [`${s.documento_id}-${s.pagina}`, (s.anotaciones ?? []) as Anotacion[]]),
   )
 
+  // Cuadro de cálculo normativo (viñeta sobre la primera lámina), si existe.
+  let cuadro: CuadroResultado | null = null
+  const { data: cuadroRow } = await supabase
+    .from("cuadros_calculo")
+    .select("data")
+    .eq("proyecto_id", proyectoId)
+    .maybeSingle()
+  if (cuadroRow?.data) {
+    const r = calcularCuadro(cuadroRow.data as CuadroInput)
+    if (!r.incompleto) cuadro = r
+  }
+
   const laminas: Lamina[] = []
   for (const p of planos) {
     const base = p.nombre.replace(/\.pdf$/i, "")
@@ -422,11 +492,12 @@ export async function generarInformePDF(
   const mod = await import("jspdf")
   const pdf = new mod.jsPDF({ orientation: "portrait", unit: "px", format: [COVER_W, COVER_H] })
   drawCoverPage(pdf, result, info)
-  for (const l of recorte) {
+  for (const [idx, l] of recorte.entries()) {
     const { dataUrl, w, h } = await burnLamina(l)
     const orientation = w >= h ? "landscape" : "portrait"
     pdf.addPage([w, h], orientation)
     pdf.addImage(dataUrl, "JPEG", 0, 0, w, h)
+    if (idx === 0 && cuadro) drawCuadroBlock(pdf, cuadro, w, h)
   }
   const safe = result.proyecto.nombre.replace(/[^\w.-]+/g, "-").slice(0, 60)
   pdf.save(`informe-due-diligence-${safe}.pdf`)

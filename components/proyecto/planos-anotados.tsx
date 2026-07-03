@@ -20,6 +20,11 @@ import {
   type CoverInfo,
 } from "@/lib/informe-pdf"
 import type { DueDiligenceResult } from "@/lib/due-diligence"
+import {
+  calcularCuadro,
+  type CuadroInput,
+  type CuadroResultado,
+} from "@/lib/cuadros-calculo"
 
 interface PlanoDoc {
   id: string
@@ -51,6 +56,27 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
   const [done, setDone] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [info, setInfo] = useState<CoverInfo>({ documentos: [] })
+  // Cuadro de cálculo normativo (viñeta sobre la lámina). Se carga guardado.
+  const [cuadro, setCuadro] = useState<CuadroResultado | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch(`/api/proyectos/${proyectoId}/cuadro-calculo`)
+        if (!res.ok) return
+        const json = (await res.json()) as { data: CuadroInput | null }
+        if (cancelled || !json.data) return
+        const r = calcularCuadro(json.data)
+        if (!r.incompleto) setCuadro(r)
+      } catch {
+        // silencioso: la viñeta es opcional
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [proyectoId])
 
   // Carga documentos + info del proyecto y rasteriza los planos (sin visión).
   // Reutilizado por generar() y por la rehidratación al montar.
@@ -264,6 +290,7 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
         hoverId={hoverId}
         setHoverId={setHoverId}
         onGenerar={generar}
+        cuadro={cuadro}
       />
     </Card>
   )
@@ -286,9 +313,10 @@ interface BodyProps {
   hoverId: string | null
   setHoverId: (id: string | null) => void
   onGenerar: () => void
+  cuadro: CuadroResultado | null
 }
 
-function CardBody({ loading, error, done, active, hoverId, setHoverId, onGenerar }: BodyProps) {
+function CardBody({ loading, error, done, active, hoverId, setHoverId, onGenerar, cuadro }: BodyProps) {
   if (!done) {
     return (
       <div className="space-y-3 p-5">
@@ -354,6 +382,7 @@ function CardBody({ loading, error, done, active, hoverId, setHoverId, onGenerar
               </div>
             )
           })}
+          {cuadro && <CuadroVineta cuadro={cuadro} />}
         </div>
         <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
           {Object.values(CONVENCION_LINEA).map((c) => (
@@ -419,6 +448,48 @@ function CardBody({ loading, error, done, active, hoverId, setHoverId, onGenerar
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// Viñeta del cuadro de cálculo normativo, anclada en la esquina de la lámina
+// (como un cuadro de superficies en un plano real). Solo lectura; se edita en PMO.
+function CuadroVineta({ cuadro }: { cuadro: CuadroResultado }) {
+  const vColor = (v: string) =>
+    v === "excede" ? "#dc2626" : v === "cumple" ? "#16a34a" : "#6b7280"
+  const filas = cuadro.filas.filter((f) =>
+    ["Constructibilidad", "Ocupación de suelo", "Altura de edificación"].includes(f.concepto),
+  )
+  const corto: Record<string, string> = {
+    "Ocupación de suelo": "Ocupación",
+    "Altura de edificación": "Altura",
+  }
+  return (
+    <div className="absolute bottom-2 right-2 w-[186px] rounded-md border border-black/25 bg-white/95 p-2 text-[10px] shadow-md">
+      <p className="mb-1 text-[9px] font-bold uppercase tracking-wide text-primary">
+        Cuadro de cálculo
+      </p>
+      <div className="space-y-0.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-muted-foreground">Sup. edificada</span>
+          <span className="font-semibold text-primary">{cuadro.superficieTotalEdificada} m²</span>
+        </div>
+        {filas.map((f) => (
+          <div key={f.concepto} className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">{corto[f.concepto] ?? f.concepto}</span>
+            <span className="font-semibold" style={{ color: vColor(f.veredicto) }}>
+              {f.valor}
+              {f.unidad}
+              {f.limite !== null ? ` / ${f.limite}${f.unidad}` : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+      {cuadro.incumplimientos.length > 0 && (
+        <p className="mt-1 text-[9px] font-semibold text-red-600">
+          Excede {cuadro.incumplimientos.length} límite{cuadro.incumplimientos.length > 1 ? "s" : ""}
+        </p>
+      )}
     </div>
   )
 }
