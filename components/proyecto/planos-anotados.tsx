@@ -19,6 +19,14 @@ interface PlanoDoc {
   id: string
   nombre: string
   url: string
+  tipo?: string
+}
+
+interface CoverInfo {
+  cliente?: string | null
+  numeroExpediente?: string | null
+  tipo?: string | null
+  documentos: { nombre: string; tipo: string }[]
 }
 
 interface LaminaConImagen {
@@ -134,7 +142,7 @@ function sevRGB(s: Anotacion["severidad"] | "critico" | "alto" | "medio"): [numb
 }
 
 // Dibuja la portada del informe (resumen del due diligence) en la página actual.
-function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult): void {
+function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult, info: CoverInfo): void {
   const M = 48
   const CW = COVER_W - M * 2
   let y = 62
@@ -167,7 +175,33 @@ function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult): void {
     pdf.text(sub, M, y)
     y += 8
   }
-  y += 18
+  y += 16
+
+  // Tarjeta de datos del proyecto
+  const infoRows: [string, string][] = [
+    ["Cliente", info.cliente ?? "—"],
+    ["Municipio", result.proyecto.municipio ?? "—"],
+    ["Dirección", result.proyecto.direccion ?? "—"],
+    ["N° Expediente", info.numeroExpediente ?? "—"],
+    ["Tipo", info.tipo ?? "—"],
+  ]
+  const cardH = 14 + Math.ceil(infoRows.length / 2) * 26
+  pdf.setFillColor(247, 247, 245)
+  pdf.roundedRect(M, y, CW, cardH, 5, 5, "F")
+  infoRows.forEach(([label, value], i) => {
+    const col = i % 2
+    const cx = M + 14 + col * (CW / 2)
+    const cy = y + 13 + Math.floor(i / 2) * 26
+    pdf.setFont("helvetica", "normal")
+    pdf.setFontSize(7)
+    pdf.setTextColor(140, 140, 140)
+    pdf.text(label.toUpperCase(), cx, cy)
+    pdf.setFont("helvetica", "bold")
+    pdf.setFontSize(9)
+    pdf.setTextColor(30, 30, 30)
+    pdf.text(pdf.splitTextToSize(value, CW / 2 - 26)[0] ?? value, cx, cy + 9)
+  })
+  y += cardH + 20
 
   // Fila de métricas: riesgo · completitud · conteos
   const boxW = (CW - 24) / 3
@@ -314,6 +348,33 @@ function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult): void {
       pdf.text(det, M + 14, y + 11)
       y += blockH + 4
     })
+    y += 6
+  }
+
+  // Documentos del expediente
+  if (info.documentos.length > 0) {
+    ensure(24)
+    pdf.setTextColor(26, 51, 40)
+    pdf.setFont("helvetica", "bold")
+    pdf.setFontSize(10)
+    pdf.text(`Documentos del expediente (${info.documentos.length})`, M, y)
+    y += 14
+    info.documentos.forEach((d, i) => {
+      ensure(13)
+      if (i % 2 === 0) {
+        pdf.setFillColor(250, 250, 249)
+        pdf.rect(M, y - 8, CW, 12, "F")
+      }
+      pdf.setFont("helvetica", "normal")
+      pdf.setFontSize(8)
+      pdf.setTextColor(30, 30, 30)
+      pdf.text(pdf.splitTextToSize(d.nombre, CW - 130)[0] ?? d.nombre, M + 6, y)
+      pdf.setTextColor(140, 140, 140)
+      pdf.setFontSize(7.5)
+      pdf.text(d.tipo, M + CW - 6, y, { align: "right" })
+      y += 13
+    })
+    y += 8
   }
 
   // Pie
@@ -335,24 +396,37 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [info, setInfo] = useState<CoverInfo>({ documentos: [] })
 
   const generar = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      // 1) Traer los planos del proyecto (RLS del dueño).
+      // 1) Traer documentos + datos del proyecto (RLS del dueño).
       const supabase = createClient()
       const { data, error: dbError } = await supabase
         .from("documentos")
-        .select("id, nombre, url")
+        .select("id, nombre, url, tipo")
         .eq("proyecto_id", proyectoId)
-        .eq("tipo", "Plano")
       if (dbError) throw new Error(dbError.message)
-      const planos = (data ?? []) as PlanoDoc[]
+      const allDocs = (data ?? []) as PlanoDoc[]
+      const planos = allDocs.filter((d) => d.tipo === "Plano")
       if (planos.length === 0) {
         setError("No hay documentos de tipo Plano en este proyecto.")
         return
       }
+      const { data: pRow } = await supabase
+        .from("proyectos")
+        .select("numero_expediente, tipo, cliente:clientes(nombre)")
+        .eq("id", proyectoId)
+        .maybeSingle()
+      const cli = pRow?.cliente as { nombre?: string } | { nombre?: string }[] | null
+      setInfo({
+        cliente: (Array.isArray(cli) ? cli[0]?.nombre : cli?.nombre) ?? null,
+        numeroExpediente: (pRow?.numero_expediente as string | null) ?? null,
+        tipo: (pRow?.tipo as string | null) ?? null,
+        documentos: allDocs.map((d) => ({ nombre: d.nombre, tipo: d.tipo ?? "—" })),
+      })
 
       // 2) Rasterizar (hasta 6 láminas en total).
       const rasterizadas: { id: string; nombre: string; dataUrl: string }[] = []
@@ -403,7 +477,7 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
       const mod = await import("jspdf")
       // Portada = resumen del due diligence (página A4 vertical).
       const pdf = new mod.jsPDF({ orientation: "portrait", unit: "px", format: [COVER_W, COVER_H] })
-      drawCoverPage(pdf, result)
+      drawCoverPage(pdf, result, info)
       // Una página por lámina anotada.
       for (const l of laminas) {
         const { dataUrl, w, h } = await burnLamina(l)
@@ -451,7 +525,7 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
               )}
               <Button variant="outline" size="sm" onClick={() => void exportarPDF()} disabled={exporting}>
                 {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
-                PDF
+                Informe completo PDF
               </Button>
             </div>
           )}
