@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowRight, Check, FileText, Sparkles } from "lucide-react"
+import { ArrowRight, Check, FileText, Loader2, Sparkles } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { DocumentUpload } from "@/components/dashboard/document-upload"
@@ -23,6 +23,7 @@ const STEPS = [
 export function ExpedienteWizard({ proyectoId, documentosIniciales, onComplete }: Props) {
   const [step, setStep] = useState(documentosIniciales > 0 ? 2 : 1)
   const [docCount, setDocCount] = useState(documentosIniciales)
+  const [ddStatus, setDdStatus] = useState<"idle" | "processing" | "done" | "error">("idle")
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -36,8 +37,9 @@ export function ExpedienteWizard({ proyectoId, documentosIniciales, onComplete }
       {/* Stepper */}
       <div className="mx-auto mb-8 mt-6 flex max-w-md items-center justify-center gap-2">
         {STEPS.map((s, i) => {
-          const done = step > s.n
+          const done = step > s.n || (s.n === 2 && ddStatus === "done")
           const active = step === s.n
+          const processing = s.n === 2 && ddStatus === "processing"
           return (
             <div key={s.n} className="flex items-center gap-2">
               <div
@@ -56,9 +58,15 @@ export function ExpedienteWizard({ proyectoId, documentosIniciales, onComplete }
                     done ? "bg-primary/15" : active ? "bg-white/20" : "bg-muted",
                   )}
                 >
-                  {done ? <Check className="size-3" /> : s.n}
+                  {done ? (
+                    <Check className="size-3" />
+                  ) : processing ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    s.n
+                  )}
                 </span>
-                {s.label}
+                {processing ? "Analizando…" : s.label}
               </div>
               {i < STEPS.length - 1 && (
                 <div className={cn("h-px w-8", step > s.n ? "bg-primary/40" : "bg-border")} />
@@ -103,7 +111,7 @@ export function ExpedienteWizard({ proyectoId, documentosIniciales, onComplete }
             )}
           </div>
           {/* El componente maneja generar/poll/rehidratar y, al completar, puebla la PMO y llama onApplied. */}
-          <DueDiligenceReport proyectoId={proyectoId} onApplied={onComplete} />
+          <DueDiligenceReport proyectoId={proyectoId} onApplied={onComplete} onStatusChange={setDdStatus} />
         </div>
       )}
     </div>

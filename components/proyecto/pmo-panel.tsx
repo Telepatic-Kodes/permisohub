@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   AlertCircle,
   AlertTriangle,
@@ -8,10 +8,12 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  GripVertical,
   Loader2,
   Mail,
   Plus,
 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -99,6 +101,50 @@ export function PmoPanel({
   const [comAsunto, setComAsunto] = useState("")
   const [comDesc, setComDesc] = useState("")
 
+  // Etapas editables (clic para cambiar estado, arrastrar para reordenar).
+  const [etapasLocal, setEtapasLocal] = useState<Etapa[]>(etapas)
+  useEffect(() => setEtapasLocal(etapas), [etapas])
+  const dragIdx = useRef<number | null>(null)
+
+  const persistirEtapas = async (rows: Etapa[]) => {
+    try {
+      const res = await fetch(`/api/proyectos/${proyecto.id}/etapas`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          etapas: rows.map((e) => ({ id: e.id, estado: e.estado, orden: e.orden })),
+        }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      toast.error("No se pudo guardar el cambio de etapa")
+    }
+  }
+
+  const cicloEstado = (etapa: Etapa) => {
+    const next: Etapa["estado"] =
+      etapa.estado === "pendiente"
+        ? "en_curso"
+        : etapa.estado === "en_curso"
+          ? "completada"
+          : "pendiente"
+    const updated = etapasLocal.map((e) => (e.id === etapa.id ? { ...e, estado: next } : e))
+    setEtapasLocal(updated)
+    void persistirEtapas(updated.filter((e) => e.id === etapa.id))
+  }
+
+  const onDropEtapa = (dropIdx: number) => {
+    const from = dragIdx.current
+    dragIdx.current = null
+    if (from === null || from === dropIdx) return
+    const arr = [...etapasLocal]
+    const [moved] = arr.splice(from, 1)
+    arr.splice(dropIdx, 0, moved)
+    const reordered = arr.map((e, i) => ({ ...e, orden: i }))
+    setEtapasLocal(reordered)
+    void persistirEtapas(reordered)
+  }
+
   const diasDesdeInicio = proyecto.fecha_inicio
     ? Math.floor(
         (Date.now() - new Date(proyecto.fecha_inicio).getTime()) /
@@ -133,19 +179,35 @@ export function PmoPanel({
         <Card>
           <CardHeader>
             <CardTitle>Etapas</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Arrastra para reordenar · clic en el círculo para cambiar el estado
+            </p>
           </CardHeader>
           <CardContent>
             <ol className="relative space-y-0">
-              {etapas.map((etapa, idx) => {
-                const isLast = idx === etapas.length - 1
+              {etapasLocal.map((etapa, idx) => {
+                const isLast = idx === etapasLocal.length - 1
                 const completed = etapa.estado === "completada"
                 const current = etapa.estado === "en_curso"
                 return (
-                  <li key={etapa.id} className="flex gap-4 pb-6 last:pb-0">
+                  <li
+                    key={etapa.id}
+                    draggable
+                    onDragStart={() => {
+                      dragIdx.current = idx
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => onDropEtapa(idx)}
+                    className="group/etapa flex gap-3 pb-6 last:pb-0"
+                  >
+                    <GripVertical className="mt-1 size-4 shrink-0 cursor-grab text-muted-foreground/30 opacity-0 transition-opacity group-hover/etapa:opacity-100" />
                     <div className="flex flex-col items-center">
-                      <span
+                      <button
+                        type="button"
+                        onClick={() => cicloEstado(etapa)}
+                        title="Cambiar estado"
                         className={cn(
-                          "flex size-8 shrink-0 items-center justify-center rounded-full border-2",
+                          "flex size-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors hover:opacity-80",
                           completed && "border-primary bg-primary text-white",
                           current && "border-primary bg-white text-primary",
                           !completed &&
@@ -158,9 +220,9 @@ export function PmoPanel({
                         ) : current ? (
                           <Clock className="size-4" />
                         ) : (
-                          <span className="text-xs font-medium">{etapa.orden}</span>
+                          <span className="text-xs font-medium">{idx + 1}</span>
                         )}
-                      </span>
+                      </button>
                       {!isLast && (
                         <span
                           className={cn(

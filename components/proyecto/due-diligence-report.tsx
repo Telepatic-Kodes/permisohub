@@ -32,6 +32,8 @@ export interface DueDiligenceReportProps {
   proyectoId: string
   // Se llama tras poblar la PMO (etapas/observaciones) al completar un run nuevo.
   onApplied?: () => void
+  // Notifica el estado del análisis (para reflejarlo en el wizard).
+  onStatusChange?: (s: "idle" | "processing" | "done" | "error") => void
 }
 
 /** Estado de UI: incluye 'idle' además de los estados de la fila. */
@@ -98,7 +100,7 @@ function vigenciaClasses(nivel: Vigencia["nivel"]): string {
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export default function DueDiligenceReport({ proyectoId, onApplied }: DueDiligenceReportProps) {
+export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChange }: DueDiligenceReportProps) {
   const appliedRef = useRef(false)
   const [reportId, setReportId] = useState<string | null>(null)
   const [status, setStatus] = useState<UiStatus>("idle")
@@ -107,6 +109,12 @@ export default function DueDiligenceReport({ proyectoId, onApplied }: DueDiligen
   const [isStarting, setIsStarting] = useState(false)
 
   const isProcessing = isStarting || status === "pending" || status === "processing"
+
+  // Notifica el estado al padre (wizard) para reflejar el progreso.
+  useEffect(() => {
+    const s = isProcessing ? "processing" : status === "done" ? "done" : status === "error" ? "error" : "idle"
+    onStatusChange?.(s)
+  }, [isProcessing, status, onStatusChange])
 
   // Rehidratación: al montar, carga el último informe del proyecto. Si está
   // 'done' lo muestra; si sigue procesando, reanuda el polling.
