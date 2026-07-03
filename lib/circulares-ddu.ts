@@ -116,6 +116,35 @@ Texto completo en la fuente oficial MINVU (PDF).`,
     fuente: 'https://www.minvu.gob.cl/wp-content/uploads/2019/06/DDU-ESP-024-07.pdf',
     verificado: true,
   },
+  {
+    id: 'ddu-esp-084-07',
+    numero: 'DDU-ESP 084-07',
+    titulo: 'Normativa aplicable a los cambios de destino de una vivienda',
+    texto: `Materia oficial (MAT.): "PERMISOS, APROBACIONES Y RECEPCIONES; EDIFICACIÓN; CAMBIO DE DESTINO. Normativa aplicable a los cambios de destino de una vivienda".
+
+Relevancia: fija la normativa y el procedimiento para cambiar el destino de una vivienda (p. ej. a local comercial) — directamente aplicable al caso de una casa habilitada como comercio, para encaminarlo por cambio de destino en vez de un permiso de alteración.
+
+Texto completo en la fuente oficial MINVU (PDF).`,
+    keywords: ['cambio de destino', 'vivienda', 'local comercial', 'destino', 'permiso', 'recepción', 'comercio', 'DDU'],
+    categoria: 'procedimiento',
+    fuente: 'https://www.minvu.gob.cl/wp-content/uploads/2019/06/DDU-ESP-084-07.pdf',
+    verificado: true,
+  },
+  {
+    id: 'ddu-esp-037-09',
+    numero: 'DDU-ESP 037-09',
+    titulo:
+      'Cambios de destino con postergación de permisos vigente (Art. 117 LGUC)',
+    texto: `Materia oficial (MAT.): "Procedencia de autorizar cambios de destino estando vigente una postergación de permisos conforme al artículo 117 de la LGUC".
+
+Relevancia: aclara si procede un cambio de destino cuando la comuna tiene una postergación de permisos vigente — a verificar antes de comprometer la vía de cambio de destino en un sector con congelamiento.
+
+Texto completo en la fuente oficial MINVU (PDF).`,
+    keywords: ['cambio de destino', 'postergación de permisos', 'artículo 117', 'LGUC', 'congelamiento', 'permiso', 'DDU'],
+    categoria: 'procedimiento',
+    fuente: 'https://www.minvu.gob.cl/wp-content/uploads/2019/06/ddu-esp-037-09.pdf',
+    verificado: true,
+  },
   // ─────────────────────────────────────────────────────────────────────────
   // NO VERIFICADAS: scaffolding temático con número placeholder. Aportan materia
   // pero NO deben citarse con número oficial hasta reemplazar por datos MINVU.
