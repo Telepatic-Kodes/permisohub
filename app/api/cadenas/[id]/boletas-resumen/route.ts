@@ -78,16 +78,6 @@ export async function GET(
 
     return Response.json({ data: resultado })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ data: MOCK_RESUMEN })
-    }
     return apiError('Error interno', 500, err)
   }
 }
-
-const MOCK_RESUMEN: ResumenCumplimientoBoletas[] = [
-  { local_id: 'l1', local_numero: 'L-101', centro_nombre: 'Mall Central', agua: 'vigente', electricidad: 'por_vencer', gas: 'pendiente', cumplimiento_pct: 33 },
-  { local_id: 'l2', local_numero: 'L-202', centro_nombre: 'Mall Central', agua: 'vencida', electricidad: 'vigente',    gas: 'vigente',   cumplimiento_pct: 67 },
-  { local_id: 'l3', local_numero: 'L-303', centro_nombre: 'Sucursal Norte', agua: 'vigente', electricidad: 'vigente', gas: 'vigente',   cumplimiento_pct: 100 },
-  { local_id: 'l4', local_numero: 'L-404', centro_nombre: 'Sucursal Norte', agua: 'pendiente', electricidad: 'pendiente', gas: 'pendiente', cumplimiento_pct: 0 },
-]

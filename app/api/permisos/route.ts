@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_PROYECTOS } from '@/lib/mock-data'
 import { checkRateLimit } from '@/lib/rate-limit'
 import type { Proyecto, TipoPermiso, VigenciaPermiso } from '@/types'
 
@@ -74,10 +73,6 @@ function buildResumen(permisos: ProyectoConVigencia[]) {
   }
 }
 
-function isTipoPermiso(tipo: TipoPermiso): boolean {
-  return TIPOS_PERMISO.includes(tipo)
-}
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const vigencia = searchParams.get('vigencia') as VigenciaPermiso | null
@@ -124,19 +119,6 @@ export async function GET(request: Request) {
       source: 'db',
     })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const conVigencia = MOCK_PROYECTOS.filter((p) => isTipoPermiso(p.tipo)).map(
-        (p) => withVigencia(p),
-      )
-      const permisos = applyFilters(conVigencia)
-
-      return Response.json({
-        ok: true,
-        permisos,
-        resumen: buildResumen(permisos),
-        source: 'mock',
-      })
-    }
     return Response.json({ error: 'Error al obtener permisos' }, { status: 500 })
   }
 }

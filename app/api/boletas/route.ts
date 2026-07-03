@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { calcularEstadoBoleta } from '@/lib/boletas'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
-import type { BoletaServicio } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,9 +52,6 @@ export async function GET(request: Request) {
 
     return Response.json({ data: data ?? [] })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ data: MOCK_BOLETAS })
-    }
     return apiError('Error interno', 500, err)
   }
 }
@@ -114,40 +110,11 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production') {
-        return Response.json({ ok: true, id: `b${Date.now()}`, simulated: true, warning: error.message })
-      }
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true, id: boleta.id, boleta })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, id: `b${Date.now()}`, simulated: true })
-    }
     return apiError('Error interno', 500, err)
   }
 }
-
-// ── Mock data para desarrollo ─────────────────────────────────────────────────
-
-const MOCK_BOLETAS: BoletaServicio[] = [
-  {
-    id: 'b1', local_id: 'l1', tipo_servicio: 'agua', proveedor: 'aguas_andinas',
-    periodo: '2026-06', estado: 'vigente', fecha_vencimiento: '2026-09-30',
-    monto_clp: 45000, created_at: new Date().toISOString(),
-    local: { id: 'l1', numero: 'L-101', uso: 'retail' } as never,
-  },
-  {
-    id: 'b2', local_id: 'l1', tipo_servicio: 'electricidad', proveedor: 'enel',
-    periodo: '2026-06', estado: 'por_vencer', fecha_vencimiento: '2026-07-10',
-    monto_clp: 128000, created_at: new Date().toISOString(),
-    local: { id: 'l1', numero: 'L-101', uso: 'retail' } as never,
-  },
-  {
-    id: 'b3', local_id: 'l2', tipo_servicio: 'agua', proveedor: 'aguas_andinas',
-    periodo: '2026-05', estado: 'vencida', fecha_vencimiento: '2026-06-01',
-    monto_clp: 38000, created_at: new Date().toISOString(),
-    local: { id: 'l2', numero: 'L-202', uso: 'food' } as never,
-  },
-]

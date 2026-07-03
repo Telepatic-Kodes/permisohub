@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_PROYECTOS } from '@/lib/mock-data'
 import { checkRateLimit } from '@/lib/rate-limit'
 import type { Proyecto } from '@/types'
 
@@ -114,9 +113,6 @@ export async function GET(request: Request) {
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit
 
-    // Dev: forzar el fallback a mock data sin Supabase configurado
-    if (process.env.NODE_ENV !== 'production') throw new Error('dev-no-auth')
-
     const { data, error } = await supabase
       .from('proyectos')
       .select('*, cliente:clientes(*)')
@@ -127,11 +123,6 @@ export async function GET(request: Request) {
     const proyectos = (data ?? []) as Proyecto[]
     return Response.json(construirRespuesta(proyectos, { año, clienteId, estadoVigencia }))
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json(
-        construirRespuesta(MOCK_PROYECTOS, { año, clienteId, estadoVigencia }),
-      )
-    }
     return Response.json({ ok: false, error: 'Error al obtener patentes' }, { status: 500 })
   }
 }

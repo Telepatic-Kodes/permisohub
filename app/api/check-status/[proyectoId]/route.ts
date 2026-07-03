@@ -58,14 +58,13 @@ export async function GET(
     estado?: string
     etapa?: string
     observaciones?: string
-    simulated?: boolean
     error?: string
   }
 
   if (!scraperData.ok) {
     return Response.json(
-      { error: scraperData.error ?? 'Scraper failed' },
-      { status: 500 }
+      { error: scraperData.error ?? 'Consulta de estado DOM en Línea no disponible' },
+      { status: 502 }
     )
   }
 
@@ -117,7 +116,6 @@ export async function GET(
     estadoAnterior,
     estadoNuevo,
     changed,
-    simulated: scraperData.simulated ?? false,
     observaciones: scraperData.observaciones ?? null,
     fetchedAt: new Date().toISOString(),
   })

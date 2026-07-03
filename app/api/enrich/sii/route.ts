@@ -1,6 +1,7 @@
 import { fetchWithTimeout, extractBetween, stripTags } from '@/lib/scraper'
 import { createClient } from '@/lib/supabase/server'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,6 @@ interface SIIData {
   superficieTerreno?: string
   superficieConstruida?: string
   destino?: string
-  simulated?: boolean
 }
 
 export async function POST(request: Request) {
@@ -37,23 +37,6 @@ export async function POST(request: Request) {
 
   // Clean rol format: "1234-56" or "1234" + "000"
   const [manzana, predio] = rol.includes('-') ? rol.split('-') : [rol, '000']
-
-  // In development or if SII is unreachable, return simulated data
-  if (process.env.NODE_ENV !== 'production') {
-    return Response.json({
-      ok: true,
-      rol,
-      simulated: true,
-      data: {
-        direccion: 'AV. EJEMPLO 1234, SANTIAGO',
-        region: 'METROPOLITANA DE SANTIAGO',
-        comuna: 'SANTIAGO',
-        superficieTerreno: '180 m²',
-        superficieConstruida: '120 m²',
-        destino: 'HABITACIONAL',
-      } satisfies SIIData,
-    })
-  }
 
   try {
     // SII property lookup URL
@@ -91,18 +74,6 @@ export async function POST(request: Request) {
 
     return Response.json({ ok: true, rol, data })
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('[sii-enrich] fetch failed:', err)
-    return Response.json({
-      ok: true,
-      rol,
-      simulated: true,
-      warning: 'SII portal unreachable — using simulated data',
-      data: {
-        direccion: undefined,
-        region: undefined,
-        comuna: undefined,
-      } satisfies SIIData,
-    })
+    return apiError('Servicio SII no disponible', 502, err)
   }
 }

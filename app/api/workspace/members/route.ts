@@ -31,9 +31,6 @@ export async function GET() {
       source: 'db',
     })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ members: [], invites: [], source: 'mock' })
-    }
     return apiError('Error interno', 500, err)
   }
 }

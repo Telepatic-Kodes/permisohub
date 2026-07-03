@@ -19,7 +19,6 @@ const CLP = new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP",
 interface LookupAPIResponse {
   ok: boolean
   rol?: string
-  simulated?: boolean
   data?: {
     direccion_normalizada: string
     region: string
@@ -40,7 +39,6 @@ export function SIIEnricher({ onEnrich, municipio }: SIIEnricherProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<SIIData | null>(null)
-  const [simulated, setSimulated] = useState(false)
 
   const handleSearch = async () => {
     const trimmed = rol.trim()
@@ -71,7 +69,6 @@ export function SIIEnricher({ onEnrich, municipio }: SIIEnricherProps) {
         lng: json.data.lng,
       }
       setResult(mapped)
-      setSimulated(Boolean(json.simulated))
     } catch {
       setError("Error de conexión. Intenta nuevamente.")
     } finally {
@@ -144,11 +141,6 @@ export function SIIEnricher({ onEnrich, municipio }: SIIEnricherProps) {
         </>
       ) : (
         <div className="space-y-3">
-          {simulated && (
-            <p className="text-xs text-amber-600 bg-amber-50 rounded px-2 py-1">
-              Datos de ejemplo (modo desarrollo)
-            </p>
-          )}
           <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
             <span className="text-muted-foreground">Rol SII</span>
             <span className="font-mono font-medium">{result.rol}</span>

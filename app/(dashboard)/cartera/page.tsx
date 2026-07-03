@@ -18,18 +18,8 @@ import {
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { MOCK_PROYECTOS, MOCK_CLIENTES } from "@/lib/mock-data"
-import { ESTADO_CONFIG, TIPO_PERMISO_LABELS } from "@/types"
+import { ESTADO_CONFIG, TIPO_PERMISO_LABELS, type Cliente, type Proyecto } from "@/types"
 import { cn } from "@/lib/utils"
-
-// ──────────────────────────────────────────────────
-// Mock members / locatarios visible en la cartera
-// ──────────────────────────────────────────────────
-const MOCK_LOCATARIOS = [
-  { id: "l1", nombre: "Parque Arauco S.A.", tipo: "inmobiliaria", proyectosIds: ["1", "2"] },
-  { id: "l2", nombre: "Vial & Asociados AG", tipo: "estudio",    proyectosIds: ["3", "4", "5"] },
-  { id: "l3", nombre: "CBRE Chile",          tipo: "inmobiliaria", proyectosIds: ["6"] },
-]
 
 const ESTADO_ORDEN = ["borrador", "ingresado", "en_revision", "con_observaciones", "aprobado", "rechazado"] as const
 
@@ -56,15 +46,16 @@ function AlertIcon({ count }: { count: number }) {
 export default function CarteraPage() {
   const [search, setSearch] = useState("")
   const [groupBy, setGroupBy] = useState<"cliente" | "estado">("cliente")
-  const [expanded, setExpanded] = useState<string[]>(MOCK_LOCATARIOS.map((l) => l.id))
+  const [expanded, setExpanded] = useState<string[]>([])
 
-  const [proyectos, setProyectos] = useState(MOCK_PROYECTOS)
-  const [clientes, setClientes] = useState(MOCK_CLIENTES)
+  const [proyectos, setProyectos] = useState<Proyecto[]>([])
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/proyectos')
+    const proyectosPromise = fetch('/api/proyectos')
       .then((r) => r.json())
-      .then((data: { data?: typeof MOCK_PROYECTOS; proyectos?: typeof MOCK_PROYECTOS }) => {
+      .then((data: { data?: Proyecto[]; proyectos?: Proyecto[] }) => {
         const list = data.data ?? data.proyectos
         if (list && list.length > 0) {
           setProyectos(list)
@@ -72,15 +63,19 @@ export default function CarteraPage() {
       })
       .catch(() => undefined)
 
-    fetch('/api/clientes')
+    const clientesPromise = fetch('/api/clientes')
       .then((r) => r.json())
-      .then((data: { data?: typeof MOCK_CLIENTES; clientes?: typeof MOCK_CLIENTES }) => {
+      .then((data: { data?: Cliente[]; clientes?: Cliente[] }) => {
         const list = data.data ?? data.clientes
         if (list && list.length > 0) {
           setClientes(list)
         }
       })
       .catch(() => undefined)
+
+    Promise.all([proyectosPromise, clientesPromise]).finally(() =>
+      setLoading(false),
+    )
   }, [])
 
   // Stats globales
@@ -271,9 +266,13 @@ export default function CarteraPage() {
               </div>
             )
           })}
-          {filteredProyectos.length === 0 && (
+          {!loading && filteredProyectos.length === 0 && (
             <div className="rounded-xl border border-border bg-white py-12 text-center">
-              <p className="text-sm text-muted-foreground">No se encontraron proyectos para &ldquo;{search}&rdquo;</p>
+              <p className="text-sm text-muted-foreground">
+                {search
+                  ? <>No se encontraron proyectos para &ldquo;{search}&rdquo;</>
+                  : "Aún no hay proyectos en cartera."}
+              </p>
             </div>
           )}
         </div>

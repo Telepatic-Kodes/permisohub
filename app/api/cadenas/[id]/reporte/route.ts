@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_CADENAS, MOCK_CENTROS, MOCK_LOCALES } from '@/lib/mock-data'
 import type { Cadena, CentroComercial, Local } from '@/types'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -7,15 +6,6 @@ export const dynamic = 'force-dynamic'
 
 type CentroWithLocales = CentroComercial & { locales: Local[] }
 type CadenaWithCentros = Cadena & { centros: CentroWithLocales[] }
-
-function buildMockReport(): CadenaWithCentros | null {
-  const cadena = MOCK_CADENAS[0]
-  if (!cadena) return null
-  const centros: CentroWithLocales[] = MOCK_CENTROS
-    .filter(cc => cc.cadena_id === cadena.id)
-    .map(cc => ({ ...cc, locales: MOCK_LOCALES.filter(l => l.centro_id === cc.id) }))
-  return { ...cadena, centros }
-}
 
 export async function GET(
   _request: Request,
@@ -29,7 +19,6 @@ export async function GET(
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      if (process.env.NODE_ENV !== 'production') throw new Error('dev-no-auth')
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
@@ -45,11 +34,7 @@ export async function GET(
     if (error) throw error
     data = row as CadenaWithCentros
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      data = buildMockReport()
-    } else {
-      return Response.json({ error: 'Error al generar reporte' }, { status: 500 })
-    }
+    return Response.json({ error: 'Error al generar reporte' }, { status: 500 })
   }
 
   if (!data) return Response.json({ error: 'Cadena no encontrada' }, { status: 404 })

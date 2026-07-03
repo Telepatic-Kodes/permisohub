@@ -26,7 +26,6 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { MOCK_PROYECTOS, MOCK_CLIENTES } from "@/lib/mock-data"
 import { getCommandContext } from "@/hooks/use-command-context"
 
 interface CommandItem {
@@ -64,32 +63,6 @@ const ACTION_ITEMS: CommandItem[] = [
   { id: "act-nuevo-proyecto", group: "Crear", label: "Nuevo proyecto", href: "/proyectos/nuevo", icon: Plus, emoji: "➕" },
 ]
 
-function buildDynamicItems(): CommandItem[] {
-  const projects: CommandItem[] = MOCK_PROYECTOS.map((p) => ({
-    id: `p-${p.id}`,
-    group: "Proyectos",
-    label: p.nombre,
-    sublabel: p.cliente?.nombre ?? p.municipio,
-    href: `/proyectos/${p.id}`,
-    icon: FolderOpen,
-    emoji: "📄",
-  }))
-
-  const clients: CommandItem[] = MOCK_CLIENTES.map((c) => ({
-    id: `c-${c.id}`,
-    group: "Clientes",
-    label: c.nombre,
-    sublabel: c.contacto_nombre,
-    href: `/clientes/${c.id}`,
-    icon: Building2,
-    emoji: "🏢",
-  }))
-
-  return [...projects, ...clients]
-}
-
-const ALL_ITEMS: CommandItem[] = [...NAV_ITEMS, ...ACTION_ITEMS, ...buildDynamicItems()]
-
 const GROUP_ORDER = ["Este proyecto", "Navegar", "Crear", "Proyectos", "Clientes", "IA Normativa", "Documentos", "Configuración"]
 
 function buildContextItems(proyectoId: string, proyectoNombre: string, municipio: string): CommandItem[] {
@@ -105,7 +78,7 @@ export function CommandPalette() {
   const [query, setQuery] = useState("")
   const [activeIndex, setActiveIndex] = useState(0)
   const [contextItems, setContextItems] = useState<CommandItem[]>([])
-  const [dynamicItems, setDynamicItems] = useState<CommandItem[]>(buildDynamicItems())
+  const [dynamicItems, setDynamicItems] = useState<CommandItem[]>([])
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)

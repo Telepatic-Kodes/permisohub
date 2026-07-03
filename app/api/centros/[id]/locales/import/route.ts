@@ -43,7 +43,6 @@ export async function POST(
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      if (process.env.NODE_ENV !== 'production') throw new Error('dev-no-auth')
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
@@ -59,9 +58,6 @@ export async function POST(
 
     return Response.json({ ok: true, created: data?.length ?? rows.length, skipped: 0, errors: [] })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, created: rows.length, skipped: 0, errors: [], simulated: true })
-    }
     return Response.json({ error: 'Error al importar locales' }, { status: 500 })
   }
 }

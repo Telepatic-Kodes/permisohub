@@ -7,7 +7,6 @@ import { AlertTriangle, Building2, ChevronRight, MapPin, Plus, Store, Zap } from
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MOCK_CADENAS, MOCK_CENTROS, MOCK_LOCALES } from "@/lib/mock-data"
 import type { Cadena, CentroComercial } from "@/types"
 
 type CentroConStats = CentroComercial & {
@@ -31,18 +30,9 @@ function centroEstado(c: CentroConStats): 'ok' | 'alert' | 'urgent' {
 export default function CadenaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
 
-  const mockCadena = MOCK_CADENAS.find(c => c.id === id)
-  const mockCentros: CentroConStats[] = MOCK_CENTROS
-    .filter(cc => cc.cadena_id === id)
-    .map(cc => ({
-      ...cc,
-      locales_count: MOCK_LOCALES.filter(l => l.centro_id === cc.id).length,
-      activos: 0,
-      alertas: 0,
-    }))
-
-  const [cadena, setCadena] = useState<Cadena | undefined>(mockCadena)
-  const [centros, setCentros] = useState<CentroConStats[]>(mockCentros)
+  const [cadena, setCadena] = useState<Cadena | null>(null)
+  const [centros, setCentros] = useState<CentroConStats[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch(`/api/cadenas/${id}`)
@@ -61,10 +51,12 @@ export default function CadenaDetailPage({ params }: { params: Promise<{ id: str
         }
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [id])
 
   if (!cadena) {
-    return <div className="p-8 text-muted-foreground">Cadena no encontrada.</div>
+    if (loading) return null
+    return <div className="p-8 text-sm text-muted-foreground">No se encontró la cadena.</div>
   }
 
   const totalLocales = centros.reduce((s, cc) => s + cc.locales_count, 0)

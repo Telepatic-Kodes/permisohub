@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { ESTADISTICAS_MUNICIPIOS } from "@/lib/municipios-stats"
-import { MOCK_PROYECTOS } from "@/lib/mock-data"
+import type { Proyecto } from "@/types"
 
 interface Observacion {
   numero: number
@@ -54,15 +54,17 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
   const [notificando, setNotificando] = useState(false)
   const [notificadoOk, setNotificadoOk] = useState(false)
 
-  const [proyecto, setProyecto] = useState(MOCK_PROYECTOS.find(p => p.id === id))
+  const [proyecto, setProyecto] = useState<Proyecto | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch(`/api/proyectos/${id}`)
       .then(r => r.json())
-      .then((d: { proyecto?: (typeof MOCK_PROYECTOS)[number]; source?: string }) => {
-        if (d.source === 'db' && d.proyecto) setProyecto(d.proyecto)
+      .then((d: { proyecto?: Proyecto; source?: string }) => {
+        if (d.proyecto) setProyecto(d.proyecto)
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [id])
   const municipioStats = result?.municipio
     ? ESTADISTICAS_MUNICIPIOS.find(m => m.nombre === result.municipio)
@@ -226,6 +228,12 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
           <Button variant="outline" size="sm">← Volver al proyecto</Button>
         </Link>
       </div>
+
+      {!loading && !proyecto && (
+        <p className="py-2 text-center text-sm text-muted-foreground">
+          No se encontró el proyecto asociado — puedes analizar el ordinario de todos modos.
+        </p>
+      )}
 
       {/* Upload zone */}
       {!result && (

@@ -1,39 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_LOCALES, MOCK_CENTROS, MOCK_CADENAS } from '@/lib/mock-data'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
-
-type ChecklistItem = {
-  id: string
-  categoria: string
-  item: string
-  obligatorio: boolean
-}
-
-const MOCK_CHECKLIST: ChecklistItem[] = [
-  // Obras
-  { id: 'obras-1', categoria: 'Obras', item: 'Obra terminada según planos aprobados', obligatorio: true },
-  { id: 'obras-2', categoria: 'Obras', item: 'Sin materiales en vías públicas', obligatorio: true },
-  { id: 'obras-3', categoria: 'Obras', item: 'Fachada terminada', obligatorio: true },
-  // Instalaciones
-  { id: 'inst-1', categoria: 'Instalaciones', item: 'Instalación eléctrica completada', obligatorio: true },
-  { id: 'inst-2', categoria: 'Instalaciones', item: 'Red de agua potable funcionando', obligatorio: true },
-  { id: 'inst-3', categoria: 'Instalaciones', item: 'Alcantarillado conectado', obligatorio: true },
-  { id: 'inst-4', categoria: 'Instalaciones', item: 'Gas certificado (si aplica)', obligatorio: false },
-  // Accesibilidad
-  { id: 'acc-1', categoria: 'Accesibilidad', item: 'Rampa de acceso conforme OGUC', obligatorio: true },
-  { id: 'acc-2', categoria: 'Accesibilidad', item: 'Baños accesibles', obligatorio: true },
-  { id: 'acc-3', categoria: 'Accesibilidad', item: 'Señalética de emergencia', obligatorio: true },
-  // Incendios
-  { id: 'inc-1', categoria: 'Incendios', item: 'Extintores instalados', obligatorio: true },
-  { id: 'inc-2', categoria: 'Incendios', item: 'Mangueras y rociadores', obligatorio: true },
-  { id: 'inc-3', categoria: 'Incendios', item: 'Alarma de incendio funcionando', obligatorio: true },
-  // Documentación
-  { id: 'doc-1', categoria: 'Documentación', item: 'Libro de obras disponible', obligatorio: true },
-  { id: 'doc-2', categoria: 'Documentación', item: 'Planos aprobados en obra', obligatorio: true },
-  { id: 'doc-3', categoria: 'Documentación', item: 'Certificados de especialidades', obligatorio: true },
-]
 
 export async function GET(
   _request: Request,
@@ -44,7 +12,7 @@ export async function GET(
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('dev-no-auth')
+    if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
 
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit
@@ -95,7 +63,7 @@ export async function GET(
       cadena: {
         nombre: cadenaItem?.nombre ?? '',
       },
-      checklist: checklistData ?? MOCK_CHECKLIST,
+      checklist: checklistData ?? [],
       ultima_inspeccion: ultimaInspeccion
         ? {
             fecha: ultimaInspeccion.fecha,
@@ -105,36 +73,6 @@ export async function GET(
         : null,
     })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const local = MOCK_LOCALES.find(l => l.id === localId)
-      if (!local) return Response.json({ error: 'Local no encontrado' }, { status: 404 })
-
-      const centro = MOCK_CENTROS.find(cc => cc.id === local.centro_id)
-      if (!centro) return Response.json({ error: 'Centro no encontrado' }, { status: 404 })
-
-      const cadena = MOCK_CADENAS.find(c => c.id === centro.cadena_id)
-
-      return Response.json({
-        ok: true,
-        local: {
-          id: local.id,
-          numero: local.numero,
-          nombre_negocio: local.nombre_negocio ?? null,
-          uso: local.uso ?? null,
-          area_m2: local.area_m2 ?? null,
-        },
-        centro: {
-          nombre: centro.nombre,
-          municipio: centro.municipio,
-          direccion: centro.direccion,
-        },
-        cadena: {
-          nombre: cadena?.nombre ?? 'Cadena desconocida',
-        },
-        checklist: MOCK_CHECKLIST,
-        ultima_inspeccion: null,
-      })
-    }
     return Response.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -163,7 +101,7 @@ export async function POST(
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('dev-no-auth')
+    if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
 
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit
@@ -187,14 +125,6 @@ export async function POST(
 
     return Response.json({ ok: true, inspeccion_id: data.id, resultado })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const resultado = calcularResultado(body.items)
-      return Response.json({
-        ok: true,
-        inspeccion_id: `insp-${Date.now()}`,
-        resultado,
-      })
-    }
     return Response.json({ error: 'Error al registrar inspección' }, { status: 500 })
   }
 }

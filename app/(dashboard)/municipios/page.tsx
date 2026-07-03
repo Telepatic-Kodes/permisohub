@@ -30,7 +30,7 @@ import {
   type DomStatus,
 } from "@/lib/comunas-chile"
 import { getInteligenciaMunicipio, type InteligenciaMunicipio, type PlanReguladorInfo } from "@/lib/inteligencia-dom"
-import { MOCK_MUNICIPIOS, type MunicipioInfo } from "@/lib/mock-data"
+import { MUNICIPIOS_INFO as MOCK_MUNICIPIOS, type MunicipioInfo } from "@/lib/municipios-referencia"
 import { cn } from "@/lib/utils"
 
 const DOM_EN_LINEA_URL = "https://domenlinea.minvu.cl"

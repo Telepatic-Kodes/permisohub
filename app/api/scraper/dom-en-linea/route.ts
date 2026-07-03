@@ -14,85 +14,53 @@ interface DomEnLineaData {
   fechaIngreso: string | null
   fechaUltimaActualizacion: string | null
   municipio: string
-  simulated?: boolean
 }
 
 async function queryDomEnLinea(
   expedienteNumero: string,
   municipio: string
 ): Promise<DomEnLineaData> {
-  // Dev/test mode: return realistic mock data
-  if (
-    process.env.NODE_ENV !== 'production' ||
-    expedienteNumero.startsWith('TEST-')
-  ) {
-    return {
-      estado: 'en_revision',
-      etapa: 'Revisión DOM',
-      observaciones: null,
-      fechaIngreso: '2026-03-15',
-      fechaUltimaActualizacion: new Date().toISOString().split('T')[0],
-      municipio,
-      simulated: true,
-    }
+  const url = `https://domenlinea.minvu.cl/solicitudes/busqueda?numero_expediente=${encodeURIComponent(
+    expedienteNumero
+  )}`
+  const response = await fetchWithTimeout(url, {}, 15000)
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
   }
 
-  try {
-    const url = `https://domenlinea.minvu.cl/solicitudes/busqueda?numero_expediente=${encodeURIComponent(
-      expedienteNumero
-    )}`
-    const response = await fetchWithTimeout(url, {}, 15000)
+  const html = await response.text()
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
+  // Parse key fields from DOM en Línea HTML.
+  // Multiple selector fallbacks cover the typical output structure.
+  const estado =
+    extractBetween(html, 'Estado:</strong>', '<') ??
+    extractBetween(html, 'class="estado">', '<') ??
+    extractBetween(html, 'Estado del Expediente', '</td>') ??
+    ''
 
-    const html = await response.text()
+  const etapa =
+    extractBetween(html, 'Etapa:</strong>', '<') ??
+    extractBetween(html, 'Etapa Actual:', '</td>') ??
+    null
 
-    // Parse key fields from DOM en Línea HTML.
-    // Multiple selector fallbacks cover the typical output structure.
-    const estado =
-      extractBetween(html, 'Estado:</strong>', '<') ??
-      extractBetween(html, 'class="estado">', '<') ??
-      extractBetween(html, 'Estado del Expediente', '</td>') ??
-      ''
+  const observaciones =
+    extractBetween(html, 'Observaciones:</strong>', '</p>') ??
+    extractBetween(html, 'class="observaciones">', '</div>') ??
+    null
 
-    const etapa =
-      extractBetween(html, 'Etapa:</strong>', '<') ??
-      extractBetween(html, 'Etapa Actual:', '</td>') ??
-      null
+  const fechaUltAct =
+    extractBetween(html, 'Última Actualización:</strong>', '<') ??
+    extractBetween(html, 'Fecha Actualización:', '</td>') ??
+    null
 
-    const observaciones =
-      extractBetween(html, 'Observaciones:</strong>', '</p>') ??
-      extractBetween(html, 'class="observaciones">', '</div>') ??
-      null
-
-    const fechaUltAct =
-      extractBetween(html, 'Última Actualización:</strong>', '<') ??
-      extractBetween(html, 'Fecha Actualización:', '</td>') ??
-      null
-
-    return {
-      estado: mapDomEstado(stripTags(estado)),
-      etapa: etapa ? stripTags(etapa) : null,
-      observaciones: observaciones ? stripTags(observaciones) : null,
-      fechaIngreso: null,
-      fechaUltimaActualizacion: fechaUltAct ? stripTags(fechaUltAct) : null,
-      municipio,
-    }
-  } catch (err) {
-    // Fallback to simulated data on error so callers never hard-fail.
-    // eslint-disable-next-line no-console
-    console.warn(`[dom-en-linea] scrape failed for ${expedienteNumero}:`, err)
-    return {
-      estado: 'en_revision',
-      etapa: null,
-      observaciones: null,
-      fechaIngreso: null,
-      fechaUltimaActualizacion: null,
-      municipio,
-      simulated: true,
-    }
+  return {
+    estado: mapDomEstado(stripTags(estado)),
+    etapa: etapa ? stripTags(etapa) : null,
+    observaciones: observaciones ? stripTags(observaciones) : null,
+    fechaIngreso: null,
+    fechaUltimaActualizacion: fechaUltAct ? stripTags(fechaUltAct) : null,
+    municipio,
   }
 }
 
@@ -110,7 +78,17 @@ export async function POST(request: Request) {
     )
   }
 
-  const data = await queryDomEnLinea(expedienteNumero, municipio ?? '')
+  let data: DomEnLineaData
+  try {
+    data = await queryDomEnLinea(expedienteNumero, municipio ?? '')
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(`[dom-en-linea] scrape failed for ${expedienteNumero}:`, err)
+    return Response.json(
+      { error: 'DOM en Línea no disponible en este momento' },
+      { status: 502 }
+    )
+  }
 
   return Response.json({
     ok: true,

@@ -20,7 +20,6 @@ interface NotificacionResult {
   enviados: number
   sin_email: number
   errors?: string[]
-  simulated?: boolean
 }
 
 export function NotificacionesDialog({ cadenaId }: { cadenaId: string }) {
@@ -95,7 +94,6 @@ export function NotificacionesDialog({ cadenaId }: { cadenaId: string }) {
                 <span>
                   ✓ {result.enviados} email{result.enviados !== 1 ? "s" : ""} enviado
                   {result.enviados !== 1 ? "s" : ""} · {result.sin_email} sin email
-                  {result.simulated ? " (simulado)" : ""}
                 </span>
               </div>
             )}

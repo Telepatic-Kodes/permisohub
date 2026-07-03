@@ -19,9 +19,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { MOCK_CADENAS, MOCK_CENTROS, MOCK_LOCALES } from "@/lib/mock-data"
 import { USO_LOCAL_LABELS } from "@/types"
-import type { CentroComercial, Local, UsoLocal } from "@/types"
+import type { Cadena, CentroComercial, Local, UsoLocal } from "@/types"
 
 const ESTADO_BADGE: Record<string, string> = {
   borrador:           'bg-slate-100 text-slate-600 border-slate-200',
@@ -80,12 +79,10 @@ export default function CentroDetailPage({
 }) {
   const { id, centroId } = use(params)
 
-  const mockCentro = MOCK_CENTROS.find(cc => cc.id === centroId)
-  const mockLocales = MOCK_LOCALES.filter(l => l.centro_id === centroId)
-  const mockCadena = MOCK_CADENAS.find(c => c.id === id)
-
-  const [centro, setCentro] = useState<CentroComercial | undefined>(mockCentro)
-  const [locales, setLocales] = useState<Local[]>(mockLocales)
+  const [centro, setCentro] = useState<CentroComercial | null>(null)
+  const [locales, setLocales] = useState<Local[]>([])
+  const [cadena, setCadena] = useState<Cadena | null>(null)
+  const [loading, setLoading] = useState(true)
   const [filtroUso, setFiltroUso] = useState<string>('todos')
 
   // Nuevo local
@@ -116,13 +113,15 @@ export default function CentroDetailPage({
   useEffect(() => {
     fetch(`/api/centros/${centroId}`)
       .then(r => r.json())
-      .then((d: { centro?: CentroComercial & { locales?: Local[] } }) => {
+      .then((d: { centro?: CentroComercial & { locales?: Local[]; cadena?: Cadena } }) => {
         if (d.centro) {
           setCentro(d.centro)
+          if (d.centro.cadena) setCadena(d.centro.cadena)
           if (d.centro.locales && d.centro.locales.length > 0) setLocales(d.centro.locales)
         }
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [centroId])
 
   async function handleSubmitLocal(e: FormEvent<HTMLFormElement>) {
@@ -237,7 +236,10 @@ export default function CentroDetailPage({
     } finally { setBulkLoading(false) }
   }
 
-  if (!centro) return <div className="p-8 text-muted-foreground">Centro no encontrado.</div>
+  if (!centro) {
+    if (loading) return <div className="p-8 text-sm text-muted-foreground">Cargando…</div>
+    return <div className="p-8 text-center text-sm text-muted-foreground">No se encontró el centro comercial.</div>
+  }
 
   const usos = ['todos', ...Array.from(new Set(locales.map(l => l.uso ?? 'otro')))]
   const localesFiltrados = filtroUso === 'todos' ? locales : locales.filter(l => (l.uso ?? 'otro') === filtroUso)
@@ -301,7 +303,7 @@ export default function CentroDetailPage({
         subtitle={`${centro.municipio} · ${centro.area_m2?.toLocaleString() ?? '—'} m²`}
         breadcrumbs={[
           { label: 'Cadenas', href: '/cadenas-comerciales' },
-          { label: mockCadena?.nombre ?? 'Cadena', href: `/cadenas-comerciales/${id}` },
+          { label: cadena?.nombre ?? 'Cadena', href: `/cadenas-comerciales/${id}` },
         ]}
         action={
           <div className="flex gap-2">

@@ -33,7 +33,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { MOCK_PROYECTOS } from "@/lib/mock-data"
 import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 import { PLAN_LIMITS } from "@/lib/plan-limits"
 import {
@@ -206,17 +205,19 @@ export default function ProyectosPage() {
   const [estado, setEstado] = useState("todos")
   const [municipio, setMunicipio] = useState("todos")
   const [view, setView] = useState<ViewMode>("kanban")
-  const [allProyectos, setAllProyectos] = useState<Proyecto[]>(MOCK_PROYECTOS)
+  const [allProyectos, setAllProyectos] = useState<Proyecto[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/proyectos')
       .then((r) => r.json())
       .then((json: { data: Proyecto[]; source: string }) => {
-        if (json.data && json.data.length > 0 && json.source === 'db') {
+        if (json.data && json.data.length > 0) {
           setAllProyectos(json.data)
         }
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [])
 
   const totalProyectos = allProyectos.length
@@ -235,7 +236,7 @@ export default function ProyectosPage() {
       const matchMunicipio = municipio === "todos" || p.municipio === municipio
       return matchSearch && matchEstado && matchMunicipio
     })
-  }, [search, estado, municipio])
+  }, [allProyectos, search, estado, municipio])
 
   const kanbanColumns = useMemo(
     () =>
@@ -358,11 +359,27 @@ export default function ProyectosPage() {
         )}
 
         {/* Results count */}
-        <p className="-mt-1 text-xs text-muted-foreground">
-          {proyectos.length} proyecto{proyectos.length !== 1 ? "s" : ""}
-          {search || estado !== "todos" || municipio !== "todos" ? " filtrados" : " en total"}
-        </p>
+        {!(!loading && allProyectos.length === 0) && (
+          <p className="-mt-1 text-xs text-muted-foreground">
+            {proyectos.length} proyecto{proyectos.length !== 1 ? "s" : ""}
+            {search || estado !== "todos" || municipio !== "todos" ? " filtrados" : " en total"}
+          </p>
+        )}
 
+      {/* ------------------------------------------------------------------ */}
+      {/* EMPTY STATE                                                         */}
+      {/* ------------------------------------------------------------------ */}
+      {!loading && allProyectos.length === 0 && (
+        <div className="py-20 text-center">
+          <p className="text-sm text-muted-foreground">Aún no tienes proyectos.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Crea tu primer proyecto para comenzar a gestionar tus permisos.
+          </p>
+        </div>
+      )}
+
+      {allProyectos.length > 0 && (
+        <>
       {/* ------------------------------------------------------------------ */}
       {/* KANBAN VIEW                                                         */}
       {/* ------------------------------------------------------------------ */}
@@ -457,6 +474,8 @@ export default function ProyectosPage() {
             </TableBody>
           </Table>
         </div>
+      )}
+        </>
       )}
       </div>
     </div>

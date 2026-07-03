@@ -7,9 +7,8 @@ import { Copy, ExternalLink, FileText, Mail, Plus } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MOCK_CADENAS, MOCK_CENTROS, MOCK_LOCALES } from "@/lib/mock-data"
 import { USO_LOCAL_LABELS } from "@/types"
-import type { Local, Proyecto } from "@/types"
+import type { Cadena, CentroComercial, Local, Proyecto } from "@/types"
 
 const ESTADO_LABELS: Record<string, string> = {
   borrador:           'Borrador',
@@ -36,24 +35,28 @@ export default function LocalDetailPage({
 }) {
   const { id, centroId, localId } = use(params)
 
-  const mockLocal = MOCK_LOCALES.find(l => l.id === localId)
-  const mockCentro = MOCK_CENTROS.find(cc => cc.id === centroId)
-  const mockCadena = MOCK_CADENAS.find(c => c.id === id)
-
-  const [local, setLocal] = useState<Local | undefined>(mockLocal)
-  const [proyectos, setProyectos] = useState<Proyecto[]>(mockLocal?.proyectos ?? [])
+  const [local, setLocal] = useState<Local | null>(null)
+  const [centro, setCentro] = useState<CentroComercial | null>(null)
+  const [cadena, setCadena] = useState<Cadena | null>(null)
+  const [proyectos, setProyectos] = useState<Proyecto[]>([])
+  const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     fetch(`/api/locales/${localId}`)
       .then(r => r.json())
-      .then((d: { local?: Local & { proyectos?: Proyecto[] } }) => {
+      .then((d: { local?: Local & { proyectos?: Proyecto[]; centro?: CentroComercial & { cadena?: Cadena } } }) => {
         if (d.local) {
           setLocal(d.local)
           if (d.local.proyectos) setProyectos(d.local.proyectos)
+          if (d.local.centro) {
+            setCentro(d.local.centro)
+            if (d.local.centro.cadena) setCadena(d.local.centro.cadena)
+          }
         }
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [localId])
 
   async function copyPortalLink() {
@@ -69,18 +72,21 @@ export default function LocalDetailPage({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  if (!local) return <div className="p-8 text-muted-foreground">Local no encontrado.</div>
+  if (!local) {
+    if (loading) return <div className="p-8 text-sm text-muted-foreground">Cargando…</div>
+    return <div className="p-8 text-center text-sm text-muted-foreground">No se encontró el local.</div>
+  }
 
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
         emoji="🏪"
         title={`${local.numero}${local.nombre_negocio ? ` — ${local.nombre_negocio}` : ''}`}
-        subtitle={mockCentro?.nombre ?? 'Local comercial'}
+        subtitle={centro?.nombre ?? 'Local comercial'}
         breadcrumbs={[
           { label: 'Cadenas', href: '/cadenas' },
-          { label: mockCadena?.nombre ?? 'Cadena', href: `/cadenas/${id}` },
-          { label: mockCentro?.nombre ?? 'Centro', href: `/cadenas/${id}/centros/${centroId}` },
+          { label: cadena?.nombre ?? 'Cadena', href: `/cadenas/${id}` },
+          { label: centro?.nombre ?? 'Centro', href: `/cadenas/${id}/centros/${centroId}` },
         ]}
         action={
           <div className="flex gap-2">

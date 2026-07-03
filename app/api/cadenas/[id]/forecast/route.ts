@@ -1,5 +1,6 @@
-import { MOCK_CADENAS, MOCK_CENTROS, MOCK_LOCALES } from '@/lib/mock-data'
-import type { CentroComercial, Local } from '@/types'
+import { createClient } from '@/lib/supabase/server'
+import { apiError } from '@/lib/api-error'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,7 +36,20 @@ interface CronogramaEntry {
   nuevos: number
 }
 
-function calcularCostoLocal(local: Local): DesgloseLine[] {
+type LocalRow = {
+  id: string
+  area_m2: number | null
+  proyectos: { id: string }[] | null
+}
+
+type CentroRow = {
+  id: string
+  nombre: string
+  municipio: string
+  locales: LocalRow[] | null
+}
+
+function calcularCostoLocal(local: LocalRow): DesgloseLine[] {
   const lines: DesgloseLine[] = []
 
   // Patente comercial: always 1 per local
@@ -47,7 +61,7 @@ function calcularCostoLocal(local: Local): DesgloseLine[] {
   })
 
   // Permiso de edificacion: if area_m2 known
-  if (local.area_m2 !== undefined && local.area_m2 > 0) {
+  if (local.area_m2 !== null && local.area_m2 > 0) {
     const raw = local.area_m2 * PERMISO_EDIFICACION_POR_M2
     const clamped = Math.min(Math.max(raw, PERMISO_EDIFICACION_MIN), PERMISO_EDIFICACION_MAX)
     lines.push({
@@ -69,8 +83,8 @@ function calcularCostoLocal(local: Local): DesgloseLine[] {
   return lines
 }
 
-function calcularCostoCentro(centro: CentroComercial): CentroCostResult {
-  const locales = MOCK_LOCALES.filter((l) => l.centro_id === centro.id)
+function calcularCostoCentro(centro: CentroRow): CentroCostResult {
+  const locales = centro.locales ?? []
   // All locales without projects are assumed to need permits
   const localesSinPermiso = locales.filter((l) => !l.proyectos || l.proyectos.length === 0)
 
@@ -102,8 +116,9 @@ function calcularCostoCentro(centro: CentroComercial): CentroCostResult {
 }
 
 function generarCronograma(totalCLP: number): CronogramaEntry[] {
-  // Reference: Jun 2026 = month 0, 6 months forward
-  const base = new Date(2026, 5, 1) // June 2026
+  // Reference: current month, 6 months forward
+  const now = new Date()
+  const base = new Date(now.getFullYear(), now.getMonth(), 1)
   const costoPorMes = Math.round(totalCLP / 6)
   const cronograma: CronogramaEntry[] = []
 
@@ -129,32 +144,56 @@ export async function GET(
 ) {
   const { id } = await params
 
-  // Validate cadena exists
-  const cadena = MOCK_CADENAS.find((c) => c.id === id)
-  if (!cadena) {
-    return Response.json({ error: 'Cadena no encontrada' }, { status: 404 })
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return Response.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+
+    const { data: cadenaRow, error: cadenaError } = await supabase
+      .from('cadenas')
+      .select('id')
+      .eq('id', id)
+      .single()
+
+    if (cadenaError || !cadenaRow) {
+      return Response.json({ error: 'Cadena no encontrada' }, { status: 404 })
+    }
+
+    const { data: centrosData, error: centrosError } = await supabase
+      .from('centros_comerciales')
+      .select('id, nombre, municipio, locales(id, area_m2, proyectos(id))')
+      .eq('cadena_id', id)
+
+    if (centrosError) throw centrosError
+
+    const centros = (centrosData ?? []) as CentroRow[]
+    const porCentro = centros.map(calcularCostoCentro)
+
+    const total_estimado_clp = porCentro.reduce((sum, c) => sum + c.costo_estimado_clp, 0)
+    const permisos_pendientes = porCentro.reduce((sum, c) => {
+      // Each local needs 3 items on average (patente + edificacion + recepcion) but
+      // count per desglose line as individual permits
+      return sum + c.desglose.reduce((s, d) => s + d.cantidad, 0)
+    }, 0)
+
+    const cronograma = generarCronograma(total_estimado_clp)
+
+    return Response.json({
+      ok: true,
+      resumen: {
+        total_estimado_clp,
+        permisos_pendientes,
+        centros: centros.length,
+      },
+      por_centro: porCentro,
+      cronograma,
+    })
+  } catch (err) {
+    return apiError('Error al generar forecast', 500, err)
   }
-
-  const centros = MOCK_CENTROS.filter((c) => c.cadena_id === id)
-  const porCentro = centros.map(calcularCostoCentro)
-
-  const total_estimado_clp = porCentro.reduce((sum, c) => sum + c.costo_estimado_clp, 0)
-  const permisos_pendientes = porCentro.reduce((sum, c) => {
-    // Each local needs 3 items on average (patente + edificacion + recepcion) but
-    // count per desglose line as individual permits
-    return sum + c.desglose.reduce((s, d) => s + d.cantidad, 0)
-  }, 0)
-
-  const cronograma = generarCronograma(total_estimado_clp)
-
-  return Response.json({
-    ok: true,
-    resumen: {
-      total_estimado_clp,
-      permisos_pendientes,
-      centros: centros.length,
-    },
-    por_centro: porCentro,
-    cronograma,
-  })
 }

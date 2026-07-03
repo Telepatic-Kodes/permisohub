@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_PROYECTOS } from '@/lib/mock-data'
 import { checkRateLimit } from '@/lib/rate-limit'
 import type { Proyecto } from '@/types'
 
@@ -47,15 +46,6 @@ export async function POST(
     return Response.json({ ok: false, error: 'Campo requerido: nuevo_año' }, { status: 400 })
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    const original = MOCK_PROYECTOS.find((p) => p.id === id)
-    if (!original) {
-      return Response.json({ ok: false, error: 'Patente no encontrada' }, { status: 404 })
-    }
-    const patente = clonarRenovacion(original, body.nuevo_año)
-    return Response.json({ ok: true, patente })
-  }
-
   try {
     const supabase = await createClient()
 
@@ -90,14 +80,6 @@ export async function POST(
 
     return Response.json({ ok: true, patente: clonado })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const original = MOCK_PROYECTOS.find((p) => p.id === id)
-      if (!original) {
-        return Response.json({ ok: false, error: 'Patente no encontrada' }, { status: 404 })
-      }
-      const patente = clonarRenovacion(original, body.nuevo_año)
-      return Response.json({ ok: true, patente })
-    }
     return Response.json({ ok: false, error: 'Error interno' }, { status: 500 })
   }
 }

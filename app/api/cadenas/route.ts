@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_CADENAS } from '@/lib/mock-data'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -22,9 +21,6 @@ export async function GET() {
     if (error) throw error
     return Response.json({ data: data ?? [], source: 'db' })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ data: MOCK_CADENAS, source: 'mock' })
-    }
     return Response.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -59,17 +55,11 @@ export async function POST(request: Request) {
     }).select().single()
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production') {
-        return Response.json({ ok: true, id: `cad${Date.now()}`, simulated: true })
-      }
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true, id: data.id, cadena: data })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, id: `cad${Date.now()}`, simulated: true })
-    }
     return Response.json({ error: 'Error interno' }, { status: 500 })
   }
 }

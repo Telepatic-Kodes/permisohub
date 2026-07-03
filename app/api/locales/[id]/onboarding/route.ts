@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_LOCALES, MOCK_CENTROS } from '@/lib/mock-data'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -128,23 +127,6 @@ function buildChecklist(uso: string, _municipio: string): ItemOnboarding[] {
   return items
 }
 
-function charCodeSum(str: string): number {
-  let sum = 0
-  for (let i = 0; i < str.length; i++) {
-    sum += str.charCodeAt(i)
-  }
-  return sum
-}
-
-const ESTADOS_ORDEN: EstadoItem[] = ['pendiente', 'en_tramite', 'completado', 'no_aplica']
-
-function applyMockEstados(localId: string, items: ItemOnboarding[]): ItemOnboarding[] {
-  return items.map((item) => ({
-    ...item,
-    estado: ESTADOS_ORDEN[charCodeSum(localId + item.id) % 4],
-  }))
-}
-
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -154,7 +136,7 @@ export async function GET(
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('dev-no-auth')
+    if (authError || !user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit as unknown as NextResponse
@@ -195,21 +177,6 @@ export async function GET(
 
     return NextResponse.json({ ok: true, checklist, local_nombre: localNombre, municipio, progreso })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const local = MOCK_LOCALES.find((l) => l.id === id)
-      if (!local) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
-
-      const centro = MOCK_CENTROS.find((cc) => cc.id === local.centro_id)
-      const municipio = centro?.municipio ?? ''
-      const uso: string = local.uso ?? 'otro'
-      const localNombre = local.nombre_negocio ?? local.numero
-
-      const checklist = applyMockEstados(id, buildChecklist(uso, municipio))
-      const completados = checklist.filter((i) => i.estado === 'completado').length
-      const progreso = Math.round((completados / checklist.length) * 100)
-
-      return NextResponse.json({ ok: true, checklist, local_nombre: localNombre, municipio, progreso })
-    }
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
@@ -229,7 +196,7 @@ export async function POST(
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('dev-no-auth')
+    if (authError || !user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit as unknown as NextResponse
@@ -241,10 +208,17 @@ export async function POST(
 
     if (error) throw error
 
-    const local = MOCK_LOCALES.find((l) => l.id === id)
-    const centro = MOCK_CENTROS.find((cc) => cc.id === local?.centro_id)
-    const uso: string = local?.uso ?? 'otro'
-    const municipio = centro?.municipio ?? ''
+    const { data: localData, error: localError } = await supabase
+      .from('locales')
+      .select('uso, centro:centros_comerciales(municipio)')
+      .eq('id', id)
+      .single()
+
+    if (localError) throw localError
+
+    const centroArr = localData.centro as Array<{ municipio: string }>
+    const municipio: string = centroArr?.[0]?.municipio ?? ''
+    const uso: string = (localData.uso as string) ?? 'otro'
     const baseItem = buildChecklist(uso, municipio).find((i) => i.id === body.itemId)
     const itemActualizado: ItemOnboarding | undefined = baseItem
       ? { ...baseItem, estado: body.estado }
@@ -252,18 +226,6 @@ export async function POST(
 
     return NextResponse.json({ ok: true, item: itemActualizado })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const local = MOCK_LOCALES.find((l) => l.id === id)
-      const centro = MOCK_CENTROS.find((cc) => cc.id === local?.centro_id)
-      const uso: string = local?.uso ?? 'otro'
-      const municipio = centro?.municipio ?? ''
-      const baseItem = buildChecklist(uso, municipio).find((i) => i.id === body.itemId)
-      const itemActualizado: ItemOnboarding | undefined = baseItem
-        ? { ...baseItem, estado: body.estado }
-        : undefined
-
-      return NextResponse.json({ ok: true, item: itemActualizado })
-    }
     return NextResponse.json({ error: 'Error al actualizar item' }, { status: 500 })
   }
 }

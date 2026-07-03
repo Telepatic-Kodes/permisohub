@@ -84,9 +84,6 @@ export async function GET(request: Request) {
 
     throw new Error('Metadata inválida')
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ proyectos: null, source: 'mock' })
-    }
     return Response.json({ error: 'Token no encontrado' }, { status: 404 })
   }
 }

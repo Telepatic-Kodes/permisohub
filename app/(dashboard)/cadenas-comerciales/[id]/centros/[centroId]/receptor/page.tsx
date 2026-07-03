@@ -3,7 +3,6 @@
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, XCircle, MinusCircle, ClipboardCheck } from 'lucide-react'
-import { MOCK_LOCALES, MOCK_CENTROS, MOCK_CADENAS } from '@/lib/mock-data'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -89,20 +88,7 @@ function LocalSelector({
           setLocales(d.centro.locales ?? [])
         }
       })
-      .catch(() => {
-        // fallback mock
-        const centro = MOCK_CENTROS.find(cc => cc.id === centroId)
-        if (centro) {
-          setCentrNombre(centro.nombre)
-          const mockLocales = MOCK_LOCALES.filter(l => l.centro_id === centroId).map(l => ({
-            id: l.id,
-            numero: l.numero,
-            nombre_negocio: l.nombre_negocio ?? null,
-            centro_id: l.centro_id,
-          }))
-          setLocales(mockLocales)
-        }
-      })
+      .catch(() => undefined)
       .finally(() => setLoading(false))
   }, [centroId])
 

@@ -30,9 +30,6 @@ export async function GET(
     if (error) throw error
     return Response.json({ cliente: data, source: 'db' })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ cliente: null, source: 'mock' })
-    }
     return Response.json({ error: 'No encontrado' }, { status: 404 })
   }
 }
@@ -70,16 +67,13 @@ export async function PATCH(
       .eq('id', id)
       .eq('user_id', user.id)
 
-    if (error && process.env.NODE_ENV === 'production') {
+    if (error) {
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
-  } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+  } catch (err) {
+    return apiError('Error interno', 500, err)
   }
 }
 
@@ -105,15 +99,12 @@ export async function DELETE(
       .eq('id', id)
       .eq('user_id', user.id)
 
-    if (error && process.env.NODE_ENV === 'production') {
+    if (error) {
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
-  } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+  } catch (err) {
+    return apiError('Error interno', 500, err)
   }
 }

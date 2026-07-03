@@ -1,10 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import {
-  MOCK_PROYECTOS,
-  MOCK_ETAPAS,
-  MOCK_COMUNICACIONES,
-  MOCK_DOCUMENTOS,
-} from '@/lib/mock-data'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -53,19 +47,6 @@ export async function GET(
       source: 'db',
     })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const proyecto =
-        MOCK_PROYECTOS.find((p) => p.id === id) ?? MOCK_PROYECTOS[0]
-      return Response.json({
-        proyecto,
-        etapas: MOCK_ETAPAS.filter((e) => e.proyecto_id === id),
-        comunicaciones: MOCK_COMUNICACIONES.filter(
-          (c) => c.proyecto_id === id,
-        ),
-        documentos: MOCK_DOCUMENTOS.filter((d) => d.proyecto_id === id),
-        source: 'mock',
-      })
-    }
     return Response.json({ error: 'Proyecto no encontrado' }, { status: 404 })
   }
 }
@@ -134,15 +115,12 @@ export async function PATCH(
       .eq('id', id)
       .eq('user_id', user.id)
 
-    if (error && process.env.NODE_ENV === 'production') {
+    if (error) {
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
     return apiError('Error interno', 500, err)
   }
 }

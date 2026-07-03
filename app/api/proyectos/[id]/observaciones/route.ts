@@ -27,11 +27,8 @@ export async function GET(
 
     if (error) throw error
     return Response.json({ observaciones: data ?? [], source: 'db' })
-  } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ observaciones: [], source: 'mock' })
-    }
-    return Response.json({ error: 'Error al obtener observaciones' }, { status: 500 })
+  } catch (err) {
+    return apiError('Error al obtener observaciones', 500, err)
   }
 }
 
@@ -65,15 +62,12 @@ export async function POST(
       fecha: body.fecha ?? new Date().toISOString().slice(0, 10),
     }).select('id').single()
 
-    if (error && process.env.NODE_ENV === 'production') {
+    if (error) {
       return apiError('Error interno', 500, error)
     }
 
-    return Response.json({ ok: true, id: data?.id ?? `obs-${Date.now()}` })
+    return Response.json({ ok: true, id: data?.id })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, id: `obs-${Date.now()}`, simulated: true })
-    }
     return apiError('Error interno', 500, err)
   }
 }
@@ -110,15 +104,12 @@ export async function PATCH(
       .eq('proyecto_id', id)
       .eq('user_id', user.id)
 
-    if (error && process.env.NODE_ENV === 'production') {
+    if (error) {
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
     return apiError('Error interno', 500, err)
   }
 }

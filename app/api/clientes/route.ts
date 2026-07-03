@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_CLIENTES } from '@/lib/mock-data'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -16,11 +15,8 @@ export async function GET() {
     if (error) throw error
 
     return Response.json({ data: data ?? [], source: 'db' })
-  } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ data: MOCK_CLIENTES, source: 'mock' })
-    }
-    return Response.json({ error: 'Error al obtener clientes' }, { status: 500 })
+  } catch (err) {
+    return apiError('Error al obtener clientes', 500, err)
   }
 }
 
@@ -66,22 +62,11 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      if (process.env.NODE_ENV !== 'production') {
-        return Response.json({
-          ok: true,
-          id: `c${Date.now()}`,
-          simulated: true,
-          warning: error.message,
-        })
-      }
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true, id: cliente.id, cliente })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, id: `c${Date.now()}`, simulated: true })
-    }
     return apiError('Error interno', 500, err)
   }
 }

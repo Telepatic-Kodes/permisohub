@@ -40,15 +40,12 @@ export async function PATCH(request: Request) {
       .from('profiles')
       .upsert({ id: user.id, ...updates }, { onConflict: 'id' })
 
-    if (error && process.env.NODE_ENV === 'production') {
+    if (error) {
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
-  } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+  } catch (err) {
+    return apiError('Error interno', 500, err)
   }
 }

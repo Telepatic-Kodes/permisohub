@@ -7,8 +7,7 @@ import { ArrowLeft, CheckCircle2, Circle, ExternalLink, FileText, Upload, AlertC
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MOCK_PROYECTOS } from "@/lib/mock-data"
-import { TIPO_PERMISO_LABELS } from "@/types"
+import { TIPO_PERMISO_LABELS, type Proyecto } from "@/types"
 import {
   getDocumentosRequeridos,
   getMunicipioInfo,
@@ -25,15 +24,17 @@ export default function IngresoPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
-  const [proyecto, setProyecto] = useState(MOCK_PROYECTOS.find((p) => p.id === id))
+  const [proyecto, setProyecto] = useState<Proyecto | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch(`/api/proyectos/${id}`)
       .then(r => r.json())
-      .then((d: { proyecto?: (typeof MOCK_PROYECTOS)[number]; source?: string }) => {
-        if (d.source === 'db' && d.proyecto) setProyecto(d.proyecto)
+      .then((d: { proyecto?: Proyecto; source?: string }) => {
+        if (d.proyecto) setProyecto(d.proyecto)
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [id])
 
   const [step, setStep] = useState(0)
@@ -46,7 +47,11 @@ export default function IngresoPage({
         <Link href="/proyectos" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[#1A3328]">
           <ArrowLeft className="size-4" /> Proyectos
         </Link>
-        <p className="text-sm text-muted-foreground">Proyecto no encontrado.</p>
+        {!loading && (
+          <div className="py-12 text-center text-sm text-muted-foreground">
+            No se encontró el proyecto.
+          </div>
+        )}
       </div>
     )
   }

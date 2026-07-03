@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   AlertTriangle,
   Calendar,
@@ -13,8 +13,8 @@ import {
   MessageSquare,
 } from "lucide-react"
 import Link from "next/link"
-import { MOCK_PROYECTOS } from "@/lib/mock-data"
 import { ESTADO_CONFIG, TIPO_PERMISO_LABELS } from "@/types"
+import type { Proyecto } from "@/types"
 import { cn } from "@/lib/utils"
 
 // Portal view — simplified read-only for clients/tenants
@@ -56,8 +56,19 @@ const ESTADO_TEXT: Record<string, string> = {
 }
 
 export default function PortalPage() {
-  const proyectos = MOCK_PROYECTOS.slice(0, 6)
+  const [proyectos, setProyectos] = useState<Proyecto[]>([])
+  const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch("/api/proyectos")
+      .then((r) => r.json())
+      .then((data: { data?: Proyecto[] }) => {
+        setProyectos((data.data ?? []).slice(0, 6))
+      })
+      .catch(() => setProyectos([]))
+      .finally(() => setLoading(false))
+  }, [])
 
   const stats = useMemo(() => ({
     total:   proyectos.length,
@@ -99,6 +110,11 @@ export default function PortalPage() {
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 px-1">
             Mis proyectos
           </p>
+          {!loading && proyectos.length === 0 && (
+            <div className="rounded-xl border border-border bg-white py-12 text-center">
+              <p className="text-sm text-muted-foreground">Aún no hay proyectos para mostrar.</p>
+            </div>
+          )}
           {proyectos.map((p) => {
             const Icon = ESTADO_ICON[p.estado] ?? FileText
             const isOpen = selected === p.id

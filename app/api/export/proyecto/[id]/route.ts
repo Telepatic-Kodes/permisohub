@@ -2,7 +2,6 @@ import PDFDocument from 'pdfkit'
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { MOCK_PROYECTOS, MOCK_CLIENTES, MOCK_DOCUMENTOS, MOCK_ETAPAS } from '@/lib/mock-data'
 import { TIPO_PERMISO_LABELS, ESTADO_CONFIG } from '@/types'
 import type { DueDiligenceResult } from '@/lib/due-diligence'
 
@@ -55,34 +54,24 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const rateLimit = await checkRateLimit(`general:${user.id}`)
   if (rateLimit) return rateLimit
 
-  // ── Datos REALES (fallback a mock solo si no existe) ──
+  // ── Datos REALES ──
   const { data: proyectoReal } = await supabase
     .from('proyectos')
     .select('*, cliente:clientes(nombre)')
     .eq('id', id)
     .maybeSingle()
 
-  let proyecto: Row
-  let documentos: { nombre: string; tipo: string }[]
-  let etapas: { nombre: string; estado: string; notas?: string | null }[]
-
-  if (proyectoReal) {
-    proyecto = proyectoReal as unknown as Row
-    const [{ data: docs }, { data: ets }] = await Promise.all([
-      supabase.from('documentos').select('nombre, tipo').eq('proyecto_id', id),
-      supabase.from('etapas').select('nombre, estado, notas').eq('proyecto_id', id),
-    ])
-    documentos = docs ?? []
-    etapas = ets ?? []
-  } else {
-    const p = MOCK_PROYECTOS.find((x) => x.id === id) ?? MOCK_PROYECTOS[0]
-    proyecto = {
-      ...p,
-      cliente: { nombre: MOCK_CLIENTES.find((c) => c.id === p.cliente_id)?.nombre ?? '—' },
-    } as unknown as Row
-    documentos = MOCK_DOCUMENTOS.filter((d) => d.proyecto_id === p.id)
-    etapas = MOCK_ETAPAS.filter((e) => e.proyecto_id === p.id)
+  if (!proyectoReal) {
+    return Response.json({ error: 'Proyecto no encontrado' }, { status: 404 })
   }
+
+  const proyecto = proyectoReal as unknown as Row
+  const [{ data: docs }, { data: ets }] = await Promise.all([
+    supabase.from('documentos').select('nombre, tipo').eq('proyecto_id', id),
+    supabase.from('etapas').select('nombre, estado, notas').eq('proyecto_id', id),
+  ])
+  const documentos: { nombre: string; tipo: string }[] = docs ?? []
+  const etapas: { nombre: string; estado: string; notas?: string | null }[] = ets ?? []
 
   // Informe de due diligence (si existe)
   const { data: ddRow } = await supabase

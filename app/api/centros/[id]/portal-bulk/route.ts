@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_LOCALES } from '@/lib/mock-data'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -27,7 +26,6 @@ export async function POST(
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      if (process.env.NODE_ENV !== 'production') throw new Error('dev-no-auth')
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
@@ -74,22 +72,6 @@ export async function POST(
 
     return Response.json({ ok: true, invites, total: invites.length })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      // Dev mock: generate fake tokens for mock locales
-      const mockLocales = MOCK_LOCALES.filter(l => l.centro_id === id)
-      const invites = mockLocales.map(local => {
-        const token = crypto.randomUUID()
-        return {
-          local_id: local.id,
-          numero: local.numero,
-          negocio: local.nombre_negocio ?? '—',
-          email: local.tenant_email ?? null,
-          token,
-          url: `${baseUrl}/portal/${token}`,
-        }
-      })
-      return Response.json({ ok: true, invites, total: invites.length, simulated: true })
-    }
     return Response.json({ error: 'Error al generar portales' }, { status: 500 })
   }
 }

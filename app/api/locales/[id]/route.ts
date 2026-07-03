@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_LOCALES, MOCK_CENTROS, MOCK_PROYECTOS } from '@/lib/mock-data'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -43,9 +42,6 @@ export async function PUT(
     if (error) throw error
     return Response.json({ ok: true, local: data })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
     return Response.json({ error: 'Error al actualizar local' }, { status: 500 })
   }
 }
@@ -73,13 +69,6 @@ export async function GET(
     if (error) throw error
     return Response.json({ local: data, source: 'db' })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const local = MOCK_LOCALES.find(l => l.id === id)
-      if (!local) return Response.json({ error: 'No encontrado' }, { status: 404 })
-      const centro = MOCK_CENTROS.find(cc => cc.id === local.centro_id)
-      const proyectos = MOCK_PROYECTOS.filter(p => p.local_id === id)
-      return Response.json({ local: { ...local, centro, proyectos }, source: 'mock' })
-    }
     return Response.json({ error: 'Error interno' }, { status: 500 })
   }
 }

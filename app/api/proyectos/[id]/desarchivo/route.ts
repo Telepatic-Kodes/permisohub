@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_PROYECTOS } from '@/lib/mock-data'
 import { getInteligenciaMunicipio } from '@/lib/inteligencia-dom'
 import { sumarDiasHabiles } from '@/lib/dias-habiles'
 import type { EstadoDesarchivo, SolicitudDesarchivo } from '@/types'
@@ -48,24 +47,6 @@ export async function GET(
       source: 'db',
     })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const proyecto = MOCK_PROYECTOS.find((p) => p.id === id)
-      const municipio = proyecto?.municipio ?? ''
-      const intel = getInteligenciaMunicipio(municipio)
-      const municipio_info = {
-        plazo_tipico_dias: intel?.tiempoAprobacionPromedio ?? 20,
-        url_prc: intel?.planRegulador?.urlPRC ?? null,
-        alertas: intel?.alertas ?? [],
-      }
-      return Response.json({
-        ok: true,
-        esta_archivado: proyecto?.esta_archivado ?? false,
-        fecha_archivado: proyecto?.fecha_archivado ?? null,
-        solicitud_desarchivo: proyecto?.solicitud_desarchivo ?? null,
-        municipio_info,
-        source: 'mock',
-      })
-    }
     return Response.json({ error: 'Proyecto no encontrado' }, { status: 404 })
   }
 }
@@ -113,15 +94,12 @@ export async function POST(
       .eq('id', id)
       .eq('user_id', user.id)
 
-    if (error && process.env.NODE_ENV === 'production') {
+    if (error) {
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true, solicitud })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, solicitud })
-    }
     return apiError('Error interno', 500, err)
   }
 }
@@ -186,26 +164,12 @@ export async function PATCH(
       .eq('id', id)
       .eq('user_id', user.id)
 
-    if (error && process.env.NODE_ENV === 'production') {
+    if (error) {
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      const mockUpdated: Partial<SolicitudDesarchivo> = { estado: body.estado }
-      if (body.fecha_pago !== undefined) mockUpdated.fecha_pago = body.fecha_pago
-      if (body.fecha_estimada_entrega !== undefined) {
-        mockUpdated.fecha_estimada_entrega = body.fecha_estimada_entrega
-      }
-      // Auto-calcular fecha_estimada_entrega si avanza a 'pagado' y no viene en el body
-      if (body.estado === 'pagado' && !body.fecha_estimada_entrega) {
-        const fechaPago = body.fecha_pago ?? new Date().toISOString().slice(0, 10)
-        const resultado = sumarDiasHabiles(new Date(fechaPago), 20)
-        mockUpdated.fecha_estimada_entrega = resultado.toISOString().slice(0, 10)
-      }
-      return Response.json({ ok: true, solicitud_desarchivo: mockUpdated })
-    }
     return apiError('Error interno', 500, err)
   }
 }

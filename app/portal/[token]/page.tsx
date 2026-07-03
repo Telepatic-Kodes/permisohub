@@ -14,8 +14,8 @@ import {
   MessageSquare,
   Shield,
 } from "lucide-react"
-import { MOCK_PROYECTOS } from "@/lib/mock-data"
 import { TIPO_PERMISO_LABELS } from "@/types"
+import type { Proyecto } from "@/types"
 import { cn } from "@/lib/utils"
 
 // ──────────────────────────────────────────────────
@@ -70,7 +70,7 @@ const ESTADO_TEXT: Record<string, string> = {
 
 type ResolveResponse = {
   nombre?: string
-  proyectos?: typeof MOCK_PROYECTOS
+  proyectos?: Proyecto[]
   localContext?: { numero?: string; negocio?: string; centro?: string; cadena?: string }
 }
 
@@ -79,7 +79,7 @@ export default function PortalTokenPage() {
   const [selected, setSelected] = useState<string | null>(null)
   const [clienteNombre, setClienteNombre] = useState<string | null>(null)
   const [localCtx, setLocalCtx] = useState<ResolveResponse['localContext']>(undefined)
-  const [proyectosReales, setProyectosReales] = useState<typeof MOCK_PROYECTOS | null>(null)
+  const [proyectosReales, setProyectosReales] = useState<Proyecto[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -108,9 +108,8 @@ export default function PortalTokenPage() {
 
   const proyectos = useMemo(() => {
     if (proyectosReales) return proyectosReales
-    if (!meta) return []
-    return MOCK_PROYECTOS.filter((p) => meta.proyectosIds.includes(p.id))
-  }, [meta, proyectosReales])
+    return []
+  }, [proyectosReales])
 
   const stats = useMemo(() => ({
     total:   proyectos.length,
@@ -199,7 +198,7 @@ export default function PortalTokenPage() {
       {proyectos.length === 0 && (
         <div className="rounded-xl border border-border bg-white py-16 text-center">
           <FileText className="mx-auto size-8 text-muted-foreground/20 mb-3" />
-          <p className="text-sm text-muted-foreground">No hay proyectos asociados a esta cuenta aún.</p>
+          <p className="text-sm text-muted-foreground">Este portal no tiene proyectos asignados.</p>
           <p className="mt-1 text-xs text-muted-foreground/60">
             El arquitecto asignará proyectos a medida que avancen.
           </p>

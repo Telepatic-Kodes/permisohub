@@ -25,9 +25,6 @@ export async function GET() {
 
     return Response.json({ perfil: data ?? {}, email: user.email, is_admin: user.email === process.env.ADMIN_EMAIL })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ perfil: null, email: null, source: 'mock' })
-    }
     return Response.json({ error: 'Error al obtener perfil' }, { status: 500 })
   }
 }
@@ -58,15 +55,12 @@ export async function PATCH(request: Request) {
       .from('profiles')
       .upsert({ id: user.id, ...updates }, { onConflict: 'id' })
 
-    if (error && process.env.NODE_ENV === 'production') {
+    if (error) {
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
-  } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+  } catch (err) {
+    return apiError('Error interno', 500, err)
   }
 }

@@ -8,7 +8,6 @@ export const dynamic = 'force-dynamic'
 interface LookupResult {
   ok: boolean
   rol?: string
-  simulated?: boolean
   data?: {
     direccion_normalizada: string
     region: string
@@ -55,25 +54,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<LookupResu
   // Normalize rol: "1234-056" or "1234-56" accepted
   const [manzana, predio] = rolRaw.includes('-') ? rolRaw.split('-') : [rolRaw, '000']
   const rolNorm = `${manzana}-${predio}`
-
-  // Dev mode: return simulated data so the UI works without SII connectivity
-  if (process.env.NODE_ENV !== 'production') {
-    return NextResponse.json({
-      ok: true,
-      rol: rolNorm,
-      simulated: true,
-      data: {
-        direccion_normalizada: 'AV. EJEMPLO 1234, SANTIAGO',
-        region: 'METROPOLITANA DE SANTIAGO',
-        comuna: 'SANTIAGO',
-        destino: 'CASA HABITACION',
-        avaluo_fiscal_clp: 48_500_000,
-        avaluo_fiscal_uf: 1_102.5,
-        superficie_terreno_m2: 180,
-        superficie_construida_m2: 145,
-      },
-    })
-  }
 
   try {
     // SII property detail page (region 13 = RM as default; most architects work here)

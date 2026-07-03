@@ -27,12 +27,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { MOCK_PROSPECTOS } from "@/lib/mock-data"
 import {
   ETAPA_CRM_CONFIG,
   FUENTE_LABELS,
   TIPO_ACTIVIDAD_LABELS,
   type EtapaCRM,
+  type Prospecto,
   type TipoActividad,
 } from "@/types"
 import { cn } from "@/lib/utils"
@@ -94,18 +94,16 @@ export default function ProspectoDetallePage({
 }) {
   const { id } = use(params)
   const router = useRouter()
-  const mockProspecto = MOCK_PROSPECTOS.find((p) => p.id === id)
 
-  const [prospecto, setProspecto] = useState(mockProspecto ?? null)
-  const [etapa, setEtapa] = useState<EtapaCRM>(
-    mockProspecto?.etapa ?? "nuevo_contacto"
-  )
-  const [notas, setNotas] = useState(mockProspecto?.notas ?? "")
+  const [prospecto, setProspecto] = useState<Prospecto | null>(null)
+  const [etapa, setEtapa] = useState<EtapaCRM>("nuevo_contacto")
+  const [notas, setNotas] = useState("")
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch(`/api/prospectos/${id}`)
       .then((r) => r.json())
-      .then((data: { prospecto?: typeof mockProspecto }) => {
+      .then((data: { prospecto?: Prospecto }) => {
         if (data.prospecto) {
           setProspecto(data.prospecto)
           setEtapa(data.prospecto.etapa)
@@ -113,6 +111,7 @@ export default function ProspectoDetallePage({
         }
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [id])
   const [showActForm, setShowActForm] = useState(false)
   const [actTipo, setActTipo] = useState<TipoActividad>("email")
@@ -121,6 +120,7 @@ export default function ProspectoDetallePage({
   const [actResultado, setActResultado] = useState("")
 
   if (!prospecto) {
+    if (loading) return null
     return (
       <div className="space-y-6">
         <Link
@@ -130,8 +130,8 @@ export default function ProspectoDetallePage({
           <ArrowLeft className="size-4" />
           Prospectos
         </Link>
-        <div className="rounded-xl border border-gray-100 bg-white p-10 text-center text-muted-foreground shadow-sm">
-          No se encontró el prospecto solicitado.
+        <div className="rounded-xl border border-gray-100 bg-white p-10 text-center text-sm text-muted-foreground shadow-sm">
+          No se encontró el prospecto.
         </div>
       </div>
     )

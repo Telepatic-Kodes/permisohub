@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { MOCK_CADENAS, MOCK_CENTROS, MOCK_LOCALES } from "@/lib/mock-data"
 import type { Cadena, CentroComercial } from "@/types"
 
 type CentroConStats = CentroComercial & {
@@ -43,16 +42,9 @@ function centroEstado(c: CentroConStats): 'ok' | 'alert' | 'urgent' {
 export default function CadenaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
 
-  const mockCadena = MOCK_CADENAS.find(c => c.id === id)
-  const mockCentros: CentroConStats[] = MOCK_CENTROS
-    .filter(cc => cc.cadena_id === id)
-    .map(cc => {
-      const locCount = MOCK_LOCALES.filter(l => l.centro_id === cc.id).length
-      return { ...cc, locales_count: locCount, activos: 0, alertas: 0, cobertura_pct: 0 }
-    })
-
-  const [cadena, setCadena] = useState<Cadena | undefined>(mockCadena)
-  const [centros, setCentros] = useState<CentroConStats[]>(mockCentros)
+  const [cadena, setCadena] = useState<Cadena | null>(null)
+  const [centros, setCentros] = useState<CentroConStats[]>([])
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
   const [downloadingPDF, setDownloadingPDF] = useState(false)
@@ -75,6 +67,7 @@ export default function CadenaDetailPage({ params }: { params: Promise<{ id: str
         }
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [id])
 
   async function handleSubmitCentro(e: FormEvent<HTMLFormElement>) {
@@ -125,7 +118,10 @@ export default function CadenaDetailPage({ params }: { params: Promise<{ id: str
     }
   }
 
-  if (!cadena) return <div className="p-8 text-muted-foreground">Cadena no encontrada.</div>
+  if (!cadena) {
+    if (loading) return <div className="p-8 text-sm text-muted-foreground">Cargando…</div>
+    return <div className="p-8 text-center text-sm text-muted-foreground">No se encontró la cadena.</div>
+  }
 
   const totalLocales = centros.reduce((s, cc) => s + cc.locales_count, 0)
   const totalAlertas = centros.reduce((s, cc) => s + cc.alertas, 0)

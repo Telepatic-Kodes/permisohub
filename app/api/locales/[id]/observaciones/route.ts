@@ -17,11 +17,6 @@ type Observacion = {
   created_at: string
 }
 
-const MOCK_OBS: Observacion[] = [
-  { id: 'obs-1', local_id: 'local-id', texto: 'Fachada no cumple con Art. 2.4.3 OGUC — falta revestimiento exterior continuo', asignado_a: 'Arq. González', deadline: '2026-07-15', estado: 'pendiente', created_at: '2026-06-20T10:00:00Z' },
-  { id: 'obs-2', local_id: 'local-id', texto: 'Baño accesible no cumple dimensiones mínimas OGUC Art. 4.1.7', asignado_a: 'Contratista', deadline: '2026-07-30', estado: 'en_respuesta', created_at: '2026-06-18T14:00:00Z' },
-]
-
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -31,7 +26,7 @@ export async function GET(
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('dev-no-auth')
+    if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit as unknown as NextResponse
@@ -44,10 +39,9 @@ export async function GET(
 
     if (error) throw error
 
-    return NextResponse.json({ observaciones: data as Observacion[] })
+    return NextResponse.json({ observaciones: (data ?? []) as Observacion[] })
   } catch {
-    const mock = MOCK_OBS.map((obs) => ({ ...obs, local_id: id }))
-    return NextResponse.json({ observaciones: mock })
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }
 
@@ -62,7 +56,7 @@ export async function POST(
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('dev-no-auth')
+    if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit as unknown as NextResponse
@@ -83,6 +77,6 @@ export async function POST(
 
     return NextResponse.json({ ok: true, observacion: data as Observacion })
   } catch {
-    return NextResponse.json({ ok: true, id: 'obs-' + Date.now() })
+    return NextResponse.json({ error: 'Error al crear observación' }, { status: 500 })
   }
 }

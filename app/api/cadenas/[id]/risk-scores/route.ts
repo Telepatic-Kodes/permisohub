@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_LOCALES, MOCK_CENTROS } from '@/lib/mock-data'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -45,12 +44,6 @@ const HIGH_ENFORCEMENT_MUNICIPIOS = new Set([
   'Ñuñoa',
 ])
 
-function charCodeSum(str: string): number {
-  let s = 0
-  for (let i = 0; i < str.length; i++) s += str.charCodeAt(i)
-  return s
-}
-
 function municipioEnforcement(municipio: string): 'alto' | 'medio' | 'bajo' {
   if (HIGH_ENFORCEMENT_MUNICIPIOS.has(municipio)) return 'alto'
   const mid = ['Maipú', 'San Miguel', 'Pudahuel', 'La Florida', 'Rancagua', 'Independencia']
@@ -79,61 +72,6 @@ function scoreToNivel(score: number): NivelRiesgo {
   return 'bajo'
 }
 
-function buildMockLocales(cadenaId: string): LocalRiesgo[] {
-  const centros = MOCK_CENTROS.filter((c) => c.cadena_id === cadenaId)
-  const centroIds = new Set(centros.map((c) => c.id))
-  const locales = MOCK_LOCALES.filter((l) => centroIds.has(l.centro_id))
-
-  const results: LocalRiesgo[] = locales.map((local, idx) => {
-    const centro = centros.find((c) => c.id === local.centro_id)!
-    const municipio = centro.municipio
-    const enforcement = municipioEnforcement(municipio)
-    const base = charCodeSum(local.id) % 100
-
-    let sin_permiso = base > 60
-    let dias_para_vencimiento: number | null = null
-    let especialidades_pendientes = 0
-    let observaciones_abiertas = 0
-
-    if (idx === 0) {
-      sin_permiso = true
-      especialidades_pendientes = 3
-      observaciones_abiertas = 2
-    } else if (idx === 1) {
-      sin_permiso = false
-      dias_para_vencimiento = 20
-      especialidades_pendientes = 2
-      observaciones_abiertas = 1
-    } else {
-      dias_para_vencimiento = sin_permiso ? null : (base % 120) + 10
-      especialidades_pendientes = base % 4
-      observaciones_abiertas = base % 3
-    }
-
-    const factores: Factores = {
-      sin_permiso,
-      dias_para_vencimiento,
-      especialidades_pendientes,
-      observaciones_abiertas,
-      municipio_enforcement: enforcement,
-    }
-
-    const score = calcularScore(factores)
-    return {
-      local_id: local.id,
-      local_numero: local.numero,
-      local_nombre: local.nombre_negocio ?? local.numero,
-      centro_nombre: centro.nombre,
-      municipio,
-      score,
-      nivel: scoreToNivel(score),
-      factores,
-    }
-  })
-
-  return results.sort((a, b) => b.score - a.score)
-}
-
 function buildResumen(locales: LocalRiesgo[]) {
   const criticos = locales.filter((l) => l.nivel === 'critico').length
   const altos = locales.filter((l) => l.nivel === 'alto').length
@@ -159,7 +97,9 @@ export async function GET(
       error: authError,
     } = await supabase.auth.getUser()
 
-    if (authError || !user) throw new Error('dev-no-auth')
+    if (authError || !user) {
+      return Response.json({ error: 'No autenticado' }, { status: 401 })
+    }
 
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit
@@ -254,15 +194,6 @@ export async function GET(
     }
     return Response.json(response)
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const locales = buildMockLocales(id)
-      const response: RiskResponse = {
-        ok: true,
-        locales,
-        resumen: buildResumen(locales),
-      }
-      return Response.json(response)
-    }
     return Response.json({ error: 'Error interno' }, { status: 500 })
   }
 }

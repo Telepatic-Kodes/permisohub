@@ -38,15 +38,12 @@ export async function POST(
       user_id: user.id,
     })
 
-    if (error && process.env.NODE_ENV === 'production') {
+    if (error) {
       return apiError('Error interno', 500, error)
     }
 
     return Response.json({ ok: true })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
     return apiError('Error interno', 500, err)
   }
 }

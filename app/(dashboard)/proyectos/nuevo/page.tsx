@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { MOCK_CLIENTES } from "@/lib/mock-data"
 import type { Cliente } from "@/types"
 import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 import { ETAPAS_PERMISO, TIPO_PERMISO_LABELS, type TipoPermiso } from "@/types"
@@ -32,7 +31,7 @@ function NuevoProyectoPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const clienteNombreParam = searchParams.get("cliente") ?? ""
-  const [clientesDisponibles, setClientesDisponibles] = useState<Cliente[]>(MOCK_CLIENTES)
+  const [clientesDisponibles, setClientesDisponibles] = useState<Cliente[]>([])
 
   useEffect(() => {
     fetch('/api/clientes')
@@ -44,11 +43,9 @@ function NuevoProyectoPageInner() {
       .catch(() => undefined)
   }, [])
 
-  // Try to match an existing client by name; fall back to "" (user must pick/create)
-  const [cliente, setCliente] = useState(() => {
-    if (!clienteNombreParam) return ""
-    return MOCK_CLIENTES.find((c) => c.nombre.toLowerCase() === clienteNombreParam.toLowerCase())?.id ?? ""
-  })
+  // Default empty; if a cliente name param is present it is matched against the
+  // real clients once they load (see effect below).
+  const [cliente, setCliente] = useState("")
 
   // Re-match if real clients loaded after mount
   useEffect(() => {

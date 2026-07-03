@@ -27,17 +27,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  MOCK_CLIENTES,
-  PROYECTOS_ACTIVOS_POR_CLIENTE,
-} from "@/lib/mock-data"
 import type { Cliente } from "@/types"
 
 export default function ClientesPage() {
-  const [clientes, setClientes] = useState<Cliente[]>(MOCK_CLIENTES)
+  const [clientes, setClientes] = useState<Cliente[]>([])
   const [proyectosCount, setProyectosCount] = useState<Record<string, number>>(
-    PROYECTOS_ACTIVOS_POR_CLIENTE,
+    {},
   )
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
 
@@ -51,6 +48,7 @@ export default function ClientesPage() {
         }
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [])
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -186,6 +184,16 @@ export default function ClientesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {!loading && clientes.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="py-12 text-center text-sm text-muted-foreground"
+                  >
+                    Aún no tienes clientes.
+                  </TableCell>
+                </TableRow>
+              )}
               {clientes.map((c) => (
                 <TableRow
                   key={c.id}

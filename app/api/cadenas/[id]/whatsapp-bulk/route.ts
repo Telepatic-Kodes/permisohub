@@ -1,5 +1,4 @@
 import { enviarWhatsApp, isWhatsAppAvailable } from '@/lib/whatsapp'
-import { MOCK_LOCALES, MOCK_CENTROS } from '@/lib/mock-data'
 import { createClient } from '@/lib/supabase/server'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -62,7 +61,9 @@ export async function POST(
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('dev-no-auth')
+    if (authError || !user) {
+      return Response.json({ error: 'No autenticado' }, { status: 401 })
+    }
 
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit
@@ -95,43 +96,7 @@ export async function POST(
       centro_nombre: row.centros?.[0]?.nombre ?? undefined,
     }))
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const centrosDelaCadena = MOCK_CENTROS.filter(
-        (c) => c.cadena_id === cadenaId
-      )
-      const centroIds = new Set(centrosDelaCadena.map((c) => c.id))
-      const centroMap = new Map(centrosDelaCadena.map((c) => [c.id, c.nombre]))
-
-      let candidatos = MOCK_LOCALES.filter((l) => centroIds.has(l.centro_id))
-
-      if (body.localIds && body.localIds.length > 0) {
-        const ids = new Set(body.localIds)
-        candidatos = candidatos.filter((l) => ids.has(l.id))
-      }
-
-      const MOCK_PHONES = ['912345678', '923456789', '934567890']
-
-      locales = candidatos.slice(0, 3).map((l, i) => ({
-        id: l.id,
-        centro_id: l.centro_id,
-        nombre_negocio: l.nombre_negocio,
-        tenant_telefono: MOCK_PHONES[i],
-        centro_nombre: centroMap.get(l.centro_id),
-      }))
-
-      if (locales.length === 0) {
-        const fallback = MOCK_LOCALES.slice(0, 3)
-        locales = fallback.map((l, i) => ({
-          id: l.id,
-          centro_id: l.centro_id,
-          nombre_negocio: l.nombre_negocio,
-          tenant_telefono: MOCK_PHONES[i],
-          centro_nombre: centroMap.get(l.centro_id) ?? 'Centro Demo',
-        }))
-      }
-    } else {
-      return Response.json({ error: 'Error al obtener locales' }, { status: 500 })
-    }
+    return Response.json({ error: 'Error al obtener locales' }, { status: 500 })
   }
 
   const localesConTelefono = locales.filter(

@@ -1,6 +1,5 @@
 import { aiComplete, isAIAvailable } from '@/lib/ai'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
-import { MOCK_CADENAS, MOCK_CENTROS, MOCK_LOCALES } from '@/lib/mock-data'
 import { createClient } from '@/lib/supabase/server'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -13,25 +12,18 @@ export async function POST(
   const { id: cadenaId } = await params
   const { pregunta } = (await request.json()) as { pregunta: string }
 
-  let userId: string | null = null
-  try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('dev-no-auth')
-    userId = user.id
-    const rateLimit = await checkRateLimit(`general:${user.id}`)
-    if (rateLimit) return rateLimit
-  } catch {
-    userId = null
-  }
-
-  let cadena: Record<string, unknown> | null = null
+  let cadena: Record<string, unknown> = {}
   let centros: Record<string, unknown>[] = []
   let locales: Record<string, unknown>[] = []
 
   try {
-    if (!userId) throw new Error('dev-no-auth')
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const rateLimit = await checkRateLimit(`general:${user.id}`)
+      if (rateLimit) return rateLimit
+    }
+
     const { data: cadenaData, error: cadenaError } = await supabase
       .from('cadenas')
       .select('*')
@@ -57,11 +49,10 @@ export async function POST(
       locales = (localesData ?? []) as Record<string, unknown>[]
     }
   } catch {
-    cadena = (MOCK_CADENAS.find((c) => c.id === cadenaId) ?? MOCK_CADENAS[0]) as unknown as Record<string, unknown>
-    const cadenaIdForMock = cadena['id'] as string
-    centros = MOCK_CENTROS.filter((c) => c.cadena_id === cadenaIdForMock) as unknown as Record<string, unknown>[]
-    const centroIds = centros.map((c) => c['id'] as string)
-    locales = MOCK_LOCALES.filter((l) => centroIds.includes(l.centro_id)) as unknown as Record<string, unknown>[]
+    // TODO: query DB for real cadena/centros/locales context when initial fetch fails
+    cadena = {}
+    centros = []
+    locales = []
   }
 
   if (!isAIAvailable()) {
@@ -69,7 +60,6 @@ export async function POST(
       ok: true,
       respuesta:
         'Para abrir un local comercial en Chile, necesitas: (1) Permiso de edificación de la DOM según Art. 5.1.1 OGUC, (2) Patente municipal, (3) Certificados de especialidades. El plazo legal es 30 días hábiles según Ley 21.718.',
-      simulated: true,
     })
   }
 

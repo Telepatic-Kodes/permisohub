@@ -72,9 +72,6 @@ export async function PATCH(
     if (error) throw error
     return Response.json({ ok: true, boleta: data })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
     return apiError('Error interno', 500, err)
   }
 }
@@ -100,9 +97,6 @@ export async function DELETE(
     if (error) throw error
     return Response.json({ ok: true })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
     return apiError('Error interno', 500, err)
   }
 }

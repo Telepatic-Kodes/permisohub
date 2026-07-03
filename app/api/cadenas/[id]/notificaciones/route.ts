@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_CENTROS, MOCK_LOCALES, MOCK_PROYECTOS } from '@/lib/mock-data'
 import { Resend } from 'resend'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -26,7 +25,6 @@ export async function POST(
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      if (process.env.NODE_ENV !== 'production') throw new Error('dev-no-auth')
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
@@ -143,42 +141,6 @@ Equipo PermisoHub`
 
     return Response.json({ ok: true, enviados, sin_email: sinEmail, errors })
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') {
-      // Dev fallback: simulate using mock data
-      const centros = MOCK_CENTROS.filter((c) => c.cadena_id === id)
-      const centroIds = centros.map((c) => c.id)
-      const locales = MOCK_LOCALES.filter((l) => centroIds.includes(l.centro_id))
-      const localesConEmail = locales.filter((l) => l.tenant_email)
-      const localesSinEmail = locales.filter((l) => !l.tenant_email)
-
-      const now = new Date()
-      const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
-
-      let enviados = 0
-      for (const local of localesConEmail) {
-        const proyectos = MOCK_PROYECTOS.filter((p) => p.local_id === local.id)
-        const needsNotification =
-          proyectos.length === 0 ||
-          proyectos.some((p) => {
-            if (p.estado === 'rechazado') return true
-            if (p.fecha_estimada) {
-              return new Date(p.fecha_estimada) <= in90Days
-            }
-            return false
-          })
-        if (needsNotification) enviados++
-      }
-
-      // Ensure at least some results for demo
-      if (enviados === 0 && localesConEmail.length > 0) enviados = localesConEmail.length
-
-      return Response.json({
-        ok: true,
-        enviados: enviados || 3,
-        sin_email: localesSinEmail.length || 1,
-        simulated: true,
-      })
-    }
     return apiError('Error al enviar notificaciones', 500, err)
   }
 }

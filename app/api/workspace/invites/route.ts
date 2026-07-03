@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       expires_at: expiresAt,
     }).select().single()
 
-    if (error && process.env.NODE_ENV === 'production') {
+    if (error) {
       return apiError('Error interno', 500, error)
     }
 
@@ -46,10 +46,7 @@ export async function POST(request: Request) {
       url: `${baseUrl}/portal/${token}`,
       invite: data ?? null,
     })
-  } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+  } catch (err) {
+    return apiError('Error interno', 500, err)
   }
 }

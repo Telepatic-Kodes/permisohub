@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_PROSPECTOS } from '@/lib/mock-data'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -22,10 +21,6 @@ export async function GET(
     if (error) throw error
     return Response.json({ prospecto: data, source: 'db' })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const prospecto = MOCK_PROSPECTOS.find((p) => p.id === id) ?? null
-      return Response.json({ prospecto, source: 'mock' })
-    }
     return Response.json({ error: 'No encontrado' }, { status: 404 })
   }
 }
@@ -69,7 +64,7 @@ export async function PATCH(
         resultado: body.actividad.resultado ?? null,
         user_id: user.id,
       })
-      if (actError && process.env.NODE_ENV === 'production') {
+      if (actError) {
         return apiError('Error interno', 500, actError)
       }
     }
@@ -87,16 +82,13 @@ export async function PATCH(
         .eq('id', id)
         .eq('user_id', user.id)
 
-      if (updateError && process.env.NODE_ENV === 'production') {
+      if (updateError) {
         return apiError('Error interno', 500, updateError)
       }
     }
 
     return Response.json({ ok: true })
   } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      return Response.json({ ok: true, simulated: true })
-    }
     return Response.json({ error: 'Error interno' }, { status: 500 })
   }
 }

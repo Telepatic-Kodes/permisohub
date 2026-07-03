@@ -34,51 +34,6 @@ import { ROL_LABELS, ROL_DESCRIPCION, type RolWorkspace, type WorkspaceMember, t
 import { cn } from "@/lib/utils"
 
 // ──────────────────────────────────────────────────
-// Mock data
-// ──────────────────────────────────────────────────
-const MOCK_MEMBERS: WorkspaceMember[] = [
-  {
-    id: "m1",
-    workspace_id: "ws1",
-    user_id: "u1",
-    role: "admin",
-    nombre: "Estefanía Parada",
-    email: "estefania@arch.cl",
-    joined_at: "2026-01-15T00:00:00Z",
-  },
-  {
-    id: "m2",
-    workspace_id: "ws1",
-    user_id: "u2",
-    role: "arquitecto",
-    nombre: "Carlos Muñoz",
-    email: "carlos@arch.cl",
-    joined_at: "2026-03-01T00:00:00Z",
-  },
-  {
-    id: "m3",
-    workspace_id: "ws1",
-    user_id: "u3",
-    role: "viewer",
-    nombre: "Parque Arauco — Locales",
-    email: "obras@parauco.cl",
-    joined_at: "2026-05-20T00:00:00Z",
-  },
-]
-
-const MOCK_INVITES: WorkspaceInvite[] = [
-  {
-    id: "i1",
-    workspace_id: "ws1",
-    email: "nuevo@arch.cl",
-    role: "arquitecto",
-    token: "abc123",
-    expires_at: "2026-07-01T00:00:00Z",
-    created_at: "2026-06-24T00:00:00Z",
-  },
-]
-
-// ──────────────────────────────────────────────────
 // Role UI helpers
 // ──────────────────────────────────────────────────
 const ROL_ICON: Record<RolWorkspace, typeof Crown> = {
@@ -126,18 +81,20 @@ function portalLink(userId: string): string {
 }
 
 export default function EquipoPage() {
-  const [members, setMembers] = useState<WorkspaceMember[]>(MOCK_MEMBERS)
-  const [invites, setInvites] = useState<WorkspaceInvite[]>(MOCK_INVITES)
+  const [members, setMembers] = useState<WorkspaceMember[]>([])
+  const [invites, setInvites] = useState<WorkspaceInvite[]>([])
+  const [loading, setLoading] = useState(true)
   const [showInvite, setShowInvite] = useState(false)
 
   useEffect(() => {
     fetch('/api/workspace/members')
       .then((r) => r.json())
       .then((d: { members?: WorkspaceMember[]; invites?: WorkspaceInvite[] }) => {
-        if (d.members && d.members.length > 0) setMembers(d.members)
+        if (d.members) setMembers(d.members)
         if (d.invites) setInvites(d.invites)
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [])
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteRol, setInviteRol] = useState<RolWorkspace>("arquitecto")
@@ -274,6 +231,11 @@ export default function EquipoPage() {
             </p>
           </div>
           <div className="rounded-xl border border-border bg-white divide-y divide-border/60 overflow-hidden">
+            {!loading && members.length === 0 && (
+              <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                Aún no hay miembros en el equipo. Invita a tu primer miembro.
+              </div>
+            )}
             {members.map((m) => (
               <div key={m.id} className="flex items-center gap-3 px-4 py-3">
                 <Initials nombre={m.nombre} />

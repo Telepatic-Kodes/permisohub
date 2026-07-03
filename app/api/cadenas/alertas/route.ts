@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { MOCK_CADENAS, MOCK_CENTROS, MOCK_LOCALES } from '@/lib/mock-data'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export interface AlertaItem {
@@ -17,69 +16,6 @@ export interface AlertaItem {
   dias_restantes?: number
 }
 
-function offsetDate(days: number): string {
-  return new Date(Date.now() + days * 86400000).toISOString().slice(0, 10)
-}
-
-function buildMockAlertas(): AlertaItem[] {
-  return [
-    {
-      id: 'alerta-loc1',
-      cadena_id: 'cad1',
-      cadena_nombre: 'Parque Arauco S.A.',
-      centro_id: 'cc1',
-      centro_nombre: 'Arauco Maipú',
-      local_id: 'loc1',
-      local_numero: 'L-101',
-      negocio: 'Starbucks',
-      tenant_email: 'permisos@starbucks.cl',
-      categoria: 'vencido',
-      fecha_estimada: offsetDate(-10),
-      dias_restantes: -10,
-    },
-    {
-      id: 'alerta-loc2',
-      cadena_id: 'cad1',
-      cadena_nombre: 'Parque Arauco S.A.',
-      centro_id: 'cc1',
-      centro_nombre: 'Arauco Maipú',
-      local_id: 'loc2',
-      local_numero: 'L-102',
-      negocio: 'H&M',
-      tenant_email: 'hmchile@expansion.cl',
-      categoria: 'proximo_30',
-      fecha_estimada: offsetDate(15),
-      dias_restantes: 15,
-    },
-    {
-      id: 'alerta-loc3',
-      cadena_id: 'cad1',
-      cadena_nombre: 'Parque Arauco S.A.',
-      centro_id: 'cc1',
-      centro_nombre: 'Arauco Maipú',
-      local_id: 'loc3',
-      local_numero: 'L-201',
-      negocio: 'Cineplanet',
-      tenant_email: 'obras@cineplanet.cl',
-      categoria: 'proximo_60',
-      fecha_estimada: offsetDate(45),
-      dias_restantes: 45,
-    },
-    {
-      id: 'alerta-loc4',
-      cadena_id: 'cad1',
-      cadena_nombre: 'Parque Arauco S.A.',
-      centro_id: 'cc1',
-      centro_nombre: 'Arauco Maipú',
-      local_id: 'loc4',
-      local_numero: 'L-103',
-      negocio: 'Farmacia Salud',
-      tenant_email: 'expansionfarma@saludvida.cl',
-      categoria: 'sin_permiso',
-    },
-  ]
-}
-
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -89,7 +25,6 @@ export async function GET() {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      if (process.env.NODE_ENV !== 'production') throw new Error('dev-no-auth')
       return Response.json({ error: 'No autenticado' }, { status: 401 })
     }
 
@@ -225,30 +160,6 @@ export async function GET() {
 
     return Response.json({ alertas })
   } catch {
-    // Dev fallback — build mock response
-    const alertas = buildMockAlertas()
-
-    // Also include any locales from mock that aren't in the hardcoded list
-    const coveredIds = new Set(['loc1', 'loc2', 'loc3', 'loc4'])
-    for (const local of MOCK_LOCALES) {
-      if (coveredIds.has(local.id)) continue
-      const centro = MOCK_CENTROS.find((c) => c.id === local.centro_id)
-      const cadena = centro ? MOCK_CADENAS.find((ca) => ca.id === centro.cadena_id) : null
-      if (!centro || !cadena) continue
-      alertas.push({
-        id: `sin-permiso-${local.id}`,
-        cadena_id: cadena.id,
-        cadena_nombre: cadena.nombre,
-        centro_id: centro.id,
-        centro_nombre: centro.nombre,
-        local_id: local.id,
-        local_numero: local.numero,
-        negocio: local.nombre_negocio ?? local.numero,
-        tenant_email: local.tenant_email ?? undefined,
-        categoria: 'sin_permiso',
-      })
-    }
-
-    return Response.json({ alertas })
+    return Response.json({ error: 'Error al obtener alertas' }, { status: 500 })
   }
 }

@@ -1,7 +1,6 @@
 import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { MOCK_PROYECTOS } from '@/lib/mock-data'
 import { NuevoProyectoSchema } from '@/lib/schemas'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -32,14 +31,8 @@ export async function GET(request: Request) {
     if (error) throw error
 
     return Response.json({ data: data ?? [], source: 'db' })
-  } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      const list = clienteId
-        ? MOCK_PROYECTOS.filter((p) => p.cliente_id === clienteId)
-        : MOCK_PROYECTOS
-      return Response.json({ data: list, source: 'mock' })
-    }
-    return Response.json({ error: 'Error al obtener proyectos' }, { status: 500 })
+  } catch (err) {
+    return apiError('Error al obtener proyectos', 500, err)
   }
 }
 
@@ -97,11 +90,6 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      // In dev without DB migrations, fall back to a mock ID so the form flow works
-      if (process.env.NODE_ENV !== 'production') {
-        const mockId = `p${Date.now()}`
-        return Response.json({ ok: true, id: mockId, simulated: true, warning: error.message })
-      }
       return apiError('Error al crear proyecto', 500, error)
     }
 
@@ -144,11 +132,6 @@ export async function POST(request: Request) {
 
     return Response.json({ ok: true, id: proyecto.id })
   } catch (err) {
-    // In dev without DB, return a mock success so the UI flow is testable
-    if (process.env.NODE_ENV !== 'production') {
-      const mockId = `p${Date.now()}`
-      return Response.json({ ok: true, id: mockId, simulated: true })
-    }
     return apiError('Error interno', 500, err)
   }
 }

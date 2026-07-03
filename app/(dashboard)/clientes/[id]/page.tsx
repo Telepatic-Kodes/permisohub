@@ -22,8 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { MOCK_CLIENTES, MOCK_PROYECTOS } from "@/lib/mock-data"
-import { ESTADO_CONFIG } from "@/types"
+import { ESTADO_CONFIG, type Cliente, type Proyecto } from "@/types"
 
 // Estimated value per project (mock — no value field on Proyecto).
 const VALOR_ESTIMADO_POR_PROYECTO = 1_200_000
@@ -52,26 +51,50 @@ export default function ClienteDetallePage({
 }) {
   const { id } = use(params)
 
-  const [cliente, setCliente] = useState(MOCK_CLIENTES.find((c) => c.id === id))
-  const [proyectos, setProyectos] = useState(MOCK_PROYECTOS.filter((p) => p.cliente_id === id))
+  const [cliente, setCliente] = useState<Cliente | null>(null)
+  const [proyectos, setProyectos] = useState<Proyecto[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/api/clientes/${id}`)
+    const clientePromise = fetch(`/api/clientes/${id}`)
       .then((r) => r.json())
-      .then((data: { cliente?: typeof cliente }) => {
+      .then((data: { cliente?: Cliente }) => {
         if (data.cliente) setCliente(data.cliente)
       })
       .catch(() => undefined)
 
-    fetch('/api/proyectos')
+    const proyectosPromise = fetch('/api/proyectos')
       .then((r) => r.json())
-      .then((data: { data?: typeof proyectos }) => {
+      .then((data: { data?: Proyecto[] }) => {
         if (data.data) {
           setProyectos(data.data.filter((p) => p.cliente_id === id))
         }
       })
       .catch(() => undefined)
+
+    Promise.all([clientePromise, proyectosPromise]).finally(() =>
+      setLoading(false),
+    )
   }, [id])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <PageHeader
+          emoji="🏢"
+          title="Cliente"
+          breadcrumbs={[{ label: "Clientes", href: "/clientes" }]}
+        />
+        <div className="flex-1 overflow-auto p-8">
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-sm text-muted-foreground">Cargando cliente…</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   if (!cliente) {
     return (

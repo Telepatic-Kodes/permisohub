@@ -8,20 +8,13 @@ import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { MOCK_CADENAS, MOCK_CENTROS } from "@/lib/mock-data"
 import type { Cadena } from "@/types"
 
 type CadenaConStats = Cadena & { num_centros: number; num_locales: number; proyectos_activos: number }
 
 export default function CadenasPage() {
-  const [cadenas, setCadenas] = useState<CadenaConStats[]>(
-    MOCK_CADENAS.map(c => ({
-      ...c,
-      num_centros: MOCK_CENTROS.filter(cc => cc.cadena_id === c.id).length,
-      num_locales: MOCK_CENTROS.filter(cc => cc.cadena_id === c.id).reduce((s, cc) => s + (cc.num_locales ?? 0), 0),
-      proyectos_activos: 0,
-    }))
-  )
+  const [cadenas, setCadenas] = useState<CadenaConStats[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/cadenas')
@@ -30,6 +23,7 @@ export default function CadenasPage() {
         if (d.data && d.data.length > 0) setCadenas(d.data)
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [])
 
   return (
@@ -128,10 +122,10 @@ export default function CadenasPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {cadenas.length === 0 && (
+            {!loading && cadenas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                  No hay cadenas registradas.{" "}
+                <TableCell colSpan={7} className="text-center py-12 text-sm text-muted-foreground">
+                  Aún no tienes cadenas.{" "}
                   <Link href="/cadenas/nueva" className="underline">Crear la primera</Link>
                 </TableCell>
               </TableRow>

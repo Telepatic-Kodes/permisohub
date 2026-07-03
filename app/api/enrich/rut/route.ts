@@ -14,7 +14,6 @@ interface SuccessResponse {
   rut_formateado: string;
   razon_social: string;
   giro: string;
-  simulated: true;
 }
 
 interface ErrorResponse {
@@ -68,14 +67,6 @@ function formatRut(body: string, check: string): string {
   return groups.reverse().join('.') + '-' + check;
 }
 
-function mockCompany(body: string): CompanyData {
-  const suffix = body.slice(-4);
-  return {
-    razon_social: `Empresa Inmobiliaria ${suffix} S.A.`,
-    giro: 'Actividades inmobiliarias',
-  };
-}
-
 export async function GET(request: NextRequest): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -98,13 +89,19 @@ export async function GET(request: NextRequest): Promise<NextResponse<SuccessRes
   }
 
   const { body, check } = result;
-  const company = KNOWN_COMPANIES[body] ?? mockCompany(body);
+  const company = KNOWN_COMPANIES[body];
+
+  if (!company) {
+    return NextResponse.json(
+      { ok: false, error: 'Servicio de enriquecimiento RUT no disponible para este RUT' },
+      { status: 502 },
+    );
+  }
 
   return NextResponse.json({
     ok: true,
     rut_formateado: formatRut(body, check),
     razon_social: company.razon_social,
     giro: company.giro,
-    simulated: true,
   });
 }

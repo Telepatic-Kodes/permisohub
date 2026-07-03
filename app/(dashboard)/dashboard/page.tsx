@@ -10,7 +10,6 @@ import {
 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { cn } from "@/lib/utils"
-import { MOCK_PROYECTOS } from "@/lib/mock-data"
 import type { EstadoExpediente, Proyecto } from "@/types"
 import { createClient } from "@/lib/supabase/server"
 import { getEstadoPlazoLey21718 } from "@/lib/dias-habiles"
@@ -291,7 +290,7 @@ function TimelineSection({
 // ---------------------------------------------------------------------------
 
 export default async function DashboardPage() {
-  let proyectos: Proyecto[] = MOCK_PROYECTOS
+  let proyectos: Proyecto[] = []
   let nombreUsuario = "Arquitecto"
 
   try {
@@ -317,7 +316,7 @@ export default async function DashboardPage() {
       nombreUsuario = profileRes.data.nombre.split(' ')[0]
     }
   } catch {
-    // Supabase not configured — use mock data
+    // Supabase not configured — leave projects empty
   }
 
   const { saludo, fechaCorta } = saludoFecha()
@@ -398,10 +397,16 @@ export default async function DashboardPage() {
         {/* ── Timeline ── */}
         <div className="rounded-2xl border border-border bg-white py-4 space-y-4">
 
+          {proyectos.length === 0 && (
+            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+              Aún no tienes proyectos. Crea tu primer proyecto para comenzar.
+            </p>
+          )}
+
           <TimelineSection
             title="Acción requerida"
             rows={sections.accionRequerida}
-            empty="Sin observaciones pendientes"
+            empty={proyectos.length > 0 ? "Sin observaciones pendientes" : undefined}
           />
 
           {(sections.accionRequerida.length > 0 && sections.proximos30d.length > 0) && (

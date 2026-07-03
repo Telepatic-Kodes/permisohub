@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/table"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { SectionTabs } from "@/components/dashboard/section-tabs"
-import { MOCK_PROSPECTOS } from "@/lib/mock-data"
 import {
   ETAPA_CRM_CONFIG,
   FUENTE_LABELS,
@@ -273,17 +272,19 @@ export default function ProspectosPage() {
   const [search, setSearch] = useState("")
   const [etapaFilter, setEtapaFilter] = useState("todas")
   const [showNuevo, setShowNuevo] = useState(false)
-  const [allProspectos, setAllProspectos] = useState<Prospecto[]>(MOCK_PROSPECTOS)
+  const [allProspectos, setAllProspectos] = useState<Prospecto[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/prospectos')
       .then((r) => r.json())
       .then((json: { data: Prospecto[]; source: string }) => {
-        if (json.data && json.data.length > 0 && json.source === 'db') {
+        if (json.data && json.data.length > 0) {
           setAllProspectos(json.data)
         }
       })
       .catch(() => undefined)
+      .finally(() => setLoading(false))
   }, [])
 
   const stats = useMemo(() => {
@@ -446,7 +447,11 @@ export default function ProspectosPage() {
             />
           </div>
 
-          {view === "pipeline" ? (
+          {!loading && allProspectos.length === 0 ? (
+            <div className="py-16 text-center text-sm text-muted-foreground">
+              Aún no tienes prospectos.
+            </div>
+          ) : view === "pipeline" ? (
             <div className="space-y-6">
               {/* Kanban */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
