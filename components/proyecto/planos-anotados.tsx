@@ -1,7 +1,8 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { AlertCircle, Loader2, PencilRuler } from "lucide-react"
+import { AlertCircle, Download, Loader2, PencilRuler } from "lucide-react"
+import type { jsPDF as JsPDF } from "jspdf"
 
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
@@ -72,6 +73,52 @@ function observacionesDesdeReporte(result: DueDiligenceResult): string {
   return lines.join("\n")
 }
 
+// Quema las marcas sobre la lámina a resolución natural y devuelve JPEG + dims.
+async function burnLamina(l: LaminaConImagen): Promise<{ dataUrl: string; w: number; h: number }> {
+  const img = new Image()
+  img.src = l.dataUrl
+  await new Promise((r) => {
+    img.onload = r
+  })
+  const canvas = document.createElement("canvas")
+  canvas.width = img.naturalWidth
+  canvas.height = img.naturalHeight
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return { dataUrl: l.dataUrl, w: canvas.width, h: canvas.height }
+  ctx.drawImage(img, 0, 0)
+  const W = canvas.width
+  const H = canvas.height
+  ctx.lineWidth = Math.max(2, W * 0.003)
+  ctx.font = `bold ${Math.max(14, W * 0.014)}px sans-serif`
+  l.anotaciones.forEach((a, i) => {
+    const color = colorDeMarca(a.convencionLinea, a.severidad)
+    const x = a.bbox.x * W
+    const y = a.bbox.y * H
+    const w = a.bbox.w * W
+    const h = a.bbox.h * H
+    ctx.strokeStyle = color
+    ctx.setLineDash(a.convencionLinea ? [W * 0.012, W * 0.008] : [])
+    if (a.tipoMarca === "circulo") {
+      ctx.beginPath()
+      ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2)
+      ctx.stroke()
+    } else {
+      ctx.strokeRect(x, y, w, h)
+    }
+    ctx.setLineDash([])
+    const r = Math.max(10, W * 0.012)
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.arc(x, y, r, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = "#fff"
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+    ctx.fillText(String(i + 1), x, y)
+  })
+  return { dataUrl: canvas.toDataURL("image/jpeg", 0.9), w: W, h: H }
+}
+
 export default function PlanosAnotados({ proyectoId, result }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,6 +126,7 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
   const [activeIdx, setActiveIdx] = useState(0)
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const generar = useCallback(async () => {
     setLoading(true)
@@ -140,6 +188,26 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
     }
   }, [proyectoId, result])
 
+  const exportarPDF = useCallback(async () => {
+    if (laminas.length === 0) return
+    setExporting(true)
+    try {
+      const mod = await import("jspdf")
+      let pdf: JsPDF | null = null
+      for (const l of laminas) {
+        const { dataUrl, w, h } = await burnLamina(l)
+        const orientation = w >= h ? "landscape" : "portrait"
+        if (!pdf) pdf = new mod.jsPDF({ orientation, unit: "px", format: [w, h] })
+        else pdf.addPage([w, h], orientation)
+        pdf.addImage(dataUrl, "JPEG", 0, 0, w, h)
+      }
+      const safe = result.proyecto.nombre.replace(/[^\w.-]+/g, "-").slice(0, 60)
+      pdf?.save(`planos-anotados-${safe}.pdf`)
+    } finally {
+      setExporting(false)
+    }
+  }, [laminas, result.proyecto.nombre])
+
   const active = laminas[activeIdx]
 
   return (
@@ -150,23 +218,31 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
             <PencilRuler className="size-4 text-primary" />
             <p className="text-sm font-semibold text-primary">Observaciones sobre los planos</p>
           </div>
-          {done && laminas.length > 1 && (
-            <div className="flex gap-1">
-              {laminas.map((l, i) => (
-                <button
-                  key={l.id}
-                  onClick={() => setActiveIdx(i)}
-                  className={cn(
-                    "rounded-md border px-2 py-0.5 text-[10px] font-medium",
-                    i === activeIdx
-                      ? "border-primary/40 bg-primary/5 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/20",
-                  )}
-                >
-                  Lámina {i + 1}
-                  {l.anotaciones.length > 0 && ` · ${l.anotaciones.length}`}
-                </button>
-              ))}
+          {done && laminas.length > 0 && (
+            <div className="flex items-center gap-2">
+              {laminas.length > 1 && (
+                <div className="flex gap-1">
+                  {laminas.map((l, i) => (
+                    <button
+                      key={l.id}
+                      onClick={() => setActiveIdx(i)}
+                      className={cn(
+                        "rounded-md border px-2 py-0.5 text-[10px] font-medium",
+                        i === activeIdx
+                          ? "border-primary/40 bg-primary/5 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/20",
+                      )}
+                    >
+                      Lámina {i + 1}
+                      {l.anotaciones.length > 0 && ` · ${l.anotaciones.length}`}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <Button variant="outline" size="sm" onClick={() => void exportarPDF()} disabled={exporting}>
+                {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                PDF
+              </Button>
             </div>
           )}
         </div>
