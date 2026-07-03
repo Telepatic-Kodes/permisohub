@@ -80,6 +80,7 @@ export async function POST(request: Request) {
     const { data: proyecto, error } = await supabase
       .from('proyectos')
       .insert({
+        user_id: user.id,
         nombre: body.nombre,
         cliente_id: body.cliente_id,
         municipio: body.municipio,

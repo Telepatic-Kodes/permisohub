@@ -647,7 +647,7 @@ CREATE POLICY "boletas_workspace_write" ON boletas_servicios
       JOIN workspace_members wm   ON wm.workspace_id = ca.workspace_id
       WHERE l.id = boletas_servicios.local_id
         AND wm.user_id = auth.uid()
-        AND wm.rol IN ('admin', 'arquitecto')
+        AND wm.role IN ('admin', 'arquitecto')
     )
   )
   WITH CHECK (
@@ -659,6 +659,6 @@ CREATE POLICY "boletas_workspace_write" ON boletas_servicios
       JOIN workspace_members wm   ON wm.workspace_id = ca.workspace_id
       WHERE l.id = boletas_servicios.local_id
         AND wm.user_id = auth.uid()
-        AND wm.rol IN ('admin', 'arquitecto')
+        AND wm.role IN ('admin', 'arquitecto')
     )
   );
