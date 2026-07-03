@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import PlanosAnotados from "@/components/proyecto/planos-anotados"
 import { cn } from "@/lib/utils"
 import type {
   DueDiligenceReportRow,
@@ -551,6 +552,9 @@ export default function DueDiligenceReport({ proyectoId }: DueDiligenceReportPro
                 </ol>
               </section>
             )}
+
+            {/* Observaciones marcadas sobre los planos */}
+            <PlanosAnotados proyectoId={proyectoId} result={result} />
 
             {/* Pie */}
             <footer className="space-y-1 border-t border-border pt-3">
