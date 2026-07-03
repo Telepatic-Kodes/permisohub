@@ -8,6 +8,7 @@ import {
   BookMarked,
   Building2,
   Calculator,
+  ChevronDown,
   FileText,
   FolderOpen,
   LayoutDashboard,
@@ -22,6 +23,7 @@ import {
   Shield,
   Sparkles,
   Store,
+  TrendingUp,
   Users,
   Zap,
   type LucideIcon,
@@ -41,6 +43,8 @@ interface NavItem {
 interface NavGroup {
   label: string | null
   items: NavItem[]
+  collapsible?: boolean
+  defaultCollapsed?: boolean
 }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -51,20 +55,10 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Gestión",
+    label: "Expediente",
     items: [
-      { href: "/proyectos", label: "Proyectos", icon: FolderOpen, newHref: "/proyectos/nuevo" },
-      { href: "/permisos",  label: "Permisos",  icon: Shield },
-      { href: "/patentes",  label: "Patentes",  icon: Receipt },
-      { href: "/clientes",  label: "Clientes",  icon: Building2, matchPaths: ["/prospectos"] },
-      { href: "/cartera",             label: "Cartera",    icon: BookMarked },
-      { href: "/cadenas-comerciales", label: "Cadenas",    icon: Store },
-      { href: "/boletas",             label: "Boletas",    icon: Zap, matchPaths: ["/cadenas"] },
-    ],
-  },
-  {
-    label: "Herramientas IA",
-    items: [
+      { href: "/proyectos",    label: "Proyectos",      icon: FolderOpen, newHref: "/proyectos/nuevo" },
+      { href: "/clientes",     label: "Clientes",       icon: Building2 },
       { href: "/herramientas", label: "Herramientas IA", icon: Sparkles },
     ],
   },
@@ -76,9 +70,22 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "Más",
+    collapsible: true,
+    defaultCollapsed: true,
+    items: [
+      { href: "/permisos",            label: "Permisos",  icon: Shield },
+      { href: "/patentes",            label: "Patentes",  icon: Receipt },
+      { href: "/cartera",             label: "Cartera",   icon: BookMarked },
+      { href: "/cadenas-comerciales", label: "Cadenas",   icon: Store, matchPaths: ["/cadenas"] },
+      { href: "/boletas",             label: "Boletas",   icon: Zap },
+      { href: "/prospectos",          label: "Prospectos", icon: TrendingUp },
+      { href: "/documentos",          label: "Documentos", icon: FileText },
+    ],
+  },
+  {
     label: "Sistema",
     items: [
-      { href: "/documentos",           label: "Documentos",    icon: FileText },
       { href: "/configuracion/equipo", label: "Equipo",        icon: Users },
       { href: "/configuracion",        label: "Configuración", icon: Settings, matchPaths: ["/configuracion/billing", "/configuracion/whatsapp"] },
     ],
@@ -103,6 +110,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const router = useRouter()
   const [perfil, setPerfil] = useState<{ nombre?: string; especialidad?: string } | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     fetch('/api/configuracion/perfil')
@@ -178,16 +186,37 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1">
-        {NAV_GROUPS.map((group, groupIndex) => (
+        {NAV_GROUPS.map((group, groupIndex) => {
+          const isCollapsible = !!group.collapsible && !!group.label
+          const groupOpen = isCollapsible
+            ? (openGroups[group.label as string] ?? !group.defaultCollapsed)
+            : true
+          // En modo rail (colapsado) siempre se muestran los íconos; en modo
+          // expandido, un grupo colapsable oculta sus items hasta desplegarlo.
+          const showItems = collapsed || !isCollapsible || groupOpen
+          return (
           <div key={group.label ?? `group-${groupIndex}`} className="mb-1">
             {group.label && !collapsed && (
-              <p className="px-2.5 pb-1 pt-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">
-                {group.label}
-              </p>
+              isCollapsible ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOpenGroups((s) => ({ ...s, [group.label as string]: !groupOpen }))
+                  }
+                  className="flex w-full items-center justify-between rounded-md px-2.5 pb-1 pt-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30 transition-colors hover:text-white/60"
+                >
+                  {group.label}
+                  <ChevronDown className={cn("size-3 transition-transform", groupOpen ? "" : "-rotate-90")} />
+                </button>
+              ) : (
+                <p className="px-2.5 pb-1 pt-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">
+                  {group.label}
+                </p>
+              )
             )}
             {collapsed && group.label && <div className="my-1.5 mx-2 h-px bg-white/10" />}
 
-            {group.items.map((item) => {
+            {showItems && group.items.map((item) => {
               const active = isActive(pathname, item)
               const Icon = item.icon
               return (
@@ -225,7 +254,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               )
             })}
           </div>
-        ))}
+          )
+        })}
 
         {isAdmin && (
           <div className="mt-1">

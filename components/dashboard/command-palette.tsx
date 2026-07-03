@@ -42,7 +42,7 @@ const NAV_ITEMS: CommandItem[] = [
   { id: "nav-dashboard",    group: "Navegar",      label: "Dashboard",           href: "/dashboard",                    icon: LayoutDashboard, emoji: "🏠" },
   { id: "nav-proyectos",    group: "Navegar",      label: "Proyectos",           href: "/proyectos",                    icon: FolderOpen,      emoji: "📁" },
   { id: "nav-clientes",     group: "Navegar",      label: "Clientes",            href: "/clientes",                     icon: Building2,       emoji: "🏢" },
-  { id: "nav-prospectos",   group: "Navegar",      label: "CRM / Prospectos",    href: "/prospectos",                   icon: TrendingUp,      emoji: "📈" },
+  { id: "nav-prospectos",   group: "Más",          label: "CRM / Prospectos",    href: "/prospectos",                   icon: TrendingUp,      emoji: "📈" },
   { id: "nav-municipios",   group: "Navegar",      label: "Municipios",          href: "/municipios",                   icon: MapPin,          emoji: "📍" },
   { id: "nav-oguc",         group: "IA Normativa", label: "Chat OGUC",           href: "/herramientas/oguc-chat",       icon: MessageSquare,   emoji: "💬" },
   { id: "nav-verificador",  group: "IA Normativa", label: "Verificador OGUC",    href: "/herramientas/compliance-check",icon: ShieldCheck,     emoji: "🔍" },
@@ -53,8 +53,8 @@ const NAV_ITEMS: CommandItem[] = [
   { id: "nav-memoria",      group: "IA Normativa", label: "Memoria Descriptiva",  href: "/herramientas/memoria",        icon: BookText,        emoji: "📝" },
   { id: "nav-timeline",     group: "IA Normativa", label: "Timeline de Aprobación", href: "/herramientas/timeline",    icon: CalendarClock,   emoji: "📅" },
   { id: "nav-calc",         group: "IA Normativa", label: "Calculadora derechos",href: "/herramientas/calculadora",     icon: Calculator,      emoji: "🧮" },
-  { id: "nav-whatsapp",     group: "IA Normativa", label: "WhatsApp",            href: "/configuracion/whatsapp",       icon: MessageCircle,   emoji: "📱" },
-  { id: "nav-docs",         group: "Documentos",   label: "Pitch & Modelo negocio",href: "/documentos",                icon: FileText,        emoji: "📄" },
+  { id: "nav-whatsapp",     group: "Más",          label: "WhatsApp",            href: "/configuracion/whatsapp",       icon: MessageCircle,   emoji: "📱" },
+  { id: "nav-docs",         group: "Más",          label: "Pitch & Modelo negocio",href: "/documentos",                icon: FileText,        emoji: "📄" },
   { id: "nav-billing",      group: "Configuración",label: "Facturación",         href: "/configuracion/billing",        icon: CreditCard,      emoji: "💳" },
   { id: "nav-config",       group: "Configuración",label: "Configuración",       href: "/configuracion",                icon: Settings,        emoji: "⚙️" },
 ]
@@ -63,7 +63,7 @@ const ACTION_ITEMS: CommandItem[] = [
   { id: "act-nuevo-proyecto", group: "Crear", label: "Nuevo proyecto", href: "/proyectos/nuevo", icon: Plus, emoji: "➕" },
 ]
 
-const GROUP_ORDER = ["Este proyecto", "Navegar", "Crear", "Proyectos", "Clientes", "IA Normativa", "Documentos", "Configuración"]
+const GROUP_ORDER = ["Este proyecto", "Navegar", "Crear", "Proyectos", "Clientes", "IA Normativa", "Configuración", "Más"]
 
 function buildContextItems(proyectoId: string, proyectoNombre: string, municipio: string): CommandItem[] {
   return [

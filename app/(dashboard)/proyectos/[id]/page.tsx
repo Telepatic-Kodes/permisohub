@@ -66,6 +66,11 @@ interface Observacion {
   estado: "pendiente" | "respondida"
 }
 
+// Acciones externas/retail (portal cliente, verificar estado scraper, WhatsApp)
+// ocultas para enfocar la ficha en el flujo del expediente. Poner en true para
+// volver a mostrarlas.
+const MOSTRAR_ACCIONES_EXTERNAS = false
+
 function formatDate(value?: string) {
   if (!value) return "—"
   // Acepta date-only ("2026-07-02") y timestamps ISO completos ("2026-07-02T12:34:56Z").
@@ -397,19 +402,21 @@ export default function ProyectoDetallePage({
                 Preparar ingreso DOM
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={compartirLoading}
-              onClick={() => void handleCompartir()}
-              title={portalUrl ? `Link copiado: ${portalUrl}` : 'Generar link para cliente'}
-            >
-              {portalUrl ? (
-                <><Check className="size-4 text-green-600" /> Link copiado</>
-              ) : (
-                <><Link2 className="size-4" /> Compartir</>
-              )}
-            </Button>
+            {MOSTRAR_ACCIONES_EXTERNAS && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={compartirLoading}
+                onClick={() => void handleCompartir()}
+                title={portalUrl ? `Link copiado: ${portalUrl}` : 'Generar link para cliente'}
+              >
+                {portalUrl ? (
+                  <><Check className="size-4 text-green-600" /> Link copiado</>
+                ) : (
+                  <><Link2 className="size-4" /> Compartir</>
+                )}
+              </Button>
+            )}
             <Button
               nativeButton={false}
               render={
@@ -926,7 +933,7 @@ export default function ProyectoDetallePage({
                 </>
               )}
 
-              <div className="pt-2">
+              <div className={MOSTRAR_ACCIONES_EXTERNAS ? "pt-2" : "hidden"}>
                 <button
                   onClick={handleVerificarEstado}
                   disabled={verificando}
@@ -975,7 +982,7 @@ export default function ProyectoDetallePage({
                   </div>
                 )}
               </div>
-              {proyecto.cliente?.telefono && (
+              {MOSTRAR_ACCIONES_EXTERNAS && proyecto.cliente?.telefono && (
                 <button
                   onClick={() => setWaDialogOpen(true)}
                   className="mt-2 w-full flex items-center justify-center gap-2 rounded-lg border border-green-700 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-50 transition-colors"
