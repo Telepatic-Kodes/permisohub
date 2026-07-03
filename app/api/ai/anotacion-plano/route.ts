@@ -34,14 +34,18 @@ function buildPrompt(nombre: string, observaciones?: string, contexto?: string):
   )
 
   const obsSection = observaciones?.trim()
-    ? `## Observaciones del revisor a ubicar sobre la lámina\n${observaciones.trim()}`
-    : `## Sin acta adjunta\nNo se adjuntaron observaciones. Detecta tú mismo, como revisor DOM, los puntos que probablemente se observarían en esta lámina y ubícalos.`
+    ? `## Hallazgos del expediente (CONTEXTO — pistas, no una lista para colocar a la fuerza)
+${observaciones.trim()}
+
+Trátalos como pistas de lo que la DOM observó. Marca sobre el dibujo SOLO los que puedas ubicar realmente en ESTA lámina. Los que sean puramente documentales, ignóralos aquí (van en el informe, no sobre el plano).`
+    : `## Sin acta adjunta
+No se adjuntaron observaciones. Detecta tú mismo, como revisor DOM, los puntos observables en ESTA lámina y ubícalos.`
 
   const ctxSection = contexto?.trim() ? `## Contexto del proyecto\n${contexto.trim()}` : ''
 
-  return `Actúas como un revisor experimentado de la Dirección de Obras Municipales (DOM) de Chile, pero del lado del arquitecto. Recibes UNA lámina de un plano de arquitectura ("${nombre}"). Tu tarea es UBICAR cada observación normativa SOBRE el dibujo, como lo hacía el revisor a mano cuando rayaba el plano físico: marcando exactamente dónde está el problema.
+  return `Actúas como un revisor experimentado de la Dirección de Obras Municipales (DOM) de Chile, pero del lado del arquitecto. Recibes UNA lámina de un plano de arquitectura ("${nombre}"). Tu tarea es LEER el dibujo y UBICAR sobre él las observaciones que de verdad se ven en la lámina, como lo hacía el revisor a mano cuando rayaba el plano físico: marcando exactamente dónde está el problema.
 
-Antes de la pandemia el revisor dibujaba encima del plano; hoy solo escribe texto y el arquitecto no ve DÓNDE está la observación. Tú devuelves esa ubicación.
+Antes de la pandemia el revisor dibujaba encima del plano; hoy solo escribe texto y el arquitecto no ve DÓNDE está la observación. Tú devuelves esa ubicación — pero solo de lo que es realmente ubicable en el dibujo.
 
 ${obsSection}
 
@@ -57,10 +61,16 @@ ${REGLAS_CITACION}
 - Línea amarilla segmentada ("amarillo_segmentado") = elementos eliminados o nuevos.
 - Si la observación no encaja en la convención de líneas, deja "convencionLinea": null y usa el tipo de marca que corresponda.
 
+## Qué marcar y qué NO
+- Marca SOLO cosas ubicables en el dibujo: muros / aleros / vanos, cotas y niveles (NPT), rasantes y distanciamientos, superficies y recintos, destino o uso de recintos, accesos, escaleras, estacionamientos, elementos estructurales alterados, ampliaciones no reflejadas, discordancias entre lo dibujado y lo declarado.
+- NO marques sobre el plano hallazgos puramente DOCUMENTALES: incoherencias de dirección entre documentos, numeración o citación de permisos, documentos faltantes o vencidos, firmas, coherencia entre formularios. Eso NO va sobre la lámina — omítelo por completo aquí.
+- Detecta además, por tu cuenta, observaciones que el propio dibujo evidencie aunque no estén en la lista de contexto.
+- Cada anotación DEBE corresponder a algo visible en ESTA lámina. Si un hallazgo del expediente no se puede ubicar en este dibujo, omítelo (irá en otra lámina o solo en el informe).
+
 ## Reglas
 - NO degrades ni pidas bajar la calidad del dibujo.
 - Coordenadas SIEMPRE normalizadas 0..1 respecto a esta imagen (x,y = esquina superior izquierda del recuadro; w,h = ancho/alto). Un recuadro que cubra un alero puntual es pequeño; el emplazamiento completo es grande.
-- Si no logras ubicar una observación con certeza, entrégala igual con "confianza" < 0.5 y un bbox amplio de la zona probable. NUNCA inventes precisión.
+- Si ubicas una observación real pero no con total certeza, entrégala con "confianza" < 0.5 y un bbox amplio de la zona probable. NUNCA inventes una ubicación para forzar una marca.
 - "sugerencia" = qué debe DIBUJAR/corregir el arquitecto, concreto.
 
 Responde SOLO con JSON válido (sin markdown), con esta forma:
@@ -81,7 +91,7 @@ Responde SOLO con JSON válido (sin markdown), con esta forma:
   ]
 }
 
-Devuelve entre 2 y 10 anotaciones, ordenadas por severidad (crítica → menor).`
+Devuelve solo las anotaciones ubicables en ESTA lámina (hasta 10), ordenadas por severidad (crítica → menor). Si de verdad no hay nada ubicable en este dibujo, devuelve "anotaciones": [] — es mejor una lámina sin marcas que marcas inventadas.`
 }
 
 function parseAnotaciones(text: string, laminaId: string): Anotacion[] {

@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
+import { AsesorVia } from "@/components/proyecto/asesor-via"
 import { getEstadoPlazoLey21718, formatFecha } from "@/lib/dias-habiles"
 import type { Proyecto, Etapa, Comunicacion } from "@/types"
 import type { DueDiligenceResult } from "@/lib/due-diligence"
@@ -609,6 +610,9 @@ export function PmoPanel({
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Asesoría de tramitación (ancho completo) ── */}
+      <AsesorVia proyectoId={proyecto.id} />
     </div>
   )
 }

@@ -12,12 +12,21 @@ export interface AIGuardResult {
 const DEMO_USER_ID = 'demo-bypass-user'
 
 export async function aiAuthGuard(): Promise<AIGuardResult | Response> {
-  if (process.env.BYPASS_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
-    return { userId: DEMO_USER_ID, userPlan: 'pro' as PlanId }
-  }
+  const bypass =
+    process.env.BYPASS_AUTH === 'true' && process.env.NODE_ENV !== 'production'
+  const demo =
+    process.env.DEMO_MODE === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
-  if (process.env.DEMO_MODE === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-    return { userId: DEMO_USER_ID, userPlan: 'pro' as PlanId }
+  // En bypass/demo saltamos límites de plan, pero si existe una sesión real
+  // (p. ej. el auto-login dev vía /auth/dev-login) usamos SU userId — así los
+  // chequeos de propiedad de proyecto funcionan. Solo caemos al usuario demo
+  // si no hay ninguna sesión.
+  if (bypass || demo) {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    return { userId: user?.id ?? DEMO_USER_ID, userPlan: 'pro' as PlanId }
   }
 
   const supabase = await createClient()
