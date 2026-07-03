@@ -40,11 +40,18 @@ export function ExpedienteWizard({ proyectoId, documentosIniciales, onComplete }
           const done = step > s.n || (s.n === 2 && ddStatus === "done")
           const active = step === s.n
           const processing = s.n === 2 && ddStatus === "processing"
+          const canGoBack = s.n === 1 || (s.n === 2 && docCount > 0)
           return (
             <div key={s.n} className="flex items-center gap-2">
-              <div
+              <button
+                type="button"
+                onClick={() => {
+                  if (canGoBack) setStep(s.n)
+                }}
+                disabled={!canGoBack}
                 className={cn(
                   "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                  canGoBack && "cursor-pointer hover:opacity-90",
                   done
                     ? "border-primary/30 bg-primary/5 text-primary"
                     : active
@@ -67,7 +74,7 @@ export function ExpedienteWizard({ proyectoId, documentosIniciales, onComplete }
                   )}
                 </span>
                 {processing ? "Analizando…" : s.label}
-              </div>
+              </button>
               {i < STEPS.length - 1 && (
                 <div className={cn("h-px w-8", step > s.n ? "bg-primary/40" : "bg-border")} />
               )}
@@ -104,10 +111,13 @@ export function ExpedienteWizard({ proyectoId, documentosIniciales, onComplete }
               La IA lee todos los documentos, detecta riesgos e inconsistencias, y arma el plan de acción.
               Al terminar se completa el expediente (etapas, observaciones y plazos).
             </p>
+            <Button variant="ghost" size="sm" className="mt-2" onClick={() => setStep(1)}>
+              ← Volver a subir documentos
+            </Button>
             {docCount === 0 && (
-              <Button variant="ghost" size="sm" className="mt-2" onClick={() => setStep(1)}>
-                ← Volver a subir documentos
-              </Button>
+              <p className="mt-2 text-xs text-amber-600">
+                Aún no hay documentos cargados. Vuelve al paso anterior para subirlos antes de generar el análisis.
+              </p>
             )}
           </div>
           {/* El componente maneja generar/poll/rehidratar y, al completar, puebla la PMO y llama onApplied. */}

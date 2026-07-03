@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 import { checkRateLimit } from "@/lib/rate-limit"
 
 // Tamaño máximo permitido por archivo: 50MB.
@@ -84,13 +85,16 @@ export async function POST(request: Request) {
     )
   }
 
-  // 3. Upload to Supabase Storage (reuse authenticated client from above)
+  // 3. Subir a Supabase Storage. La escritura la hace el service client:
+  // ya verificamos autenticación y propiedad del proyecto arriba, y las
+  // políticas RLS de storage no permiten escribir al usuario directamente.
+  const service = createServiceClient()
   const safeName = file.name.replace(/\s+/g, "-")
   const fileName = `${proyectoId}/${Date.now()}-${safeName}`
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
 
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await service.storage
     .from("documentos")
     .upload(fileName, buffer, {
       contentType: file.type || "application/octet-stream",
@@ -99,28 +103,20 @@ export async function POST(request: Request) {
 
   if (uploadError) {
     console.error("Upload error:", uploadError)
-    // Return mock success for development (when Supabase Storage not configured)
-    if (process.env.NODE_ENV !== "production") {
-      return Response.json({
-        success: true,
-        documento: {
-          nombre: file.name,
-          tipo,
-          url: `/mock-uploads/${fileName}`,
-          tamano: file.size,
-        },
-      })
-    }
-    return Response.json({ error: uploadError.message }, { status: 500 })
+    return Response.json(
+      { error: `No se pudo subir el archivo: ${uploadError.message}` },
+      { status: 500 },
+    )
   }
 
-  // 5. Get public URL
+  // 4. URL pública.
   const {
     data: { publicUrl },
-  } = supabase.storage.from("documentos").getPublicUrl(fileName)
+  } = service.storage.from("documentos").getPublicUrl(fileName)
 
-  // 6. Save to documentos table
-  const { error: dbError } = await supabase.from("documentos").insert({
+  // 5. Guardar en la tabla documentos. Si falla, borrar el objeto subido
+  // para no dejar archivos huérfanos, y devolver el error (sin silenciarlo).
+  const { error: dbError } = await service.from("documentos").insert({
     proyecto_id: proyectoId,
     nombre: file.name,
     tipo,
@@ -130,6 +126,11 @@ export async function POST(request: Request) {
 
   if (dbError) {
     console.error("DB error:", dbError)
+    await service.storage.from("documentos").remove([fileName])
+    return Response.json(
+      { error: `No se pudo registrar el documento: ${dbError.message}` },
+      { status: 500 },
+    )
   }
 
   return Response.json({

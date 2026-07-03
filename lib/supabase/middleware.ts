@@ -12,8 +12,52 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/docs")
 
   // BYPASS_AUTH only works outside production — never allow in Vercel prod env.
+  // En vez de dejar pasar sin usuario (lo que rompe RLS y hace que las API
+  // devuelvan 401), auto-logueamos como el usuario dev vía /auth/dev-login.
   if (process.env.BYPASS_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
-    return NextResponse.next({ request })
+    // Dejar pasar la propia ruta de dev-login y todo lo que no sea página.
+    if (pathname.startsWith('/auth/dev-login')) {
+      return NextResponse.next({ request })
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.next({ request })
+    }
+
+    let res = NextResponse.next({ request })
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          res = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options),
+          )
+        },
+      },
+    })
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    // Sin sesión y pidiendo una PÁGINA (navegación HTML) → bounce por
+    // dev-login para crear la sesión. Evitamos rebotar assets como
+    // manifest.json, que se piden sin cookies y causarían un loop.
+    const wantsHTML = request.headers.get('accept')?.includes('text/html')
+    if (!user && wantsHTML && !pathname.startsWith('/api')) {
+      const to = request.nextUrl.clone()
+      to.pathname = '/auth/dev-login'
+      to.search = `?next=${encodeURIComponent(pathname + request.nextUrl.search)}`
+      return NextResponse.redirect(to)
+    }
+
+    return res
   }
 
   // DEMO_MODE (runtime) or NEXT_PUBLIC_DEMO_MODE (baked at build) bypass auth.

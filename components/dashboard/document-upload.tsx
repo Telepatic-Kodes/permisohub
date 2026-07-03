@@ -44,16 +44,37 @@ interface UploadedDoc {
 const TIPOS_DOCUMENTO = [
   "Plano de arquitectura",
   "Plano estructural",
-  "Memoria de cálculo",
+  "Especificaciones técnicas",
+  "Memoria",
   "Certificado DOM",
   "Certificado SEC",
   "Certificado sanitario",
   "Formulario municipal",
+  "Permiso anterior",
   "Correspondencia",
   "Otro",
 ] as const
 
-const DEFAULT_TIPO = TIPOS_DOCUMENTO[0]
+type TipoDocumento = (typeof TIPOS_DOCUMENTO)[number]
+const DEFAULT_TIPO: TipoDocumento = "Otro"
+
+// Clasifica el tipo de documento a partir del nombre del archivo. Se ejecuta
+// al agregar los archivos, para no pedirle al usuario que elija manualmente.
+function clasificarTipo(nombre: string): TipoDocumento {
+  const n = nombre.toLowerCase()
+  if (/l[aá]mina|\bplano|planta|elevaci|arquitect/.test(n)) return "Plano de arquitectura"
+  if (/estruct/.test(n)) return "Plano estructural"
+  if (/eett|especificaci/.test(n)) return "Especificaciones técnicas"
+  if (/memoria|c[aá]lculo/.test(n)) return "Memoria"
+  if (/sanitar|dotaci[oó]n|alcantar|agua/.test(n)) return "Certificado sanitario"
+  if (/\bsec\b|el[eé]ctric/.test(n)) return "Certificado SEC"
+  if (/\bpe\b|\brf\b|recepci[oó]n|permiso|resoluci[oó]n|patente/.test(n)) return "Permiso anterior"
+  if (/certificad/.test(n)) return "Certificado DOM"
+  if (/formulario|solicitud/.test(n)) return "Formulario municipal"
+  if (/carta|declaraci[oó]n|oficio|\bobs\b|observaci|informe|correspond/.test(n)) return "Correspondencia"
+  return DEFAULT_TIPO
+}
+
 const ACCEPT = ".pdf,.dwg,.png,.jpg,.jpeg,.webp"
 const MAX_FILE_SIZE = 50 * 1024 * 1024
 
@@ -96,7 +117,7 @@ export function DocumentUpload({
       return {
         id: makeId(),
         file,
-        tipo: DEFAULT_TIPO,
+        tipo: clasificarTipo(file.name),
         status: tooLarge ? "error" : "queued",
         progress: 0,
         error: tooLarge ? "Supera el máximo de 50MB." : undefined,
@@ -320,29 +341,17 @@ export function DocumentUpload({
                       </div>
                     </div>
 
-                    {/* Type selector (antes de subir) */}
-                    {item.status === "queued" && (
-                      <select
-                        value={item.tipo}
-                        onChange={(event) =>
-                          updateItem(item.id, { tipo: event.target.value })
-                        }
-                        className="mt-2 h-8 w-full rounded-lg border border-input bg-card px-2 text-xs text-primary outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-[#1A3328]/30"
-                      >
-                        {TIPOS_DOCUMENTO.map((tipo) => (
-                          <option key={tipo} value={tipo}>
-                            {tipo}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-
-                    {/* Tipo asignado (durante / después de subir) */}
-                    {item.status !== "queued" && (
-                      <p className="mt-1 text-xs text-muted-foreground">
+                    {/* Tipo detectado automáticamente (no se le pide al usuario). */}
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-primary">
                         {item.tipo}
-                      </p>
-                    )}
+                      </span>
+                      {item.status === "queued" && (
+                        <span className="text-[11px] text-muted-foreground">
+                          detectado automáticamente
+                        </span>
+                      )}
+                    </div>
 
                     {/* Progress bar */}
                     {item.status === "uploading" && (
