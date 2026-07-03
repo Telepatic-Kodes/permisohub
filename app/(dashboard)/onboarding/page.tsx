@@ -12,6 +12,7 @@ import {
   Loader2,
 } from "lucide-react"
 
+import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 import { Button } from "@/components/ui/button"
@@ -101,24 +102,42 @@ export default function OnboardingPage() {
   }
 
   async function handleCrearProyecto() {
+    if (!proyectoNombre.trim() || !proyectoCliente.trim() || !proyectoMunicipio) {
+      toast.error("Completa nombre, cliente y municipio")
+      return
+    }
     setLoading(true)
     try {
-      // La API /api/proyectos puede no existir todavía. Intentamos el POST y,
-      // si falla por cualquier motivo, avanzamos igual con estado local.
-      await fetch("/api/proyectos", {
+      // 1) Crear el cliente (necesitamos su uuid para el proyecto).
+      const cRes = await fetch("/api/clientes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: proyectoCliente.trim() }),
+      })
+      const cData = (await cRes.json()) as { id?: string; error?: string }
+      if (!cRes.ok || !cData.id) throw new Error(cData.error ?? "No se pudo crear el cliente")
+
+      // 2) Crear el proyecto con los campos requeridos (dirección editable luego).
+      const pRes = await fetch("/api/proyectos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nombre: proyectoNombre,
-          cliente: proyectoCliente,
+          nombre: proyectoNombre.trim(),
+          cliente_id: cData.id,
           municipio: proyectoMunicipio,
+          tipo: "obra_menor_sin_permiso",
+          direccion: "Por definir",
+          fecha_inicio: new Date().toISOString().slice(0, 10),
         }),
-      }).catch(() => {
-        // Silencioso: la API puede no existir en el MVP.
       })
+      const pData = (await pRes.json()) as { id?: string; error?: string }
+      if (!pRes.ok || !pData.id) throw new Error(pData.error ?? "No se pudo crear el proyecto")
+
+      setStep(3)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al crear el proyecto")
     } finally {
       setLoading(false)
-      setStep(3)
     }
   }
 

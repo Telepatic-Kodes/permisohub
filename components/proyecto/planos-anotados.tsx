@@ -1,11 +1,12 @@
 "use client"
 
-import { useCallback, useState } from "react"
-import { AlertCircle, Download, Loader2, PencilRuler } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { AlertCircle, Download, Loader2, PencilRuler, RefreshCw } from "lucide-react"
 import type { jsPDF as JsPDF } from "jspdf"
 
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
+import { esPlano } from "@/lib/planos"
 import { cn } from "@/lib/utils"
 import {
   CONVENCION_LINEA,
@@ -34,6 +35,8 @@ interface LaminaConImagen {
   nombre: string
   dataUrl: string
   anotaciones: Anotacion[]
+  documentoId: string
+  pagina: number
 }
 
 interface Props {
@@ -398,59 +401,97 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
   const [exporting, setExporting] = useState(false)
   const [info, setInfo] = useState<CoverInfo>({ documentos: [] })
 
+  // Carga documentos + info del proyecto y rasteriza los planos (sin visión).
+  // Reutilizado por generar() y por la rehidratación al montar.
+  const cargar = useCallback(async () => {
+    const supabase = createClient()
+    const { data, error: dbError } = await supabase
+      .from("documentos")
+      .select("id, nombre, url, tipo")
+      .eq("proyecto_id", proyectoId)
+    if (dbError) throw new Error(dbError.message)
+    const allDocs = (data ?? []) as PlanoDoc[]
+    const planos = allDocs.filter((d) => esPlano(d.tipo))
+    const { data: pRow } = await supabase
+      .from("proyectos")
+      .select("numero_expediente, tipo, cliente:clientes(nombre)")
+      .eq("id", proyectoId)
+      .maybeSingle()
+    const cli = pRow?.cliente as { nombre?: string } | { nombre?: string }[] | null
+    const coverInfo: CoverInfo = {
+      cliente: (Array.isArray(cli) ? cli[0]?.nombre : cli?.nombre) ?? null,
+      numeroExpediente: (pRow?.numero_expediente as string | null) ?? null,
+      tipo: (pRow?.tipo as string | null) ?? null,
+      documentos: allDocs.map((d) => ({ nombre: d.nombre, tipo: d.tipo ?? "—" })),
+    }
+    const rasterizadas: LaminaConImagen[] = []
+    for (const p of planos) {
+      const base = p.nombre.replace(/\.pdf$/i, "")
+      const imgs = /\.pdf$/i.test(p.nombre)
+        ? await pdfUrlToImages(p.url, base)
+        : [{ nombre: base, dataUrl: p.url }]
+      imgs.forEach((im, i) =>
+        rasterizadas.push({
+          id: `${p.id}-${i}`,
+          documentoId: p.id,
+          pagina: i,
+          nombre: im.nombre,
+          dataUrl: im.dataUrl,
+          anotaciones: [],
+        }),
+      )
+    }
+    return { recorte: rasterizadas.slice(0, 6), coverInfo }
+  }, [proyectoId])
+
+  // Persiste las anotaciones por (documento, página).
+  const guardar = useCallback(
+    async (lams: LaminaConImagen[]) => {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+      const rows = lams.map((l) => ({
+        proyecto_id: proyectoId,
+        user_id: user.id,
+        documento_id: l.documentoId,
+        pagina: l.pagina,
+        anotaciones: l.anotaciones,
+        updated_at: new Date().toISOString(),
+      }))
+      await supabase
+        .from("planos_anotaciones")
+        .upsert(rows, { onConflict: "proyecto_id,documento_id,pagina" })
+    },
+    [proyectoId],
+  )
+
   const generar = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      // 1) Traer documentos + datos del proyecto (RLS del dueño).
-      const supabase = createClient()
-      const { data, error: dbError } = await supabase
-        .from("documentos")
-        .select("id, nombre, url, tipo")
-        .eq("proyecto_id", proyectoId)
-      if (dbError) throw new Error(dbError.message)
-      const allDocs = (data ?? []) as PlanoDoc[]
-      const planos = allDocs.filter((d) => d.tipo === "Plano")
-      if (planos.length === 0) {
-        setError("No hay documentos de tipo Plano en este proyecto.")
+      const { recorte, coverInfo } = await cargar()
+      if (recorte.length === 0) {
+        setError("No hay planos en este proyecto. Sube una lámina (tipo Plano) para marcar observaciones.")
         return
       }
-      const { data: pRow } = await supabase
-        .from("proyectos")
-        .select("numero_expediente, tipo, cliente:clientes(nombre)")
-        .eq("id", proyectoId)
-        .maybeSingle()
-      const cli = pRow?.cliente as { nombre?: string } | { nombre?: string }[] | null
-      setInfo({
-        cliente: (Array.isArray(cli) ? cli[0]?.nombre : cli?.nombre) ?? null,
-        numeroExpediente: (pRow?.numero_expediente as string | null) ?? null,
-        tipo: (pRow?.tipo as string | null) ?? null,
-        documentos: allDocs.map((d) => ({ nombre: d.nombre, tipo: d.tipo ?? "—" })),
-      })
-
-      // 2) Rasterizar (hasta 6 láminas en total).
-      const rasterizadas: { id: string; nombre: string; dataUrl: string }[] = []
-      for (const p of planos) {
-        const base = p.nombre.replace(/\.pdf$/i, "")
-        const imgs = /\.pdf$/i.test(p.nombre)
-          ? await pdfUrlToImages(p.url, base)
-          : [{ nombre: base, dataUrl: p.url }]
-        imgs.forEach((im, i) =>
-          rasterizadas.push({ id: `${p.id}-${i}`, nombre: im.nombre, dataUrl: im.dataUrl }),
-        )
-      }
-      const recorte = rasterizadas.slice(0, 6)
+      setInfo(coverInfo)
       const observaciones = observacionesDesdeReporte(result)
       const contexto = `${result.proyecto.nombre} — ${result.proyecto.municipio ?? ""}. Due diligence: ${result.resumenEjecutivo}`
 
-      // 3) Marcar observaciones sobre cada lámina — UN request por lámina para
-      //    no exceder el límite de 10MB del body con imágenes grandes.
+      // Marca observaciones sobre cada lámina — UN request por lámina para no
+      // exceder el límite de 10MB del body con imágenes grandes.
       const merged: LaminaConImagen[] = []
       for (const r of recorte) {
         const res = await fetch("/api/ai/anotacion-plano", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ laminas: [r], observaciones, contexto }),
+          body: JSON.stringify({
+            laminas: [{ id: r.id, nombre: r.nombre, dataUrl: r.dataUrl }],
+            observaciones,
+            contexto,
+          }),
         })
         const json = (await res.json()) as {
           ok?: boolean
@@ -463,12 +504,48 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
       setLaminas(merged)
       setActiveIdx(0)
       setDone(true)
+      await guardar(merged)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido")
     } finally {
       setLoading(false)
     }
-  }, [proyectoId, result])
+  }, [cargar, guardar, result])
+
+  // Rehidratación: si hay anotaciones guardadas, re-rasteriza y las aplica
+  // (sin volver a llamar a visión).
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const supabase = createClient()
+        const { data: stored } = await supabase
+          .from("planos_anotaciones")
+          .select("documento_id, pagina, anotaciones")
+          .eq("proyecto_id", proyectoId)
+        if (!stored || stored.length === 0 || cancelled) return
+        const { recorte, coverInfo } = await cargar()
+        if (cancelled || recorte.length === 0) return
+        const map = new Map(
+          stored.map((s) => [`${s.documento_id}-${s.pagina}`, (s.anotaciones ?? []) as Anotacion[]]),
+        )
+        const merged = recorte.map((r) => ({
+          ...r,
+          anotaciones: map.get(`${r.documentoId}-${r.pagina}`) ?? [],
+        }))
+        if (cancelled) return
+        setInfo(coverInfo)
+        setLaminas(merged)
+        setActiveIdx(0)
+        setDone(true)
+      } catch {
+        // silencioso: si falla la rehidratación, queda el estado inicial (botón)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [proyectoId, cargar])
 
   const exportarPDF = useCallback(async () => {
     if (laminas.length === 0) return
@@ -523,6 +600,10 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
                   ))}
                 </div>
               )}
+              <Button variant="ghost" size="sm" onClick={() => void generar()} disabled={loading} title="Volver a marcar con IA">
+                {loading ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+                Regenerar
+              </Button>
               <Button variant="outline" size="sm" onClick={() => void exportarPDF()} disabled={exporting}>
                 {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
                 Informe completo PDF

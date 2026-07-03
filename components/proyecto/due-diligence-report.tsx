@@ -105,6 +105,33 @@ export default function DueDiligenceReport({ proyectoId }: DueDiligenceReportPro
 
   const isProcessing = isStarting || status === "pending" || status === "processing"
 
+  // Rehidratación: al montar, carga el último informe del proyecto. Si está
+  // 'done' lo muestra; si sigue procesando, reanuda el polling.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch(`/api/proyectos/${proyectoId}/due-diligence`)
+        if (!res.ok) return
+        const { report } = (await res.json()) as { report: DueDiligenceReportRow | null }
+        if (cancelled || !report) return
+        if (report.status === "done" && report.result) {
+          setResult(report.result)
+          setStatus("done")
+        } else if (report.status === "pending" || report.status === "processing") {
+          setProgress(report.progress)
+          setStatus(report.status)
+          setReportId(report.id) // reanuda el polling
+        }
+      } catch {
+        // sin rehidratación: queda el estado inicial (botón Generar)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [proyectoId])
+
   // Polling: se re-ejecuta solo cuando cambia reportId. Limpia el intervalo al
   // desmontar y cuando el status llega a 'done' o 'error'.
   useEffect(() => {

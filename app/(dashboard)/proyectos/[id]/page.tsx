@@ -36,12 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  MOCK_COMUNICACIONES,
-  MOCK_DOCUMENTOS,
-  MOCK_ETAPAS,
-  MOCK_PROYECTOS,
-} from "@/lib/mock-data"
+import { toast } from "sonner"
 import { ESTADO_CONFIG, TIPO_PERMISO_LABELS, type Proyecto, type Etapa, type Comunicacion, type Documento } from "@/types"
 import { getEstadoPlazoLey21718, formatFecha } from "@/lib/dias-habiles"
 import { cn } from "@/lib/utils"
@@ -71,26 +66,13 @@ interface Observacion {
   estado: "pendiente" | "respondida"
 }
 
-const MOCK_OBSERVACIONES: Observacion[] = [
-  {
-    id: "1",
-    fecha: "2024-03-15",
-    numero: "OBS-001",
-    texto: "Se requiere memoria descriptiva actualizada con superficies desagregadas por uso.",
-    estado: "pendiente",
-  },
-  {
-    id: "2",
-    fecha: "2024-02-28",
-    numero: "OBS-002",
-    texto: "Plano de emplazamiento debe indicar rasantes y distanciamientos según Art. 2.6.3 OGUC.",
-    estado: "respondida",
-  },
-]
-
 function formatDate(value?: string) {
   if (!value) return "—"
-  return new Date(`${value}T00:00:00`).toLocaleDateString("es-CL", {
+  // Acepta date-only ("2026-07-02") y timestamps ISO completos ("2026-07-02T12:34:56Z").
+  const iso = /[T ]\d{2}:\d{2}/.test(value) ? value : `${value}T00:00:00`
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return "—"
+  return d.toLocaleDateString("es-CL", {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -126,71 +108,67 @@ export default function ProyectoDetallePage({
 }) {
   const { id } = use(params)
 
-  const initialProyecto = MOCK_PROYECTOS.find((p) => p.id === id) ?? MOCK_PROYECTOS[0]
-  const [proyecto, setProyecto] = useState<Proyecto>(initialProyecto)
-  const [etapas, setEtapas] = useState<Etapa[]>(
-    MOCK_ETAPAS.filter((e) => e.proyecto_id === id),
-  )
-  const [comunicaciones, setComunicaciones] = useState<Comunicacion[]>(
-    MOCK_COMUNICACIONES.filter((c) => c.proyecto_id === id),
-  )
-  const [documentos, setDocumentos] = useState<Documento[]>(
-    MOCK_DOCUMENTOS.filter((d) => d.proyecto_id === id),
-  )
-  const [observaciones, setObservaciones] = useState<Observacion[]>(MOCK_OBSERVACIONES.filter(() => false))
+  const [proyecto, setProyecto] = useState<Proyecto | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [etapas, setEtapas] = useState<Etapa[]>([])
+  const [comunicaciones, setComunicaciones] = useState<Comunicacion[]>([])
+  const [documentos, setDocumentos] = useState<Documento[]>([])
+  const [observaciones, setObservaciones] = useState<Observacion[]>([])
   const [copilotoOpen, setCopilotoOpen] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     fetch(`/api/proyectos/${id}`)
       .then((r) => r.json())
       .then((data: ProyectoDetalleData) => {
-        if (data.source === 'db' && data.proyecto) {
-          setProyecto(data.proyecto)
-          setEtapas(data.etapas ?? [])
-          setComunicaciones(data.comunicaciones ?? [])
-          setDocumentos(data.documentos ?? [])
-        }
+        if (cancelled || !data.proyecto) return
+        setProyecto(data.proyecto)
+        setEtapas(data.etapas ?? [])
+        setComunicaciones(data.comunicaciones ?? [])
+        setDocumentos(data.documentos ?? [])
       })
       .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
 
-    // Load observaciones from dedicated endpoint
     fetch(`/api/proyectos/${id}/observaciones`)
       .then((r) => r.json())
       .then((data: { observaciones?: Observacion[] }) => {
-        if (data.observaciones && data.observaciones.length > 0) {
-          setObservaciones(data.observaciones)
-        } else {
-          // Show mock data in dev so the section is visible
-          setObservaciones(MOCK_OBSERVACIONES)
-        }
+        if (!cancelled) setObservaciones(data.observaciones ?? [])
       })
-      .catch(() => setObservaciones(MOCK_OBSERVACIONES))
+      .catch(() => undefined)
+
+    return () => {
+      cancelled = true
+    }
   }, [id])
 
-  const estadoCfg = ESTADO_CONFIG[proyecto.estado]
+  const estadoCfg = ESTADO_CONFIG[proyecto?.estado ?? "borrador"]
 
-  // Calculate days since inicio
-  const diasDesdeInicio = Math.floor(
-    (new Date().getTime() - new Date(proyecto.fecha_inicio).getTime()) /
-      (1000 * 60 * 60 * 24)
-  )
+  const diasDesdeInicio = proyecto
+    ? Math.floor((Date.now() - new Date(proyecto.fecha_inicio).getTime()) / (1000 * 60 * 60 * 24))
+    : 0
   const plazoLegalExcedido =
+    !!proyecto &&
     diasDesdeInicio > 30 &&
     !["aprobado", "rechazado", "borrador"].includes(proyecto.estado)
 
   useEffect(() => {
+    if (!proyecto) return
     setCommandContext({
       proyectoId: proyecto.id,
       proyectoNombre: proyecto.nombre,
       municipio: proyecto.municipio ?? '',
     })
     return () => clearCommandContext()
-  }, [proyecto.id, proyecto.nombre, proyecto.municipio])
+  }, [proyecto])
 
   const [compartirLoading, setCompartirLoading] = useState(false)
   const [portalUrl, setPortalUrl] = useState<string | null>(null)
 
   const handleCompartir = async () => {
+    if (!proyecto) return
     setCompartirLoading(true)
     try {
       const res = await fetch('/api/portal/generate-token', {
@@ -220,10 +198,11 @@ export default function ProyectoDetallePage({
   } | null>(null)
   const [waDialogOpen, setWaDialogOpen] = useState(false)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
-  const [notas, setNotas] = useState(proyecto.notas ?? "")
+  const [notas, setNotas] = useState(proyecto?.notas ?? "")
   const [notasSaving, setNotasSaving] = useState(false)
 
   const saveNotas = async () => {
+    if (!proyecto) return
     setNotasSaving(true)
     try {
       await fetch(`/api/proyectos/${proyecto.id}`, {
@@ -243,7 +222,7 @@ export default function ProyectoDetallePage({
   const [comDesc, setComDesc] = useState("")
 
   const addComunicacion = async () => {
-    if (!comAsunto.trim()) return
+    if (!proyecto || !comAsunto.trim()) return
     const now = new Date().toISOString()
     const nueva: Comunicacion = {
       id: `com-${Date.now()}`,
@@ -263,7 +242,7 @@ export default function ProyectoDetallePage({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(nueva),
-    }).catch(() => undefined)
+    }).catch(() => toast.error("No se pudo guardar la comunicación"))
   }
 
   // Observaciones DOM
@@ -272,7 +251,7 @@ export default function ProyectoDetallePage({
   const [obsTexto, setObsTexto] = useState("")
 
   const addObservacion = async () => {
-    if (!obsNumero.trim() || !obsTexto.trim()) return
+    if (!proyecto || !obsNumero.trim() || !obsTexto.trim()) return
     const fecha = new Date().toISOString().slice(0, 10)
     const nueva: Observacion = {
       id: `obs-${Date.now()}`,
@@ -289,10 +268,11 @@ export default function ProyectoDetallePage({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(nueva),
-    }).catch(() => undefined)
+    }).catch(() => toast.error("No se pudo guardar la observación"))
   }
 
   const marcarRespondida = (obsId: string) => {
+    if (!proyecto) return
     setObservaciones((prev) =>
       prev.map((o) => o.id === obsId ? { ...o, estado: "respondida" } : o)
     )
@@ -300,17 +280,27 @@ export default function ProyectoDetallePage({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ estado: "respondida" }),
-    }).catch(() => undefined)
+    }).catch(() => toast.error("No se pudo actualizar la observación"))
   }
 
   // Inline info edit state
   const [editMode, setEditMode] = useState(false)
-  const [editEstado, setEditEstado] = useState(proyecto.estado)
-  const [editNumExp, setEditNumExp] = useState(proyecto.numero_expediente ?? "")
-  const [editFechaEst, setEditFechaEst] = useState(proyecto.fecha_estimada ?? "")
+  const [editEstado, setEditEstado] = useState<Proyecto["estado"]>(proyecto?.estado ?? "borrador")
+  const [editNumExp, setEditNumExp] = useState(proyecto?.numero_expediente ?? "")
+  const [editFechaEst, setEditFechaEst] = useState(proyecto?.fecha_estimada ?? "")
   const [editSaving, setEditSaving] = useState(false)
 
+  // Sincroniza los campos editables cuando el proyecto real termina de cargar.
+  useEffect(() => {
+    if (!proyecto) return
+    setNotas(proyecto.notas ?? "")
+    setEditEstado(proyecto.estado)
+    setEditNumExp(proyecto.numero_expediente ?? "")
+    setEditFechaEst(proyecto.fecha_estimada ?? "")
+  }, [proyecto])
+
   const saveInfoEdit = async () => {
+    if (!proyecto) return
     setEditSaving(true)
     try {
       await fetch(`/api/proyectos/${proyecto.id}`, {
@@ -322,12 +312,16 @@ export default function ProyectoDetallePage({
           fecha_estimada: editFechaEst || null,
         }),
       })
-      setProyecto((prev) => ({
-        ...prev,
-        estado: editEstado,
-        numero_expediente: editNumExp || undefined,
-        fecha_estimada: editFechaEst || undefined,
-      }))
+      setProyecto((prev) =>
+        prev
+          ? {
+              ...prev,
+              estado: editEstado,
+              numero_expediente: editNumExp || undefined,
+              fecha_estimada: editFechaEst || undefined,
+            }
+          : prev,
+      )
       setEditMode(false)
     } finally {
       setEditSaving(false)
@@ -335,6 +329,7 @@ export default function ProyectoDetallePage({
   }
 
   const handleVerificarEstado = async () => {
+    if (!proyecto) return
     setVerificando(true)
     try {
       const res = await fetch(`/api/check-status/${proyecto.id}`)
@@ -351,14 +346,33 @@ export default function ProyectoDetallePage({
   }
 
   const handleGenerarEmailSeguimiento = () => {
-    const domEmail = "dom@municipio.cl" // would come from municipios KB in real version
+    if (!proyecto) return
     const subject = encodeURIComponent(
       `Seguimiento Expediente N° ${proyecto.numero_expediente ?? "[número]"} — ${proyecto.nombre}`
     )
     const body = encodeURIComponent(
-      `Estimado/a equipo DOM ${proyecto.municipio},\n\nMe dirijo a ustedes para solicitar información sobre el estado del expediente:\n\nN° Expediente: ${proyecto.numero_expediente ?? "[número]"}\nProyecto: ${proyecto.nombre}\nDirección: ${proyecto.direccion}\n\nFecha de ingreso: ${proyecto.fecha_inicio}\nDías en tramitación: ${diasDesdeInicio}\n\nAgradecería información sobre el estado actual y los próximos pasos.\n\nSaludos cordiales,\nEstefanía Parada\nArquitecta — EP Gestión Arquitectónica\nestefania@epgestion.cl`
+      `Estimado/a equipo DOM ${proyecto.municipio ?? ""},\n\nMe dirijo a ustedes para solicitar información sobre el estado del expediente:\n\nN° Expediente: ${proyecto.numero_expediente ?? "[número]"}\nProyecto: ${proyecto.nombre}\nDirección: ${proyecto.direccion ?? ""}\n\nFecha de ingreso: ${proyecto.fecha_inicio}\nDías en tramitación: ${diasDesdeInicio}\n\nAgradecería información sobre el estado actual y los próximos pasos.\n\nSaludos cordiales,`
     )
-    window.open(`mailto:${domEmail}?subject=${subject}&body=${body}`)
+    // Sin destinatario fijo: el usuario elige el correo de la DOM en su cliente de correo.
+    window.open(`mailto:?subject=${subject}&body=${body}`)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+        Cargando proyecto…
+      </div>
+    )
+  }
+  if (!proyecto) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-center">
+        <p className="text-sm text-muted-foreground">No encontramos este proyecto.</p>
+        <Button nativeButton={false} render={<Link href="/proyectos" />} variant="outline" size="sm">
+          Volver a Proyectos
+        </Button>
+      </div>
+    )
   }
 
   return (
@@ -1092,6 +1106,15 @@ export default function ProyectoDetallePage({
                     </p>
                   </div>
                   <Button
+                    nativeButton={false}
+                    render={
+                      <a
+                        href={d.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                      />
+                    }
                     variant="ghost"
                     size="icon-sm"
                     aria-label="Descargar"
