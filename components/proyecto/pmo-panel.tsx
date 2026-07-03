@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { AsesorVia } from "@/components/proyecto/asesor-via"
+import { CuadroCalculo } from "@/components/proyecto/cuadro-calculo"
 import { getEstadoPlazoLey21718, formatFecha } from "@/lib/dias-habiles"
 import type { Proyecto, Etapa, Comunicacion } from "@/types"
 import type { DueDiligenceResult } from "@/lib/due-diligence"
@@ -613,6 +614,9 @@ export function PmoPanel({
 
       {/* ── Asesoría de tramitación (ancho completo) ── */}
       <AsesorVia proyectoId={proyecto.id} />
+
+      {/* ── Cuadro de cálculo normativo (ancho completo) ── */}
+      <CuadroCalculo proyectoId={proyecto.id} />
     </div>
   )
 }

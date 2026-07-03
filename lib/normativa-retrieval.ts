@@ -126,8 +126,34 @@ export function flagUnverifiedDDU(code: string): string {
   return `${code.trim()} (n° por verificar)`
 }
 
+// Ids de artículos OGUC/LGUC presentes en la base curada (los ÚNICOS que se
+// inyectan como contexto). Una cita a un artículo fuera de este set se marca
+// como "por verificar": el modelo fue instruido a citar solo los del contexto.
+const VERIFIED_OGUC_IDS = new Set(ARTICULOS_OGUC.map((a) => a.id.toLowerCase()))
+const VERIFIED_LGUC_IDS = new Set(ARTICULOS_LGUC.map((a) => a.id.toLowerCase()))
+
+// Marca como NO verificada una cita a un artículo OGUC/LGUC cuyo número no esté
+// en la base curada. "Art. 5.1.2 OGUC" (curado) pasa intacto; "Art. 9.9.9 OGUC"
+// (fuera de base) se anota "(por verificar)". Citas por materia/PRC no se tocan.
+export function flagUnverifiedArticulo(code: string): string {
+  if (!code) return code
+  if (/por verificar/i.test(code)) return code
+  const m = code.match(/\b(?:art[íi]?culo|art)\.?\s*(\d+(?:\.\d+)*(?:\s*bis)?)\s*(OGUC|LGUC)\b/i)
+  if (!m) return code // no es una cita "Art. X OGUC/LGUC" → nada que verificar
+  const id = m[1].trim().toLowerCase().replace(/\s+/g, ' ')
+  const set = m[2].toUpperCase() === 'OGUC' ? VERIFIED_OGUC_IDS : VERIFIED_LGUC_IDS
+  const ok = set.has(id) || [...set].some((v) => id === v || id.startsWith(`${v} `))
+  return ok ? code : `${code.trim()} (por verificar)`
+}
+
+// Aplica ambas verificaciones (artículo + DDU) sobre una cita.
+export function flagUnverifiedCita(code: string): string {
+  return flagUnverifiedArticulo(flagUnverifiedDDU(code))
+}
+
 // Regla reutilizable para inyectar en los prompts: evita inventar normativa.
 export const REGLAS_CITACION = `## Reglas de citación (no inventar normativa)
 - Cita SOLO artículos y circulares presentes en el CONTEXTO NORMATIVO de arriba.
+- NUNCA inventes números de ARTÍCULO. Si el punto no está cubierto por un artículo del contexto, describe la materia sin número (o deja el artículo vacío) en vez de adivinar un "Art. X.X.X".
 - Los números oficiales de las circulares DDU NO están confirmados: NUNCA inventes un número tipo "DDU 253" o "DDU 1234". Refiere la DDU por su MATERIA/título (ej. "DDU — modificación de proyecto") y da por hecho que el número exacto debe verificarse.
 - Si ninguna circular del contexto aplica, no cites ninguna DDU.`

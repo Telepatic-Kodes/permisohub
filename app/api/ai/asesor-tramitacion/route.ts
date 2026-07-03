@@ -5,7 +5,7 @@ import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { getContextoNormativo, flagUnverifiedDDU, REGLAS_CITACION } from '@/lib/normativa-retrieval'
+import { getContextoNormativo, flagUnverifiedCita, REGLAS_CITACION } from '@/lib/normativa-retrieval'
 import { createServiceClient } from '@/lib/supabase/service'
 import type { DueDiligenceResult } from '@/lib/due-diligence'
 
@@ -396,7 +396,7 @@ export async function POST(request: Request) {
     })
     const result = parse(text)
     // Defensa en profundidad: marca cualquier número de DDU no verificado.
-    result.ddu = result.ddu.map((d) => ({ ...d, codigo: flagUnverifiedDDU(d.codigo) }))
+    result.ddu = result.ddu.map((d) => ({ ...d, codigo: flagUnverifiedCita(d.codigo) }))
     recordUsage(auth.userId, 'ai_chats').catch(console.error)
     return Response.json({ ok: true, ...result })
   } catch (err) {
