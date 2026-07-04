@@ -7,7 +7,7 @@
 import type { jsPDF as JsPDF } from "jspdf"
 import { createClient } from "@/lib/supabase/client"
 import { esPlano } from "@/lib/planos"
-import { colorDeMarca, type Anotacion } from "@/lib/anotacion-convenciones"
+import { CONVENCION_LINEA, colorDeMarca, type Anotacion } from "@/lib/anotacion-convenciones"
 import type { DueDiligenceResult } from "@/lib/due-diligence"
 import { calcularCuadro, type CuadroInput, type CuadroResultado } from "@/lib/cuadros-calculo"
 
@@ -105,6 +105,9 @@ async function burnLamina(l: Lamina): Promise<{ dataUrl: string; w: number; h: n
     const y = a.bbox.y * H
     const w = a.bbox.w * W
     const h = a.bbox.h * H
+    // Ubicación incierta (confianza < 0.5) se imprime atenuada, igual que en
+    // el visor: nunca falsa precisión sobre una lámina impresa.
+    ctx.globalAlpha = a.confianza < 0.5 ? 0.55 : 1
     ctx.strokeStyle = color
     ctx.setLineDash(a.convencionLinea ? [W * 0.012, W * 0.008] : [])
     if (a.tipoMarca === "circulo") {
@@ -124,8 +127,71 @@ async function burnLamina(l: Lamina): Promise<{ dataUrl: string; w: number; h: n
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
     ctx.fillText(String(i + 1), x, y)
+    ctx.globalAlpha = 1
   })
   return { dataUrl: canvas.toDataURL("image/jpeg", 0.9), w: W, h: H }
+}
+
+// Banda de leyenda bajo la lámina: convención de líneas + lista numerada de
+// las marcas. La lámina impresa debe explicarse sola, como un plano real.
+function drawLaminaLeyenda(pdf: JsPDF, l: Lamina, W: number, top: number, bandH: number): void {
+  const pad = W * 0.015
+  const fs = Math.max(9, W * 0.011)
+  const lh = fs * 1.55
+
+  pdf.setFillColor(255, 255, 255)
+  pdf.rect(0, top, W, bandH, "F")
+  pdf.setDrawColor(180, 180, 180)
+  pdf.setLineWidth(Math.max(0.75, W * 0.0006))
+  pdf.line(0, top, W, top)
+
+  // Línea de convención.
+  let y = top + pad + fs
+  pdf.setFontSize(fs)
+  let x = pad
+  for (const c of Object.values(CONVENCION_LINEA)) {
+    const rgb = hexToRgb(c.color)
+    pdf.setDrawColor(rgb[0], rgb[1], rgb[2])
+    pdf.setLineWidth(Math.max(1.5, W * 0.0015))
+    pdf.setLineDashPattern([W * 0.006, W * 0.004], 0)
+    pdf.line(x, y - fs * 0.35, x + W * 0.02, y - fs * 0.35)
+    pdf.setLineDashPattern([], 0)
+    pdf.setFont("helvetica", "normal")
+    pdf.setTextColor(80, 80, 80)
+    pdf.text(c.label, x + W * 0.025, y)
+    x += W * 0.025 + pdf.getTextWidth(c.label) + W * 0.03
+  }
+  pdf.setTextColor(120, 120, 120)
+  pdf.text("Marca atenuada = ubicación aproximada", x, y)
+
+  // Marcas en dos columnas.
+  const colW = (W - pad * 3) / 2
+  const half = Math.ceil(l.anotaciones.length / 2)
+  l.anotaciones.forEach((a, i) => {
+    const col = i < half ? 0 : 1
+    const row = i < half ? i : i - half
+    const ix = pad + col * (colW + pad)
+    const iy = y + lh + row * lh
+    const rgb = hexToRgb(colorDeMarca(a.convencionLinea, a.severidad))
+    pdf.setFillColor(rgb[0], rgb[1], rgb[2])
+    pdf.circle(ix + fs * 0.45, iy - fs * 0.32, fs * 0.5, "F")
+    pdf.setFont("helvetica", "bold")
+    pdf.setFontSize(fs * 0.78)
+    pdf.setTextColor(255, 255, 255)
+    pdf.text(String(i + 1), ix + fs * 0.45, iy - fs * 0.32, { align: "center", baseline: "middle" })
+    pdf.setFont("helvetica", "normal")
+    pdf.setFontSize(fs)
+    pdf.setTextColor(50, 50, 50)
+    const label = `${a.textoCorto}${a.articulo ? ` — ${a.articulo}` : ""}${a.confianza < 0.5 ? " (aprox.)" : ""}`
+    pdf.text(pdf.splitTextToSize(label, colW - fs * 1.4)[0] ?? label, ix + fs * 1.2, iy)
+  })
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex)
+  if (!m) return [100, 100, 100]
+  const n = parseInt(m[1], 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
 // Dibuja el cuadro de cálculo normativo como viñeta (esquina inferior derecha)
@@ -494,9 +560,19 @@ export async function generarInformePDF(
   drawCoverPage(pdf, result, info)
   for (const [idx, l] of recorte.entries()) {
     const { dataUrl, w, h } = await burnLamina(l)
-    const orientation = w >= h ? "landscape" : "portrait"
-    pdf.addPage([w, h], orientation)
+    // Banda de leyenda bajo el dibujo (no tapa la lámina): convención + lista
+    // numerada de marcas, en dos columnas.
+    const fs = Math.max(9, w * 0.011)
+    const lh = fs * 1.55
+    const bandH =
+      l.anotaciones.length > 0
+        ? w * 0.03 + fs + lh * (Math.ceil(l.anotaciones.length / 2) + 0.5)
+        : 0
+    const totalH = h + bandH
+    const orientation = w >= totalH ? "landscape" : "portrait"
+    pdf.addPage([w, totalH], orientation)
     pdf.addImage(dataUrl, "JPEG", 0, 0, w, h)
+    if (bandH > 0) drawLaminaLeyenda(pdf, l, w, h, bandH)
     if (idx === 0 && cuadro) drawCuadroBlock(pdf, cuadro, w, h)
   }
   const safe = result.proyecto.nombre.replace(/[^\w.-]+/g, "-").slice(0, 60)
