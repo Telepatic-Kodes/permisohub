@@ -15,7 +15,8 @@ export async function aiAuthGuard(): Promise<AIGuardResult | Response> {
   const bypass =
     process.env.BYPASS_AUTH === 'true' && process.env.NODE_ENV !== 'production'
   const demo =
-    process.env.DEMO_MODE === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+    (process.env.DEMO_MODE === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') &&
+    process.env.NODE_ENV !== 'production'
 
   // En bypass/demo saltamos límites de plan, pero si existe una sesión real
   // (p. ej. el auto-login dev vía /auth/dev-login) usamos SU userId — así los

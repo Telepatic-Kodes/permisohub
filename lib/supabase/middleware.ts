@@ -61,7 +61,11 @@ export async function updateSession(request: NextRequest) {
   }
 
   // DEMO_MODE (runtime) or NEXT_PUBLIC_DEMO_MODE (baked at build) bypass auth.
-  if (process.env.DEMO_MODE === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+  // Igual que BYPASS_AUTH: jamás en producción.
+  if (
+    (process.env.DEMO_MODE === 'true' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') &&
+    process.env.NODE_ENV !== 'production'
+  ) {
     return NextResponse.next({ request })
   }
 
