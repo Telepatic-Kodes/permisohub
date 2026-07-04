@@ -92,7 +92,7 @@ async function send(params: {
   html: string
 }): Promise<EmailResult> {
   if (!process.env.RESEND_API_KEY) {
-    // eslint-disable-next-line no-console
+
     console.warn(
       `[email] RESEND_API_KEY no configurado. Email simulado a ${params.to}: "${params.subject}"`
     )

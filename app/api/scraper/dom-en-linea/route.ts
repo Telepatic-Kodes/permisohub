@@ -82,7 +82,7 @@ export async function POST(request: Request) {
   try {
     data = await queryDomEnLinea(expedienteNumero, municipio ?? '')
   } catch (err) {
-    // eslint-disable-next-line no-console
+
     console.warn(`[dom-en-linea] scrape failed for ${expedienteNumero}:`, err)
     return Response.json(
       { error: 'DOM en Línea no disponible en este momento' },
