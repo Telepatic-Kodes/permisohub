@@ -146,7 +146,7 @@ function drawLaminaLeyenda(pdf: JsPDF, l: Lamina, W: number, top: number, bandH:
   pdf.line(0, top, W, top)
 
   // Línea de convención.
-  let y = top + pad + fs
+  const y = top + pad + fs
   pdf.setFontSize(fs)
   let x = pad
   for (const c of Object.values(CONVENCION_LINEA)) {
