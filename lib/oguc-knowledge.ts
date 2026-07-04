@@ -293,8 +293,11 @@ CONSECUENCIAS DE NO CUMPLIR:
     categoria: 'permisos',
   },
   {
-    id: '5.1.15',
-    titulo: 'Modificaciones a permisos — obras mayores y menores',
+    // Régimen de modificación de proyecto: Arts. 5.1.17 y 5.1.18 OGUC (así lo
+    // indexan las circulares DDU-ESP 021-07, DDU-ESP 021-10 y DDU 328 del
+    // MINVU). Antes esta entrada estaba mal numerada como "5.1.15".
+    id: '5.1.17',
+    titulo: 'Modificaciones de proyecto (Arts. 5.1.17 y 5.1.18) — mayores y menores',
     texto: `Durante la ejecución de las obras pueden producirse modificaciones al proyecto original.
 
 MODIFICACIONES MENORES (no requieren nuevo permiso):
@@ -316,7 +319,7 @@ PROCEDIMIENTO DE MODIFICACIÓN:
 4. No se pueden ejecutar las modificaciones hasta obtener el permiso.
 
 Construcción sin permiso de modificación = obra clandestina = multa + obligación de regularizar o demoler.`,
-    keywords: ['modificación', 'permiso', 'cambio', 'obra', 'mayor', 'menor', 'fachada', 'superficie', 'destino'],
+    keywords: ['modificación', 'modificación de proyecto', '5.1.17', '5.1.18', 'permiso', 'cambio', 'obra', 'mayor', 'menor', 'fachada', 'superficie', 'destino'],
     categoria: 'permisos',
   },
   {

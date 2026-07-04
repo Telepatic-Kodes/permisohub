@@ -155,5 +155,5 @@ export function flagUnverifiedCita(code: string): string {
 export const REGLAS_CITACION = `## Reglas de citación (no inventar normativa)
 - Cita SOLO artículos y circulares presentes en el CONTEXTO NORMATIVO de arriba.
 - NUNCA inventes números de ARTÍCULO. Si el punto no está cubierto por un artículo del contexto, describe la materia sin número (o deja el artículo vacío) en vez de adivinar un "Art. X.X.X".
-- Los números oficiales de las circulares DDU NO están confirmados: NUNCA inventes un número tipo "DDU 253" o "DDU 1234". Refiere la DDU por su MATERIA/título (ej. "DDU — modificación de proyecto") y da por hecho que el número exacto debe verificarse.
+- Circulares DDU: puedes citar el número SOLO si esa circular aparece en el contexto con su número (ej. "DDU 328", "DDU-ESP 084-07"). Para cualquier otra circular, NUNCA inventes un número — refiérela por su MATERIA/título (ej. "DDU — modificación de proyecto").
 - Si ninguna circular del contexto aplica, no cites ninguna DDU.`

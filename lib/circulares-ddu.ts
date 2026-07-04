@@ -6,18 +6,15 @@
 // Desarrollo Urbano del MINVU para fijar el sentido y alcance de la OGUC/LGUC.
 // Existen cientos, con numeración correlativa que se actualiza en el tiempo.
 //
-// NO se inventan números de circular. Como el mapeo exacto "número ↔ contenido
-// ↔ fecha" NO está verificado contra la fuente oficial del MINVU, TODAS las
-// entradas de este archivo:
-//   - describen TEMAS de interpretación de amplio conocimiento (correctos en
-//     cuanto a materia), y
-//   - llevan el número marcado como "[VERIFICAR N° OFICIAL]" y el texto con
-//     [VERIFICAR TEXTO OFICIAL], hasta contrastarlos con el buscador oficial de
-//     circulares DDU del MINVU (www.minvu.gob.cl / DDU).
+// NO se inventan números de circular. Toda entrada con `verificado: true` tiene
+// su número + materia confirmados contra el índice oficial de Circulares DDU
+// del MINVU (o el PDF oficial de la circular) y una `fuente` que resuelve a
+// minvu.gob.cl. Si se agrega una entrada sin poder verificarla, debe llevar
+// `verificado: false`, numero '[VERIFICAR N° OFICIAL]' y fuente '' — el runtime
+// (flagUnverifiedCita en lib/normativa-retrieval.ts) la marcará "por verificar".
 //
-// Esto entrega scaffolding + contenido temático útil SIN afirmar números o
-// textos que no se pueden verificar aquí. Reemplazar los marcadores por los
-// datos oficiales antes de usar estas referencias en asesoría vinculante.
+// Índice maestro usado en la verificación de jul 2026 (DDU 7–506):
+// https://www.minvu.gob.cl/wp-content/uploads/2019/06/Indice-Cir-Grales-hasta-la-506.pdf
 
 export type CategoriaCircular =
   | 'interpretacion'
@@ -146,64 +143,109 @@ Texto completo en la fuente oficial MINVU (PDF).`,
     verificado: true,
   },
   // ─────────────────────────────────────────────────────────────────────────
-  // NO VERIFICADAS: scaffolding temático con número placeholder. Aportan materia
-  // pero NO deben citarse con número oficial hasta reemplazar por datos MINVU.
+  // VERIFICADAS contra el índice oficial de Circulares Generales DDU del MINVU
+  // (https://www.minvu.gob.cl/wp-content/uploads/2019/06/Indice-Cir-Grales-hasta-la-506.pdf)
+  // y/o el PDF oficial de cada circular. Reemplazan al scaffolding temático
+  // anterior (jul 2026): modificación de proyecto, rasantes/envolvente, carga
+  // de ocupación y norma aplicable por fecha de ingreso.
   // ─────────────────────────────────────────────────────────────────────────
   {
-    id: 'ddu-modificacion-proyecto',
-    numero: '[VERIFICAR N° OFICIAL]',
-    titulo: 'Alcance de "Modificación de Proyecto"',
-    texto: `Tema de interpretación de amplio conocimiento: la DDU ha precisado, mediante circular, el alcance del concepto de "Modificación de Proyecto" y cuándo una variante introducida entre el permiso y la recepción definitiva requiere un permiso de modificación, distinguiéndola de los ajustes menores que no lo requieren.
+    id: 'ddu-328',
+    numero: 'DDU 328',
+    titulo: 'Modificación de proyectos: aplicación del inciso segundo del Art. 5.1.18 OGUC',
+    texto: `Circular Ord. N° 0535 (26.12.2016). Materia oficial (MAT.): "Aplicación inciso segundo artículo 5.1.18. de la Ordenanza General de Urbanismo y Construcciones" — modificaciones de proyecto: condiciones bajo las cuales procede y cálculo del aumento de superficie edificada.
 
-Relación normativa: se vincula con la definición de "Modificación de proyecto" de la OGUC (vigente desde 25.04.2026 por D.S. N°10, D.O. 23.02.2026) y con el Art. 5.1.15 OGUC.
+Relevancia: precisa cuándo una variante introducida a un proyecto con permiso vigente puede tramitarse como modificación de proyecto (Arts. 5.1.17 y 5.1.18 OGUC) en vez de exigir un nuevo permiso, y cómo se computa el aumento de superficie.
 
-[VERIFICAR TEXTO OFICIAL] y [VERIFICAR N° OFICIAL] — Confirmar el número, fecha y texto de la circular DDU aplicable en el buscador oficial del MINVU antes de citarla.`,
-    keywords: ['modificación de proyecto', 'variante', 'permiso de modificación', 'interpretación', 'DDU', 'ajuste menor'],
+Texto completo en la fuente oficial MINVU (PDF).`,
+    keywords: ['modificación de proyecto', 'variante', 'permiso de modificación', '5.1.17', '5.1.18', 'aumento de superficie', 'interpretación', 'DDU'],
     categoria: 'interpretacion',
-    fuente: '',
-    verificado: false,
+    fuente: 'https://www.minvu.gob.cl/wp-content/uploads/2019/06/DDU-328.pdf',
+    verificado: true,
   },
   {
-    id: 'ddu-rasantes-envolvente',
-    numero: '[VERIFICAR N° OFICIAL]',
-    titulo: 'Aplicación de rasantes y envolvente teórica',
-    texto: `Tema de interpretación de amplio conocimiento: la DDU ha emitido circulares que precisan la forma de aplicar las rasantes y de construir la envolvente teórica de un proyecto, incluyendo la medición desde el nivel del terreno, el tratamiento de deslindes con espacio público y privado, y casos de terrenos en pendiente.
+    id: 'ddu-319',
+    numero: 'DDU 319',
+    titulo: 'Variaciones menores entre permiso y recepción definitiva (Art. 5.2.8 OGUC)',
+    texto: `Circular Ord. N° 0356 (17.08.2016). Materia oficial (MAT.): aplicación del artículo 5.2.8 de la OGUC — resolución aprobatoria de variaciones menores en forma simultánea a la recepción definitiva.
 
-Relación normativa: complementa los Arts. 2.6.3 (rasantes y alturas) y 2.6.6 (distanciamientos) de la OGUC.
+Relevancia: es la vía para regularizar ajustes menores detectados entre el permiso y la recepción definitiva sin tramitar un permiso de modificación completo; complementa los Arts. 5.1.17 y 5.1.18 OGUC.
 
-[VERIFICAR TEXTO OFICIAL] y [VERIFICAR N° OFICIAL] — Confirmar número, fecha y texto contra la fuente oficial del MINVU antes de usarla en una observación o defensa técnica.`,
-    keywords: ['rasante', 'envolvente', 'sombra', 'deslinde', 'pendiente', 'altura', 'interpretación', 'DDU'],
-    categoria: 'edificacion',
-    fuente: '',
-    verificado: false,
-  },
-  {
-    id: 'ddu-carga-ocupacion',
-    numero: '[VERIFICAR N° OFICIAL]',
-    titulo: 'Cálculo de la carga de ocupación',
-    texto: `Tema de interpretación de amplio conocimiento: la DDU ha precisado, mediante circular, criterios para el cálculo de la carga de ocupación de las edificaciones (número de personas por recinto según destino), dato clave para dimensionar vías de evacuación, servicios higiénicos, ascensores y exigencias de accesibilidad y seguridad contra incendio.
-
-Relación normativa: se aplica junto a las tablas de carga de ocupación de la OGUC (Título 4, condiciones de seguridad contra incendio y de habitabilidad).
-
-[VERIFICAR TEXTO OFICIAL] y [VERIFICAR N° OFICIAL] — Confirmar número, fecha y texto contra la fuente oficial del MINVU.`,
-    keywords: ['carga de ocupación', 'evacuación', 'destino', 'seguridad', 'incendio', 'accesibilidad', 'interpretación', 'DDU'],
-    categoria: 'edificacion',
-    fuente: '',
-    verificado: false,
-  },
-  {
-    id: 'ddu-norma-aplicable',
-    numero: '[VERIFICAR N° OFICIAL]',
-    titulo: 'Norma aplicable según fecha de ingreso de la solicitud',
-    texto: `Tema de interpretación de amplio conocimiento: la DDU ha reiterado, mediante circulares, el criterio de que las solicitudes de permisos se evalúan conforme a las normas vigentes a la fecha de su ingreso a la Dirección de Obras Municipales, entregando reglas de transición cuando una modificación de la OGUC entra en vigencia.
-
-Relación normativa: desarrolla y complementa el Art. 1.1.3 OGUC (norma aplicable = vigente a la fecha de ingreso).
-
-[VERIFICAR TEXTO OFICIAL] y [VERIFICAR N° OFICIAL] — Confirmar número, fecha y texto contra la fuente oficial del MINVU antes de citarla.`,
-    keywords: ['norma aplicable', 'fecha de ingreso', 'vigencia', 'transición', 'derecho intertemporal', 'interpretación', 'DDU'],
+Texto completo en la fuente oficial MINVU (PDF).`,
+    keywords: ['variaciones menores', 'recepción definitiva', '5.2.8', 'modificación de proyecto', 'ajuste menor', 'DDU'],
     categoria: 'procedimiento',
-    fuente: '',
-    verificado: false,
+    fuente: 'https://www.minvu.gob.cl/wp-content/uploads/2019/06/DDU-319.pdf',
+    verificado: true,
+  },
+  {
+    id: 'ddu-109',
+    numero: 'DDU 109',
+    titulo: 'Aplicación de rasantes (Art. 2.6.3 OGUC)',
+    texto: `Circular Ord. N° 264 (12.07.2002). Materia oficial (MAT.): "Artículo 2.6.3. APLICACIÓN RASANTES."
+
+Relevancia: fija cómo se levantan las rasantes — desde el nivel de suelo natural, en todos los puntos de los deslindes con predios vecinos y en el punto medio entre líneas oficiales del espacio público — incluyendo casos de áreas verdes, anchos mayores a 100 m y deslindes sin línea oficial opuesta (con figuras explicativas).
+
+Texto completo en la fuente oficial MINVU (PDF).`,
+    keywords: ['rasante', 'envolvente', '2.6.3', 'deslinde', 'nivel de suelo natural', 'altura', 'línea oficial', 'DDU'],
+    categoria: 'edificacion',
+    fuente: 'https://www.minvu.gob.cl/wp-content/uploads/2019/06/Cir109.pdf',
+    verificado: true,
+  },
+  {
+    id: 'ddu-esp-080-07',
+    numero: 'DDU-ESP 080-07',
+    titulo: 'Rasantes y sombras: aplicación de los Arts. 2.6.3 y 2.6.11 OGUC',
+    texto: `Materia oficial (MAT.): "Normas urbanísticas, rasantes (sombras). Aplicación Arts. 2.6.3 y 2.6.11 de la OGUC".
+
+Relevancia: complementa la DDU 109 con el método de sombras proyectadas y la envolvente teórica del Art. 2.6.11 — el corpus DDU de rasantes gira en torno a los Arts. 2.6.3 y 2.6.11 a 2.6.16 OGUC.
+
+Texto completo en la fuente oficial MINVU (PDF).`,
+    keywords: ['rasante', 'sombra', 'envolvente teórica', '2.6.3', '2.6.11', 'volumen teórico', 'DDU'],
+    categoria: 'edificacion',
+    fuente: 'https://www.minvu.gob.cl/wp-content/uploads/2019/06/DDU-ESP-080-07.pdf',
+    verificado: true,
+  },
+  {
+    id: 'ddu-esp-013-08',
+    numero: 'DDU-ESP 013-08',
+    titulo: 'Carga de ocupación (tabla Art. 4.2.4 OGUC)',
+    texto: `Circular Ord. N° 0456 (03.06.2008). Materia oficial (MAT.): "Carga de ocupación en locales con destino educacional."
+
+Relevancia: define la carga de ocupación como la relación máxima de personas por m² según la tabla del Art. 4.2.4 OGUC, base para dimensionar vías de evacuación (Título 4), y resuelve el conflicto de aplicación entre los Arts. 4.2.4 y 4.5.6. El criterio de cálculo es extrapolable a otros destinos vía la misma tabla.
+
+Texto completo en la fuente oficial MINVU (PDF).`,
+    keywords: ['carga de ocupación', 'evacuación', '4.2.4', 'destino', 'seguridad', 'personas por m²', 'DDU'],
+    categoria: 'edificacion',
+    fuente: 'https://www.minvu.gob.cl/wp-content/uploads/2019/06/DDU-ESP-013-08.pdf',
+    verificado: true,
+  },
+  {
+    id: 'ddu-esp-060-09',
+    numero: 'DDU-ESP 060-09',
+    titulo: 'Escaleras según carga de ocupación (Art. 4.2.10 OGUC)',
+    texto: `Materia oficial (MAT.): "Cantidad y ancho mínimo de escaleras según carga de ocupación de superficie servida" (Art. 4.2.10 OGUC).
+
+Relevancia: traduce la carga de ocupación en exigencias concretas de evacuación (número y ancho de escaleras); complementada por la DDU-ESP 033-10.
+
+Texto completo en la fuente oficial MINVU (PDF).`,
+    keywords: ['escaleras', 'carga de ocupación', '4.2.10', 'evacuación', 'ancho mínimo', 'DDU'],
+    categoria: 'edificacion',
+    fuente: 'https://www.minvu.gob.cl/wp-content/uploads/2019/06/DDU-ESP-060-09.pdf',
+    verificado: true,
+  },
+  {
+    id: 'ddu-484',
+    numero: 'DDU 484',
+    titulo: 'Fecha de ingreso del expediente y norma aplicable (Arts. 1.1.3 y 1.4.2 OGUC)',
+    texto: `Circular Ord. N° 252 (07.07.2023). Materia oficial (MAT.): "Fecha de ingreso de un expediente cuando se realiza por medios electrónicos, Artículos 1.1.3 y 1.4.2. de la Ordenanza General de Urbanismo y Construcciones."
+
+Relevancia: precisa qué se entiende por "fecha de ingreso" para efectos del Art. 1.1.3 OGUC (las solicitudes se evalúan con las normas vigentes a esa fecha), incluida la presentación por medios electrónicos ante la DOM — clave para las reglas de transición cuando cambia la OGUC.
+
+Texto completo en la fuente oficial MINVU (PDF).`,
+    keywords: ['norma aplicable', 'fecha de ingreso', '1.1.3', '1.4.2', 'medios electrónicos', 'vigencia', 'transición', 'DDU'],
+    categoria: 'procedimiento',
+    fuente: 'https://www.minvu.gob.cl/wp-content/uploads/2019/06/DDU-484.pdf',
+    verificado: true,
   },
 ]
 
