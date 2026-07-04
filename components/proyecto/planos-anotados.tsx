@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { AlertCircle, Download, Eye, EyeOff, Loader2, Maximize2, PencilRuler, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -242,6 +242,31 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
     }
   }, [laminas.length, proyectoId, result])
 
+  // El arquitecto ajusta la marca arrastrándola (la IA propone, el humano
+  // corrige). Persiste al soltar y marca la anotación como verificada.
+  const moverMarca = useCallback(
+    (laminaId: string, anotacionId: string, x: number, y: number) => {
+      setLaminas((prev) => {
+        const next = prev.map((l) =>
+          l.id !== laminaId
+            ? l
+            : {
+                ...l,
+                anotaciones: l.anotaciones.map((a) =>
+                  a.id !== anotacionId
+                    ? a
+                    : { ...a, bbox: { ...a.bbox, x, y }, confianza: Math.max(a.confianza, 0.9) },
+                ),
+              },
+        )
+        const moved = next.find((l) => l.id === laminaId)
+        if (moved) void guardar([moved])
+        return next
+      })
+    },
+    [guardar],
+  )
+
   const active = laminas[activeIdx]
 
   return (
@@ -299,6 +324,7 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
         hoverId={hoverId}
         setHoverId={setHoverId}
         onGenerar={generar}
+        onMoverMarca={moverMarca}
         cuadro={cuadro}
       />
     </Card>
@@ -323,10 +349,11 @@ interface BodyProps {
   hoverId: string | null
   setHoverId: (id: string | null) => void
   onGenerar: () => void
+  onMoverMarca: (laminaId: string, anotacionId: string, x: number, y: number) => void
   cuadro: CuadroResultado | null
 }
 
-function CardBody({ loading, rehidratando, error, done, active, hoverId, setHoverId, onGenerar, cuadro }: BodyProps) {
+function CardBody({ loading, rehidratando, error, done, active, hoverId, setHoverId, onGenerar, onMoverMarca, cuadro }: BodyProps) {
   const [zoom, setZoom] = useState(false)
   const [vinetaVisible, setVinetaVisible] = useState(true)
 
@@ -375,6 +402,7 @@ function CardBody({ loading, rehidratando, error, done, active, hoverId, setHove
           setHoverId={setHoverId}
           cuadro={vinetaVisible ? cuadro : null}
           onZoom={() => setZoom(true)}
+          onMoverMarca={onMoverMarca}
         />
         <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
           {Object.values(CONVENCION_LINEA).map((c) => (
@@ -387,6 +415,7 @@ function CardBody({ loading, rehidratando, error, done, active, hoverId, setHove
             <span className="inline-block size-2.5 rounded-full border-2 border-dashed border-muted-foreground/50 opacity-70" />
             Marca tenue = ubicación aproximada
           </span>
+          <span>Arrastra una marca para corregir su posición</span>
           <span className="ml-auto inline-flex items-center gap-2">
             <button
               onClick={() => setZoom(true)}
@@ -499,6 +528,7 @@ function CardBody({ loading, rehidratando, error, done, active, hoverId, setHove
                 hoverId={hoverId}
                 setHoverId={setHoverId}
                 cuadro={vinetaVisible ? cuadro : null}
+                onMoverMarca={onMoverMarca}
               />
             </div>
           </div>
@@ -509,48 +539,119 @@ function CardBody({ loading, rehidratando, error, done, active, hoverId, setHove
 }
 
 // Imagen de la lámina + marcas + viñeta. Reutilizada por el visor y el zoom
-// (coordenadas en %, así que escala sola).
+// (coordenadas en %, así que escala sola). Las marcas se pueden ARRASTRAR
+// para corregir la ubicación propuesta por la IA (persiste al soltar).
 function LaminaOverlay({
   lamina,
   hoverId,
   setHoverId,
   cuadro,
   onZoom,
+  onMoverMarca,
 }: {
   lamina: LaminaConImagen
   hoverId: string | null
   setHoverId: (id: string | null) => void
   cuadro: CuadroResultado | null
   onZoom?: () => void
+  onMoverMarca?: (laminaId: string, anotacionId: string, x: number, y: number) => void
 }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  // Posición transitoria durante el arrastre (evita persistir en cada move).
+  const [dragPos, setDragPos] = useState<{ id: string; x: number; y: number } | null>(null)
+  const dragRef = useRef<{
+    id: string
+    startClientX: number
+    startClientY: number
+    startX: number
+    startY: number
+    w: number
+    h: number
+    moved: boolean
+    // Última posición calculada — el pointerup puede llegar antes del
+    // re-render, así que no puede depender del estado dragPos.
+    lastX: number
+    lastY: number
+  } | null>(null)
+
+  const onPointerDown = (a: Anotacion) => (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!onMoverMarca) return
+    e.stopPropagation()
+    ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
+    dragRef.current = {
+      id: a.id,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startX: a.bbox.x,
+      startY: a.bbox.y,
+      w: a.bbox.w,
+      h: a.bbox.h,
+      moved: false,
+      lastX: a.bbox.x,
+      lastY: a.bbox.y,
+    }
+  }
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (!d || !rect) return
+    const dx = (e.clientX - d.startClientX) / rect.width
+    const dy = (e.clientY - d.startClientY) / rect.height
+    if (!d.moved && Math.abs(dx) < 0.004 && Math.abs(dy) < 0.004) return
+    d.moved = true
+    d.lastX = Math.min(1 - d.w, Math.max(0, d.startX + dx))
+    d.lastY = Math.min(1 - d.h, Math.max(0, d.startY + dy))
+    setDragPos({ id: d.id, x: d.lastX, y: d.lastY })
+  }
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current
+    dragRef.current = null
+    if (!d) return
+    e.stopPropagation()
+    if (d.moved && onMoverMarca) {
+      onMoverMarca(lamina.id, d.id, d.lastX, d.lastY)
+    }
+    setDragPos(null)
+  }
+
   return (
     <div
+      ref={containerRef}
       className={cn(
         "relative overflow-hidden rounded-lg border border-border",
         onZoom && "cursor-zoom-in",
       )}
       onClick={onZoom}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={lamina.dataUrl} alt={lamina.nombre} className="block w-full" />
       {lamina.anotaciones.map((a, i) => {
         const color = colorDeMarca(a.convencionLinea, a.severidad)
         const on = hoverId === a.id
+        const dragging = dragPos?.id === a.id
+        const x = dragging ? dragPos.x : a.bbox.x
+        const y = dragging ? dragPos.y : a.bbox.y
         return (
           <div
             key={a.id}
             onMouseEnter={() => setHoverId(a.id)}
             onMouseLeave={() => setHoverId(null)}
-            className="absolute"
+            onPointerDown={onPointerDown(a)}
+            onClick={(e) => e.stopPropagation()}
+            className={cn("absolute touch-none", onMoverMarca && "cursor-move")}
             style={{
-              left: `${a.bbox.x * 100}%`,
-              top: `${a.bbox.y * 100}%`,
+              left: `${x * 100}%`,
+              top: `${y * 100}%`,
               width: `${a.bbox.w * 100}%`,
               height: `${a.bbox.h * 100}%`,
               border: `2px ${a.convencionLinea ? "dashed" : "solid"} ${color}`,
               borderRadius: a.tipoMarca === "circulo" ? "9999px" : "4px",
-              background: on ? `${color}1f` : "transparent",
-              boxShadow: on ? `0 0 0 2px ${color}55` : "none",
+              background: on || dragging ? `${color}1f` : "transparent",
+              boxShadow: on || dragging ? `0 0 0 2px ${color}55` : "none",
               opacity: a.confianza < 0.5 ? 0.7 : 1,
             }}
             title={a.ancla ? `${i + 1}. ${a.textoCorto} — ${a.ancla}` : `${i + 1}. ${a.textoCorto}`}
