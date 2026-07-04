@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, type FormEvent } from 'react'
+import { useEffect, useState, useRef, type FormEvent } from 'react'
 import { Upload, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,9 @@ interface BoletaUploadDialogProps {
   localId: string
   localNumero?: string
   defaultTipo?: TipoServicioBasico
+  /** Boleta existente a editar — precarga el formulario. El POST hace upsert
+   *  por (local_id, tipo_servicio, periodo), así que guardar actualiza. */
+  boleta?: BoletaServicio | null
   onSaved?: (boleta: BoletaServicio) => void
 }
 
@@ -26,6 +29,7 @@ export function BoletaUploadDialog({
   localId,
   localNumero,
   defaultTipo,
+  boleta,
   onSaved,
 }: BoletaUploadDialogProps) {
   const [tipoServicio, setTipoServicio] = useState<TipoServicioBasico>(defaultTipo ?? 'agua')
@@ -41,6 +45,21 @@ export function BoletaUploadDialog({
   const fileRef = useRef<HTMLInputElement>(null)
 
   const proveedores = PROVEEDORES_POR_SERVICIO[tipoServicio]
+
+  // Precarga los campos al abrir en modo edición
+  useEffect(() => {
+    if (open && boleta) {
+      setTipoServicio(boleta.tipo_servicio)
+      setProveedor(boleta.proveedor)
+      setPeriodo(boleta.periodo)
+      setNumeroCuenta(boleta.numero_cuenta ?? '')
+      setFechaEmision(boleta.fecha_emision ? boleta.fecha_emision.slice(0, 10) : '')
+      setFechaVenc(boleta.fecha_vencimiento ? boleta.fecha_vencimiento.slice(0, 10) : '')
+      setMonto(boleta.monto_clp != null ? String(boleta.monto_clp) : '')
+      setTramiteTipo(boleta.tramite_tipo ?? '')
+      setFile(null)
+    }
+  }, [open, boleta])
 
   function reset() {
     setTipoServicio('agua')
@@ -60,27 +79,28 @@ export function BoletaUploadDialog({
 
     setSaving(true)
     try {
-      let url: string | undefined
+      // En edición conserva el PDF existente si no se sube uno nuevo
+      let url: string | undefined = boleta?.url
 
       // 1. Upload PDF si hay archivo
       if (file) {
         const fd = new FormData()
         fd.append('file', file)
-        fd.append('proyectoId', localId)
+        fd.append('proyectoId', boleta?.local_id ?? localId)
         fd.append('tipo', `boleta_${tipoServicio}`)
         const upRes = await fetch('/api/upload', { method: 'POST', body: fd })
         if (upRes.ok) {
           const upData = await upRes.json() as { documento?: { url: string } }
-          url = upData.documento?.url
+          url = upData.documento?.url ?? url
         }
       }
 
-      // 2. Crear boleta
+      // 2. Crear / actualizar boleta (upsert por local_id + tipo_servicio + periodo)
       const res = await fetch('/api/boletas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          local_id:          localId,
+          local_id:          boleta?.local_id ?? localId,
           tipo_servicio:     tipoServicio,
           proveedor,
           numero_cuenta:     numeroCuenta || undefined,
@@ -96,7 +116,7 @@ export function BoletaUploadDialog({
       const data = await res.json() as { ok?: boolean; boleta?: BoletaServicio }
       if (!res.ok) throw new Error()
 
-      toast.success('Boleta registrada correctamente')
+      toast.success(boleta ? 'Boleta actualizada correctamente' : 'Boleta registrada correctamente')
       if (data.boleta) onSaved?.(data.boleta)
       reset()
       onOpenChange(false)
@@ -114,7 +134,7 @@ export function BoletaUploadDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            Registrar boleta{localNumero ? ` — Local ${localNumero}` : ''}
+            {boleta ? 'Editar boleta' : 'Registrar boleta'}{localNumero ? ` — Local ${localNumero}` : ''}
           </DialogTitle>
         </DialogHeader>
 

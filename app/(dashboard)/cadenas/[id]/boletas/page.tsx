@@ -21,6 +21,7 @@ export default function CadenaBoletasPage({ params }: PageProps) {
   const [boletas,    setBoletas   ] = useState<BoletaServicio[]>([])
   const [loading,    setLoading   ] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editBoleta, setEditBoleta] = useState<BoletaServicio | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -121,7 +122,7 @@ export default function CadenaBoletasPage({ params }: PageProps) {
                     key={b.id}
                     boleta={b}
                     onDeleted={handleBoletaDeleted}
-                    onEdit={() => {/* TODO: edit flow */}}
+                    onEdit={(boleta) => { setEditBoleta(boleta); setDialogOpen(true) }}
                   />
                 ))}
               </div>
@@ -132,8 +133,9 @@ export default function CadenaBoletasPage({ params }: PageProps) {
 
       <BoletaUploadDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        localId={resumen[0]?.local_id ?? ''}
+        onOpenChange={(v) => { setDialogOpen(v); if (!v) setEditBoleta(null) }}
+        localId={editBoleta?.local_id ?? resumen[0]?.local_id ?? ''}
+        boleta={editBoleta}
         onSaved={handleBoletaAdded}
       />
     </div>

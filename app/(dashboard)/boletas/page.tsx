@@ -40,10 +40,24 @@ export default function BoletasPage() {
   const [dialogOpen,  setDialogOpen ] = useState(false)
 
   useEffect(() => {
-    fetch('/api/cadenas/mock/boletas-resumen')
+    // 1. Obtener las cadenas reales y 2. agregar los resúmenes de todas en paralelo
+    fetch('/api/cadenas')
       .then((r) => r.json())
-      .then((d: { data?: ResumenCumplimientoBoletas[] }) => {
-        if (Array.isArray(d.data)) setData(d.data)
+      .then(async (d: { data?: { id: string }[] }) => {
+        const cadenas = Array.isArray(d.data) ? d.data : []
+        if (cadenas.length === 0) return
+
+        const resumenes = await Promise.all(
+          cadenas.map((c) =>
+            fetch(`/api/cadenas/${c.id}/boletas-resumen`)
+              .then((r) => r.json())
+              .then((res: { data?: ResumenCumplimientoBoletas[] }) =>
+                Array.isArray(res.data) ? res.data : [],
+              )
+              .catch(() => [] as ResumenCumplimientoBoletas[]),
+          ),
+        )
+        setData(resumenes.flat())
       })
       .catch(() => undefined)
       .finally(() => setLoading(false))
