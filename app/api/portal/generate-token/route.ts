@@ -37,19 +37,16 @@ export async function POST(request: Request) {
           : { cliente_id: body.clienteId },
     })
 
-    if (error && process.env.NODE_ENV === 'production') {
+    // Si la inserción falla, el token no existe en workspace_invites y el
+    // enlace no resolvería: devolvemos error siempre (también en dev).
+    if (error) {
       return apiError('Error al generar token', 500, error)
     }
   } catch (err) {
-    // Dev without DB: fall through to return mock token
-    if (process.env.NODE_ENV === 'production') {
-      return apiError('Error al generar token', 500, err)
-    }
+    return apiError('Error al generar token', 500, err)
   }
 
-  const url = body.proyectoId
-    ? `${baseUrl}/portal/${token}`
-    : `${baseUrl}/portal/${token}`
+  const url = `${baseUrl}/portal/${token}`
 
   return Response.json({ ok: true, token, url })
 }

@@ -24,6 +24,8 @@ interface DomResponse {
   numero_expediente: string | null
   fecha_ingreso: string | null
   municipio_url: string | null
+  /** true cuando los datos son simulados (solo entorno de desarrollo) */
+  simulado: true
 }
 
 const STATUS_DESCRIPTIONS: Record<DomStatus, string> = {
@@ -64,6 +66,7 @@ function buildMockResponse(localId: string, municipio: string): DomResponse {
       numero_expediente: null,
       fecha_ingreso: null,
       municipio_url: null,
+      simulado: true,
     }
   }
 
@@ -79,6 +82,7 @@ function buildMockResponse(localId: string, municipio: string): DomResponse {
       numero_expediente: pendingExpediente,
       fecha_ingreso: fechaIngreso,
       municipio_url: `https://dom.municipio.cl/expediente/${municipioSlug}/${pendingExpediente}`,
+      simulado: true,
     }
   }
 
@@ -96,6 +100,7 @@ function buildMockResponse(localId: string, municipio: string): DomResponse {
     numero_expediente: expediente,
     fecha_ingreso: fechaIngreso,
     municipio_url: `https://dom.municipio.cl/expediente/${municipioSlug}/${expediente}`,
+    simulado: true,
   }
 }
 
@@ -129,11 +134,31 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: 'Faltan parámetros requeridos' }, { status: 400 })
     }
 
-    // In production with a real auth'd user, we would call the real DOM Digital API here.
-    // For now, return mock data even in production until real integration is available.
+    // La integración real con DOM Digital aún no existe: en producción NUNCA
+    // devolvemos datos simulados — respondemos 503 hasta que esté disponible.
+    if (process.env.NODE_ENV === 'production') {
+      return Response.json(
+        {
+          error: 'DOM_DIGITAL_NO_DISPONIBLE',
+          message: 'La consulta a DOM Digital aún no está integrada.',
+        },
+        { status: 503 },
+      )
+    }
+
+    // Dev: datos simulados, etiquetados con simulado: true
     const result = buildMockResponse(localId, municipio)
     return Response.json(result)
   } catch {
+    if (process.env.NODE_ENV === 'production') {
+      return Response.json(
+        {
+          error: 'DOM_DIGITAL_NO_DISPONIBLE',
+          message: 'La consulta a DOM Digital aún no está integrada.',
+        },
+        { status: 503 },
+      )
+    }
     // Dev fallback — no auth available in local environment
     const result = buildMockResponse(body.localId ?? 'unknown', body.municipio ?? 'unknown')
     return Response.json(result)

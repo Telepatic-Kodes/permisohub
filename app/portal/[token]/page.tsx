@@ -19,17 +19,6 @@ import type { Proyecto } from "@/types"
 import { cn } from "@/lib/utils"
 
 // ──────────────────────────────────────────────────
-// Mock token → client mapping
-// In production, this resolves from workspace_invites.token → workspace_id
-// and shows only the projects assigned to that viewer.
-// ──────────────────────────────────────────────────
-const TOKEN_META: Record<string, { nombre: string; proyectosIds: string[] }> = {
-  "pq-arauco-01": { nombre: "Parque Arauco S.A.",         proyectosIds: ["1", "2"] },
-  "cbre-001":     { nombre: "CBRE Chile — Área Locales",   proyectosIds: ["3"] },
-  "espi-002":     { nombre: "ESPI Administración",         proyectosIds: ["4", "5"] },
-}
-
-// ──────────────────────────────────────────────────
 // State helpers (copy from /portal/page.tsx)
 // ──────────────────────────────────────────────────
 const ESTADO_PLAIN: Record<string, string> = {
@@ -84,6 +73,7 @@ export default function PortalTokenPage() {
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
+    // La validez del token la decide únicamente la API (workspace_invites).
     fetch(`/api/portal/resolve?token=${params.token}`)
       .then((r) => r.json())
       .then((data: ResolveResponse) => {
@@ -92,19 +82,12 @@ export default function PortalTokenPage() {
           setClienteNombre(data.nombre ?? null)
           setLocalCtx(data.localContext)
         } else {
-          // check mock tokens as fallback
-          const meta = TOKEN_META[params.token]
-          if (!meta) setNotFound(true)
+          setNotFound(true)
         }
       })
-      .catch(() => {
-        const meta = TOKEN_META[params.token]
-        if (!meta) setNotFound(true)
-      })
+      .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [params.token])
-
-  const meta = TOKEN_META[params.token]
 
   const proyectos = useMemo(() => {
     if (proyectosReales) return proyectosReales
@@ -118,7 +101,7 @@ export default function PortalTokenPage() {
   }), [proyectos])
 
   const selectedProyecto = proyectos.find((p) => p.id === selected)
-  const displayNombre = clienteNombre ?? meta?.nombre ?? "Portal de proyectos"
+  const displayNombre = clienteNombre ?? "Portal de proyectos"
 
   if (loading) {
     return (

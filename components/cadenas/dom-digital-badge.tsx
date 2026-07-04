@@ -18,6 +18,7 @@ interface DomConsultaResult {
   numero_expediente: string | null
   fecha_ingreso: string | null
   municipio_url: string | null
+  simulado?: boolean
 }
 
 const STATUS_CONFIG: Record<
@@ -53,6 +54,7 @@ export function DomDigitalBadge({
   className,
 }: DomDigitalBadgeProps) {
   const [result, setResult] = useState<DomConsultaResult | null>(null)
+  const [unavailable, setUnavailable] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -65,6 +67,12 @@ export function DomDigitalBadge({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ localId, municipio, numero }),
         })
+
+        if (res.status === 503) {
+          // Integración DOM Digital no disponible (aún no implementada)
+          if (!cancelled) setUnavailable(true)
+          return
+        }
 
         if (!res.ok) return
 
@@ -95,6 +103,18 @@ export function DomDigitalBadge({
     )
   }
 
+  if (unavailable) {
+    // Estado discreto: la consulta a DOM Digital no está disponible todavía
+    return (
+      <span
+        className={`inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-[10.5px] text-gray-400 ${className ?? ''}`}
+        title="La consulta a DOM Digital aún no está integrada"
+      >
+        No disponible
+      </span>
+    )
+  }
+
   if (!result) return null
 
   const config = STATUS_CONFIG[result.status]
@@ -103,12 +123,22 @@ export function DomDigitalBadge({
     result.municipio_url != null
 
   const badge = (
-    <Badge
-      className={`${config.className} ${className ?? ''}`}
-      title={result.numero_expediente ?? undefined}
-    >
-      {config.label}
-    </Badge>
+    <span className="inline-flex items-center gap-1">
+      <Badge
+        className={`${config.className} ${className ?? ''}`}
+        title={result.numero_expediente ?? undefined}
+      >
+        {config.label}
+      </Badge>
+      {result.simulado && (
+        <Badge
+          className="border border-dashed border-amber-300 bg-amber-50 text-amber-700"
+          title="Datos simulados — la integración con DOM Digital está en beta"
+        >
+          Simulado (beta)
+        </Badge>
+      )}
+    </span>
   )
 
   if (showLink && result.municipio_url) {
