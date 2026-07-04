@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { AlertCircle, Download, Loader2, PencilRuler, RefreshCw } from "lucide-react"
+import { AlertCircle, Download, Eye, EyeOff, Loader2, Maximize2, PencilRuler, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
@@ -54,6 +54,10 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
   const [activeIdx, setActiveIdx] = useState(0)
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  // true mientras se buscan/rasterizan anotaciones guardadas (varios segundos
+  // en láminas PDF pesadas) — sin esto el usuario ve el botón como si no
+  // hubiera nada guardado.
+  const [rehidratando, setRehidratando] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [info, setInfo] = useState<CoverInfo>({ documentos: [] })
   // Cuadro de cálculo normativo (viñeta sobre la lámina). Se carga guardado.
@@ -215,8 +219,12 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
         setLaminas(merged)
         setActiveIdx(0)
         setDone(true)
-      } catch {
-        // silencioso: si falla la rehidratación, queda el estado inicial (botón)
+      } catch (err) {
+        // La rehidratación no bloquea el flujo (queda el botón), pero dejamos
+        // rastro para diagnosticar planos que no cargan.
+        console.warn("[planos-anotados] rehidratación falló:", err)
+      } finally {
+        if (!cancelled) setRehidratando(false)
       }
     })()
     return () => {
@@ -284,6 +292,7 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
 
       <CardBody
         loading={loading}
+        rehidratando={rehidratando}
         error={error}
         done={done}
         active={active}
@@ -307,6 +316,7 @@ function Card({ children }: { children: React.ReactNode }) {
 
 interface BodyProps {
   loading: boolean
+  rehidratando: boolean
   error: string | null
   done: boolean
   active: LaminaConImagen | undefined
@@ -316,8 +326,18 @@ interface BodyProps {
   cuadro: CuadroResultado | null
 }
 
-function CardBody({ loading, error, done, active, hoverId, setHoverId, onGenerar, cuadro }: BodyProps) {
+function CardBody({ loading, rehidratando, error, done, active, hoverId, setHoverId, onGenerar, cuadro }: BodyProps) {
+  const [zoom, setZoom] = useState(false)
+  const [vinetaVisible, setVinetaVisible] = useState(true)
+
   if (!done) {
+    if (rehidratando && !loading && !error) {
+      return (
+        <div className="flex items-center gap-2 p-5 text-xs text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" /> Buscando marcas guardadas…
+        </div>
+      )
+    }
     return (
       <div className="space-y-3 p-5">
         {error && (
@@ -346,55 +366,48 @@ function CardBody({ loading, error, done, active, hoverId, setHoverId, onGenerar
   }
 
   return (
-    <div className="grid gap-4 p-5 lg:grid-cols-[1fr_300px]">
-      {/* Lámina con overlay */}
+    <div className="space-y-4 p-5">
+      {/* Lámina con overlay — ancho completo: el dibujo es el protagonista */}
       <div className="space-y-2">
-        <div className="relative overflow-hidden rounded-lg border border-border">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={active.dataUrl} alt={active.nombre} className="block w-full" />
-          {active.anotaciones.map((a, i) => {
-            const color = colorDeMarca(a.convencionLinea, a.severidad)
-            const on = hoverId === a.id
-            return (
-              <div
-                key={a.id}
-                onMouseEnter={() => setHoverId(a.id)}
-                onMouseLeave={() => setHoverId(null)}
-                className="absolute"
-                style={{
-                  left: `${a.bbox.x * 100}%`,
-                  top: `${a.bbox.y * 100}%`,
-                  width: `${a.bbox.w * 100}%`,
-                  height: `${a.bbox.h * 100}%`,
-                  border: `2px ${a.convencionLinea ? "dashed" : "solid"} ${color}`,
-                  borderRadius: a.tipoMarca === "circulo" ? "9999px" : "4px",
-                  background: on ? `${color}1f` : "transparent",
-                  boxShadow: on ? `0 0 0 2px ${color}55` : "none",
-                  opacity: a.confianza < 0.5 ? 0.7 : 1,
-                }}
-              >
-                <span
-                  className="absolute -left-2 -top-2 flex size-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                  style={{ background: color }}
-                >
-                  {i + 1}
-                </span>
-              </div>
-            )
-          })}
-          {cuadro && <CuadroVineta cuadro={cuadro} />}
-        </div>
-        <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+        <LaminaOverlay
+          lamina={active}
+          hoverId={hoverId}
+          setHoverId={setHoverId}
+          cuadro={vinetaVisible ? cuadro : null}
+          onZoom={() => setZoom(true)}
+        />
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
           {Object.values(CONVENCION_LINEA).map((c) => (
             <span key={c.label} className="inline-flex items-center gap-1.5">
               <span className="inline-block h-0 w-5 border-t-2 border-dashed" style={{ borderColor: c.color }} />
               {c.label}
             </span>
           ))}
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block size-2.5 rounded-full border-2 border-dashed border-muted-foreground/50 opacity-70" />
+            Marca tenue = ubicación aproximada
+          </span>
+          <span className="ml-auto inline-flex items-center gap-2">
+            <button
+              onClick={() => setZoom(true)}
+              className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10px] hover:border-primary/40 hover:text-primary"
+            >
+              <Maximize2 className="size-3" /> Ampliar lámina
+            </button>
+            {cuadro && (
+              <button
+                onClick={() => setVinetaVisible((v) => !v)}
+                className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10px] hover:border-primary/40 hover:text-primary"
+              >
+                {vinetaVisible ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+                {vinetaVisible ? "Ocultar cuadro" : "Mostrar cuadro"}
+              </button>
+            )}
+          </span>
         </div>
       </div>
 
-      {/* Panel de observaciones */}
+      {/* Panel de observaciones — bajo la lámina, en grilla */}
       <div className="space-y-2">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
           {active.anotaciones.length} observaciones en esta lámina
@@ -404,56 +417,161 @@ function CardBody({ loading, error, done, active, hoverId, setHoverId, onGenerar
             Sin marcas en esta lámina.
           </p>
         )}
-        {active.anotaciones.map((a, i) => {
-          const color = colorDeMarca(a.convencionLinea, a.severidad)
-          const on = hoverId === a.id
-          return (
-            <div
-              key={a.id}
-              onMouseEnter={() => setHoverId(a.id)}
-              onMouseLeave={() => setHoverId(null)}
-              className={cn(
-                "rounded-lg border bg-white p-2.5 transition-all",
-                on ? "border-primary/40 shadow-sm" : "border-border",
-              )}
-            >
-              <div className="mb-1 flex items-start gap-2">
-                <span
-                  className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                  style={{ background: color }}
-                >
-                  {i + 1}
-                </span>
-                <span className="text-xs font-semibold text-primary">{a.textoCorto}</span>
-                <span
-                  className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
-                  style={{ background: `${SEVERIDAD_COLOR[a.severidad]}1a`, color: SEVERIDAD_COLOR[a.severidad] }}
-                >
-                  {a.severidad}
-                </span>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {active.anotaciones.map((a, i) => {
+            const color = colorDeMarca(a.convencionLinea, a.severidad)
+            const on = hoverId === a.id
+            return (
+              <div
+                key={a.id}
+                onMouseEnter={() => setHoverId(a.id)}
+                onMouseLeave={() => setHoverId(null)}
+                className={cn(
+                  "rounded-lg border bg-white p-2.5 transition-all",
+                  on ? "border-primary/40 shadow-sm" : "border-border",
+                )}
+              >
+                <div className="mb-1 flex items-start gap-2">
+                  <span
+                    className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                    style={{ background: color }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="text-xs font-semibold text-primary">{a.textoCorto}</span>
+                  <span
+                    className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
+                    style={{ background: `${SEVERIDAD_COLOR[a.severidad]}1a`, color: SEVERIDAD_COLOR[a.severidad] }}
+                  >
+                    {a.severidad}
+                  </span>
+                </div>
+                {a.articulo && (
+                  <span className="mb-1 inline-block rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    {a.articulo}
+                  </span>
+                )}
+                {a.ancla && (
+                  <p className="mb-1 text-[10px] italic text-muted-foreground">📍 {a.ancla}</p>
+                )}
+                {a.confianza < 0.5 && (
+                  <p className="mb-1 text-[10px] font-medium text-amber-600">
+                    Ubicación aproximada — verificar sobre el plano
+                  </p>
+                )}
+                <p className="text-[11px] leading-relaxed text-foreground/75">{a.observacion}</p>
+                {a.sugerencia && (
+                  <p className="mt-1 rounded bg-primary/5 px-1.5 py-1 text-[10px] leading-relaxed text-primary/80">
+                    <span className="font-semibold">Corregir: </span>
+                    {a.sugerencia}
+                  </p>
+                )}
               </div>
-              {a.articulo && (
-                <span className="mb-1 inline-block rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                  {a.articulo}
-                </span>
-              )}
-              <p className="text-[11px] leading-relaxed text-foreground/75">{a.observacion}</p>
-              {a.sugerencia && (
-                <p className="mt-1 rounded bg-primary/5 px-1.5 py-1 text-[10px] leading-relaxed text-primary/80">
-                  <span className="font-semibold">Corregir: </span>
-                  {a.sugerencia}
-                </p>
-              )}
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
+
+      {/* Lightbox de zoom: lámina a pantalla (casi) completa con las marcas */}
+      {zoom && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setZoom(false)}
+          role="dialog"
+          aria-label={`Lámina ampliada: ${active.nombre}`}
+        >
+          <div
+            className="max-h-[94vh] max-w-[96vw] overflow-auto rounded-lg bg-white p-2 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-1 flex items-center justify-between gap-3 px-1">
+              <p className="truncate text-xs font-semibold text-primary">{active.nombre}</p>
+              <button
+                onClick={() => setZoom(false)}
+                className="rounded border border-border px-2 py-0.5 text-[11px] text-muted-foreground hover:border-primary/40 hover:text-primary"
+              >
+                Cerrar ✕
+              </button>
+            </div>
+            <div className="min-w-[900px]">
+              <LaminaOverlay
+                lamina={active}
+                hoverId={hoverId}
+                setHoverId={setHoverId}
+                cuadro={vinetaVisible ? cuadro : null}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Imagen de la lámina + marcas + viñeta. Reutilizada por el visor y el zoom
+// (coordenadas en %, así que escala sola).
+function LaminaOverlay({
+  lamina,
+  hoverId,
+  setHoverId,
+  cuadro,
+  onZoom,
+}: {
+  lamina: LaminaConImagen
+  hoverId: string | null
+  setHoverId: (id: string | null) => void
+  cuadro: CuadroResultado | null
+  onZoom?: () => void
+}) {
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-lg border border-border",
+        onZoom && "cursor-zoom-in",
+      )}
+      onClick={onZoom}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={lamina.dataUrl} alt={lamina.nombre} className="block w-full" />
+      {lamina.anotaciones.map((a, i) => {
+        const color = colorDeMarca(a.convencionLinea, a.severidad)
+        const on = hoverId === a.id
+        return (
+          <div
+            key={a.id}
+            onMouseEnter={() => setHoverId(a.id)}
+            onMouseLeave={() => setHoverId(null)}
+            className="absolute"
+            style={{
+              left: `${a.bbox.x * 100}%`,
+              top: `${a.bbox.y * 100}%`,
+              width: `${a.bbox.w * 100}%`,
+              height: `${a.bbox.h * 100}%`,
+              border: `2px ${a.convencionLinea ? "dashed" : "solid"} ${color}`,
+              borderRadius: a.tipoMarca === "circulo" ? "9999px" : "4px",
+              background: on ? `${color}1f` : "transparent",
+              boxShadow: on ? `0 0 0 2px ${color}55` : "none",
+              opacity: a.confianza < 0.5 ? 0.7 : 1,
+            }}
+            title={a.ancla ? `${i + 1}. ${a.textoCorto} — ${a.ancla}` : `${i + 1}. ${a.textoCorto}`}
+          >
+            <span
+              className="absolute -left-2 -top-2 flex size-5 items-center justify-center rounded-full text-[10px] font-bold text-white"
+              style={{ background: color }}
+            >
+              {i + 1}
+            </span>
+          </div>
+        )
+      })}
+      {cuadro && <CuadroVineta cuadro={cuadro} />}
     </div>
   )
 }
 
 // Viñeta del cuadro de cálculo normativo, anclada en la esquina de la lámina
-// (como un cuadro de superficies en un plano real). Solo lectura; se edita en PMO.
+// (como un cuadro de superficies en un plano real). Solo lectura; se edita en
+// PMO. Compacta a propósito: no debe tapar el dibujo (ancho relativo, tope).
 function CuadroVineta({ cuadro }: { cuadro: CuadroResultado }) {
   const vColor = (v: string) =>
     v === "excede" ? "#dc2626" : v === "cumple" ? "#16a34a" : "#6b7280"
@@ -465,17 +583,17 @@ function CuadroVineta({ cuadro }: { cuadro: CuadroResultado }) {
     "Altura de edificación": "Altura",
   }
   return (
-    <div className="absolute bottom-2 right-2 w-[186px] rounded-md border border-black/25 bg-white/95 p-2 text-[10px] shadow-md">
-      <p className="mb-1 text-[9px] font-bold uppercase tracking-wide text-primary">
+    <div className="absolute bottom-1.5 right-1.5 w-[22%] min-w-[110px] max-w-[170px] rounded border border-black/25 bg-white/95 p-1.5 text-[9px] leading-tight shadow-md">
+      <p className="mb-0.5 text-[8px] font-bold uppercase tracking-wide text-primary">
         Cuadro de cálculo
       </p>
-      <div className="space-y-0.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground">Sup. edificada</span>
+      <div className="space-y-px">
+        <div className="flex items-center justify-between gap-1">
+          <span className="text-muted-foreground">Sup. edif.</span>
           <span className="font-semibold text-primary">{cuadro.superficieTotalEdificada} m²</span>
         </div>
         {filas.map((f) => (
-          <div key={f.concepto} className="flex items-center justify-between gap-2">
+          <div key={f.concepto} className="flex items-center justify-between gap-1">
             <span className="text-muted-foreground">{corto[f.concepto] ?? f.concepto}</span>
             <span className="font-semibold" style={{ color: vColor(f.veredicto) }}>
               {f.valor}
@@ -486,7 +604,7 @@ function CuadroVineta({ cuadro }: { cuadro: CuadroResultado }) {
         ))}
       </div>
       {cuadro.incumplimientos.length > 0 && (
-        <p className="mt-1 text-[9px] font-semibold text-red-600">
+        <p className="mt-0.5 text-[8px] font-semibold text-red-600">
           Excede {cuadro.incumplimientos.length} límite{cuadro.incumplimientos.length > 1 ? "s" : ""}
         </p>
       )}

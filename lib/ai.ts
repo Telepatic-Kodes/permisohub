@@ -17,15 +17,23 @@ export function isAIAvailable(): boolean {
 
 type Message = { role: 'system' | 'user' | 'assistant'; content: string }
 
+// json: true fuerza response_format json_object (el prompt DEBE mencionar
+// "JSON"). Evita el parsing frágil por regex sobre prosa.
+interface CompleteOptions {
+  max_tokens?: number
+  json?: boolean
+}
+
 export async function aiComplete(
   messages: Message[],
-  options?: { max_tokens?: number }
+  options?: CompleteOptions
 ): Promise<string> {
   const ai = getAI()
   if (!ai) throw new Error('OPENAI_API_KEY no configurado')
   const response = await ai.chat.completions.create({
     model: AI_MODEL,
     max_tokens: options?.max_tokens ?? 2000,
+    ...(options?.json ? { response_format: { type: 'json_object' as const } } : {}),
     messages,
   })
   return response.choices[0].message.content ?? ''
@@ -40,7 +48,7 @@ export async function aiCompleteWithPDF(
   prompt: string,
   pdfBase64: string,
   fileName: string,
-  options?: { max_tokens?: number }
+  options?: CompleteOptions
 ): Promise<string> {
   const ai = getAI()
   if (!ai) throw new Error('OPENAI_API_KEY no configurado')
@@ -53,6 +61,7 @@ export async function aiCompleteWithPDF(
   const response = await ai.chat.completions.create({
     model: AI_MODEL,
     max_tokens: options?.max_tokens ?? 3000,
+    ...(options?.json ? { response_format: { type: 'json_object' as const } } : {}),
     messages: [{ role: 'user', content: content as OpenAI.Chat.ChatCompletionContentPart[] }],
   })
   return response.choices[0].message.content ?? ''
@@ -64,7 +73,7 @@ export async function aiCompleteWithPDF(
 export async function aiCompleteWithImages(
   prompt: string,
   images: string[],
-  options?: { max_tokens?: number }
+  options?: CompleteOptions
 ): Promise<string> {
   const ai = getAI()
   if (!ai) throw new Error('OPENAI_API_KEY no configurado')
@@ -82,6 +91,7 @@ export async function aiCompleteWithImages(
   const response = await ai.chat.completions.create({
     model: AI_MODEL,
     max_tokens: options?.max_tokens ?? 3000,
+    ...(options?.json ? { response_format: { type: 'json_object' as const } } : {}),
     messages: [{ role: 'user', content }],
   })
   return response.choices[0].message.content ?? ''

@@ -72,6 +72,11 @@ export interface Anotacion {
   fundamento: string
   sugerencia: string
   confianza: number // 0..1 — bajo = ubicación incierta, se avisa en UI
+  // Ancla visual: descripción textual de DÓNDE está la marca en el dibujo
+  // (ej. "planta 2° piso, muro poniente entre ejes 2-3"). Obliga al modelo a
+  // comprometerse con una ubicación y permite verificarla. Opcional en filas
+  // antiguas guardadas antes de jul 2026.
+  ancla?: string
 }
 
 export interface LaminaAnotada {
