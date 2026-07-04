@@ -1,8 +1,9 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { use, useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, CheckCircle2, Circle, ExternalLink, FileText, Upload, AlertCircle, ChevronRight, ChevronLeft, Package } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Circle, ExternalLink, FileText, Upload, AlertCircle, ChevronRight, ChevronLeft, Loader2, Package } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +16,7 @@ import {
   type CategoriaDocumento,
   type DocumentoRequerido,
 } from "@/lib/dom-requirements"
+import { uploadDocumento } from "@/lib/upload-documento"
 
 const STEPS = ['Datos', 'Checklist', 'Documentos', 'Exportar'] as const
 
@@ -40,6 +42,9 @@ export default function IngresoPage({
   const [step, setStep] = useState(0)
   const [checkedDocs, setCheckedDocs] = useState<Set<string>>(new Set())
   const [uploadedDocs, setUploadedDocs] = useState<Record<string, string>>({})
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const pendingDocRef = useRef<DocumentoRequerido | null>(null)
 
   if (!proyecto) {
     return (
@@ -85,10 +90,37 @@ export default function IngresoPage({
     })
   }
 
-  function handleMockUpload(docId: string) {
-    // Simulate upload — in production this would call /api/upload
-    setUploadedDocs((prev) => ({ ...prev, [docId]: `${docId}_uploaded.pdf` }))
-    setCheckedDocs((prev) => new Set([...prev, docId]))
+  // Subida real: abre el selector de archivos para el documento requerido
+  function handleUploadClick(doc: DocumentoRequerido) {
+    pendingDocRef.current = doc
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = doc.formatoAceptado.map((f) => `.${f}`).join(',')
+      fileInputRef.current.click()
+    }
+  }
+
+  // Sube el archivo a Supabase Storage y lo registra en la tabla `documentos`
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    // Permite volver a seleccionar el mismo archivo
+    e.target.value = ''
+    const doc = pendingDocRef.current
+    if (!file || !doc) return
+
+    setUploadingDocId(doc.id)
+    try {
+      const result = await uploadDocumento(file, id, doc.nombre)
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      setUploadedDocs((prev) => ({ ...prev, [doc.id]: result.documento.nombre }))
+      setCheckedDocs((prev) => new Set([...prev, doc.id]))
+      toast.success(`${doc.nombre} subido correctamente`)
+    } finally {
+      setUploadingDocId(null)
+      pendingDocRef.current = null
+    }
   }
 
   function openDomEnLinea() {
@@ -254,8 +286,15 @@ export default function IngresoPage({
       {/* STEP 2 — Upload */}
       {step === 2 && (
         <div className="space-y-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => void handleFileSelected(e)}
+          />
           {obligatorios.map((doc) => {
             const uploaded = !!uploadedDocs[doc.id]
+            const uploading = uploadingDocId === doc.id
             return (
               <Card key={doc.id}>
                 <CardContent className="flex items-center gap-4 pt-4">
@@ -273,15 +312,18 @@ export default function IngresoPage({
                     )}
                   </div>
                   <button
-                    onClick={() => handleMockUpload(doc.id)}
-                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    onClick={() => handleUploadClick(doc)}
+                    disabled={uploading || uploadingDocId !== null}
+                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
                       uploaded
                         ? 'bg-green-50 text-green-700 hover:bg-green-100'
                         : 'bg-[#F0EBE1] text-[#1A3328] hover:bg-[#E8E0D4]'
                     }`}
                   >
-                    {uploaded ? (
-                      <><CheckCircle2 className="size-4" /> Subido</>
+                    {uploading ? (
+                      <><Loader2 className="size-4 animate-spin" /> Subiendo…</>
+                    ) : uploaded ? (
+                      <><CheckCircle2 className="size-4" /> Reemplazar</>
                     ) : (
                       <><Upload className="size-4" /> Subir</>
                     )}

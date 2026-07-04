@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { uploadDocumento } from "@/lib/upload-documento"
 
 interface DocumentUploadProps {
   proyectoId: string
@@ -188,50 +189,29 @@ export function DocumentUpload({
         )
       }, 160)
 
-      try {
-        const formData = new FormData()
-        formData.append("file", item.file)
-        formData.append("proyectoId", proyectoId)
-        formData.append("tipo", item.tipo)
+      const result = await uploadDocumento(item.file, proyectoId, item.tipo)
 
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        })
+      clearInterval(progressTimer)
 
-        clearInterval(progressTimer)
-
-        const result = await response
-          .json()
-          .catch(() => ({ error: "Respuesta inválida del servidor." }))
-
-        if (!response.ok || !result?.success) {
-          updateItem(item.id, {
-            status: "error",
-            progress: 0,
-            error: result?.error ?? "No se pudo subir el archivo.",
-          })
-          return
-        }
-
-        const doc: UploadedDoc = result.documento
-
-        updateItem(item.id, {
-          status: "complete",
-          progress: 100,
-          url: doc.url,
-        })
-
-        setUploaded((prev) => [...prev, doc])
-        onUploadComplete?.(doc)
-      } catch {
-        clearInterval(progressTimer)
+      if (!result.ok) {
         updateItem(item.id, {
           status: "error",
           progress: 0,
-          error: "Error de red. Inténtalo nuevamente.",
+          error: result.error,
         })
+        return
       }
+
+      const doc: UploadedDoc = result.documento
+
+      updateItem(item.id, {
+        status: "complete",
+        progress: 100,
+        url: doc.url,
+      })
+
+      setUploaded((prev) => [...prev, doc])
+      onUploadComplete?.(doc)
     },
     [onUploadComplete, proyectoId, updateItem],
   )
