@@ -8,6 +8,13 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { getContextoNormativo, flagUnverifiedCita, REGLAS_CITACION } from '@/lib/normativa-retrieval'
 import { createServiceClient } from '@/lib/supabase/service'
 import type { DueDiligenceResult } from '@/lib/due-diligence'
+import {
+  calcularCuadro,
+  margenesCuadro,
+  type CuadroInput,
+  type CuadroResultado,
+  type MargenCuadro,
+} from '@/lib/cuadros-calculo'
 
 // ---------------------------------------------------------------------------
 // Asesor de tramitación — qué VÍA conviene, no solo qué dice la norma.
@@ -87,12 +94,16 @@ interface PlanoAnotacionItem {
   articulo?: string
   severidad?: string
   tipoMarca?: string
+  ancla?: string
 }
 
 interface ProyectoContexto {
   proyecto: ProyectoRow
   dd: DueDiligenceResult | null
   anotaciones: PlanoAnotacionItem[]
+  // Cuadro de cálculo guardado del proyecto (si existe): resultado determinista
+  // + márgenes contra los límites del PRC. Computados en servidor, NUNCA por el LLM.
+  cuadro: { resultado: CuadroResultado; margenes: MargenCuadro[] } | null
 }
 
 /** Arma el bloque de texto "Estado real del expediente" para inyectar al prompt. */
@@ -144,16 +155,47 @@ function buildContextoBloque(ctx: ProyectoContexto): string {
     for (const a of anotaciones) {
       const cuerpo = [a.textoCorto, a.observacion].filter(Boolean).join(' — ')
       lines.push(
-        `- ${cuerpo || '(sin texto)'}${a.articulo ? ` [${a.articulo}]` : ''}${
-          a.severidad ? ` (severidad ${a.severidad})` : ''
-        }`,
+        `- ${cuerpo || '(sin texto)'}${a.ancla ? ` [ubicación: ${a.ancla}]` : ''}${
+          a.articulo ? ` [${a.articulo}]` : ''
+        }${a.severidad ? ` (severidad ${a.severidad})` : ''}`,
       )
     }
   } else {
     lines.push('No hay observaciones marcadas sobre los planos.')
   }
 
+  if (ctx.cuadro && !ctx.cuadro.resultado.incompleto) {
+    const { resultado, margenes } = ctx.cuadro
+    lines.push(
+      'Cuadro de cálculo normativo del proyecto (cómputo DETERMINISTA de la app — usa ESTOS números tal cual, no los recalcules ni los inventes):',
+    )
+    for (const f of resultado.filas) {
+      if (f.limite === null) continue
+      lines.push(
+        `- ${f.concepto}: ${f.valor}${f.unidad} / límite ${f.limite}${f.unidad} → ${f.veredicto.toUpperCase()}`,
+      )
+    }
+    for (const m of margenes) {
+      lines.push(
+        m.exceso > 0
+          ? `- META NUMÉRICA: ${m.concepto} debe bajar de ${m.actual} ${m.unidad} a como máximo ${m.maximoPermitido} ${m.unidad} (reducir ${m.exceso} ${m.unidad}) para cumplir.`
+          : `- Holgura: ${m.concepto} tiene ${round2(-m.exceso)} ${m.unidad} disponibles bajo el límite (${m.actual} de ${m.maximoPermitido} ${m.unidad}).`,
+      )
+    }
+    if (resultado.incumplimientos.length === 0) {
+      lines.push('- El cuadro CUMPLE todos los límites declarados.')
+    }
+  } else {
+    lines.push('Sin cuadro de cálculo guardado (o incompleto) para este proyecto.')
+  }
+
   return lines.join('\n')
+}
+
+// Redondeo corto para holguras (evita -0 y colas de float en el prompt).
+function round2(n: number): number {
+  const r = Math.round((n + Number.EPSILON) * 100) / 100
+  return Object.is(r, -0) ? 0 : r
 }
 
 /** Deriva una `situacion` textual (>= 20 chars) cuando el usuario no la manda. */
@@ -216,8 +258,9 @@ ${contextoBloque}
     ? `
 
 MODO PROYECTO (prescriptivo y específico — no genérico): dado el estado real del expediente de arriba, tu recomendación DEBE:
-- Indicar explícitamente QUÉ modificación/elemento concreto revertir o redibujar para que el caso caiga bajo la vía liviana (ej. bajo el Art. 5.1.2), citando las OBSERVACIONES ESPACIALES reales de los planos (por su textoCorto/observación/artículo). No digas "regulariza bajo 5.1.2" sin decir qué cambiar.
+- Indicar explícitamente QUÉ modificación/elemento concreto revertir o redibujar para que el caso caiga bajo la vía liviana (ej. bajo el Art. 5.1.2), citando las OBSERVACIONES ESPACIALES reales de los planos (por su textoCorto/observación/ubicación/artículo). No digas "regulariza bajo 5.1.2" sin decir qué cambiar.
 - Rellenar "ajustesProyecto" con la lista concreta de ajustes al proyecto/dibujo (elemento, acción de revertir/redibujar, y por qué eso lo hace calificar a la vía liviana). Si de verdad no hay ajuste que permita bajar de vía, deja "ajustesProyecto" vacío y explícalo en la estrategia.
+- Si el expediente trae "Cuadro de cálculo normativo" con METAS NUMÉRICAS, tus "ajustesProyecto" deben CUANTIFICAR usando exactamente esos números (ej. "reducir la superficie edificada en 70 m², de 250 a 180 m²"). Esos números vienen del cómputo determinista de la app: NO los recalcules, NO inventes otros. Si el cuadro excede límites del PRC, dilo sin rodeos y evalúa si la vía liviana sigue siendo alcanzable (una obra menor no salva un exceso de constructibilidad: el ajuste tiene que resolverlo o la vía cambia).
 - Indicar qué ARGUMENTO NORMATIVO usar (DDU pertinentes por su materia, sin inventar números), p. ej. carga desproporcionada u otros, solo si aplican al caso.`
     : '\nSi no hay contexto de proyecto, "ajustesProyecto" puede ir vacío.'
 
@@ -353,7 +396,22 @@ async function loadProyectoContexto(
     }
   }
 
-  return { proyecto, dd: ddRow?.result ?? null, anotaciones }
+  // Cuadro de cálculo guardado → cómputo determinista en servidor.
+  const { data: cuadroRow } = await supabase
+    .from('cuadros_calculo')
+    .select('data')
+    .eq('proyecto_id', proyectoId)
+    .maybeSingle<{ data: CuadroInput | null }>()
+
+  let cuadro: ProyectoContexto['cuadro'] = null
+  if (cuadroRow?.data) {
+    const resultado = calcularCuadro(cuadroRow.data)
+    if (!resultado.incompleto) {
+      cuadro = { resultado, margenes: margenesCuadro(cuadroRow.data) }
+    }
+  }
+
+  return { proyecto, dd: ddRow?.result ?? null, anotaciones, cuadro }
 }
 
 export async function POST(request: Request) {
@@ -393,6 +451,7 @@ export async function POST(request: Request) {
   try {
     const text = await aiComplete([{ role: 'user', content: buildPrompt(body, contextoBloque) }], {
       max_tokens: 3200,
+      json: true,
     })
     const result = parse(text)
     // Defensa en profundidad: marca cualquier número de DDU no verificado.

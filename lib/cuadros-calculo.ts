@@ -180,6 +180,62 @@ export function calcularCuadro(input: CuadroInput): CuadroResultado {
   }
 }
 
+// Margen determinista contra un límite del instrumento: cuánto se puede
+// edificar/ocupar como máximo y cuánto hay que REDUCIR para cumplir.
+export interface MargenCuadro {
+  concepto: string
+  actual: number
+  maximoPermitido: number
+  // > 0: lo que sobra respecto del límite (hay que reducir esto para cumplir).
+  // <= 0: holgura disponible (se cumple).
+  exceso: number
+  unidad: string
+}
+
+/**
+ * Traduce los límites del PRC a metas concretas en m²/m: máximo edificable,
+ * máxima ocupación de suelo y altura. Es la base numérica que el asesor de
+ * vía entrega al arquitecto ("reducir X m²"), calculada aquí y NUNCA por el
+ * LLM. Solo incluye conceptos con límite declarado.
+ */
+export function margenesCuadro(input: CuadroInput): MargenCuadro[] {
+  const r = calcularCuadro(input)
+  const predio = num(input.superficiePredio)
+  const margenes: MargenCuadro[] = []
+  if (predio > 0 && typeof input.coefConstructibilidadMax === 'number' && input.coefConstructibilidadMax > 0) {
+    const maximo = round(predio * input.coefConstructibilidadMax)
+    margenes.push({
+      concepto: 'Superficie edificada (constructibilidad)',
+      actual: r.superficieTotalEdificada,
+      maximoPermitido: maximo,
+      exceso: round(r.superficieTotalEdificada - maximo),
+      unidad: 'm²',
+    })
+  }
+  if (predio > 0 && typeof input.ocupacionSueloMaxPct === 'number' && input.ocupacionSueloMaxPct > 0) {
+    const maximo = round((predio * input.ocupacionSueloMaxPct) / 100)
+    margenes.push({
+      concepto: 'Superficie ocupada en suelo',
+      actual: r.superficieOcupadaSuelo,
+      maximoPermitido: maximo,
+      exceso: round(r.superficieOcupadaSuelo - maximo),
+      unidad: 'm²',
+    })
+  }
+  if (typeof input.alturaMaxM === 'number' && input.alturaMaxM > 0 && num(input.alturaProyectoM) > 0) {
+    const actual = round(num(input.alturaProyectoM), 2)
+    const maximo = round(input.alturaMaxM, 2)
+    margenes.push({
+      concepto: 'Altura de edificación',
+      actual,
+      maximoPermitido: maximo,
+      exceso: round(actual - maximo, 2),
+      unidad: 'm',
+    })
+  }
+  return margenes
+}
+
 // Input vacío de arranque para la UI.
 export function cuadroVacio(): CuadroInput {
   return {
