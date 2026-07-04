@@ -1,6 +1,7 @@
 import { aiComplete, isAIAvailable } from '@/lib/ai'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -49,10 +50,38 @@ export async function POST(
       locales = (localesData ?? []) as Record<string, unknown>[]
     }
   } catch {
-    // TODO: query DB for real cadena/centros/locales context when initial fetch fails
-    cadena = {}
-    centros = []
-    locales = []
+    // Respaldo: si el fetch inicial falla (sin sesión o RLS), consultamos la DB
+    // con el service client para armar igual el contexto real de la cadena.
+    try {
+      const service = createServiceClient()
+
+      const { data: cadenaData } = await service
+        .from('cadenas')
+        .select('*')
+        .eq('id', cadenaId)
+        .single()
+      cadena = (cadenaData ?? {}) as Record<string, unknown>
+
+      const { data: centrosData } = await service
+        .from('centros_comerciales')
+        .select('*')
+        .eq('cadena_id', cadenaId)
+      centros = (centrosData ?? []) as Record<string, unknown>[]
+
+      const centroIds = centros.map((c) => c['id'] as string)
+      if (centroIds.length > 0) {
+        const { data: localesData } = await service
+          .from('locales')
+          .select('*')
+          .in('centro_id', centroIds)
+        locales = (localesData ?? []) as Record<string, unknown>[]
+      }
+    } catch {
+      // Sin credenciales de servicio o DB inaccesible: contexto vacío
+      cadena = {}
+      centros = []
+      locales = []
+    }
   }
 
   if (!isAIAvailable()) {

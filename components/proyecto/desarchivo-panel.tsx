@@ -125,6 +125,11 @@ export function DesarchivoPanel({ proyectoId, estadoProyecto, proyectoNombre, mu
     setLoading(true)
     try {
       const res = await fetch(`/api/proyectos/${proyectoId}/desarchivo`)
+      if (!res.ok) {
+        // 404: el proyecto no tiene datos de archivo en la DB — ocultar el panel
+        setData(null)
+        return
+      }
       const json = (await res.json()) as DesarchivoData & { ok?: boolean }
       setData({
         esta_archivado: json.esta_archivado ?? false,
@@ -132,6 +137,8 @@ export function DesarchivoPanel({ proyectoId, estadoProyecto, proyectoNombre, mu
         solicitud_desarchivo: json.solicitud_desarchivo ?? null,
         municipio_info: json.municipio_info,
       })
+    } catch {
+      setData(null)
     } finally {
       setLoading(false)
     }
@@ -238,6 +245,9 @@ export function DesarchivoPanel({ proyectoId, estadoProyecto, proyectoNombre, mu
       </Card>
     )
   }
+
+  // Sin datos del backend (404 / error de red): ocultar el panel con gracia
+  if (!data) return null
 
   const solicitud = data?.solicitud_desarchivo ?? null
 

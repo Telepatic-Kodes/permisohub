@@ -34,7 +34,7 @@ const STATS = [
 // cobertura de datos, integraciones). NO son métricas de tracción inventadas.
 const CONFIANZA = [
   { icon: Building2, valor: "346", label: "municipios con inteligencia DOM" },
-  { icon: Bot, valor: "10", label: "herramientas con IA integradas" },
+  { icon: Bot, valor: "12", label: "herramientas con IA integradas" },
   { icon: Scale, valor: "Ley 21.718", label: "OGUC vigente 2026" },
   { icon: Sparkles, valor: "100%", label: "bootstrapped · arquitecta-fundadora" },
 ];
@@ -85,7 +85,7 @@ const FEATURES = [
   },
   {
     icon: Bot,
-    title: "10 herramientas con IA",
+    title: "12 herramientas con IA",
     description:
       "Chat OGUC, predictor de observaciones, memoria descriptiva, declaración jurada, checklist y más. Todo conectado con los datos de tu proyecto.",
   },
@@ -206,7 +206,7 @@ const PLANES: Plan[] = [
     features: [
       "Todo lo de Starter +",
       "Proyectos ilimitados",
-      "IA ilimitada (9 herramientas sin límite)",
+      "IA ilimitada (12 herramientas sin límite)",
       "Inteligencia DOM por municipio",
       "Portal del mandante con link único",
       "Export ZIP expediente con naming DOM",

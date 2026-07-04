@@ -33,7 +33,7 @@ const MODULES = [
     accent: '#7C3AED',
     bg: '#EDE9FE',
     status: 'Operacional',
-    desc: '9 herramientas de inteligencia artificial para auditar expedientes, predecir observaciones y generar documentos.',
+    desc: '12 herramientas de inteligencia artificial para auditar expedientes, predecir observaciones y generar documentos.',
   },
   {
     id: 'portal',
@@ -363,7 +363,7 @@ export default function DocsPage() {
             {[
               { label: 'Next.js 16', sub: 'App Router + Server Components' },
               { label: 'Supabase', sub: 'PostgreSQL · Auth · RLS · Storage' },
-              { label: 'OpenAI GPT-4o', sub: '9 herramientas IA especializadas' },
+              { label: 'OpenAI GPT-4o', sub: '12 herramientas IA especializadas' },
               { label: 'Stripe', sub: '5 planes · webhooks · portal billing' },
             ].map((t) => (
               <div key={t.label} className="rounded-xl bg-[#1A3328]/5 px-4 py-3">
@@ -436,7 +436,7 @@ export default function DocsPage() {
           'POST /api/ai/extract-observations',
         ]}
       >
-        <SectionLabel label="9 herramientas especializadas sobre OGUC + DOM" />
+        <SectionLabel label="12 herramientas especializadas sobre OGUC + DOM" />
 
         <div className="mb-4 rounded-xl border border-[#7C3AED]/20 bg-[#EDE9FE]/60 p-3">
           <p className="text-[10px] font-semibold text-[#7C3AED]">Capa de protección (aiAuthGuard)</p>
