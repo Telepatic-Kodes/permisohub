@@ -34,7 +34,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
 import { ESTADO_CONFIG, TIPO_PERMISO_LABELS, type Proyecto, type Etapa, type Comunicacion, type Documento } from "@/types"
 import { cn } from "@/lib/utils"
-import { PageHeader } from "@/components/dashboard/page-header"
+import { Rotulo } from "@/components/arch/rotulo"
+import { type Veredicto } from "@/components/arch/estado"
 import { CopilotoTrigger } from "@/components/copiloto/copiloto-trigger"
 import { CopilotoDrawer } from "@/components/copiloto/copiloto-drawer"
 import { DocumentUpload } from "@/components/dashboard/document-upload"
@@ -418,65 +419,87 @@ export default function ProyectoDetallePage({
     )
   }
 
+  // Estado del expediente → veredicto normativo (color restringido).
+  const veredicto: Veredicto =
+    proyecto.estado === "aprobado"
+      ? "cumple"
+      : proyecto.estado === "rechazado"
+        ? "rechaza"
+        : proyecto.estado === "con_observaciones"
+          ? "observa"
+          : "neutro"
+
+  const acciones = (
+    <div className="flex items-center gap-2">
+      {!["aprobado", "rechazado"].includes(proyecto.estado) && (
+        <Button
+          nativeButton={false}
+          render={<Link href={`/proyectos/${proyecto.id}/ingreso`} />}
+          variant="outline"
+          size="sm"
+        >
+          <Upload className="size-4" />
+          Preparar ingreso DOM
+        </Button>
+      )}
+      {MOSTRAR_ACCIONES_EXTERNAS && (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={compartirLoading}
+          onClick={() => void handleCompartir()}
+          title={portalUrl ? `Link copiado: ${portalUrl}` : 'Generar link para cliente'}
+        >
+          {portalUrl ? (
+            <><Check className="size-4 text-green-600" /> Link copiado</>
+          ) : (
+            <><Link2 className="size-4" /> Compartir</>
+          )}
+        </Button>
+      )}
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={!ddResult || exporting}
+        onClick={() => void handleExportInforme()}
+        title={ddResult ? "Exportar informe PDF" : "Genera el Due Diligence primero"}
+      >
+        {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+        Exportar PDF
+      </Button>
+      <CopilotoTrigger proyecto={proyecto} onClick={() => setCopilotoOpen(true)} />
+    </div>
+  )
+
   return (
     <div className="flex min-h-screen flex-col">
-      <PageHeader
-        emoji="📄"
-        title={proyecto.nombre}
-        breadcrumbs={[
-          { label: "Proyectos", href: "/proyectos" },
-          { label: proyecto.nombre },
-        ]}
-        action={
-          <div className="flex items-center gap-2">
-            {!["aprobado", "rechazado"].includes(proyecto.estado) && (
-              <Button
-                nativeButton={false}
-                render={<Link href={`/proyectos/${proyecto.id}/ingreso`} />}
-                variant="outline"
-                size="sm"
-              >
-                <Upload className="size-4" />
-                Preparar ingreso DOM
-              </Button>
-            )}
-            {MOSTRAR_ACCIONES_EXTERNAS && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={compartirLoading}
-                onClick={() => void handleCompartir()}
-                title={portalUrl ? `Link copiado: ${portalUrl}` : 'Generar link para cliente'}
-              >
-                {portalUrl ? (
-                  <><Check className="size-4 text-green-600" /> Link copiado</>
-                ) : (
-                  <><Link2 className="size-4" /> Compartir</>
-                )}
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!ddResult || exporting}
-              onClick={() => void handleExportInforme()}
-              title={ddResult ? "Exportar informe PDF" : "Genera el Due Diligence primero"}
-            >
-              {exporting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Download className="size-4" />
-              )}
-              Exportar PDF
-            </Button>
-            <CopilotoTrigger
-              proyecto={proyecto}
-              onClick={() => setCopilotoOpen(true)}
-            />
-          </div>
-        }
-      />
-      <div className="flex-1 overflow-auto p-8">
+      {/* Barra slim: breadcrumb + acciones. El título vive en el rótulo. */}
+      <div className="relative flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-8 py-3">
+        <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+        <nav className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <Link href="/proyectos" className="transition-colors hover:text-primary">Proyectos</Link>
+          <span className="text-muted-foreground/30">/</span>
+          <span className="truncate text-muted-foreground/60">{proyecto.nombre}</span>
+        </nav>
+        {acciones}
+      </div>
+
+      <div className="flex-1 overflow-auto bg-blueprint-grid p-6 md:p-8">
+        {/* Rótulo del expediente — cabecera como cajetín técnico */}
+        <Rotulo
+          className="mb-6"
+          clase="Expediente de edificación"
+          titulo={proyecto.nombre}
+          subtitulo={[proyecto.direccion, proyecto.municipio].filter(Boolean).join(" · ") || undefined}
+          estado={{ veredicto, label: estadoCfg.label }}
+          campos={[
+            { label: "Expediente", valor: proyecto.numero_expediente || "—" },
+            { label: "Comuna / DOM", valor: proyecto.municipio || "—", mono: false },
+            { label: "Tipo de trámite", valor: TIPO_PERMISO_LABELS[proyecto.tipo] ?? proyecto.tipo ?? "—", mono: false },
+            { label: "Ingreso", valor: formatDate(proyecto.fecha_inicio) },
+            { label: "Días en trámite", valor: diasDesdeInicio },
+          ]}
+        />
         {!ddResult ? (
           <ExpedienteWizard
             proyectoId={id}
@@ -503,7 +526,7 @@ export default function ProyectoDetallePage({
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">
                     Días en tramitación
                   </p>
-                  <p className="text-xl font-semibold text-primary font-display mt-1">
+                  <p className="text-xl font-semibold text-primary num mt-1">
                     {diasDesdeInicio}
                   </p>
                 </div>
@@ -521,7 +544,7 @@ export default function ProyectoDetallePage({
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">
                     Documentos
                   </p>
-                  <p className="text-xl font-semibold text-primary font-display mt-1">
+                  <p className="text-xl font-semibold text-primary num mt-1">
                     {documentos.length}
                   </p>
                 </div>
@@ -529,7 +552,7 @@ export default function ProyectoDetallePage({
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">
                     N° Expediente
                   </p>
-                  <p className="text-xl font-semibold text-primary font-display mt-1">
+                  <p className="text-xl font-semibold text-primary num mt-1">
                     {proyecto.numero_expediente ?? "Sin asignar"}
                   </p>
                 </div>

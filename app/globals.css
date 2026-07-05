@@ -9,8 +9,18 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
-  --font-mono: var(--font-geist-mono);
+  --font-technical: var(--font-technical);
+  --font-mono: var(--font-mono);
   --font-heading: var(--font-display);
+  /* Idioma del arquitecto: color de estado normativo (único color saturado). */
+  --color-blueprint: var(--blueprint);
+  --color-cumple: var(--state-ok);
+  --color-observa: var(--state-warn);
+  --color-rechaza: var(--state-error);
+  /* Jerarquía de grosores de línea (ISO 128 → bordes de UI). */
+  --color-line-strong: var(--line-strong);
+  --color-line-med: var(--line-med);
+  --color-line-fine: var(--line-fine);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -77,6 +87,17 @@
   --radius: 0.5rem;
   --color-gold: oklch(0.78 0.16 78);
   --color-gold-subtle: oklch(0.96 0.04 85);
+  /* ── Idioma del arquitecto ─────────────────────────────────────────────
+     Azul blueprint: eje/cota activa, dato en foco, la "tinta de plano".
+     Estado normativo (ÚNICO color saturado que se permite en la UI). */
+  --blueprint: oklch(0.52 0.13 245);
+  --state-ok: oklch(0.55 0.12 155);
+  --state-warn: oklch(0.66 0.15 68);
+  --state-error: oklch(0.55 0.20 27);
+  /* Jerarquía de grosores de línea (muro / tabique / cota). */
+  --line-strong: oklch(0.28 0.055 158);
+  --line-med: oklch(0.80 0.012 85);
+  --line-fine: oklch(0.905 0.012 85);
   /* Shadows with green tint */
   --shadow-card: 0 1px 3px oklch(0.28 0.055 158 / 0.07), 0 1px 2px oklch(0.28 0.055 158 / 0.04);
   --shadow-elevated: 0 4px 20px oklch(0.28 0.055 158 / 0.10), 0 2px 8px oklch(0.28 0.055 158 / 0.06);
@@ -119,6 +140,14 @@
   --sidebar-accent-foreground: oklch(0.96 0.006 85);
   --sidebar-border: oklch(1 0 0 / 0.06);
   --sidebar-ring: oklch(0.78 0.16 78);
+  /* Idioma del arquitecto — variante oscura */
+  --blueprint: oklch(0.68 0.13 245);
+  --state-ok: oklch(0.68 0.13 155);
+  --state-warn: oklch(0.75 0.15 68);
+  --state-error: oklch(0.70 0.19 22);
+  --line-strong: oklch(1 0 0 / 0.30);
+  --line-med: oklch(1 0 0 / 0.14);
+  --line-fine: oklch(1 0 0 / 0.08);
 }
 
 @layer base {
@@ -159,6 +188,68 @@
   .bg-dot-grid {
     background-image: radial-gradient(circle, oklch(0.28 0.055 158 / 0.10) 1px, transparent 1px);
     background-size: 20px 20px;
+  }
+
+  /* ── Idioma del arquitecto: componentes de dibujo técnico ──────────────── */
+
+  /* Voz técnica del instrumento: rótulos, cabeceras de expediente, láminas. */
+  .font-technical {
+    font-family: var(--font-technical), var(--font-sans), sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  /* DATO técnico: monospace + cifras tabulares → cotas y superficies alinean
+     como en un cuadro de un plano. Aplícalo a TODO número que viva en columna
+     o que sea una medida (m², %, coeficientes, plazos, art., expediente). */
+  .num {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "cv01" 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* Grilla milimetrada subliminal (papel vegetal). Fondo del lienzo donde vive
+     el expediente. Casi imperceptible: señala precisión sin decorar. */
+  .bg-blueprint-grid {
+    background-color: var(--background);
+    background-image:
+      linear-gradient(to right, oklch(0.28 0.055 158 / 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.28 0.055 158 / 0.045) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .dark .bg-blueprint-grid {
+    background-image:
+      linear-gradient(to right, oklch(1 0 0 / 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(1 0 0 / 0.035) 1px, transparent 1px);
+  }
+
+  /* Achurado: zona observada / no cumple, en línea finísima (como el hatch de
+     material en un plano). Codifica estado, no decora. */
+  .hatch-observa {
+    background-image: repeating-linear-gradient(
+      45deg,
+      oklch(0.66 0.15 68 / 0.14),
+      oklch(0.66 0.15 68 / 0.14) 1px,
+      transparent 1px,
+      transparent 7px
+    );
+  }
+  .hatch-rechaza {
+    background-image: repeating-linear-gradient(
+      45deg,
+      oklch(0.55 0.20 27 / 0.13),
+      oklch(0.55 0.20 27 / 0.13) 1px,
+      transparent 1px,
+      transparent 7px
+    );
+  }
+
+  /* Rótulo / cajetín: contenedor de documento técnico. Borde de muro (fuerte)
+     + esquinas rectas. Da sensación de lámina oficial, no de card web. */
+  .rotulo {
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    background: var(--card);
   }
 
   /* Premium card */

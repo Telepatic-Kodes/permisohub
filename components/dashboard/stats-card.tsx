@@ -67,7 +67,7 @@ export function StatsCard({
           <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
             {title}
           </p>
-          <p className="heading-display mt-2 text-[2.25rem] leading-none text-primary tabular-nums">
+          <p className="num mt-2 text-[2.25rem] font-semibold leading-none text-primary">
             {value}
           </p>
           {subtitle && (
