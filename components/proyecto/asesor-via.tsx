@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { TextoConCitas } from "@/components/arch/cita"
 import { cn } from "@/lib/utils"
 
 type Viabilidad = "sí" | "con condiciones" | "no"
@@ -153,7 +154,7 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
                 </p>
                 {result.estrategia && (
                   <p className="mt-2 text-sm leading-relaxed text-foreground/80">
-                    {result.estrategia}
+                    <TextoConCitas>{result.estrategia}</TextoConCitas>
                   </p>
                 )}
               </div>
@@ -177,11 +178,13 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
                       <p className="text-sm font-semibold text-amber-900">{a.elemento}</p>
                       <p className="mt-1 flex items-start gap-1.5 text-sm text-foreground/80">
                         <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
-                        <span>{a.accion}</span>
+                        <span>
+                          <TextoConCitas>{a.accion}</TextoConCitas>
+                        </span>
                       </p>
                       {a.porque && (
                         <p className="mt-1 text-xs leading-snug text-muted-foreground">
-                          {a.porque}
+                          <TextoConCitas>{a.porque}</TextoConCitas>
                         </p>
                       )}
                     </li>
@@ -226,7 +229,7 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
                       </div>
                       {via.fundamento && (
                         <p className="mt-2 text-xs leading-snug text-muted-foreground">
-                          {via.fundamento}
+                          <TextoConCitas>{via.fundamento}</TextoConCitas>
                         </p>
                       )}
                     </div>
@@ -246,9 +249,11 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
                         {paso.orden || idx + 1}
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{paso.accion}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          <TextoConCitas>{paso.accion}</TextoConCitas>
+                        </p>
                         <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-                          {paso.porque}
+                          <TextoConCitas>{paso.porque}</TextoConCitas>
                         </p>
                       </div>
                     </li>
@@ -267,8 +272,12 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
                       key={`${d.codigo}-${idx}`}
                       className="rounded-lg border border-border bg-muted/20 px-3 py-2"
                     >
-                      <p className="text-sm font-medium text-foreground">{d.codigo}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{d.porque}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        <TextoConCitas>{d.codigo}</TextoConCitas>
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        <TextoConCitas>{d.porque}</TextoConCitas>
+                      </p>
                     </li>
                   ))}
                 </ul>
@@ -289,7 +298,9 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
                       className="flex items-start gap-2 text-sm text-foreground/80"
                     >
                       <Check className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                      <span>{r}</span>
+                      <span>
+                        <TextoConCitas>{r}</TextoConCitas>
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -300,7 +311,9 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
             {result.advertencia && (
               <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                <span>{result.advertencia}</span>
+                <span>
+                  <TextoConCitas>{result.advertencia}</TextoConCitas>
+                </span>
               </div>
             )}
           </div>
