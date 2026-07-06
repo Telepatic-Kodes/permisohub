@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
 import { Num } from "@/components/arch/dato"
 import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 
@@ -242,38 +241,31 @@ export default function PreRevisionPage() {
               </div>
 
               {/* Observaciones */}
-              <div className="overflow-hidden rounded-xl border border-border bg-white" style={{ boxShadow: "var(--shadow-card)" }}>
-                <div className="border-b border-border px-5 py-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Observaciones
-                  </p>
-                  <p className="mt-0.5 text-sm font-semibold text-primary">Ordenadas por severidad</p>
+              <div className="overflow-hidden rounded-[4px] border border-line-fine bg-card">
+                <div className="flex items-center gap-3 border-b border-line-fine px-5 py-4">
+                  <h3 className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                    Observaciones · por severidad
+                  </h3>
+                  <div className="h-px flex-1 bg-line-fine" />
+                  <span className="num text-[10px] text-muted-foreground/60">{String(result.observaciones.length).padStart(2, "0")}</span>
                 </div>
 
-                <div className="divide-y divide-border">
+                <div className="divide-y divide-line-fine">
                   {result.observaciones.map((o) => {
                     const sev = SEVERIDAD_CONFIG[o.severidad] ?? SEVERIDAD_CONFIG.menor
-                    const SevIcon = sev.Icon
                     return (
-                      <div key={o.numero} className="px-5 py-4 transition-colors hover:bg-muted/30">
+                      <div key={o.numero} className="px-5 py-4 transition-colors hover:bg-[var(--blueprint)]/[0.05]">
                         <div className="mb-2 flex items-start justify-between gap-3">
                           <div className="flex min-w-0 flex-wrap items-start gap-2">
-                            <span className="mt-0.5 shrink-0 font-mono text-[11px] text-muted-foreground/40">
-                              #{o.numero}
+                            <span className="num mt-0.5 shrink-0 text-[11px] text-muted-foreground/40">
+                              {String(o.numero).padStart(2, "0")}
                             </span>
                             <span className="text-sm font-semibold text-primary">{o.materia}</span>
-                            <span className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                              {o.articulo}
+                            <span className="rounded-[3px] border border-line-fine bg-card px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              <Num>{o.articulo}</Num>
                             </span>
                           </div>
-                          <span
-                            className={cn(
-                              "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-                              sev.badge,
-                            )}
-                          >
-                            <SevIcon className="size-3" /> {sev.label}
-                          </span>
+                          <EstadoNormativo estado={sev.veredicto} label={sev.label} dot={false} className="shrink-0" />
                         </div>
 
                         <p className="mb-2 text-sm leading-relaxed text-foreground/80">{o.observacion}</p>
@@ -285,11 +277,11 @@ export default function PreRevisionPage() {
                           </p>
                         )}
 
-                        <div className="flex items-start gap-2 rounded-lg border border-primary/8 bg-primary/4 px-3 py-2">
-                          <span className="mt-px shrink-0 text-[10px] font-bold uppercase tracking-wide text-primary/60">
+                        <div className="flex items-start gap-2 rounded-[3px] border border-line-fine bg-card px-3 py-2">
+                          <span className="font-technical mt-px shrink-0 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                             Subsanar
                           </span>
-                          <p className="text-xs leading-relaxed text-primary/80">{o.comoSubsanar}</p>
+                          <p className="text-xs leading-relaxed text-foreground/80">{o.comoSubsanar}</p>
                         </div>
                       </div>
                     )
@@ -299,9 +291,9 @@ export default function PreRevisionPage() {
 
               {/* Veredicto */}
               {result.veredicto && (
-                <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-5 py-4">
-                  <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
-                  <p className="text-sm leading-relaxed text-primary/90">{result.veredicto}</p>
+                <div className="flex items-start gap-3 rounded-[4px] border border-line-fine bg-card px-5 py-4">
+                  <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+                  <p className="text-sm leading-relaxed text-foreground/80">{result.veredicto}</p>
                 </div>
               )}
 

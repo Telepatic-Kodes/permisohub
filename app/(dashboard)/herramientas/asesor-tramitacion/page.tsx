@@ -9,13 +9,14 @@ import {
   DollarSign,
   Loader2,
   Route,
-  ShieldAlert,
 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { Num } from "@/components/arch/dato"
+import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 
 type Viabilidad = "sí" | "con condiciones" | "no"
 type CostoRelativo = "bajo" | "medio" | "alto"
@@ -43,16 +44,16 @@ interface AsesorResult {
   error?: string
 }
 
-const VIABILIDAD_CFG: Record<Viabilidad, { label: string; badge: string; dot: string }> = {
-  "sí": { label: "Viable", badge: "bg-green-50 text-green-700 border-green-200", dot: "#16a34a" },
-  "con condiciones": { label: "Con condiciones", badge: "bg-amber-50 text-amber-700 border-amber-200", dot: "#f59e0b" },
-  "no": { label: "No viable", badge: "bg-red-50 text-red-700 border-red-200", dot: "#ef4444" },
+const VIABILIDAD_CFG: Record<Viabilidad, { label: string; veredicto: Veredicto }> = {
+  "sí": { label: "Viable", veredicto: "cumple" },
+  "con condiciones": { label: "Con condiciones", veredicto: "observa" },
+  "no": { label: "No viable", veredicto: "rechaza" },
 }
 
-const COSTO_CFG: Record<CostoRelativo, { label: string; color: string }> = {
-  bajo: { label: "Costo bajo", color: "text-green-700" },
-  medio: { label: "Costo medio", color: "text-amber-700" },
-  alto: { label: "Costo alto", color: "text-red-700" },
+const COSTO_CFG: Record<CostoRelativo, { label: string }> = {
+  bajo: { label: "Costo bajo" },
+  medio: { label: "Costo medio" },
+  alto: { label: "Costo alto" },
 }
 
 export default function AsesorTramitacionPage() {
@@ -107,9 +108,22 @@ export default function AsesorTramitacionPage() {
 
       <div className="flex-1 p-6 lg:p-8">
         <div className="mx-auto max-w-4xl space-y-6">
-          <Card>
+          <div className="flex items-end justify-between gap-4 border-b border-line-med pb-4">
+            <div>
+              <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                Estrategia de tramitación · costo / tiempo
+              </p>
+              <h2 className="font-technical mt-1.5 text-lg font-semibold leading-none text-primary">
+                Asesor de tramitación
+              </h2>
+            </div>
+          </div>
+
+          <Card className="rounded-[4px] border-line-fine">
             <CardHeader>
-              <CardTitle>Describe el caso y tu objetivo</CardTitle>
+              <CardTitle className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                Describe el caso y tu objetivo
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
@@ -124,7 +138,7 @@ export default function AsesorTramitacionPage() {
                   value={situacion}
                   onChange={(e) => setSituacion(e.target.value)}
                   placeholder="Ej: Casa antigua en Kennedy que pasó a oficina y hoy es un petshop con peluquería y sala de eventos. Patente provisoria. Se modificó levemente la fachada (alero eliminado). El expediente lleva 3 años sin aprobarse."
-                  className="min-h-28 w-full resize-y rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary/40"
+                  className="min-h-28 w-full resize-y rounded-[4px] border border-line-fine bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--blueprint)]"
                 />
               </div>
 
@@ -135,7 +149,7 @@ export default function AsesorTramitacionPage() {
                     value={objetivo}
                     onChange={(e) => setObjetivo(e.target.value)}
                     placeholder="Ej: Sacar la patente como 512, evitar permiso de alteración"
-                    className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary/40"
+                    className="w-full rounded-[4px] border border-line-fine bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--blueprint)]"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -144,7 +158,7 @@ export default function AsesorTramitacionPage() {
                     value={municipio}
                     onChange={(e) => setMunicipio(e.target.value)}
                     placeholder="Ej: Vitacura"
-                    className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary/40"
+                    className="w-full rounded-[4px] border border-line-fine bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--blueprint)]"
                   />
                 </div>
               </div>
@@ -155,7 +169,7 @@ export default function AsesorTramitacionPage() {
                   value={restricciones}
                   onChange={(e) => setRestricciones(e.target.value)}
                   placeholder="Ej: El dueño no quiere invertir más ni contratar cálculo/constructor. El arrendatario se va si esto no sale pronto."
-                  className="min-h-20 w-full resize-y rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary/40"
+                  className="min-h-20 w-full resize-y rounded-[4px] border border-line-fine bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--blueprint)]"
                 />
               </div>
 
@@ -188,18 +202,15 @@ export default function AsesorTramitacionPage() {
             <div className="space-y-4">
               {/* Vía recomendada + estrategia */}
               {result.viaRecomendada && (
-                <div
-                  className="rounded-xl border border-primary/20 bg-primary/5 p-5"
-                  style={{ boxShadow: "var(--shadow-card)" }}
-                >
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-primary/50">
+                <div className="rounded-[4px] border border-line-strong bg-card p-5">
+                  <p className="font-technical mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
                     Vía recomendada
                   </p>
                   <div className="flex items-center gap-2.5">
-                    <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
+                    <div className="flex size-9 items-center justify-center rounded-[4px] border border-line-med">
                       <Route className="size-5 text-primary" />
                     </div>
-                    <p className="heading-section text-xl font-bold text-primary">{result.viaRecomendada}</p>
+                    <p className="font-technical text-xl font-semibold text-primary">{result.viaRecomendada}</p>
                   </div>
                   {result.estrategia && (
                     <p className="mt-3 text-sm leading-relaxed text-foreground/80">{result.estrategia}</p>
@@ -218,22 +229,19 @@ export default function AsesorTramitacionPage() {
                       <div
                         key={v.nombre}
                         className={cn(
-                          "rounded-xl border bg-white p-4",
-                          rec ? "border-primary/40 ring-1 ring-primary/20" : "border-border",
+                          "rounded-[4px] border bg-card p-4",
+                          rec ? "border-line-strong" : "border-line-fine",
                         )}
-                        style={{ boxShadow: "var(--shadow-card)" }}
                       >
                         <div className="mb-2 flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold text-primary">{v.nombre}</p>
-                          <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold", via.badge)}>
-                            {via.label}
-                          </span>
+                          <EstadoNormativo estado={via.veredicto} label={via.label} dot={false} className="shrink-0" />
                         </div>
                         <div className="mb-2 flex flex-wrap gap-3 text-[11px]">
                           <span className="inline-flex items-center gap-1 text-muted-foreground">
-                            <Clock className="size-3" /> {v.tiempoEstimado}
+                            <Clock className="size-3" /> <Num>{v.tiempoEstimado}</Num>
                           </span>
-                          <span className={cn("inline-flex items-center gap-1 font-medium", costo.color)}>
+                          <span className="inline-flex items-center gap-1 font-medium text-muted-foreground">
                             <DollarSign className="size-3" /> {costo.label}
                           </span>
                         </div>
@@ -244,19 +252,19 @@ export default function AsesorTramitacionPage() {
                           </p>
                         )}
                         <div className="grid grid-cols-2 gap-2 text-[11px]">
-                          <ul className="space-y-0.5 text-green-700">
+                          <ul className="space-y-0.5 text-foreground/70">
                             {v.pros.map((p, i) => (
                               <li key={i}>+ {p}</li>
                             ))}
                           </ul>
-                          <ul className="space-y-0.5 text-red-700/80">
+                          <ul className="space-y-0.5 text-muted-foreground">
                             {v.contras.map((c, i) => (
                               <li key={i}>− {c}</li>
                             ))}
                           </ul>
                         </div>
                         {v.fundamento && (
-                          <p className="mt-2 border-t border-border pt-2 text-[10px] leading-relaxed text-muted-foreground/70">
+                          <p className="mt-2 border-t border-line-fine pt-2 text-[10px] leading-relaxed text-muted-foreground/70">
                             {v.fundamento}
                           </p>
                         )}
@@ -268,16 +276,18 @@ export default function AsesorTramitacionPage() {
 
               {/* Pasos */}
               {result.pasos.length > 0 && (
-                <div className="overflow-hidden rounded-xl border border-border bg-white" style={{ boxShadow: "var(--shadow-card)" }}>
-                  <div className="border-b border-border px-5 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                <div className="overflow-hidden rounded-[4px] border border-line-fine bg-card">
+                  <div className="flex items-center gap-3 border-b border-line-fine px-5 py-3">
+                    <h3 className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
                       Plan de acción
-                    </p>
+                    </h3>
+                    <div className="h-px flex-1 bg-line-fine" />
+                    <span className="num text-[10px] text-muted-foreground/60">{String(result.pasos.length).padStart(2, "0")}</span>
                   </div>
-                  <div className="divide-y divide-border">
+                  <div className="divide-y divide-line-fine">
                     {result.pasos.map((p) => (
                       <div key={p.orden} className="flex gap-3 px-5 py-3">
-                        <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                        <span className="num mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-[3px] border border-line-fine text-xs font-semibold text-primary">
                           {p.orden}
                         </span>
                         <div>
@@ -293,15 +303,15 @@ export default function AsesorTramitacionPage() {
               {/* DDU + riesgos */}
               <div className="grid gap-3 sm:grid-cols-2">
                 {result.ddu.length > 0 && (
-                  <div className="rounded-xl border border-border bg-white p-4" style={{ boxShadow: "var(--shadow-card)" }}>
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  <div className="rounded-[4px] border border-line-fine bg-card p-4">
+                    <p className="font-technical mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
                       Circulares DDU aplicables
                     </p>
                     <div className="space-y-2">
                       {result.ddu.map((d) => (
                         <div key={d.codigo} className="text-xs">
-                          <span className="rounded border border-border bg-muted/40 px-1.5 py-0.5 font-semibold text-primary">
-                            {d.codigo}
+                          <span className="rounded-[3px] border border-line-fine bg-card px-1.5 py-0.5 font-semibold text-primary">
+                            <Num>{d.codigo}</Num>
                           </span>
                           <span className="ml-2 text-muted-foreground">{d.porque}</span>
                         </div>
@@ -310,11 +320,11 @@ export default function AsesorTramitacionPage() {
                   </div>
                 )}
                 {result.riesgos.length > 0 && (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-                    <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-amber-700">
-                      <ShieldAlert className="size-3.5" /> Riesgos / a verificar
-                    </p>
-                    <ul className="space-y-1 text-xs text-amber-900/80">
+                  <div className="rounded-[4px] border border-line-fine bg-card p-4">
+                    <div className="mb-2">
+                      <EstadoNormativo estado="observa" label="Riesgos / a verificar" dot={false} />
+                    </div>
+                    <ul className="space-y-1 text-xs text-foreground/80">
                       {result.riesgos.map((r, i) => (
                         <li key={i}>• {r}</li>
                       ))}
@@ -324,8 +334,8 @@ export default function AsesorTramitacionPage() {
               </div>
 
               {result.advertencia && (
-                <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/20 px-4 py-3">
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                <div className="flex items-start gap-2 rounded-[4px] border border-line-fine bg-card px-4 py-3">
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                   <p className="text-xs leading-relaxed text-muted-foreground">{result.advertencia}</p>
                 </div>
               )}
