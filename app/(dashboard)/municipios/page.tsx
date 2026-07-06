@@ -39,32 +39,32 @@ type StatusFilter = "todas" | "dom_en_linea" | "presencial"
 
 function InteligenciaDOMSection({ data }: { data: InteligenciaMunicipio }) {
   const NIVEL_CONFIG = {
-    danger: { className: "bg-red-50 border-red-200 text-red-800", Icon: AlertTriangle, iconClass: "text-red-500" },
-    warning: { className: "bg-amber-50 border-amber-200 text-amber-800", Icon: AlertTriangle, iconClass: "text-amber-500" },
-    info: { className: "bg-blue-50 border-blue-200 text-blue-800", Icon: Info, iconClass: "text-blue-500" },
+    danger: { color: "var(--state-error)", Icon: AlertTriangle },
+    warning: { color: "var(--state-warn)", Icon: AlertTriangle },
+    info: { color: "var(--blueprint)", Icon: Info },
   } as const
 
   return (
-    <div className="mt-3 rounded-lg border border-primary/15 bg-white p-4 space-y-4">
-      <div className="flex items-center gap-2">
-        <BarChart3 className="size-4 text-primary" />
-        <p className="text-xs font-semibold text-primary">Inteligencia DOM</p>
-        <span className="ml-auto text-[10px] text-muted-foreground/50">Actualizado {data.ultimaActualizacion}</span>
+    <div className="mt-3 rounded-[4px] border border-line-med bg-card p-4 space-y-4">
+      <div className="flex items-center gap-2 border-b border-line-fine pb-2">
+        <BarChart3 className="size-3.5 text-muted-foreground" />
+        <p className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">Inteligencia DOM</p>
+        <span className="num ml-auto text-[10px] text-muted-foreground/60">Act. {data.ultimaActualizacion}</span>
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg bg-[#F9F7F3] p-2.5 text-center">
-          <p className="text-lg font-semibold text-primary">{data.tasaObservaciones}%</p>
-          <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">proyectos con observaciones</p>
+      <div className="grid grid-cols-3 divide-x divide-line-fine rounded-[3px] border border-line-fine">
+        <div className="px-2.5 py-2.5">
+          <p className="num text-lg font-semibold leading-none text-primary">{data.tasaObservaciones}%</p>
+          <p className="text-[10px] text-muted-foreground leading-tight mt-1">proyectos con observaciones</p>
         </div>
-        <div className="rounded-lg bg-[#F9F7F3] p-2.5 text-center">
-          <p className="text-lg font-semibold text-primary">{data.tiempoRespuestaPromedio}d</p>
-          <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">días hábiles primera respuesta</p>
+        <div className="px-2.5 py-2.5">
+          <p className="num text-lg font-semibold leading-none text-primary">{data.tiempoRespuestaPromedio}d</p>
+          <p className="text-[10px] text-muted-foreground leading-tight mt-1">días hábiles primera respuesta</p>
         </div>
-        <div className="rounded-lg bg-[#F9F7F3] p-2.5 text-center">
-          <p className="text-lg font-semibold text-primary">{data.promedioObservaciones}</p>
-          <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">obs promedio por expediente</p>
+        <div className="px-2.5 py-2.5">
+          <p className="num text-lg font-semibold leading-none text-primary">{data.promedioObservaciones}</p>
+          <p className="text-[10px] text-muted-foreground leading-tight mt-1">obs promedio por expediente</p>
         </div>
       </div>
 
@@ -72,18 +72,18 @@ function InteligenciaDOMSection({ data }: { data: InteligenciaMunicipio }) {
       <div>
         <div className="flex items-center gap-1.5 mb-2">
           <TrendingUp className="size-3.5 text-muted-foreground" />
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Observaciones más frecuentes</p>
+          <p className="font-technical text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">Observaciones más frecuentes</p>
         </div>
         <div className="space-y-2">
           {data.observacionesFrecuentes.slice(0, 5).map((obs) => (
             <div key={obs.tipo} className="space-y-1">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-medium text-primary truncate">{obs.tipo}</p>
-                <span className="shrink-0 text-[10px] font-semibold text-primary/60">{obs.porcentaje}%</span>
+                <span className="num shrink-0 text-[10px] font-semibold text-muted-foreground">{obs.porcentaje}%</span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-primary/40 transition-all"
+                  className="h-full rounded-full bg-[var(--blueprint)]/40 transition-all"
                   style={{ width: `${obs.porcentaje}%` }}
                 />
               </div>
@@ -99,9 +99,13 @@ function InteligenciaDOMSection({ data }: { data: InteligenciaMunicipio }) {
           {data.alertas.map((alerta, i) => {
             const cfg = NIVEL_CONFIG[alerta.nivel]
             return (
-              <div key={i} className={cn("flex items-start gap-2 rounded-lg border px-3 py-2", cfg.className)}>
-                <cfg.Icon className={cn("size-3.5 shrink-0 mt-0.5", cfg.iconClass)} />
-                <p className="text-[11px] leading-snug">{alerta.texto}</p>
+              <div
+                key={i}
+                className="flex items-start gap-2 rounded-[3px] border border-line-fine px-3 py-2"
+                style={{ background: `color-mix(in oklch, ${cfg.color} 8%, transparent)` }}
+              >
+                <cfg.Icon className="size-3.5 shrink-0 mt-0.5" style={{ color: cfg.color }} />
+                <p className="text-[11px] leading-snug text-foreground/80">{alerta.texto}</p>
               </div>
             )
           })}
@@ -112,13 +116,13 @@ function InteligenciaDOMSection({ data }: { data: InteligenciaMunicipio }) {
       {data.consejos.length > 0 && (
         <div>
           <div className="flex items-center gap-1.5 mb-1.5">
-            <Lightbulb className="size-3.5 text-amber-500" />
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Consejos para este municipio</p>
+            <Lightbulb className="size-3.5 text-muted-foreground" />
+            <p className="font-technical text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">Consejos para este municipio</p>
           </div>
           <ul className="space-y-1">
             {data.consejos.map((c, i) => (
               <li key={i} className="flex items-start gap-2 text-[11px] text-muted-foreground">
-                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-amber-400" />
+                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-[var(--blueprint)]/50" />
                 {c}
               </li>
             ))}
@@ -129,8 +133,8 @@ function InteligenciaDOMSection({ data }: { data: InteligenciaMunicipio }) {
       {/* Plan Regulador Comunal */}
       {data.planRegulador && <PlanReguladorSection prc={data.planRegulador} />}
 
-      <p className="text-[9px] text-muted-foreground/40 text-right">
-        Base: {data.totalExpedientesBase} expedientes históricos · Datos sintéticos beta
+      <p className="text-[9px] text-muted-foreground/50 text-right">
+        Base: <span className="num">{data.totalExpedientesBase}</span> expedientes históricos · Datos sintéticos beta
       </p>
     </div>
   )
@@ -139,36 +143,41 @@ function InteligenciaDOMSection({ data }: { data: InteligenciaMunicipio }) {
 function PlanReguladorSection({ prc }: { prc: PlanReguladorInfo }) {
   const [expandido, setExpandido] = useState(false)
   return (
-    <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-2">
+    <div className="rounded-[3px] border border-line-med bg-[var(--blueprint)]/[0.03] p-3 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
-          <BookOpen className="size-3.5 text-indigo-600 shrink-0" />
-          <p className="text-[11px] font-semibold text-indigo-900">Plan Regulador Comunal (PRC)</p>
+          <BookOpen className="size-3.5 text-muted-foreground shrink-0" />
+          <p className="font-technical text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            Plan Regulador Comunal (PRC)
+          </p>
         </div>
         <a
           href={prc.urlPRC}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-600 hover:text-indigo-800 shrink-0"
+          className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-[var(--blueprint)] shrink-0"
         >
           Ver PRC <ExternalLink className="size-3" />
         </a>
       </div>
 
       {prc.notaGeneral && (
-        <p className="text-[10.5px] text-indigo-800/80 leading-relaxed">{prc.notaGeneral}</p>
+        <p className="text-[10.5px] text-muted-foreground leading-relaxed">{prc.notaGeneral}</p>
       )}
 
-      {/* Zonas típicas */}
+      {/* Zonas típicas — estado: requieren CMN (warning) */}
       {prc.zonasTipicas && prc.zonasTipicas.length > 0 && (
-        <div className="rounded bg-amber-50 border border-amber-200 p-2">
-          <p className="text-[10px] font-semibold text-amber-800 mb-1">
+        <div
+          className="rounded-[3px] border border-line-fine p-2"
+          style={{ background: "color-mix(in oklch, var(--state-warn) 8%, transparent)" }}
+        >
+          <p className="text-[10px] font-semibold mb-1" style={{ color: "var(--state-warn)" }}>
             Zonas de Conservación Histórica (requieren CMN)
           </p>
           <ul className="space-y-0.5">
             {prc.zonasTipicas.map((z) => (
-              <li key={z} className="flex items-start gap-1.5 text-[10px] text-amber-700">
-                <span className="mt-1.5 size-1 shrink-0 rounded-full bg-amber-400" />
+              <li key={z} className="flex items-start gap-1.5 text-[10px] text-foreground/75">
+                <span className="mt-1.5 size-1 shrink-0 rounded-full" style={{ background: "var(--state-warn)" }} />
                 {z}
               </li>
             ))}
@@ -181,25 +190,25 @@ function PlanReguladorSection({ prc }: { prc: PlanReguladorInfo }) {
         <div>
           <button
             onClick={() => setExpandido(!expandido)}
-            className="text-[10px] font-semibold text-indigo-700 hover:text-indigo-900 flex items-center gap-1"
+            className="text-[10px] font-semibold text-muted-foreground hover:text-[var(--blueprint)] flex items-center gap-1"
           >
             <ChevronDown className={cn("size-3 transition-transform", expandido && "rotate-180")} />
-            {expandido ? "Ocultar" : "Ver"} seccionales por barrio ({prc.seccionales.length})
+            {expandido ? "Ocultar" : "Ver"} seccionales por barrio (<span className="num">{prc.seccionales.length}</span>)
           </button>
           {expandido && (
             <div className="mt-2 space-y-2">
               {prc.seccionales.map((sec) => (
-                <div key={sec.codigo} className="rounded bg-white border border-indigo-100 p-2.5 space-y-1">
+                <div key={sec.codigo} className="rounded-[3px] bg-card border border-line-fine p-2.5 space-y-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold text-primary">
-                      {sec.codigo} — {sec.nombre}
+                    <p className="font-technical text-[11px] font-semibold text-primary">
+                      <span className="num">{sec.codigo}</span> — {sec.nombre}
                     </p>
                     {sec.urlPlano && (
                       <a
                         href={sec.urlPlano}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="shrink-0 text-[9.5px] font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5"
+                        className="shrink-0 text-[9.5px] font-medium text-muted-foreground hover:text-[var(--blueprint)] flex items-center gap-0.5"
                       >
                         Plano <ExternalLink className="size-2.5" />
                       </a>
@@ -208,8 +217,8 @@ function PlanReguladorSection({ prc }: { prc: PlanReguladorInfo }) {
                   <p className="text-[10.5px] text-muted-foreground leading-snug">{sec.descripcion}</p>
                   {sec.notaPatrimonio && (
                     <div className="flex items-start gap-1.5 mt-1">
-                      <AlertTriangle className="size-3 text-amber-500 shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-amber-700 leading-snug">{sec.notaPatrimonio}</p>
+                      <AlertTriangle className="size-3 shrink-0 mt-0.5" style={{ color: "var(--state-warn)" }} />
+                      <p className="text-[10px] leading-snug" style={{ color: "var(--state-warn)" }}>{sec.notaPatrimonio}</p>
                     </div>
                   )}
                 </div>
@@ -222,10 +231,16 @@ function PlanReguladorSection({ prc }: { prc: PlanReguladorInfo }) {
   )
 }
 
-const STATUS_BADGE: Record<DomStatus, { label: string; className: string }> = {
-  dom_en_linea: { label: "DOM en Línea", className: "bg-green-100 text-green-700" },
-  probable: { label: "Probable", className: "bg-blue-100 text-blue-700" },
-  presencial: { label: "Presencial", className: "bg-gray-100 text-gray-700" },
+const STATE_DOT: Record<"ok" | "warn" | "neutro", string> = {
+  ok: "var(--state-ok)",
+  warn: "var(--state-warn)",
+  neutro: "var(--muted-foreground)",
+}
+
+const STATUS_BADGE: Record<DomStatus, { label: string; state: "ok" | "warn" | "neutro" }> = {
+  dom_en_linea: { label: "DOM en Línea", state: "ok" },
+  probable: { label: "Probable", state: "warn" },
+  presencial: { label: "Presencial", state: "neutro" },
 }
 
 function findMockInfo(comuna: ComunaChile): MunicipioInfo | undefined {
@@ -313,44 +328,53 @@ export default function MunicipiosPage() {
 
       <div className="flex-1 overflow-auto p-8">
         <div className="space-y-6">
-          {/* Stats bar */}
-          <div className="rounded-xl bg-[#F9F7F3] p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex flex-col rounded-lg bg-white px-4 py-2 shadow-sm">
-                <span className="text-xl font-semibold text-primary">
-                  210 comunas
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  en DOM en Línea
-                </span>
+          {/* Cabecera de cobertura — cuadro técnico */}
+          <div className="rounded-[4px] border border-line-med bg-card">
+            <div className="flex items-center gap-3 border-b border-line-fine px-4 py-2.5">
+              <h2 className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                Cobertura DOM en Línea
+              </h2>
+              <div className="h-px flex-1 bg-line-fine" />
+              <span className="num text-[10px] tracking-wide text-muted-foreground/60">
+                MINVU · Sep 2023
+              </span>
+            </div>
+            <div className="grid grid-cols-1 divide-y divide-line-fine sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              <div className="px-4 py-3">
+                <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  En DOM en Línea
+                </p>
+                <p className="num flex items-baseline gap-1 text-xl font-semibold leading-none text-primary">
+                  210 <span className="text-xs font-medium text-muted-foreground">comunas</span>
+                </p>
               </div>
-              <div className="flex flex-col rounded-lg bg-white px-4 py-2 shadow-sm">
-                <span className="text-xl font-semibold text-primary">
-                  {stats.pctCoverage}% del país
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  cobertura nacional
-                </span>
+              <div className="px-4 py-3">
+                <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Cobertura nacional
+                </p>
+                <p className="num flex items-baseline gap-1 text-xl font-semibold leading-none text-primary">
+                  {stats.pctCoverage}<span className="text-xs font-medium text-muted-foreground">% del país</span>
+                </p>
               </div>
-              <div className="flex flex-col rounded-lg bg-white px-4 py-2 shadow-sm">
-                <span className="text-xl font-semibold text-gray-500">
-                  345 comunas
-                </span>
-                <span className="text-xs text-muted-foreground">Chile total</span>
+              <div className="px-4 py-3">
+                <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Chile total
+                </p>
+                <p className="num flex items-baseline gap-1 text-xl font-semibold leading-none text-muted-foreground">
+                  345 <span className="text-xs font-medium text-muted-foreground">comunas</span>
+                </p>
               </div>
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Datos MINVU · Sep 2023
-            </p>
           </div>
 
           {/* Result count */}
-          <p className="text-sm text-muted-foreground">
-            Mostrando {filtered.length} de {COMUNAS_CHILE.length} comunas
+          <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+            Mostrando <span className="num tracking-normal text-primary">{filtered.length}</span> de{" "}
+            <span className="num tracking-normal text-primary">{COMUNAS_CHILE.length}</span> comunas
           </p>
 
           {/* List */}
-          <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+          <div className="divide-y divide-line-fine overflow-hidden rounded-[4px] border border-line-med bg-card">
         {filtered.map((comuna) => {
           const isOpen = expanded === comuna.id
           const badge = STATUS_BADGE[comuna.domStatus]
@@ -360,10 +384,13 @@ export default function MunicipiosPage() {
               <button
                 type="button"
                 onClick={() => setExpanded(isOpen ? null : comuna.id)}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[#F9F7F3]"
+                className={cn(
+                  "group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--blueprint)]/[0.05]",
+                  isOpen && "bg-[var(--blueprint)]/[0.05]"
+                )}
               >
                 <div className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold text-primary">
+                  <span className="font-technical block truncate font-semibold text-primary">
                     {comuna.nombre}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
@@ -371,12 +398,8 @@ export default function MunicipiosPage() {
                   </span>
                 </div>
 
-                <span
-                  className={cn(
-                    "inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                    badge.className
-                  )}
-                >
+                <span className="num inline-flex shrink-0 items-center gap-1.5 rounded-[3px] border border-line-med px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span className="size-1.5 rounded-full" style={{ background: STATE_DOT[badge.state] }} />
                   {badge.label}
                 </span>
 
@@ -386,7 +409,7 @@ export default function MunicipiosPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="shrink-0 text-muted-foreground transition-colors hover:text-primary"
+                    className="shrink-0 text-muted-foreground transition-colors hover:text-[var(--blueprint)]"
                     aria-label={`Abrir plataforma DOM de ${comuna.nombre}`}
                   >
                     <Globe className="size-4" />
@@ -395,14 +418,14 @@ export default function MunicipiosPage() {
 
                 <ChevronDown
                   className={cn(
-                    "size-4 shrink-0 text-muted-foreground transition-transform",
+                    "size-4 shrink-0 text-muted-foreground transition-transform group-hover:text-[var(--blueprint)]",
                     isOpen && "rotate-180"
                   )}
                 />
               </button>
 
               {isOpen && (
-                <div className="bg-[#F9F7F3] px-4 pt-1 pb-4">
+                <div className="border-t border-line-fine bg-[var(--blueprint)]/[0.03] px-4 pt-3 pb-4">
                   {(() => {
                     const inteligencia = getInteligenciaMunicipio(comuna.nombre)
                     return inteligencia ? <InteligenciaDOMSection data={inteligencia} /> : null
@@ -431,14 +454,14 @@ export default function MunicipiosPage() {
                         {info.plazo_tipico_dias && (
                           <span className="flex items-center gap-2">
                             <Clock className="size-4" />
-                            Plazo típico: {info.plazo_tipico_dias} días
+                            Plazo típico: <span className="num text-foreground/80">{info.plazo_tipico_dias}</span> días
                           </span>
                         )}
                       </div>
 
                       {info.requisitos.length > 0 && (
                         <div>
-                          <p className="mb-1.5 text-xs font-semibold text-primary">
+                          <p className="font-technical mb-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">
                             Requisitos
                           </p>
                           <ul className="space-y-1.5">
@@ -447,7 +470,7 @@ export default function MunicipiosPage() {
                                 key={r.nombre}
                                 className="flex items-start gap-2 text-sm text-muted-foreground"
                               >
-                                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+                                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[var(--blueprint)]/50" />
                                 <span>
                                   {r.nombre}
                                   {!r.obligatorio && (
@@ -471,7 +494,7 @@ export default function MunicipiosPage() {
                   <div className="mt-4 flex items-center gap-3 flex-wrap">
                     <Link
                       href={`/municipios/${comuna.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-[4px] bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors"
                     >
                       Ver ficha completa + PRC
                       <ChevronRight className="size-3" />
@@ -481,7 +504,7 @@ export default function MunicipiosPage() {
                         href={comuna.urlDom ?? DOM_EN_LINEA_URL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-[var(--blueprint)] transition-colors"
                       >
                         Ir a domenlinea.minvu.cl
                         <ExternalLink className="size-3.5" />

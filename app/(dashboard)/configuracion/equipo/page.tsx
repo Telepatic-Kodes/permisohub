@@ -30,7 +30,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ROL_LABELS, ROL_DESCRIPCION, type RolWorkspace, type WorkspaceMember, type WorkspaceInvite } from "@/types"
-import { cn } from "@/lib/utils"
 
 // ──────────────────────────────────────────────────
 // Role UI helpers
@@ -41,16 +40,10 @@ const ROL_ICON: Record<RolWorkspace, typeof Crown> = {
   viewer:     Eye,
 }
 
-const ROL_COLOR: Record<RolWorkspace, string> = {
-  admin:      "bg-amber-100 text-amber-700",
-  arquitecto: "bg-blue-100 text-blue-700",
-  viewer:     "bg-gray-100 text-gray-600",
-}
-
 function RolBadge({ role }: { role: RolWorkspace }) {
   const Icon = ROL_ICON[role]
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium", ROL_COLOR[role])}>
+    <span className="inline-flex items-center gap-1 rounded-[3px] border border-line-med px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
       <Icon className="size-2.5" />
       {ROL_LABELS[role]}
     </span>
@@ -149,10 +142,10 @@ export default function EquipoPage() {
 
         {/* Invite modal */}
         {showInvite && (
-          <div className="rounded-xl border border-primary/20 bg-primary/4 p-5 space-y-4">
+          <div className="rounded-[4px] border border-line-med bg-[var(--blueprint)]/[0.03] p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-primary">Invitar nuevo miembro</p>
-              <button onClick={() => setShowInvite(false)} className="text-muted-foreground hover:text-primary">
+              <p className="font-technical text-[13px] font-semibold text-primary">Invitar nuevo miembro</p>
+              <button onClick={() => setShowInvite(false)} className="text-muted-foreground hover:text-[var(--blueprint)]">
                 <X className="size-4" />
               </button>
             </div>
@@ -191,10 +184,10 @@ export default function EquipoPage() {
                 </Button>
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 border-t border-line-fine pt-3">
               {(["admin", "arquitecto", "viewer"] as RolWorkspace[]).map((r) => (
                 <div key={r} className="flex items-start gap-2">
-                  {(() => { const Icon = ROL_ICON[r]; return <Icon className={cn("size-3.5 mt-0.5 shrink-0", r === "admin" ? "text-amber-500" : r === "arquitecto" ? "text-blue-500" : "text-gray-400")} /> })()}
+                  {(() => { const Icon = ROL_ICON[r]; return <Icon className="size-3.5 mt-0.5 shrink-0 text-muted-foreground/70" /> })()}
                   <p className="text-[10.5px] text-muted-foreground">
                     <span className="font-medium text-primary">{ROL_LABELS[r]}:</span> {ROL_DESCRIPCION[r]}
                   </p>
@@ -208,11 +201,11 @@ export default function EquipoPage() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Users className="size-3.5 text-muted-foreground" />
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-              Miembros activos ({members.length})
+            <p className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground/70">
+              Miembros activos (<span className="num">{members.length}</span>)
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-white divide-y divide-border/60 overflow-hidden">
+          <div className="rounded-[4px] border border-line-med bg-card divide-y divide-line-fine overflow-hidden">
             {!loading && members.length === 0 && (
               <div className="px-4 py-10 text-center text-sm text-muted-foreground">
                 Aún no hay miembros en el equipo. Invita a tu primer miembro.
@@ -222,7 +215,7 @@ export default function EquipoPage() {
               <div key={m.id} className="flex items-center gap-3 px-4 py-3">
                 <Initials nombre={m.nombre} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium text-primary truncate">{m.nombre ?? m.email}</p>
+                  <p className="font-technical text-[13px] font-medium text-primary truncate">{m.nombre ?? m.email}</p>
                   <p className="text-[10.5px] text-muted-foreground truncate">{m.email}</p>
                 </div>
                 <RolBadge role={m.role} />
@@ -230,7 +223,7 @@ export default function EquipoPage() {
                   <button
                     disabled
                     title="Genera un enlace desde el proyecto"
-                    className="flex cursor-not-allowed items-center gap-1 rounded-lg border border-border bg-white px-2 py-1 text-[10.5px] text-muted-foreground/50"
+                    className="flex cursor-not-allowed items-center gap-1 rounded-[4px] border border-line-fine px-2 py-1 text-[10.5px] text-muted-foreground/50"
                   >
                     <Copy className="size-3" /> Link portal
                   </button>
@@ -239,23 +232,23 @@ export default function EquipoPage() {
                   <div className="relative">
                     <button
                       onClick={() => setMenuOpen(menuOpen === m.id ? null : m.id)}
-                      className="flex size-7 items-center justify-center rounded-md text-muted-foreground/40 hover:bg-muted hover:text-primary transition-colors"
+                      className="flex size-7 items-center justify-center rounded-[4px] text-muted-foreground/40 hover:bg-[var(--blueprint)]/[0.06] hover:text-[var(--blueprint)] transition-colors"
                     >
                       <MoreHorizontal className="size-4" />
                     </button>
                     {menuOpen === m.id && (
-                      <div className="absolute right-0 top-8 z-10 w-44 rounded-xl border border-border bg-white shadow-lg py-1">
+                      <div className="absolute right-0 top-8 z-10 w-44 rounded-[6px] border border-line-med bg-card shadow-lg py-1">
                         {(["arquitecto", "viewer"] as RolWorkspace[]).filter((r) => r !== m.role).map((r) => (
                           <button
                             key={r}
                             onClick={() => changeRole(m.id, r)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-[#F9F7F3] text-left"
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-[var(--blueprint)]/[0.06] text-left"
                           >
                             {(() => { const Icon = ROL_ICON[r]; return <Icon className="size-3.5 text-muted-foreground" /> })()}
                             Cambiar a {ROL_LABELS[r]}
                           </button>
                         ))}
-                        <div className="my-1 h-px bg-border" />
+                        <div className="my-1 h-px bg-line-fine" />
                         <button
                           onClick={() => removeMember(m.id)}
                           className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 text-left"
@@ -277,26 +270,26 @@ export default function EquipoPage() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Clock className="size-3.5 text-muted-foreground" />
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                Invitaciones pendientes ({invites.length})
+              <p className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground/70">
+                Invitaciones pendientes (<span className="num">{invites.length}</span>)
               </p>
             </div>
-            <div className="rounded-xl border border-border bg-white divide-y divide-border/60 overflow-hidden">
+            <div className="rounded-[4px] border border-line-med bg-card divide-y divide-line-fine overflow-hidden">
               {invites.map((inv) => (
                 <div key={inv.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/30">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-dashed border-line-strong">
                     <Mail className="size-4 text-muted-foreground/40" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[12.5px] font-medium text-primary truncate">{inv.email}</p>
                     <p className="text-[10px] text-muted-foreground">
-                      Vence {new Date(inv.expires_at).toLocaleDateString("es-CL")}
+                      Vence <span className="num">{new Date(inv.expires_at).toLocaleDateString("es-CL")}</span>
                     </p>
                   </div>
                   <RolBadge role={inv.role} />
                   <button
                     onClick={() => removeInvite(inv.id)}
-                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground/30 hover:bg-rose-50 hover:text-rose-500 transition-colors"
+                    className="flex size-7 items-center justify-center rounded-[4px] text-muted-foreground/30 transition-colors hover:text-[var(--state-error)]"
                   >
                     <X className="size-4" />
                   </button>
@@ -307,20 +300,20 @@ export default function EquipoPage() {
         )}
 
         {/* Info portal */}
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <div className="rounded-[4px] border border-line-med bg-[var(--blueprint)]/[0.03] p-4">
           <div className="flex items-start gap-3">
-            <Link2 className="size-4 text-indigo-600 shrink-0 mt-0.5" />
+            <Link2 className="size-4 text-[var(--blueprint)] shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-indigo-900">Portal de cliente — acceso por link</p>
-              <p className="mt-1 text-xs text-indigo-700 leading-relaxed">
-                Cada miembro con rol <strong>Sólo lectura</strong> tiene un link único al portal.
+              <p className="font-technical text-[13px] font-semibold text-primary">Portal de cliente — acceso por link</p>
+              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                Cada miembro con rol <strong className="font-semibold text-foreground/80">Sólo lectura</strong> tiene un link único al portal.
                 Compártelo con el mandante, administradora o locatario — no necesitan crear cuenta.
                 Solo ven sus proyectos, no el panel completo.
               </p>
               <div className="mt-3 flex items-center gap-2 flex-wrap">
                 <Link
                   href="/portal"
-                  className="inline-flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-700"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-[var(--blueprint)] transition-colors"
                 >
                   <Shield className="size-3.5" />
                   Portal general →

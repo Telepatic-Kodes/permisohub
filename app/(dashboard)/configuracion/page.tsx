@@ -7,13 +7,6 @@ import { toast } from "sonner"
 
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -89,13 +82,24 @@ function SectionCard({
   children: ReactNode
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-primary">{title}</CardTitle>
-        {description ? <CardDescription>{description}</CardDescription> : null}
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
+    <section className="rounded-[4px] border border-line-med bg-card">
+      <div className="flex items-center gap-3 border-b border-line-fine px-5 py-3">
+        <span
+          className="inline-block size-2 border border-[var(--blueprint)]"
+          style={{ borderRightWidth: 0, borderBottomWidth: 0 }}
+          aria-hidden
+        />
+        <div className="min-w-0">
+          <h2 className="font-technical text-[13px] font-semibold leading-tight text-primary">
+            {title}
+          </h2>
+          {description ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
+      </div>
+      <div className="p-5">{children}</div>
+    </section>
   )
 }
 
@@ -388,60 +392,57 @@ export default function ConfiguracionPage() {
       </SectionCard>
 
       {/* Automatización */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-primary">
-            Automatización
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Tareas automáticas programadas vía Vercel Cron
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <SectionCard
+        title="Automatización"
+        description="Tareas automáticas programadas vía Vercel Cron"
+      >
+        <div className="space-y-4">
           {/* Cron jobs status */}
-          <div className="rounded-lg border border-border bg-[#F9F7F3] p-4 space-y-3">
-            <div className="flex items-center justify-between">
+          <div className="divide-y divide-line-fine rounded-[3px] border border-line-fine">
+            <div className="flex items-center justify-between px-4 py-3">
               <div>
-                <p className="text-sm font-medium">
+                <p className="text-sm font-medium text-primary">
                   Revisión diaria de vencimientos
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Lunes a Viernes · 8:00 AM Santiago
+                  Lunes a Viernes · <span className="num">8:00 AM</span> Santiago
                 </p>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
-                <span className="size-1.5 rounded-full bg-green-500" />
+              <span className="num inline-flex items-center gap-1.5 rounded-[3px] border border-line-med px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                <span className="size-1.5 rounded-full" style={{ background: "var(--state-ok)" }} />
                 Activo
               </span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-4 py-3">
               <div>
-                <p className="text-sm font-medium">Resumen semanal</p>
+                <p className="text-sm font-medium text-primary">Resumen semanal</p>
                 <p className="text-xs text-muted-foreground">
-                  Lunes · 9:00 AM Santiago
+                  Lunes · <span className="num">9:00 AM</span> Santiago
                 </p>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
-                <span className="size-1.5 rounded-full bg-green-500" />
+              <span className="num inline-flex items-center gap-1.5 rounded-[3px] border border-line-med px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                <span className="size-1.5 rounded-full" style={{ background: "var(--state-ok)" }} />
                 Activo
               </span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-4 py-3">
               <div>
-                <p className="text-sm font-medium">Scraper DOM en Línea</p>
+                <p className="text-sm font-medium text-primary">Scraper DOM en Línea</p>
                 <p className="text-xs text-muted-foreground">
-                  Con cada revisión diaria · 110 municipios
+                  Con cada revisión diaria · <span className="num">110</span> municipios
                 </p>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                <span className="size-1.5 rounded-full bg-blue-500" />
+              <span className="num inline-flex items-center gap-1.5 rounded-[3px] border border-line-med px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                <span className="size-1.5 rounded-full" style={{ background: "var(--blueprint)" }} />
                 Beta
               </span>
             </div>
           </div>
           {/* Manual trigger */}
           <div>
-            <p className="text-sm font-medium mb-2">Disparar manualmente</p>
+            <p className="font-technical mb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">
+              Disparar manualmente
+            </p>
             <div className="flex gap-2">
               <button
                 onClick={async () => {
@@ -451,7 +452,7 @@ export default function ConfiguracionPage() {
                     `Revisión completada: ${data.deadlineAlerts ?? 0} alertas enviadas`
                   )
                 }}
-                className="rounded-lg border border-primary px-3 py-1.5 text-sm text-primary hover:bg-[#F0EBE1] transition-colors"
+                className="rounded-[4px] border border-line-med px-3 py-1.5 text-sm text-primary transition-colors hover:border-[var(--blueprint)] hover:bg-[var(--blueprint)]/[0.05]"
               >
                 Ejecutar revisión diaria ahora
               </button>
@@ -461,8 +462,8 @@ export default function ConfiguracionPage() {
             Los cron jobs requieren deploy en Vercel para funcionar
             automáticamente. Localmente, usa los botones manuales.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
       {/* 2. Notificaciones a clientes */}
       <SectionCard
@@ -546,19 +547,21 @@ export default function ConfiguracionPage() {
 
       {/* Facturación */}
       <SectionCard title="Facturación" description="Gestión de plan y métodos de pago.">
-        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-4">
+        <div className="flex items-center justify-between rounded-[3px] border border-line-fine p-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/8">
-              <CreditCard className="size-4 text-primary" />
+            <div className="flex size-9 items-center justify-center rounded-[3px] border border-line-med">
+              <CreditCard className="size-4 text-muted-foreground" />
             </div>
             <div>
               <p className="text-[13px] font-medium text-primary">Plan Starter</p>
-              <p className="text-[11px] text-muted-foreground">$29.990 CLP / mes · Próximo cobro 21 jul</p>
+              <p className="text-[11px] text-muted-foreground">
+                <span className="num">$29.990</span> CLP / mes · Próximo cobro <span className="num">21 jul</span>
+              </p>
             </div>
           </div>
           <Link
             href="/configuracion/billing"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-muted/40"
+            className="inline-flex items-center gap-1.5 rounded-[4px] border border-line-med bg-card px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:border-[var(--blueprint)] hover:bg-[var(--blueprint)]/[0.05]"
           >
             Gestionar
             <ArrowRight className="size-3.5" />
@@ -568,10 +571,10 @@ export default function ConfiguracionPage() {
 
       {/* Integraciones */}
       <SectionCard title="Integraciones" description="Canales de comunicación con clientes.">
-        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-4">
+        <div className="flex items-center justify-between rounded-[3px] border border-line-fine p-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-50">
-              <MessageCircle className="size-4 text-emerald-600" />
+            <div className="flex size-9 items-center justify-center rounded-[3px] border border-line-med">
+              <MessageCircle className="size-4 text-muted-foreground" />
             </div>
             <div>
               <p className="text-[13px] font-medium text-primary">WhatsApp Business</p>
@@ -580,7 +583,7 @@ export default function ConfiguracionPage() {
           </div>
           <Link
             href="/configuracion/whatsapp"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-muted/40"
+            className="inline-flex items-center gap-1.5 rounded-[4px] border border-line-med bg-card px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:border-[var(--blueprint)] hover:bg-[var(--blueprint)]/[0.05]"
           >
             Configurar
             <ArrowRight className="size-3.5" />
@@ -590,17 +593,17 @@ export default function ConfiguracionPage() {
 
       {/* 4. Cuenta y acceso */}
       <SectionCard title="Cuenta y acceso">
-        <div className="space-y-3 text-sm">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-muted-foreground">Arquitecta responsable</span>
+        <div className="grid gap-px overflow-hidden rounded-[3px] border border-line-fine bg-line-fine sm:grid-cols-3">
+          <div className="flex flex-col gap-1 bg-card px-4 py-3">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Arquitecta responsable</span>
             <span className="font-medium text-primary">Estefanía Parada</span>
           </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-muted-foreground">Plan activo</span>
-            <span className="font-medium text-primary">Starter · $29.990 CLP/mes</span>
+          <div className="flex flex-col gap-1 bg-card px-4 py-3">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Plan activo</span>
+            <span className="font-medium text-primary">Starter · <span className="num">$29.990</span> CLP/mes</span>
           </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-muted-foreground">Workspace</span>
+          <div className="flex flex-col gap-1 bg-card px-4 py-3">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Workspace</span>
             <span className="font-medium text-primary">EP Gestión Arquitectónica</span>
           </div>
         </div>
