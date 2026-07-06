@@ -10,6 +10,7 @@ import { esPlano } from "@/lib/planos"
 import { CONVENCION_LINEA, colorDeMarca, type Anotacion } from "@/lib/anotacion-convenciones"
 import type { DueDiligenceResult } from "@/lib/due-diligence"
 import { calcularCuadro, type CuadroInput, type CuadroResultado } from "@/lib/cuadros-calculo"
+import { TIPO_PERMISO_LABELS, type TipoPermiso } from "@/types"
 
 export const COVER_W = 794
 export const COVER_H = 1123
@@ -87,6 +88,42 @@ function sevRGB(s: string): [number, number, number] {
   if (s === "critico" || s === "crítica") return [239, 68, 68]
   if (s === "alto" || s === "media") return [245, 158, 11]
   return [59, 130, 246]
+}
+
+// Idioma del arquitecto en el informe: un único acento "blueprint" para las
+// citas verificadas y un ámbar de advertencia para lo sin fundamento.
+const BLUEPRINT: [number, number, number] = [31, 102, 168]
+const WARN_TEXT: [number, number, number] = [180, 83, 9]
+
+// Fecha de generación formateada (es-CL, hora de Chile). Cae al valor crudo si no parsea.
+function formatGeneradoEl(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  try {
+    return new Intl.DateTimeFormat("es-CL", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "America/Santiago",
+    }).format(d)
+  } catch {
+    return iso
+  }
+}
+
+// Etiqueta legible del tipo de trámite (evita mostrar el enum crudo).
+function tipoLabel(tipo?: string | null): string {
+  if (!tipo) return "—"
+  return TIPO_PERMISO_LABELS[tipo as TipoPermiso] ?? tipo
+}
+
+// Hairline bajo un título de sección — evoca la grilla de una lámina técnica.
+function sectionRule(pdf: JsPDF, x: number, y: number, w: number): void {
+  pdf.setDrawColor(221, 221, 218)
+  pdf.setLineWidth(0.5)
+  pdf.line(x, y, x + w, y)
 }
 
 // Quema las marcas sobre la lámina a resolución natural y devuelve JPEG + dims.
@@ -189,7 +226,8 @@ function drawLaminaLeyenda(pdf: JsPDF, l: Lamina, W: number, top: number, bandH:
     pdf.setFont("helvetica", "normal")
     pdf.setFontSize(fs)
     pdf.setTextColor(50, 50, 50)
-    const label = `${a.textoCorto}${a.articulo ? ` — ${a.articulo}` : ""}${a.confianza < 0.5 ? " (aprox.)" : ""}`
+    const cita = a.articulo?.trim() ? ` — ${a.articulo.trim()}` : " — sin fundamento verif."
+    const label = `${a.textoCorto}${cita}${a.confianza < 0.5 ? " (aprox.)" : ""}`
     pdf.text(pdf.splitTextToSize(label, colW - fs * 1.4)[0] ?? label, ix + fs * 1.2, iy)
   })
 }
@@ -301,7 +339,7 @@ function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult, info: CoverInfo):
     ["Municipio", result.proyecto.municipio ?? "—"],
     ["Dirección", result.proyecto.direccion ?? "—"],
     ["N° Expediente", info.numeroExpediente ?? "—"],
-    ["Tipo", info.tipo ?? "—"],
+    ["Tipo", tipoLabel(info.tipo)],
   ]
   const cardH = 14 + Math.ceil(infoRows.length / 2) * 26
   pdf.setFillColor(247, 247, 245)
@@ -341,8 +379,10 @@ function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult, info: CoverInfo):
   pdf.setFontSize(7)
   pdf.text("COMPLETITUD", x2 + 12, y + 16)
   pdf.setTextColor(26, 51, 40)
+  pdf.setFont("courier", "bold")
   pdf.setFontSize(15)
   pdf.text(`${result.completitud.presentes}/${result.completitud.esperados} docs`, x2 + 12, y + 34)
+  pdf.setFont("helvetica", "bold")
 
   const x3 = x2 + boxW + 12
   pdf.setFillColor(248, 248, 248)
@@ -351,12 +391,14 @@ function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult, info: CoverInfo):
   pdf.setFontSize(7)
   pdf.text("HALLAZGOS", x3 + 12, y + 16)
   pdf.setTextColor(26, 51, 40)
-  pdf.setFontSize(11)
+  pdf.setFont("courier", "bold")
+  pdf.setFontSize(10.5)
   pdf.text(
-    `${result.conteos.criticos} crít · ${result.conteos.altos} altos · ${result.conteos.medios} medios`,
+    `${result.conteos.criticos} crit  ${result.conteos.altos} alt  ${result.conteos.medios} med`,
     x3 + 12,
     y + 33,
   )
+  pdf.setFont("helvetica", "bold")
   y += boxH + 22
 
   if (result.estadoDOM?.rechazado || result.estadoDOM?.detalle) {
@@ -398,6 +440,7 @@ function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult, info: CoverInfo):
     pdf.setFont("helvetica", "bold")
     pdf.setFontSize(10)
     pdf.text("Resumen ejecutivo", M, y)
+    sectionRule(pdf, M, y + 5, CW)
     y += 15
     pdf.setFont("helvetica", "normal")
     pdf.setFontSize(9.5)
@@ -412,12 +455,16 @@ function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult, info: CoverInfo):
     pdf.setFont("helvetica", "bold")
     pdf.setFontSize(10)
     pdf.text(`Hallazgos (${result.hallazgos.length})`, M, y)
+    sectionRule(pdf, M, y + 5, CW)
     y += 16
     result.hallazgos.forEach((h) => {
-      pdf.setFont("helvetica", "normal")
+      const titulo = h.tituloEditado ?? h.titulo
+      const descripcion = h.descripcionEditada ?? h.descripcion
+      const cita = h.refNormativa?.find((r) => r.verificado)
       pdf.setFontSize(8.5)
-      const desc = pdf.splitTextToSize(h.descripcion, CW - 20)
-      const blockH = 18 + desc.length * 11
+      const desc = pdf.splitTextToSize(descripcion, CW - 20)
+      // Título + línea de fundamento (cita o "sin fundamento verificado") + descripción.
+      const blockH = 30 + desc.length * 11
       ensure(blockH)
       const [sr, sg, sb] = sevRGB(h.severidad)
       pdf.setFillColor(sr, sg, sb)
@@ -425,18 +472,37 @@ function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult, info: CoverInfo):
       pdf.setTextColor(sr, sg, sb)
       pdf.setFont("helvetica", "bold")
       pdf.setFontSize(8.5)
-      pdf.text(`${h.codigo} · ${h.titulo}`, M + 12, y)
+      pdf.text(`${h.codigo} · ${titulo}`, M + 12, y)
+
+      // Fundamento: cita verificada (blueprint, mono) o marcador honesto (ámbar).
+      const citaY = y + 10
+      let citaW: number
+      if (cita) {
+        pdf.setFont("courier", "bold")
+        pdf.setFontSize(7.5)
+        pdf.setTextColor(BLUEPRINT[0], BLUEPRINT[1], BLUEPRINT[2])
+        pdf.text(cita.etiqueta, M + 12, citaY)
+        citaW = pdf.getTextWidth(cita.etiqueta)
+      } else {
+        pdf.setFont("helvetica", "italic")
+        pdf.setFontSize(7.5)
+        pdf.setTextColor(WARN_TEXT[0], WARN_TEXT[1], WARN_TEXT[2])
+        const t = "sin fundamento verificado"
+        pdf.text(t, M + 12, citaY)
+        citaW = pdf.getTextWidth(t)
+      }
       if (h.refDOM) {
         pdf.setFont("helvetica", "normal")
-        pdf.setTextColor(150, 150, 150)
         pdf.setFontSize(7)
-        pdf.text(h.refDOM, M + 12, y + 9)
+        pdf.setTextColor(150, 150, 150)
+        pdf.text(`· ${h.refDOM}`, M + 12 + citaW + 8, citaY)
       }
+
       pdf.setFont("helvetica", "normal")
       pdf.setTextColor(70, 70, 70)
       pdf.setFontSize(8.5)
-      pdf.text(desc, M + 12, y + (h.refDOM ? 19 : 11))
-      y += blockH + (h.refDOM ? 10 : 4)
+      pdf.text(desc, M + 12, y + 21)
+      y += blockH + 6
     })
     y += 10
   }
@@ -447,6 +513,7 @@ function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult, info: CoverInfo):
     pdf.setFont("helvetica", "bold")
     pdf.setFontSize(10)
     pdf.text("Próximos pasos", M, y)
+    sectionRule(pdf, M, y + 5, CW)
     y += 16
     result.proximosPasos.forEach((p, i) => {
       pdf.setFontSize(8.5)
@@ -470,7 +537,8 @@ function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult, info: CoverInfo):
     pdf.setFont("helvetica", "bold")
     pdf.setFontSize(10)
     pdf.text(`Documentos del expediente (${info.documentos.length})`, M, y)
-    y += 14
+    sectionRule(pdf, M, y + 5, CW)
+    y += 16
     info.documentos.forEach((d, i) => {
       ensure(13)
       if (i % 2 === 0) {
@@ -493,7 +561,7 @@ function drawCoverPage(pdf: JsPDF, result: DueDiligenceResult, info: CoverInfo):
   pdf.setFont("helvetica", "italic")
   pdf.setFontSize(7.5)
   pdf.text(
-    `Generado el ${result.generadoEl} · Revisión preliminar, no constituye pronunciamiento de la DOM.`,
+    `Generado el ${formatGeneradoEl(result.generadoEl)} · Revisión preliminar, no constituye pronunciamiento de la DOM.`,
     M,
     COVER_H - 30,
   )
