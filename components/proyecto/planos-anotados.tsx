@@ -1,13 +1,32 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { AlertCircle, Check, CircleDashed, Download, Eye, EyeOff, Loader2, Maximize2, PencilRuler, RefreshCw } from "lucide-react"
+import { AlertCircle, Check, CircleDashed, Download, ExternalLink, Eye, EyeOff, Loader2, Maximize2, PencilRuler, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 import { createClient } from "@/lib/supabase/client"
 import { esPlano } from "@/lib/planos"
+import { getArticuloById, urlDeCitable, type FuenteNormativa } from "@/lib/normativa-retrieval"
 import { cn } from "@/lib/utils"
+
+// Resuelve el texto libre `articulo` de una marca a un link de fuente cuando el
+// artículo existe en la base curada. Devuelve null si no matchea o si viene
+// marcado "(por verificar)" (se muestra como texto/warn, sin link falso).
+function citaDesdeTexto(articulo: string): { url: string } | null {
+  if (!articulo || /por verificar/i.test(articulo)) return null
+  const ddu = articulo.match(/DDU[\s-]*(?:ESP[\s-]*)?N?[°º]?\s*([\d-]+)/i)
+  if (ddu) {
+    const a = getArticuloById("DDU", ddu[1])
+    if (a?.verificado) return { url: urlDeCitable(a) }
+  }
+  const art = articulo.match(/\b(\d+(?:\.\d+)*(?:\s*bis)?)\s*(OGUC|LGUC)\b/i)
+  if (art) {
+    const a = getArticuloById(art[2].toUpperCase() as FuenteNormativa, art[1])
+    if (a?.verificado) return { url: urlDeCitable(a) }
+  }
+  return null
+}
 import {
   CONVENCION_LINEA,
   colorDeMarca,
@@ -596,11 +615,36 @@ function MarkupsList({
                       >
                         {a.textoCorto}
                       </span>
-                      {a.articulo && (
-                        <span className="num rounded-[3px] border border-line-fine bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                          {a.articulo}
-                        </span>
-                      )}
+                      {a.articulo && (() => {
+                        const cita = citaDesdeTexto(a.articulo)
+                        const porVerificar = /por verificar/i.test(a.articulo)
+                        if (cita) {
+                          return (
+                            <a
+                              href={cita.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="num inline-flex items-center gap-1 rounded-[3px] border border-line-med px-1.5 py-0.5 text-[10px] text-primary transition-colors hover:border-[var(--blueprint)] hover:text-[var(--blueprint)]"
+                              title={`Ver ${a.articulo} en la fuente`}
+                            >
+                              {a.articulo}
+                              <ExternalLink className="size-2.5" />
+                            </a>
+                          )
+                        }
+                        return (
+                          <span
+                            className="num rounded-[3px] border px-1.5 py-0.5 text-[10px]"
+                            style={
+                              porVerificar
+                                ? { color: "var(--state-warn)", borderColor: "var(--state-warn)", background: "color-mix(in oklch, var(--state-warn) 12%, transparent)" }
+                                : { borderColor: "var(--line-fine)", color: "var(--muted-foreground)", background: "color-mix(in oklch, var(--muted-foreground) 8%, transparent)" }
+                            }
+                          >
+                            {a.articulo}
+                          </span>
+                        )
+                      })()}
                     </div>
                     {a.ancla && (
                       <p className="mt-1 text-[10px] text-muted-foreground">
@@ -613,6 +657,12 @@ function MarkupsList({
                       </p>
                     )}
                     <p className="mt-1 text-[11px] leading-relaxed text-foreground/75">{a.observacion}</p>
+                    {a.fundamento && (
+                      <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                        <span className="font-semibold">Fundamento: </span>
+                        {a.fundamento}
+                      </p>
+                    )}
                     {a.sugerencia && (
                       <p className="mt-1 rounded-[3px] bg-[color-mix(in_oklch,var(--blueprint)_8%,transparent)] px-1.5 py-1 text-[10px] leading-relaxed text-[var(--blueprint)]">
                         <span className="font-semibold">Corregir: </span>

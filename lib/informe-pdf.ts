@@ -61,12 +61,19 @@ export async function pdfUrlToImages(
   return out
 }
 
-// Observaciones para marcar = estado DOM + hallazgos del due diligence.
+// Observaciones para marcar = estado DOM + hallazgos VERIFICADOS del due
+// diligence (con su cita normativa como pista para la anotación). Si ningún
+// hallazgo fue confirmado aún, cae a todos (compatibilidad con DD sin verificar).
 export function observacionesDesdeReporte(result: DueDiligenceResult): string {
   const lines: string[] = []
   if (result.estadoDOM?.detalle) lines.push(result.estadoDOM.detalle)
-  for (const h of result.hallazgos) {
-    lines.push(`${h.titulo}: ${h.descripcion}${h.refDOM ? ` (${h.refDOM})` : ""}`)
+  const confirmados = result.hallazgos.filter((h) => (h.estadoRevision ?? "propuesto") === "confirmado")
+  const fuente = confirmados.length > 0 ? confirmados : result.hallazgos
+  for (const h of fuente) {
+    const titulo = h.tituloEditado ?? h.titulo
+    const descripcion = h.descripcionEditada ?? h.descripcion
+    const cita = h.refNormativa?.find((r) => r.verificado)?.etiqueta
+    lines.push(`${titulo}: ${descripcion}${cita ? ` [${cita}]` : ""}${h.refDOM ? ` (${h.refDOM})` : ""}`)
   }
   return lines.join("\n")
 }
