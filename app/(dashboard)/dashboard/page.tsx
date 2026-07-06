@@ -9,10 +9,19 @@ import {
   Target,
 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
+import { EstadoNormativo, colorDeVeredicto, type Veredicto } from "@/components/arch/estado"
 import { cn } from "@/lib/utils"
 import type { EstadoExpediente, Proyecto } from "@/types"
 import { createClient } from "@/lib/supabase/server"
 import { getEstadoPlazoLey21718 } from "@/lib/dias-habiles"
+
+// Mapea el estado del expediente al veredicto normativo (único color saturado).
+function veredictoDeEstado(estado: EstadoExpediente): Veredicto {
+  if (estado === "aprobado") return "cumple"
+  if (estado === "con_observaciones") return "observa"
+  if (estado === "rechazado") return "rechaza"
+  return "neutro"
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -177,38 +186,33 @@ const QUICK_ACTIONS = [
 // ---------------------------------------------------------------------------
 
 function ProyectoRow({ proyecto, dias }: { proyecto: Proyecto; dias: number | null }) {
-  const isConObs = proyecto.estado === "con_observaciones"
-  const isAprobado = proyecto.estado === "aprobado"
+  const veredicto = veredictoDeEstado(proyecto.estado)
   const isVencido = dias !== null && dias < 0
+
+  // Color de plazo = estado normativo del plazo (vencido/próximo), nunca decorativo.
+  const colorPlazo = isVencido
+    ? "var(--state-error)"
+    : dias !== null && dias <= 7
+      ? "var(--state-warn)"
+      : "var(--muted-foreground)"
 
   return (
     <Link
       href={`/proyectos/${proyecto.id}`}
-      className="group flex items-start gap-3 rounded-lg px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer"
+      className="group flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-muted/40 cursor-pointer"
     >
-      {/* Indicator */}
-      <span className="mt-[3px] flex size-5 shrink-0 items-center justify-center">
-        {isAprobado ? (
-          <span className="text-emerald-500 text-[15px] leading-none">✓</span>
-        ) : isConObs ? (
-          <span className="size-2.5 rounded-full bg-red-500 mt-[3px] block" />
-        ) : (
-          <span className="size-2 rounded-full bg-primary/25 mt-[3px] block" />
-        )}
-      </span>
+      {/* Semáforo normativo */}
+      <span
+        className="mt-[7px] size-2 shrink-0 rounded-full"
+        style={{ background: colorDeVeredicto(veredicto) }}
+      />
 
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-[13px] font-medium text-primary">{proyecto.nombre}</span>
+          <span className="text-[13px] font-medium text-foreground">{proyecto.nombre}</span>
           {dias !== null && (
-            <span className={cn(
-              "text-[11px] font-medium tabular-nums",
-              isVencido ? "text-red-600" :
-              dias <= 7  ? "text-amber-600" :
-              dias <= 30 ? "text-sky-600" :
-                           "text-muted-foreground/60"
-            )}>
+            <span className="num text-[11px] font-medium" style={{ color: colorPlazo }}>
               {isVencido
                 ? `${Math.abs(dias)}d vencidas`
                 : proyecto.fecha_estimada
@@ -218,36 +222,41 @@ function ProyectoRow({ proyecto, dias }: { proyecto: Proyecto; dias: number | nu
             </span>
           )}
         </div>
-        <p className="text-[11px] text-muted-foreground/70">
+        <p className="mt-0.5 text-[11px] text-muted-foreground/70">
           {proyecto.cliente?.nombre ?? "—"} · {proyecto.municipio}
         </p>
       </div>
 
-      {/* Arrow */}
-      <ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground/25 transition-colors group-hover:text-primary/40" />
+      {/* Estado normativo + arrow */}
+      <div className="mt-0.5 flex shrink-0 items-center gap-2">
+        <EstadoNormativo estado={veredicto} dot={false} className="hidden sm:inline-flex" />
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground/25 transition-colors group-hover:text-primary/40" />
+      </div>
     </Link>
   )
 }
 
 function AlertaRow({ alerta }: { alerta: AlertaItem }) {
+  const vencido = alerta.diasRestantes <= 0
+  const color = vencido ? "var(--state-error)" : "var(--state-warn)"
   return (
     <Link
       href={alerta.href}
-      className="group flex items-start gap-3 rounded-lg px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer"
+      className="group flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-muted/40 cursor-pointer"
     >
-      <span className="mt-[3px] flex size-5 shrink-0 items-center justify-center">
-        <AlertTriangle className="size-3.5 text-amber-500" />
+      <span className="mt-[3px] flex size-4 shrink-0 items-center justify-center">
+        <AlertTriangle className="size-3.5" style={{ color }} />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-[13px] font-medium text-amber-700">{alerta.titulo}</span>
-          <span className="text-[11px] font-medium text-amber-600 tabular-nums">
-            {alerta.diasRestantes}d restantes
+          <span className="text-[13px] font-medium" style={{ color }}>{alerta.titulo}</span>
+          <span className="num text-[11px] font-medium" style={{ color }}>
+            {vencido ? "vencido" : `${alerta.diasRestantes}d restantes`}
           </span>
         </div>
-        <p className="text-[11px] text-muted-foreground/70">{alerta.detalle}</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground/70">{alerta.detalle}</p>
       </div>
-      <ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground/25 transition-colors group-hover:text-amber-400/60" />
+      <ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground/25 transition-colors group-hover:text-primary/40" />
     </Link>
   )
 }
@@ -264,8 +273,11 @@ function TimelineSection({
   if (rows.length === 0 && !empty) return null
   return (
     <section>
-      <h2 className="mb-1 flex items-center gap-2 px-4 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/50">
-        <span className="text-primary/30">▸</span>
+      <h2 className="mb-1.5 flex items-center gap-1.5 px-4 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <span
+          className="inline-block h-2 w-2 border border-[var(--blueprint)]"
+          style={{ borderRightWidth: 0, borderBottomWidth: 0 }}
+        />
         {title}
       </h2>
       {rows.length === 0 ? (
@@ -352,31 +364,32 @@ export default async function DashboardPage() {
         }
       />
 
-      <div className="flex-1 px-6 py-5 space-y-6 max-w-3xl">
+      <div className="flex-1 bg-blueprint-grid">
+      <div className="px-6 py-5 space-y-6 max-w-3xl">
 
         {/* ── Hero Stats ── */}
         <div className="flex items-end gap-8 px-4">
           <div>
             <p className={cn(
-              "text-[3rem] font-light leading-none tabular-nums",
-              stats.urgentes > 0 ? "text-red-600" : "text-muted-foreground/30"
+              "num text-[3rem] font-light leading-none",
+              stats.urgentes > 0 ? "text-[var(--state-error)]" : "text-muted-foreground/30"
             )}>
               {stats.urgentes}
             </p>
             <p className={cn(
-              "mt-1 text-[10px] font-semibold uppercase tracking-[0.12em]",
-              stats.urgentes > 0 ? "text-red-500" : "text-muted-foreground/40"
+              "mt-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
+              stats.urgentes > 0 ? "text-[var(--state-error)]" : "text-muted-foreground/40"
             )}>
               Urgentes
             </p>
           </div>
           <div>
-            <p className="text-[3rem] font-light leading-none tabular-nums text-primary">{stats.activos}</p>
-            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50">Activos</p>
+            <p className="num text-[3rem] font-light leading-none text-primary">{stats.activos}</p>
+            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50">Activos</p>
           </div>
           <div>
-            <p className="text-[3rem] font-light leading-none tabular-nums text-primary/50">{stats.diasPromedio}</p>
-            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/40">Días prom.</p>
+            <p className="num text-[3rem] font-light leading-none text-primary/50">{stats.diasPromedio}</p>
+            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/40">Días prom.</p>
           </div>
         </div>
 
@@ -395,7 +408,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Timeline ── */}
-        <div className="rounded-2xl border border-border bg-white py-4 space-y-4">
+        <div className="rounded-lg border border-line-fine bg-white py-4 space-y-4">
 
           {proyectos.length === 0 && (
             <p className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -410,7 +423,7 @@ export default async function DashboardPage() {
           />
 
           {(sections.accionRequerida.length > 0 && sections.proximos30d.length > 0) && (
-            <div className="mx-4 border-t border-border" />
+            <div className="mx-4 border-t border-line-fine" />
           )}
 
           <TimelineSection
@@ -419,7 +432,7 @@ export default async function DashboardPage() {
           />
 
           {sections.proximos30d.length > 0 && sections.enProceso.length > 0 && (
-            <div className="mx-4 border-t border-border" />
+            <div className="mx-4 border-t border-line-fine" />
           )}
 
           <TimelineSection
@@ -428,7 +441,7 @@ export default async function DashboardPage() {
           />
 
           {sections.enProceso.length > 0 && sections.completado.length > 0 && (
-            <div className="mx-4 border-t border-border" />
+            <div className="mx-4 border-t border-line-fine" />
           )}
 
           <TimelineSection
@@ -436,17 +449,18 @@ export default async function DashboardPage() {
             rows={sections.completado}
           />
 
-          {/* Status bar */}
+          {/* Legend / pipeline */}
           {pipelineStr && (
             <>
-              <div className="mx-4 border-t border-border" />
-              <p className="px-4 text-center text-[11px] text-muted-foreground/40">
+              <div className="mx-4 border-t border-line-fine" />
+              <p className="num px-4 text-center text-[11px] tracking-wide text-muted-foreground/50">
                 {pipelineStr}
               </p>
             </>
           )}
         </div>
 
+      </div>
       </div>
     </div>
   )

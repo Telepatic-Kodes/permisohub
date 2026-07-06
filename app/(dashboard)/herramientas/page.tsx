@@ -2,7 +2,6 @@ import Link from "next/link"
 import {
   BookText,
   CalendarClock,
-  ChevronRight,
   ClipboardList,
   Compass,
   FileSearch,
@@ -16,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
+import { Num } from "@/components/arch/dato"
 import { COPILOTO_PERSONA } from "@/lib/copiloto-persona"
 
 interface Tool {
@@ -23,110 +23,107 @@ interface Tool {
   description: string
   href: string
   Icon: LucideIcon
-  color: string
-  iconBg: string
 }
 
-const TOOLS: Tool[] = [
+interface ToolGroup {
+  categoria: string
+  tools: Tool[]
+}
+
+const GROUPS: ToolGroup[] = [
   {
-    label: "Pre-revisión DOM",
-    description: "Simula el acta de observaciones de la DOM antes de ingresar tu expediente",
-    href: "/herramientas/pre-revision",
-    Icon: Stamp,
-    color: "text-primary",
-    iconBg: "bg-primary/8",
+    categoria: "Revisión y control",
+    tools: [
+      {
+        label: "Pre-revisión DOM",
+        description: "Simula el acta de observaciones de la DOM antes de ingresar tu expediente",
+        href: "/herramientas/pre-revision",
+        Icon: Stamp,
+      },
+      {
+        label: "Verificador Normativo",
+        description: "Revisa cumplimiento OGUC antes de ingresar el expediente",
+        href: "/herramientas/compliance-check",
+        Icon: ShieldCheck,
+      },
+      {
+        label: "Anticipa Observaciones",
+        description: "Predice qué observaciones hará la DOM antes de que ingrese el expediente",
+        href: "/herramientas/predictor",
+        Icon: Target,
+      },
+      {
+        label: "Revisor de Expediente",
+        description: "Analiza tus PDFs y detecta inconsistencias con la normativa",
+        href: "/herramientas/auditor",
+        Icon: FileSearch,
+      },
+    ],
   },
   {
-    label: "Anotación sobre planos",
-    description: "Marca cada observación sobre la lámina, como el revisor DOM rayaba el plano",
-    href: "/herramientas/anotacion-plano",
-    Icon: PencilRuler,
-    color: "text-primary",
-    iconBg: "bg-primary/8",
+    categoria: "Normativa y tramitación",
+    tools: [
+      {
+        label: "Chat OGUC",
+        description: "Consultas normativas OGUC · LGUC · circulares DDU en tiempo real",
+        href: "/herramientas/oguc-chat",
+        Icon: MessageSquare,
+      },
+      {
+        label: "Asesor de tramitación",
+        description: "Qué vía conviene (512, obra menor, alteración) ponderando costo y tiempo",
+        href: "/herramientas/asesor-tramitacion",
+        Icon: Compass,
+      },
+      {
+        label: "Checklist Expediente",
+        description: "Lista de verificación de documentos por municipio y tipo de proyecto",
+        href: "/herramientas/checklist",
+        Icon: Wrench,
+      },
+      {
+        label: "Plazos DOM (Ley 21.718)",
+        description: "Calcula y alerta sobre los plazos legales de respuesta de la DOM",
+        href: "/herramientas/timeline",
+        Icon: CalendarClock,
+      },
+    ],
   },
   {
-    label: "Asesor de tramitación",
-    description: "Qué vía conviene (512, obra menor, alteración) ponderando costo y tiempo",
-    href: "/herramientas/asesor-tramitacion",
-    Icon: Compass,
-    color: "text-primary",
-    iconBg: "bg-primary/8",
-  },
-  {
-    label: "Chat OGUC",
-    description: "Consultas normativas OGUC · LGUC · circulares DDU en tiempo real",
-    href: "/herramientas/oguc-chat",
-    Icon: MessageSquare,
-    color: "text-primary",
-    iconBg: "bg-primary/8",
-  },
-  {
-    label: "Verificador Normativo",
-    description: "Revisa cumplimiento OGUC antes de ingresar el expediente",
-    href: "/herramientas/compliance-check",
-    Icon: ShieldCheck,
-    color: "text-emerald-600",
-    iconBg: "bg-emerald-50",
-  },
-  {
-    label: "Checklist Expediente",
-    description: "Lista de verificación de documentos por municipio y tipo de proyecto",
-    href: "/herramientas/checklist",
-    Icon: Wrench,
-    color: "text-sky-600",
-    iconBg: "bg-sky-50",
-  },
-  {
-    label: "Memoria Descriptiva",
-    description: "Genera memorias técnicas con IA a partir de los datos del proyecto",
-    href: "/herramientas/memoria",
-    Icon: BookText,
-    color: "text-amber-600",
-    iconBg: "bg-amber-50",
-  },
-  {
-    label: "Anticipa Observaciones",
-    description: "Predice qué observaciones hará la DOM antes de que ingrese el expediente",
-    href: "/herramientas/predictor",
-    Icon: Target,
-    color: "text-orange-600",
-    iconBg: "bg-orange-50",
-  },
-  {
-    label: "Revisor de Expediente",
-    description: "Analiza tus PDFs y detecta inconsistencias con la normativa",
-    href: "/herramientas/auditor",
-    Icon: FileSearch,
-    color: "text-violet-600",
-    iconBg: "bg-violet-50",
-  },
-  {
-    label: "Plazos DOM (Ley 21.718)",
-    description: "Calcula y alerta sobre los plazos legales de respuesta de la DOM",
-    href: "/herramientas/timeline",
-    Icon: CalendarClock,
-    color: "text-rose-600",
-    iconBg: "bg-rose-50",
-  },
-  {
-    label: "Declaración Jurada",
-    description: "Genera declaración para obras menores exentas de permiso (Art. 5.1.2 OGUC)",
-    href: "/herramientas/declaracion-jurada",
-    Icon: FileSignature,
-    color: "text-teal-600",
-    iconBg: "bg-teal-50",
-  },
-  {
-    label: "Formularios MINVU",
-    description: "Formularios oficiales MINVU con pre-llenado desde los datos de tus proyectos",
-    href: "/herramientas/formularios-minvu",
-    Icon: ClipboardList,
-    color: "text-indigo-600",
-    iconBg: "bg-indigo-50",
+    categoria: "Documentos y planos",
+    tools: [
+      {
+        label: "Anotación sobre planos",
+        description: "Marca cada observación sobre la lámina, como el revisor DOM rayaba el plano",
+        href: "/herramientas/anotacion-plano",
+        Icon: PencilRuler,
+      },
+      {
+        label: "Memoria Descriptiva",
+        description: "Genera memorias técnicas con IA a partir de los datos del proyecto",
+        href: "/herramientas/memoria",
+        Icon: BookText,
+      },
+      {
+        label: "Declaración Jurada",
+        description: "Genera declaración para obras menores exentas de permiso (Art. 5.1.2 OGUC)",
+        href: "/herramientas/declaracion-jurada",
+        Icon: FileSignature,
+      },
+      {
+        label: "Formularios MINVU",
+        description: "Formularios oficiales MINVU con pre-llenado desde los datos de tus proyectos",
+        href: "/herramientas/formularios-minvu",
+        Icon: ClipboardList,
+      },
+    ],
   },
 ]
 
+const TOTAL_TOOLS = GROUPS.reduce((n, g) => n + g.tools.length, 0)
+
 export default function HerramientasPage() {
+
   return (
     <div className="flex min-h-screen flex-col">
       <PageHeader
@@ -136,23 +133,70 @@ export default function HerramientasPage() {
 
       <div className="flex-1 px-6 py-8">
         <div className="mx-auto max-w-4xl">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {TOOLS.map(({ label, description, href, Icon, color, iconBg }) => (
-              <Link
-                key={href}
-                href={href}
-                className="group flex items-start gap-4 rounded-xl border border-border bg-white p-5 transition-all hover:border-primary/20 hover:shadow-sm"
-              >
-                <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
-                  <Icon className={`size-5 ${color}`} />
+          {/* Cabecera de índice — instrumentos del estudio técnico */}
+          <div className="mb-8 flex items-end justify-between gap-4 border-b border-line-med pb-4">
+            <div>
+              <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                Instrumentos técnicos
+              </p>
+              <h2 className="font-technical mt-1.5 text-lg font-semibold leading-none text-primary">
+                Índice de herramientas
+              </h2>
+            </div>
+            <p className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              <Num className="text-sm font-semibold text-primary">
+                {String(TOTAL_TOOLS).padStart(2, "0")}
+              </Num>{" "}
+              instrumentos
+            </p>
+          </div>
+
+          <div className="space-y-9">
+            {GROUPS.map(({ categoria, tools }, gi) => {
+              // Índice de instrumento correlativo (01..12) sin mutar en render:
+              // offset = total de herramientas en los grupos anteriores.
+              const offset = GROUPS.slice(0, gi).reduce((n, g) => n + g.tools.length, 0)
+              return (
+              <section key={categoria} className="space-y-3">
+                {/* Encabezado de categoría — eyebrow técnico */}
+                <div className="flex items-center gap-3">
+                  <h3 className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                    {categoria}
+                  </h3>
+                  <div className="h-px flex-1 bg-line-fine" />
+                  <span className="num text-[10px] text-muted-foreground/60">
+                    {String(tools.length).padStart(2, "0")}
+                  </span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold text-primary">{label}</p>
-                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground/70">{description}</p>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {tools.map(({ label, description, href, Icon }, ti) => {
+                    const codigo = String(offset + ti + 1).padStart(2, "0")
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        className="group flex items-start gap-3.5 rounded-[4px] border border-line-fine bg-card p-4 transition-colors hover:border-[var(--blueprint)] hover:bg-[var(--blueprint)]/[0.05]"
+                      >
+                        <span className="num mt-0.5 shrink-0 text-[11px] tabular-nums text-muted-foreground/50 transition-colors group-hover:text-[var(--blueprint)]">
+                          {codigo}
+                        </span>
+                        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground/70 transition-colors group-hover:text-[var(--blueprint)]" />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-technical text-[13px] font-semibold leading-tight text-primary">
+                            {label}
+                          </p>
+                          <p className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground/70">
+                            {description}
+                          </p>
+                        </div>
+                      </Link>
+                    )
+                  })}
                 </div>
-                <ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground/20 transition-colors group-hover:text-primary/40" />
-              </Link>
-            ))}
+              </section>
+              )
+            })}
           </div>
         </div>
       </div>

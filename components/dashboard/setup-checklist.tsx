@@ -39,12 +39,12 @@ export function SetupChecklist() {
   const total = CHECKLIST_ITEMS.length
 
   return (
-    <div className="mb-8 rounded-xl border border-border border-l-4 border-l-primary/50 bg-white p-5 shadow-sm">
+    <div className="mb-8 rounded-lg border border-line-fine border-l-2 border-l-[var(--blueprint)] bg-white p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-primary">
+        <h2 className="font-technical text-sm font-semibold text-foreground">
           Completa tu configuración
         </h2>
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="num text-xs font-medium text-muted-foreground">
           {completados}/{total}
         </span>
       </div>
@@ -62,8 +62,8 @@ export function SetupChecklist() {
                   className={cn(
                     "flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors",
                     isDone
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-white",
+                      ? "border-[var(--blueprint)] bg-[var(--blueprint)] text-white"
+                      : "border-line-med bg-white",
                   )}
                 >
                   {isDone && <Check className="size-3.5" />}
