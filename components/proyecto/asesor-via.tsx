@@ -104,8 +104,8 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
     <Card className="lg:col-span-2">
       <CardHeader className="flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Route className="size-4 text-primary" />
-          <CardTitle>Asesoría de tramitación</CardTitle>
+          <Route className="size-4 text-[var(--blueprint)]" />
+          <CardTitle>Cómo continuar · vía de tramitación</CardTitle>
         </div>
         <button
           type="button"
@@ -122,14 +122,15 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
             ? "Analizando expediente…"
             : result
               ? "Volver a analizar"
-              : "¿Cómo llegar a la vía más liviana (512)?"}
+              : "Sugerir cómo continuar (vía más liviana)"}
         </button>
       </CardHeader>
 
       <CardContent className="space-y-5">
         <p className="text-xs text-muted-foreground">
-          Lee el due diligence y las observaciones marcadas sobre los planos de este proyecto para
-          decirte el movimiento específico: qué revertir o redibujar para caer bajo la vía liviana.
+          A partir del due diligence verificado y las observaciones marcadas sobre los planos, te dice
+          el movimiento específico: qué vía conviene (512 / obra menor / cambio de destino) y qué
+          revertir o redibujar para caer bajo la vía más liviana, con su fundamento normativo.
         </p>
 
         {error && (

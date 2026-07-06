@@ -174,7 +174,11 @@ export function PmoPanel({
   const vigencias = ddResult?.vigencias ?? []
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div className="space-y-6">
+      {/* ── Cómo continuar — el asesor de vía encabeza el PMO ── */}
+      <AsesorVia proyectoId={proyecto.id} />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* ── Columna izquierda: Etapas + Plan de acción ── */}
       <div className="space-y-6">
         {/* Etapas */}
@@ -612,11 +616,9 @@ export function PmoPanel({
         </Card>
       </div>
 
-      {/* ── Asesoría de tramitación (ancho completo) ── */}
-      <AsesorVia proyectoId={proyecto.id} />
-
       {/* ── Cuadro de cálculo normativo (ancho completo) ── */}
       <CuadroCalculo proyectoId={proyecto.id} />
+      </div>
     </div>
   )
 }
