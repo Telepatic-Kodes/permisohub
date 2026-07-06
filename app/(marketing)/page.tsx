@@ -311,8 +311,15 @@ export default async function MarketingPage({
       {/* ------------------------------------------------------------------ */}
       {/* Hero                                                               */}
       {/* ------------------------------------------------------------------ */}
-      <section className="mx-auto max-w-6xl px-6 pt-20 pb-16 text-center md:pt-28">
-        <span className="inline-flex items-center gap-2 rounded-full border border-[#1A3328]/15 bg-white px-4 py-1.5 text-xs font-medium text-[#2D6A4F]">
+      <section
+        className="relative mx-auto max-w-6xl px-6 pt-20 pb-16 text-center md:pt-28"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(26,51,40,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(26,51,40,0.045) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      >
+        <span className="inline-flex items-center gap-2 rounded-full border border-[#1A3328]/15 bg-white px-4 py-1.5 font-mono text-[11px] tracking-wide text-[#2D6A4F]">
           <span className="size-1.5 rounded-full bg-[#E9C46A] animate-pulse" />
           MVP en producción · Ley 21.718 · OGUC · 346 municipios
         </span>
@@ -342,7 +349,7 @@ export default async function MarketingPage({
         <div className="mx-auto mt-16 grid max-w-4xl grid-cols-1 gap-px overflow-hidden rounded-2xl bg-[#1A3328] sm:grid-cols-3">
           {STATS.map((stat) => (
             <div key={stat.label} className="bg-[#1A3328] px-6 py-8 text-center">
-              <p className="text-4xl font-semibold tracking-tight text-[#E9C46A]">
+              <p className="num text-4xl font-semibold tracking-tight text-[#E9C46A]">
                 {stat.value}
               </p>
               <p className="mt-2 text-sm text-[#F9F7F3]/70">{stat.label}</p>
