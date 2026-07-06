@@ -4,7 +4,8 @@ import { useState } from "react"
 import { ArrowLeft, ChevronRight, ExternalLink, FileText, Info } from "lucide-react"
 import Link from "next/link"
 import { PageHeader } from "@/components/dashboard/page-header"
-import { Badge } from "@/components/ui/badge"
+import { Num } from "@/components/arch/dato"
+import { cn } from "@/lib/utils"
 
 const MINVU_BASE = "https://www.minvu.gob.cl/elementos-tecnicos/formularios/"
 
@@ -174,30 +175,50 @@ export default function FormulariosMinvuPage() {
         <div className="mx-auto max-w-3xl space-y-6">
           <Link
             href="/herramientas"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-[var(--blueprint)]"
           >
             <ArrowLeft className="size-4" /> Herramientas
           </Link>
 
           {/* Banner MINVU */}
-          <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+          <div className="rounded-[4px] border border-line-fine bg-card p-4">
             <div className="flex items-start gap-3">
-              <FileText className="size-5 text-indigo-600 shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-indigo-900">Formularios oficiales MINVU</p>
-                <p className="mt-1 text-xs text-indigo-700 leading-relaxed">
+              <FileText className="mt-0.5 size-5 shrink-0 text-muted-foreground/60" />
+              <div className="min-w-0 flex-1">
+                <p className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  Repositorio oficial
+                </p>
+                <p className="font-technical mt-1 text-sm font-semibold text-primary">
+                  Formularios oficiales MINVU
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   Estos son los formularios vigentes del Ministerio de Vivienda para trámites DOM. Cada formulario indica qué campos de tu proyecto pueden pre-llenarse automáticamente.
                 </p>
                 <a
                   href={MINVU_BASE}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-[var(--blueprint)]"
                 >
                   Ver todos los formularios en minvu.gob.cl <ExternalLink className="size-3" />
                 </a>
               </div>
             </div>
+          </div>
+
+          {/* Section header */}
+          <div className="flex items-end justify-between gap-4 border-b border-line-med pb-4">
+            <div>
+              <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                Trámites DOM
+              </p>
+              <h2 className="font-technical mt-1.5 text-lg font-semibold leading-none text-primary">
+                Catálogo de formularios
+              </h2>
+            </div>
+            <span className="num text-xs text-muted-foreground/70">
+              {filtrados.length} de {FORMULARIOS.length}
+            </span>
           </div>
 
           {/* Filtro por categoría */}
@@ -206,11 +227,12 @@ export default function FormulariosMinvuPage() {
               <button
                 key={cat}
                 onClick={() => setCategoria(cat)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                className={cn(
+                  "font-technical rounded-[4px] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.1em] transition-colors",
                   categoria === cat
-                    ? "bg-primary text-white"
-                    : "bg-white border border-border text-muted-foreground hover:border-primary/30 hover:text-primary"
-                }`}
+                    ? "border border-[var(--blueprint)] bg-[var(--blueprint)]/[0.05] text-[var(--blueprint)]"
+                    : "border border-line-fine text-muted-foreground hover:border-[var(--blueprint)] hover:text-[var(--blueprint)]"
+                )}
               >
                 {cat}
               </button>
@@ -222,45 +244,48 @@ export default function FormulariosMinvuPage() {
             {filtrados.map((form) => (
               <div
                 key={form.id}
-                className="rounded-xl border border-border bg-white overflow-hidden"
+                className="overflow-hidden rounded-[4px] border border-line-fine bg-card transition-colors hover:border-[var(--blueprint)]"
               >
                 <button
                   onClick={() => setExpandido(expandido === form.id ? null : form.id)}
-                  className="w-full flex items-start gap-3 p-4 text-left hover:bg-[#F9F7F3] transition-colors"
+                  className="flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-[var(--blueprint)]/[0.05]"
                 >
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 mt-0.5">
-                    <FileText className="size-4 text-indigo-600" />
+                  <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[3px] border border-line-fine">
+                    <FileText className="size-4 text-muted-foreground/70" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-2 flex-wrap">
-                      <p className="text-[13px] font-semibold text-primary leading-snug">{form.nombre}</p>
-                      <Badge variant="outline" className="text-[10px] shrink-0">{form.categoria}</Badge>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start gap-2">
+                      <p className="font-technical text-[13px] font-semibold leading-snug text-primary">{form.nombre}</p>
+                      <span className="font-technical shrink-0 rounded-[3px] border border-line-fine px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                        {form.categoria}
+                      </span>
                     </div>
                     {form.articuloOguc && (
-                      <p className="text-[10.5px] text-muted-foreground/60 mt-0.5">{form.articuloOguc}</p>
+                      <Num className="mt-0.5 block text-[10.5px] text-muted-foreground/60">{form.articuloOguc}</Num>
                     )}
                   </div>
                   <ChevronRight
-                    className={`size-4 text-muted-foreground/30 shrink-0 mt-1 transition-transform ${
-                      expandido === form.id ? "rotate-90" : ""
-                    }`}
+                    className={cn(
+                      "mt-1 size-4 shrink-0 text-muted-foreground/40 transition-transform",
+                      expandido === form.id && "rotate-90"
+                    )}
                   />
                 </button>
 
                 {expandido === form.id && (
-                  <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
-                    <p className="text-[12.5px] text-muted-foreground leading-relaxed">{form.descripcion}</p>
+                  <div className="space-y-3 border-t border-line-fine px-4 pb-4 pt-3">
+                    <p className="text-[12.5px] leading-relaxed text-muted-foreground">{form.descripcion}</p>
 
                     {/* Campos pre-llenados */}
-                    <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
-                      <p className="text-[11px] font-semibold text-emerald-800 mb-2">
-                        Campos que PermisoHub puede pre-llenar desde tu proyecto:
+                    <div className="rounded-[4px] border border-line-fine p-3">
+                      <p className="font-technical mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        Campos que PermisoHub puede pre-llenar desde tu proyecto
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {form.camposPreLlenados.map((campo) => (
                           <span
                             key={campo}
-                            className="rounded-full bg-white border border-emerald-200 px-2 py-0.5 text-[10.5px] text-emerald-700"
+                            className="rounded-[3px] border border-line-fine px-2 py-0.5 text-[10.5px] text-muted-foreground"
                           >
                             {campo}
                           </span>
@@ -271,8 +296,8 @@ export default function FormulariosMinvuPage() {
                     {/* Nota */}
                     {form.nota && (
                       <div className="flex items-start gap-2">
-                        <Info className="size-3.5 text-amber-500 shrink-0 mt-0.5" />
-                        <p className="text-[11.5px] text-amber-700 leading-relaxed">{form.nota}</p>
+                        <Info className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/50" />
+                        <p className="text-[11.5px] leading-relaxed text-muted-foreground">{form.nota}</p>
                       </div>
                     )}
 
@@ -281,7 +306,7 @@ export default function FormulariosMinvuPage() {
                       href={form.urlMinvu ?? MINVU_BASE}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-[4px] border border-line-fine px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-[var(--blueprint)] hover:bg-[var(--blueprint)]/[0.05] hover:text-[var(--blueprint)]"
                     >
                       <ExternalLink className="size-3.5" />
                       Descargar desde minvu.gob.cl
@@ -293,12 +318,12 @@ export default function FormulariosMinvuPage() {
           </div>
 
           {/* Nota Consejo de Monumentos */}
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="rounded-[4px] border border-line-fine bg-card p-4">
             <div className="flex items-start gap-3">
-              <Info className="size-4 text-amber-600 shrink-0 mt-0.5" />
+              <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" />
               <div>
-                <p className="text-sm font-semibold text-amber-900">Proyectos en Zonas Típicas o Monumentos Nacionales</p>
-                <p className="mt-1 text-xs text-amber-800 leading-relaxed">
+                <p className="font-technical text-sm font-semibold text-primary">Proyectos en Zonas Típicas o Monumentos Nacionales</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   Si el proyecto se ubica en una Zona de Conservación Histórica, Zona Típica o en el entorno de un Monumento Nacional, se requiere visación adicional del{" "}
                   <strong>Consejo de Monumentos Nacionales (CMN)</strong>{" "}
                   o de la <strong>SEREMI de Vivienda</strong>. Consultar la cartografía patrimonial y los planos seccionales del PRC de la comuna antes de diseñar.
@@ -307,7 +332,7 @@ export default function FormulariosMinvuPage() {
                   href="https://www.monumentos.gob.cl"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-[var(--blueprint)]"
                 >
                   Consejo de Monumentos <ExternalLink className="size-3" />
                 </a>

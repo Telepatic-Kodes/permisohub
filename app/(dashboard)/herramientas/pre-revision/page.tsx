@@ -16,6 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { Num } from "@/components/arch/dato"
+import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 
 interface ObservacionActa {
   numero: number
@@ -46,16 +48,16 @@ interface ProyectoLite {
   numero_expediente: string | null
 }
 
-const RIESGO_CONFIG = {
-  BAJO: { color: "text-green-700", chip: "bg-green-100 border-green-300", label: "Riesgo bajo", border: "#16a34a", icon: CheckCircle2 },
-  MEDIO: { color: "text-amber-700", chip: "bg-amber-100 border-amber-300", label: "Riesgo medio", border: "#f59e0b", icon: AlertCircle },
-  ALTO: { color: "text-red-700", chip: "bg-red-100 border-red-300", label: "Riesgo alto", border: "#ef4444", icon: ShieldAlert },
+const RIESGO_CONFIG: Record<ActaResult["riesgoGlobal"], { label: string; icon: typeof CheckCircle2; veredicto: Veredicto }> = {
+  BAJO: { label: "Riesgo bajo", icon: CheckCircle2, veredicto: "cumple" },
+  MEDIO: { label: "Riesgo medio", icon: AlertCircle, veredicto: "observa" },
+  ALTO: { label: "Riesgo alto", icon: ShieldAlert, veredicto: "rechaza" },
 }
 
-const SEVERIDAD_CONFIG: Record<ObservacionActa["severidad"], { label: string; dot: string; badge: string; Icon: typeof AlertTriangle }> = {
-  "crítica": { label: "Crítica", dot: "#ef4444", badge: "bg-red-50 text-red-700 border-red-200", Icon: ShieldAlert },
-  "media": { label: "Media", dot: "#f59e0b", badge: "bg-amber-50 text-amber-700 border-amber-200", Icon: AlertTriangle },
-  "menor": { label: "Menor", dot: "#64748b", badge: "bg-slate-50 text-slate-600 border-slate-200", Icon: AlertCircle },
+const SEVERIDAD_CONFIG: Record<ObservacionActa["severidad"], { label: string; veredicto: Veredicto; Icon: typeof AlertTriangle }> = {
+  "crítica": { label: "Crítica", veredicto: "rechaza", Icon: ShieldAlert },
+  "media": { label: "Media", veredicto: "observa", Icon: AlertTriangle },
+  "menor": { label: "Menor", veredicto: "neutro", Icon: AlertCircle },
 }
 
 export default function PreRevisionPage() {
@@ -119,9 +121,22 @@ export default function PreRevisionPage() {
 
       <div className="flex-1 p-8">
         <div className="mx-auto max-w-4xl space-y-6">
-          <Card>
+          <div className="flex items-end justify-between gap-4 border-b border-line-med pb-4">
+            <div>
+              <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                Acta simulada · pre-ingreso DOM
+              </p>
+              <h2 className="font-technical mt-1.5 text-lg font-semibold leading-none text-primary">
+                Pre-revisión DOM
+              </h2>
+            </div>
+          </div>
+
+          <Card className="rounded-[4px] border-line-fine">
             <CardHeader>
-              <CardTitle>Simula la revisión de la DOM</CardTitle>
+              <CardTitle className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                Simula la revisión de la DOM
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
@@ -183,21 +198,18 @@ export default function PreRevisionPage() {
                   const cfg = RIESGO_CONFIG[result.riesgoGlobal]
                   const Icon = cfg.icon
                   return (
-                    <div
-                      className="relative overflow-hidden rounded-xl border bg-white p-5 sm:col-span-2"
-                      style={{ boxShadow: "var(--shadow-card)", borderLeftWidth: "4px", borderLeftColor: cfg.border }}
-                    >
-                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    <div className="relative overflow-hidden rounded-[4px] border border-line-fine bg-card p-5 sm:col-span-2">
+                      <p className="font-technical mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
                         Acta de observaciones simulada
                       </p>
                       <div className="flex items-center gap-3">
-                        <div className={cn("flex size-10 items-center justify-center rounded-lg", cfg.chip)}>
-                          <Icon className={cn("size-5", cfg.color)} />
+                        <div className="flex size-10 items-center justify-center rounded-[4px] border border-line-fine">
+                          <Icon className="size-5 text-muted-foreground" />
                         </div>
-                        <div>
-                          <p className={cn("heading-section text-2xl font-bold", cfg.color)}>{cfg.label}</p>
+                        <div className="space-y-1.5">
+                          <EstadoNormativo estado={cfg.veredicto} label={cfg.label} />
                           <p className="text-xs text-muted-foreground">
-                            {result.expediente} · {result.municipio} · {result.observaciones.length} observaciones
+                            {result.expediente} · {result.municipio} · <Num>{result.observaciones.length}</Num> observaciones
                           </p>
                         </div>
                       </div>
@@ -205,28 +217,25 @@ export default function PreRevisionPage() {
                   )
                 })()}
 
-                <div
-                  className="relative overflow-hidden rounded-xl border border-primary/15 bg-primary/4 p-5"
-                  style={{ boxShadow: "var(--shadow-card)" }}
-                >
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-primary/50">
+                <div className="relative overflow-hidden rounded-[4px] border border-line-fine bg-card p-5">
+                  <p className="font-technical mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
                     Aprobación sin subsanar
                   </p>
                   <div className="mt-1 flex items-center gap-2.5">
-                    <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                      <FileCheck2 className="size-5 text-primary" />
+                    <div className="flex size-10 items-center justify-center rounded-[4px] border border-line-fine">
+                      <FileCheck2 className="size-5 text-muted-foreground" />
                     </div>
-                    <p className="heading-section text-2xl font-bold text-primary tabular-nums">
-                      {result.probabilidadAprobacion}%
+                    <p className="num text-2xl font-semibold leading-none text-primary">
+                      <Num>{result.probabilidadAprobacion}%</Num>
                     </p>
                   </div>
-                  <p className="mt-2 text-[11px] leading-snug text-primary/50">probabilidad en 1ª revisión</p>
+                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground">probabilidad en 1ª revisión</p>
                 </div>
               </div>
 
               {/* Resumen */}
-              <div className="rounded-xl border border-border bg-white px-5 py-4" style={{ boxShadow: "var(--shadow-card)" }}>
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4">
+                <p className="font-technical mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
                   Considerandos
                 </p>
                 <p className="text-sm leading-relaxed text-foreground/80">{result.resumen}</p>

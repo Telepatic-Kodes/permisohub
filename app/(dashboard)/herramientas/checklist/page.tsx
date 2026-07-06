@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react"
 import {
-  AlertTriangle,
   Building2,
   CheckSquare,
   ClipboardCopy,
@@ -13,7 +12,6 @@ import {
 } from "lucide-react"
 
 import { PageHeader } from "@/components/dashboard/page-header"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -31,6 +29,8 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { COMUNAS_CHILE } from "@/lib/comunas-chile"
+import { Num } from "@/components/arch/dato"
+import { EstadoNormativo } from "@/components/arch/estado"
 
 // --- Tipos ---
 
@@ -363,10 +363,13 @@ export default function ChecklistNormativoPage() {
       />
       <div className="flex-1 space-y-6 overflow-auto p-8">
       {/* Paso 1 — Selector */}
-      <Card className="no-print">
+      <Card className="no-print rounded-[4px] border-line-fine">
         <CardHeader>
-          <CardTitle className="text-primary">
-            1. Selecciona tu trámite
+          <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+            Paso <span className="num">01</span> · Definición del trámite
+          </p>
+          <CardTitle className="font-technical mt-1.5 text-lg font-semibold leading-none text-primary">
+            Selecciona municipio y tipo de permiso
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -428,28 +431,25 @@ export default function ChecklistNormativoPage() {
       {/* Paso 2 — Resultado */}
       {generado && (
         <>
-          <Card className="print-area">
-            <CardHeader>
+          <Card className="print-area rounded-[4px] border-line-fine bg-blueprint-grid">
+            <CardHeader className="border-b border-line-med">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="text-lg text-primary">
-                    Checklist para {generado.tipo} en {generado.municipio}
+                <div className="space-y-1.5">
+                  <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                    Expediente · {generado.municipio}
+                  </p>
+                  <CardTitle className="font-technical text-lg font-semibold leading-tight text-primary">
+                    {generado.tipo}
                   </CardTitle>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="size-4" />
                     <span>
-                      Plazo típico: {PLAZOS[generado.tipo]} días hábiles
+                      Plazo típico:{" "}
+                      <Num>{PLAZOS[generado.tipo]}</Num> días hábiles
                     </span>
                   </div>
                 </div>
-                <span
-                  className={cn(
-                    "inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium",
-                    enLinea
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-700"
-                  )}
-                >
+                <span className="inline-flex w-fit items-center gap-1.5 rounded-[3px] border border-line-fine px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                   <Building2 className="size-3" />
                   {enLinea ? "DOM en Línea" : "Presencial"}
                 </span>
@@ -459,12 +459,17 @@ export default function ChecklistNormativoPage() {
             <CardContent className="space-y-6">
               {/* Barra de progreso */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-primary">
-                    Progreso
+                <div className="flex items-center justify-between">
+                  <span className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                    Documentos reunidos
                   </span>
-                  <span className="tabular-nums text-muted-foreground">
-                    {completados} de {total} ({progreso}%)
+                  <span className="text-muted-foreground">
+                    <Num className="text-primary">{completados}</Num>
+                    <span className="text-muted-foreground/60"> / </span>
+                    <Num>{total}</Num>
+                    <span className="ml-1.5 text-muted-foreground/70">
+                      (<Num>{progreso}</Num>%)
+                    </span>
                   </span>
                 </div>
                 <Progress value={progreso} />
@@ -473,9 +478,15 @@ export default function ChecklistNormativoPage() {
               {/* Secciones de documentos */}
               {sections.map((section) => (
                 <div key={section.titulo} className="space-y-3">
-                  <h3 className="text-sm font-semibold tracking-wide text-primary uppercase">
-                    {section.titulo}
-                  </h3>
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                      {section.titulo}
+                    </h3>
+                    <div className="h-px flex-1 bg-line-fine" />
+                    <span className="num text-[10px] text-muted-foreground/60">
+                      {String(section.items.length).padStart(2, "0")}
+                    </span>
+                  </div>
                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                     {section.items.map((item) => {
                       const isChecked = !!checked[item.id]
@@ -485,10 +496,10 @@ export default function ChecklistNormativoPage() {
                           type="button"
                           onClick={() => toggle(item.id)}
                           className={cn(
-                            "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+                            "flex items-start gap-3 rounded-[4px] border p-3 text-left transition-colors",
                             isChecked
-                              ? "border-primary/30 bg-[#F0EBE1]"
-                              : "border-border bg-card hover:bg-[#F0EBE1]"
+                              ? "border-line-fine bg-[var(--blueprint)]/[0.05]"
+                              : "border-line-fine bg-card hover:border-[var(--blueprint)] hover:bg-[var(--blueprint)]/[0.05]"
                           )}
                         >
                           <span className="mt-0.5 shrink-0 text-primary">
@@ -498,7 +509,7 @@ export default function ChecklistNormativoPage() {
                               <Square className="size-5 text-muted-foreground" />
                             )}
                           </span>
-                          <span className="min-w-0 flex-1 space-y-1">
+                          <span className="min-w-0 flex-1 space-y-1.5">
                             <span className="flex flex-wrap items-center gap-2">
                               <span
                                 className={cn(
@@ -510,15 +521,17 @@ export default function ChecklistNormativoPage() {
                                 {item.nombre}
                               </span>
                               {item.copias && (
-                                <Badge variant="outline">
+                                <span className="num inline-flex items-center rounded-[3px] border border-line-fine px-1.5 py-0.5 text-[10px] text-muted-foreground">
                                   {item.copias}
-                                </Badge>
+                                </span>
                               )}
                               {item.warning && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                                  <AlertTriangle className="size-3" />
-                                  Error común
-                                </span>
+                                <EstadoNormativo
+                                  estado="observa"
+                                  label="Error común"
+                                  dot={false}
+                                  className="gap-1"
+                                />
                               )}
                             </span>
                             {item.descripcion && (
@@ -526,6 +539,10 @@ export default function ChecklistNormativoPage() {
                                 {item.descripcion}
                               </span>
                             )}
+                            <EstadoNormativo
+                              estado={isChecked ? "cumple" : "neutro"}
+                              label={isChecked ? "Reunido" : "Pendiente"}
+                            />
                           </span>
                         </button>
                       )

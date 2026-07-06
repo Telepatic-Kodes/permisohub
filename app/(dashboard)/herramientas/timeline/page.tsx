@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ESTADISTICAS_MUNICIPIOS, type EstadisticaMunicipio } from "@/lib/municipios-stats"
-import { cn } from "@/lib/utils"
+import { Num } from "@/components/arch/dato"
+import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -99,25 +100,25 @@ function TimelineBar({ result, fechaIngreso }: TimelineBarProps) {
   const p50Pct = pct(result.diasP50)
   const p80Pct = pct(result.diasP80)
 
-  const markers: { pct: number; label: string; fecha: Date; colorClass: string }[] = [
-    { pct: 0,       label: "Hoy",       fecha: fechaIngreso,    colorClass: "text-gray-600" },
-    { pct: legalPct, label: "Plazo legal (30 días hábiles)", fecha: result.plazoLegal, colorClass: "text-blue-600" },
-    { pct: p50Pct,  label: "P50",       fecha: result.fechaP50, colorClass: "text-green-600" },
-    { pct: p80Pct,  label: "P80",       fecha: result.fechaP80, colorClass: "text-amber-600" },
-    { pct: 100,     label: "P95",       fecha: result.fechaP95, colorClass: "text-red-600" },
+  const markers: { pct: number; label: string; fecha: Date }[] = [
+    { pct: 0,        label: "Hoy",                         fecha: fechaIngreso },
+    { pct: legalPct, label: "Plazo legal · 30 días háb.", fecha: result.plazoLegal },
+    { pct: p50Pct,   label: "P50",                        fecha: result.fechaP50 },
+    { pct: p80Pct,   label: "P80",                        fecha: result.fechaP80 },
+    { pct: 100,      label: "P95",                        fecha: result.fechaP95 },
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="bg-blueprint-grid space-y-6 rounded-[4px] border border-line-fine p-5">
       {/* Gradient bar */}
-      <div className="relative h-6 w-full rounded-full overflow-hidden"
-        style={{ background: "linear-gradient(to right, #22c55e, #f59e0b, #ef4444)" }}
+      <div className="relative h-6 w-full overflow-hidden rounded-[3px]"
+        style={{ background: "linear-gradient(to right, var(--state-ok), var(--state-warn), var(--state-error))" }}
       >
         {/* Tick lines for each marker (except Hoy at 0) */}
         {markers.slice(1).map((m) => (
           <div
             key={m.label}
-            className="absolute top-0 h-full w-0.5 bg-white/70"
+            className="absolute top-0 h-full w-px bg-white/70"
             style={{ left: `${m.pct}%` }}
           />
         ))}
@@ -128,18 +129,18 @@ function TimelineBar({ result, fechaIngreso }: TimelineBarProps) {
         {markers.map((m) => (
           <div
             key={m.label}
-            className="absolute flex flex-col items-center"
+            className="absolute flex flex-col items-center gap-0.5"
             style={{
               left: `${m.pct}%`,
               transform: m.pct === 0 ? "translateX(0)" : m.pct === 100 ? "translateX(-100%)" : "translateX(-50%)",
             }}
           >
-            <div className={cn("text-[10px] font-semibold uppercase tracking-wider", m.colorClass)}>
+            <div className="font-technical text-center text-[9px] font-medium uppercase leading-tight tracking-[0.14em] text-muted-foreground">
               {m.label}
             </div>
-            <div className="text-[10px] text-muted-foreground whitespace-nowrap">
+            <Num className="whitespace-nowrap text-[10px] text-muted-foreground/70">
               {formatFecha(m.fecha)}
-            </div>
+            </Num>
           </div>
         ))}
       </div>
@@ -210,7 +211,10 @@ export default function TimelinePage() {
         {/* Formulario */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Configura tu consulta</CardTitle>
+            <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+              Parámetros de cálculo
+            </p>
+            <CardTitle className="font-technical mt-1 text-base">Configura tu consulta</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -272,86 +276,74 @@ export default function TimelinePage() {
         {result && municipioActivo && (
           <>
             {/* Stats row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {/* P50 */}
-              <Card className={cn(
-                "border-2",
-                result.diasP50 <= 42 ? "border-green-300 bg-green-50" : "border-amber-300 bg-amber-50"
-              )}>
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className={cn(
-                        "text-xs font-semibold uppercase tracking-wider",
-                        result.diasP50 <= 42 ? "text-green-700" : "text-amber-700"
-                      )}>
-                        P50 · 50% de probabilidad
+              {(() => {
+                const p50Estado: Veredicto = result.diasP50 <= 42 ? "cumple" : "observa"
+                return (
+                  <div className="rounded-[4px] border border-line-fine bg-card p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-technical text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                        P50 · 50% probabilidad
                       </p>
-                      <p className={cn(
-                        "mt-1 text-2xl font-bold",
-                        result.diasP50 <= 42 ? "text-green-800" : "text-amber-800"
-                      )}>
-                        {result.diasP50} días
-                      </p>
-                      <p className={cn(
-                        "mt-0.5 text-xs",
-                        result.diasP50 <= 42 ? "text-green-700" : "text-amber-700"
-                      )}>
-                        Aprobaría antes del {formatFecha(result.fechaP50)}
-                      </p>
+                      <EstadoNormativo
+                        estado={p50Estado}
+                        label={p50Estado === "cumple" ? "En plazo legal" : "Excede plazo"}
+                      />
                     </div>
-                    <span className="text-2xl">
-                      {result.diasP50 <= 42 ? "✅" : "⚠️"}
-                    </span>
+                    <p className="num mt-2 flex items-baseline gap-1.5 text-2xl font-semibold leading-none">
+                      <Num>{result.diasP50}</Num>
+                      <span className="text-xs font-medium text-muted-foreground">días</span>
+                    </p>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      Aprobaría antes del <Num>{formatFecha(result.fechaP50)}</Num>
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                )
+              })()}
 
               {/* P80 */}
-              <Card className="border-2 border-amber-300 bg-amber-50">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-amber-700">
-                        P80 · 80% de probabilidad
-                      </p>
-                      <p className="mt-1 text-2xl font-bold text-amber-800">
-                        {result.diasP80} días
-                      </p>
-                      <p className="mt-0.5 text-xs text-amber-700">
-                        Aprobaría antes del {formatFecha(result.fechaP80)}
-                      </p>
-                    </div>
-                    <span className="text-2xl">📊</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="rounded-[4px] border border-line-fine bg-card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-technical text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    P80 · 80% probabilidad
+                  </p>
+                  <EstadoNormativo estado="observa" label="Escenario probable" />
+                </div>
+                <p className="num mt-2 flex items-baseline gap-1.5 text-2xl font-semibold leading-none">
+                  <Num>{result.diasP80}</Num>
+                  <span className="text-xs font-medium text-muted-foreground">días</span>
+                </p>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Aprobaría antes del <Num>{formatFecha(result.fechaP80)}</Num>
+                </p>
+              </div>
 
               {/* P95 */}
-              <Card className="border-2 border-red-300 bg-red-50">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-red-700">
-                        P95 · Peor caso
-                      </p>
-                      <p className="mt-1 text-2xl font-bold text-red-800">
-                        {result.diasP95} días
-                      </p>
-                      <p className="mt-0.5 text-xs text-red-700">
-                        Aprobaría antes del {formatFecha(result.fechaP95)}
-                      </p>
-                    </div>
-                    <span className="text-2xl">⚠️</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="rounded-[4px] border border-line-fine bg-card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-technical text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    P95 · Peor caso
+                  </p>
+                  <EstadoNormativo estado="rechaza" label="Vencido" />
+                </div>
+                <p className="num mt-2 flex items-baseline gap-1.5 text-2xl font-semibold leading-none">
+                  <Num>{result.diasP95}</Num>
+                  <span className="text-xs font-medium text-muted-foreground">días</span>
+                </p>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Aprobaría antes del <Num>{formatFecha(result.fechaP95)}</Num>
+                </p>
+              </div>
             </div>
 
             {/* Barra de timeline visual */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Línea de tiempo visual</CardTitle>
+                <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                  Proyección de plazos
+                </p>
+                <CardTitle className="font-technical mt-1 text-base">Línea de tiempo visual</CardTitle>
               </CardHeader>
               <CardContent className="pb-6">
                 <TimelineBar result={result} fechaIngreso={fechaIngresoDate} />
@@ -361,50 +353,63 @@ export default function TimelinePage() {
             {/* Inteligencia del municipio */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">
-                    Datos históricos DOM {municipioActivo.nombre}
-                  </CardTitle>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                      Serie histórica · Ley 21.718
+                    </p>
+                    <CardTitle className="font-technical mt-1 text-base">
+                      Datos históricos DOM {municipioActivo.nombre}
+                    </CardTitle>
+                  </div>
                   {municipioActivo.calificacion <= 2 ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700 border border-red-300">
-                      DOM lenta — considera ingresar en {municipioActivo.mesesMasAgiles[0]}
-                    </span>
+                    <EstadoNormativo
+                      estado="rechaza"
+                      label={`DOM lenta — considera ingresar en ${municipioActivo.mesesMasAgiles[0]}`}
+                    />
                   ) : municipioActivo.calificacion >= 4 ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700 border border-green-300">
-                      DOM eficiente
-                    </span>
+                    <EstadoNormativo estado="cumple" label="DOM eficiente" />
                   ) : null}
                 </div>
               </CardHeader>
               <CardContent>
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+                <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
                   <div>
-                    <dt className="text-xs text-muted-foreground">Tiempo promedio</dt>
-                    <dd className="text-sm font-medium">{municipioActivo.tiempoPromedioHabiles} días hábiles</dd>
+                    <dt className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Tiempo promedio</dt>
+                    <dd className="text-sm">
+                      <Num className="font-semibold">{municipioActivo.tiempoPromedioHabiles}</Num>
+                      <span className="ml-1 text-xs text-muted-foreground">días hábiles</span>
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted-foreground">Cumplimiento plazo Ley 21.718</dt>
-                    <dd className="text-sm font-medium">{Math.round(municipioActivo.cumplimientoPlazoLey * 100)}%</dd>
+                    <dt className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Cumplimiento plazo Ley 21.718</dt>
+                    <dd className="text-sm">
+                      <Num className="font-semibold">{Math.round(municipioActivo.cumplimientoPlazoLey * 100)}</Num>
+                      <span className="text-xs text-muted-foreground">%</span>
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted-foreground">Probabilidad de observaciones</dt>
-                    <dd className="text-sm font-medium">{result.probabilidadConObs}%</dd>
+                    <dt className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Probabilidad de observaciones</dt>
+                    <dd className="text-sm">
+                      <Num className="font-semibold">{result.probabilidadConObs}</Num>
+                      <span className="text-xs text-muted-foreground">%</span>
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted-foreground">Calificación DOM</dt>
-                    <dd className="text-sm font-medium">{"★".repeat(municipioActivo.calificacion)}{"☆".repeat(5 - municipioActivo.calificacion)}</dd>
+                    <dt className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Calificación DOM</dt>
+                    <dd className="num text-sm font-semibold">{"★".repeat(municipioActivo.calificacion)}{"☆".repeat(5 - municipioActivo.calificacion)}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted-foreground">Meses más ágiles</dt>
+                    <dt className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Meses más ágiles</dt>
                     <dd className="text-sm font-medium">{municipioActivo.mesesMasAgiles.join(", ")}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted-foreground">Meses más lentos</dt>
+                    <dt className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Meses más lentos</dt>
                     <dd className="text-sm font-medium">{municipioActivo.mesesMasLentos.join(", ")}</dd>
                   </div>
                   {municipioActivo.notas && (
                     <div className="sm:col-span-2">
-                      <dt className="text-xs text-muted-foreground">Notas</dt>
+                      <dt className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Notas</dt>
                       <dd className="text-sm text-muted-foreground">{municipioActivo.notas}</dd>
                     </div>
                   )}
@@ -414,21 +419,24 @@ export default function TimelinePage() {
 
             {/* Recomendación táctica */}
             {recomendaciones.length > 0 && (
-              <Card className="border-primary/20 bg-primary/5">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Lightbulb className="size-4 text-primary" />
+                  <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                    Lectura del analista
+                  </p>
+                  <CardTitle className="font-technical mt-1 flex items-center gap-2 text-base">
+                    <Lightbulb className="size-4 text-muted-foreground" />
                     Recomendación táctica
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2">
+                  <ul className="divide-y divide-line-fine">
                     {recomendaciones.map((rec, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="mt-0.5 shrink-0">
-                          {i === recomendaciones.length - 1 ? "💡" : "⚠️"}
+                      <li key={i} className="flex items-start gap-3 py-2.5 text-sm first:pt-0 last:pb-0">
+                        <span className="num mt-0.5 shrink-0 text-[10px] font-semibold text-muted-foreground/50">
+                          {String(i + 1).padStart(2, "0")}
                         </span>
-                        <span>{rec}</span>
+                        <span className="text-foreground/80">{rec}</span>
                       </li>
                     ))}
                   </ul>

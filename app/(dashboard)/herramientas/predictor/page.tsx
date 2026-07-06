@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ESTADISTICAS_MUNICIPIOS } from "@/lib/municipios-stats"
-import { cn } from "@/lib/utils"
 import { SIIEnricher } from "@/components/proyecto/sii-enricher"
 import type { SIIData } from "@/lib/sii-lookup"
+import { Num } from "@/components/arch/dato"
+import { EstadoNormativo, colorDeVeredicto, type Veredicto } from "@/components/arch/estado"
 
 interface Prediccion {
   categoria: string
@@ -32,10 +33,17 @@ interface PredictResult {
   error?: string
 }
 
-const RIESGO_CONFIG = {
-  BAJO: { color: 'text-green-700', bg: 'bg-green-100 border-green-300', label: 'Riesgo bajo', icon: TrendingDown },
-  MEDIO: { color: 'text-amber-700', bg: 'bg-amber-100 border-amber-300', label: 'Riesgo medio', icon: AlertCircle },
-  ALTO: { color: 'text-red-700', bg: 'bg-red-100 border-red-300', label: 'Riesgo alto', icon: TrendingUp },
+const RIESGO_CONFIG: Record<PredictResult['riesgoGlobal'], { label: string; icon: typeof TrendingDown; veredicto: Veredicto }> = {
+  BAJO: { label: 'Riesgo bajo', icon: TrendingDown, veredicto: 'cumple' },
+  MEDIO: { label: 'Riesgo medio', icon: AlertCircle, veredicto: 'observa' },
+  ALTO: { label: 'Riesgo alto', icon: TrendingUp, veredicto: 'rechaza' },
+}
+
+/** Veredicto normativo por probabilidad de observación individual. */
+function veredictoDeProbabilidad(p: number): Veredicto {
+  if (p >= 0.7) return 'rechaza'
+  if (p >= 0.4) return 'observa'
+  return 'cumple'
 }
 
 const TIPOS_OBRA = [
@@ -129,10 +137,23 @@ function PredictorPageInner() {
 
       <div className="flex-1 p-8">
         <div className="mx-auto max-w-4xl space-y-6">
+          <div className="flex items-end justify-between gap-4 border-b border-line-med pb-4">
+            <div>
+              <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                Predicción normativa · pre-ingreso
+              </p>
+              <h2 className="font-technical mt-1.5 text-lg font-semibold leading-none text-primary">
+                Anticipa observaciones DOM
+              </h2>
+            </div>
+          </div>
+
           <form onSubmit={(e) => void handleSubmit(e)}>
-            <Card>
+            <Card className="rounded-[4px] border-line-fine">
               <CardHeader>
-                <CardTitle>Datos del proyecto</CardTitle>
+                <CardTitle className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                  Datos del proyecto
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -224,11 +245,13 @@ function PredictorPageInner() {
 
                 {/* Quick stats del municipio seleccionado */}
                 {municipioStats && (
-                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-                    <p className="font-medium text-primary mb-1">Inteligencia {form.municipio}</p>
+                  <div className="rounded-[4px] border border-line-fine bg-card p-3 text-sm">
+                    <p className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground mb-1.5">
+                      Inteligencia {form.municipio}
+                    </p>
                     <p className="text-muted-foreground">
-                      {Math.round(municipioStats.tasaObservaciones * 100)}% de proyectos reciben observaciones ·
-                      Tiempo promedio: {municipioStats.tiempoPromedioHabiles} días hábiles ·
+                      <Num>{Math.round(municipioStats.tasaObservaciones * 100)}%</Num> de proyectos reciben observaciones ·
+                      Tiempo promedio: <Num>{municipioStats.tiempoPromedioHabiles}</Num> días hábiles ·
                       Meses ágiles: {municipioStats.mesesMasAgiles.join(', ')}
                     </p>
                   </div>
@@ -260,30 +283,18 @@ function PredictorPageInner() {
                 {(() => {
                   const cfg = RIESGO_CONFIG[result.riesgoGlobal]
                   const Icon = cfg.icon
-                  const borderColors: Record<string, string> = {
-                    ALTO: '#ef4444', MEDIO: '#f59e0b', BAJO: '#16a34a'
-                  }
                   return (
-                    <div
-                      className="sm:col-span-2 relative overflow-hidden rounded-xl border bg-white p-5"
-                      style={{
-                        boxShadow: 'var(--shadow-card)',
-                        borderLeftWidth: '4px',
-                        borderLeftColor: borderColors[result.riesgoGlobal] ?? '#16a34a',
-                      }}
-                    >
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Diagnóstico pre-ingreso</p>
+                    <div className="sm:col-span-2 relative overflow-hidden rounded-[4px] border border-line-fine bg-card p-5">
+                      <p className="font-technical mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">Diagnóstico pre-ingreso</p>
                       <div className="flex items-center gap-3">
-                        <div className={cn(
-                          'flex size-10 items-center justify-center rounded-lg',
-                          result.riesgoGlobal === 'ALTO' ? 'bg-red-100' :
-                          result.riesgoGlobal === 'MEDIO' ? 'bg-amber-100' : 'bg-green-100'
-                        )}>
-                          <Icon className={cn('size-5', cfg.color)} />
+                        <div className="flex size-10 items-center justify-center rounded-[4px] border border-line-fine">
+                          <Icon className="size-5 text-muted-foreground" />
                         </div>
-                        <div>
-                          <p className={cn('text-2xl font-bold heading-section', cfg.color)}>{cfg.label}</p>
-                          <p className="text-xs text-muted-foreground">{result.municipio} · {result.predicciones.length} factores analizados</p>
+                        <div className="space-y-1.5">
+                          <EstadoNormativo estado={cfg.veredicto} label={cfg.label} />
+                          <p className="text-xs text-muted-foreground">
+                            {result.municipio} · <Num>{result.predicciones.length}</Num> factores analizados
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -291,79 +302,66 @@ function PredictorPageInner() {
                 })()}
 
                 {/* Mes óptimo */}
-                <div className="relative overflow-hidden rounded-xl border border-primary/15 bg-primary/4 p-5" style={{ boxShadow: 'var(--shadow-card)' }}>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-primary/50 mb-1">Mejor mes</p>
+                <div className="relative overflow-hidden rounded-[4px] border border-line-fine bg-card p-5">
+                  <p className="font-technical mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">Mejor mes</p>
                   <div className="flex items-center gap-2.5 mt-1">
-                    <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                      <Calendar className="size-5 text-primary" />
+                    <div className="flex size-10 items-center justify-center rounded-[4px] border border-line-fine">
+                      <Calendar className="size-5 text-muted-foreground" />
                     </div>
-                    <p className="text-2xl font-bold text-primary heading-section">{result.mesOptimo}</p>
+                    <p className="num text-2xl font-semibold leading-none text-primary">{result.mesOptimo}</p>
                   </div>
-                  <p className="mt-2 text-[11px] text-primary/50 leading-snug">para ingresar expediente</p>
+                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground">para ingresar expediente</p>
                 </div>
               </div>
 
               {/* Resumen IA */}
-              <div className="rounded-xl border border-border bg-white px-5 py-4" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Análisis IA</p>
+              <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4">
+                <p className="font-technical mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">Análisis IA</p>
                 <p className="text-sm text-foreground/80 leading-relaxed">{result.resumen}</p>
               </div>
 
               {/* Predicciones */}
-              <div className="rounded-xl border border-border bg-white overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Observaciones probables</p>
-                    <p className="text-sm font-semibold text-primary mt-0.5">Ordenadas por probabilidad</p>
+              <div className="overflow-hidden rounded-[4px] border border-line-fine bg-card">
+                <div className="flex items-center justify-between border-b border-line-fine px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">Observaciones probables · por probabilidad</h3>
                   </div>
-                  <span className="rounded-full bg-primary/8 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                    {result.predicciones.length} factores
-                  </span>
+                  <span className="num text-[11px] text-muted-foreground/60">{String(result.predicciones.length).padStart(2, '0')}</span>
                 </div>
 
-                <div className="divide-y divide-border">
+                <div className="divide-y divide-line-fine">
                   {result.predicciones.map((p, i) => {
                     const pct = Math.round(p.probabilidad * 100)
-                    const barColor = p.probabilidad >= 0.7
-                      ? 'from-red-500 to-red-400'
-                      : p.probabilidad >= 0.4
-                      ? 'from-amber-500 to-amber-400'
-                      : 'from-green-600 to-green-500'
-                    const numColor = p.probabilidad >= 0.7
-                      ? 'text-red-600'
-                      : p.probabilidad >= 0.4
-                      ? 'text-amber-600'
-                      : 'text-green-700'
+                    const veredicto = veredictoDeProbabilidad(p.probabilidad)
+                    const barColor = colorDeVeredicto(veredicto)
 
                     return (
-                      <div key={i} className="px-5 py-4 hover:bg-muted/30 transition-colors">
+                      <div key={i} className="px-5 py-4 transition-colors hover:bg-[var(--blueprint)]/[0.05]">
                         <div className="flex items-start justify-between gap-3 mb-2.5">
                           <div className="flex items-start gap-2 flex-wrap min-w-0">
-                            <span className="text-[11px] font-mono text-muted-foreground/40 mt-0.5 shrink-0">#{i + 1}</span>
+                            <span className="num text-[11px] text-muted-foreground/40 mt-0.5 shrink-0">{String(i + 1).padStart(2, '0')}</span>
                             <span className="text-sm font-semibold text-primary">{p.categoria}</span>
                             {p.frecuenciaLocal && (
-                              <span className="rounded-md bg-[oklch(0.78_0.16_78)]/15 border border-[oklch(0.78_0.16_78)]/25 px-2 py-0.5 text-[10px] font-semibold text-[oklch(0.55_0.14_78)]">
-                                ★ Frecuente en {result.municipio}
-                              </span>
+                              <EstadoNormativo estado="observa" label={`Frecuente en ${result.municipio}`} dot={false} className="!text-[10px]" />
                             )}
                           </div>
-                          <span className={cn('shrink-0 text-xl font-bold tabular-nums leading-none', numColor)}>
-                            {pct}%
+                          <span className="num shrink-0 text-xl font-semibold leading-none" style={{ color: barColor }}>
+                            <Num>{pct}%</Num>
                           </span>
                         </div>
 
                         {/* Bar */}
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted mb-2.5">
+                        <div className="h-1.5 w-full overflow-hidden rounded-[2px] bg-muted mb-2.5">
                           <div
-                            className={cn('h-full rounded-full bg-gradient-to-r transition-all duration-700', barColor)}
-                            style={{ width: `${pct}%` }}
+                            className="h-full rounded-[2px] transition-all duration-700"
+                            style={{ width: `${pct}%`, background: barColor }}
                           />
                         </div>
 
                         <p className="text-xs text-muted-foreground mb-2 leading-relaxed">{p.descripcion}</p>
-                        <div className="flex items-start gap-2 rounded-lg bg-primary/4 border border-primary/8 px-3 py-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-primary/60 shrink-0 mt-px">Acción</span>
-                          <p className="text-xs text-primary/80 leading-relaxed">{p.accion}</p>
+                        <div className="flex items-start gap-2 rounded-[3px] border border-line-fine bg-card px-3 py-2">
+                          <span className="font-technical text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground shrink-0 mt-px">Acción</span>
+                          <p className="text-xs text-foreground/80 leading-relaxed">{p.accion}</p>
                         </div>
                       </div>
                     )

@@ -1,14 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { AlertCircle, CheckCircle2, AlertTriangle, HelpCircle, Loader2, ShieldCheck } from "lucide-react"
+import { AlertCircle, Loader2, ShieldCheck } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { COMUNAS_CHILE } from "@/lib/comunas-chile"
+import { Num } from "@/components/arch/dato"
+import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 
 interface CheckResult {
   riesgoGeneral: 'BAJO' | 'MEDIO' | 'ALTO'
@@ -23,17 +25,17 @@ interface CheckResult {
   recomendaciones: string[]
 }
 
-const RESULTADO_CONFIG = {
-  OK: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50 border-green-200', label: '✅ OK' },
-  EXCEDIDO: { icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50 border-red-200', label: '❌ Excedido' },
-  ADVERTENCIA: { icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200', label: '⚠️ Advertencia' },
-  VERIFICAR: { icon: HelpCircle, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200', label: '🔍 Verificar' },
+const RESULTADO_CONFIG: Record<CheckResult['checks'][number]['resultado'], { estado: Veredicto; label: string }> = {
+  OK: { estado: 'cumple', label: 'OK' },
+  EXCEDIDO: { estado: 'rechaza', label: 'Excedido' },
+  ADVERTENCIA: { estado: 'observa', label: 'Advertencia' },
+  VERIFICAR: { estado: 'neutro', label: 'Verificar' },
 }
 
-const RIESGO_CONFIG = {
-  BAJO: { color: 'text-green-700', bg: 'bg-green-100', label: 'Riesgo bajo' },
-  MEDIO: { color: 'text-amber-700', bg: 'bg-amber-100', label: 'Riesgo medio' },
-  ALTO: { color: 'text-red-700', bg: 'bg-red-100', label: 'Riesgo alto' },
+const RIESGO_CONFIG: Record<CheckResult['riesgoGeneral'], { estado: Veredicto; label: string }> = {
+  BAJO: { estado: 'cumple', label: 'Riesgo bajo' },
+  MEDIO: { estado: 'observa', label: 'Riesgo medio' },
+  ALTO: { estado: 'rechaza', label: 'Riesgo alto' },
 }
 
 export default function ComplianceCheckPage() {
@@ -108,14 +110,27 @@ export default function ComplianceCheckPage() {
           { label: "Verificador Normativo" },
         ]}
       />
-      <div className="flex-1 overflow-auto p-8">
+      <div className="bg-blueprint-grid flex-1 overflow-auto p-8">
         <div className="mx-auto max-w-3xl space-y-6">
+      {/* Cabecera en-contenido */}
+      <div className="mb-8 flex items-end justify-between gap-4 border-b border-line-med pb-4">
+        <div>
+          <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+            Herramientas · OGUC
+          </p>
+          <h2 className="font-technical mt-1.5 text-lg font-semibold leading-none text-primary">
+            Verificador normativo de cumplimiento
+          </h2>
+        </div>
+      </div>
       <form onSubmit={(e) => void handleSubmit(e)}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base text-primary">Datos del proyecto</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
+        <Card className="rounded-[4px] border-line-fine shadow-none">
+          <CardContent className="space-y-5 p-5">
+            <div className="flex items-center gap-3">
+              <h3 className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">Datos del proyecto</h3>
+              <div className="h-px flex-1 bg-line-fine" />
+              <span className="num text-[10px] text-muted-foreground/60">01</span>
+            </div>
             {/* Municipality + Zone */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -151,12 +166,12 @@ export default function ComplianceCheckPage() {
               <div className="space-y-2">
                 <Label>Superficie construida total m² *</Label>
                 <Input type="number" value={form.superficieConstruida} onChange={e => setField('superficieConstruida', e.target.value)} placeholder="320" required />
-                {fotReal && <p className="text-xs text-muted-foreground">FOT: <strong>{fotReal}</strong></p>}
+                {fotReal && <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">FOT calculado <Num className="ml-1 text-xs font-semibold text-foreground/80">{fotReal}</Num></p>}
               </div>
               <div className="space-y-2">
                 <Label>Huella planta baja m² *</Label>
                 <Input type="number" value={form.huellaEdificacion} onChange={e => setField('huellaEdificacion', e.target.value)} placeholder="160" required />
-                {fosReal && <p className="text-xs text-muted-foreground">FOS: <strong>{fosReal}</strong></p>}
+                {fosReal && <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">FOS calculado <Num className="ml-1 text-xs font-semibold text-foreground/80">{fosReal}</Num></p>}
               </div>
             </div>
 
@@ -190,7 +205,7 @@ export default function ComplianceCheckPage() {
             <Button
               type="submit"
               disabled={loading || !form.municipio || !form.superficieTerreno}
-              className="w-full bg-primary text-white hover:bg-primary/90"
+              className="w-full rounded-[3px] bg-primary text-white hover:bg-primary/90"
             >
               {loading ? (
                 <><Loader2 className="size-4 animate-spin" /> Analizando cumplimiento OGUC...</>
@@ -203,58 +218,75 @@ export default function ComplianceCheckPage() {
       </form>
 
       {error && (
-        <div className="flex gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
-          <AlertCircle className="size-5 text-red-600 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="flex items-start gap-3 rounded-[4px] border border-line-fine p-4">
+          <AlertCircle className="mt-0.5 size-5 shrink-0" style={{ color: "var(--state-error)" }} />
+          <p className="text-sm text-foreground/80">{error}</p>
         </div>
       )}
 
       {result && (
         <div className="space-y-4">
           {/* General risk */}
-          <Card className={`border-2 ${result.riesgoGeneral === 'BAJO' ? 'border-green-300' : result.riesgoGeneral === 'MEDIO' ? 'border-amber-300' : 'border-red-300'}`}>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <span className={`rounded-full px-3 py-1.5 text-sm font-semibold ${RIESGO_CONFIG[result.riesgoGeneral].bg} ${RIESGO_CONFIG[result.riesgoGeneral].color}`}>
-                  {RIESGO_CONFIG[result.riesgoGeneral].label}
-                </span>
-                <p className="text-sm text-gray-700">{result.resumen}</p>
+          <Card className="rounded-[4px] border-line-strong shadow-none">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-3">
+                <EstadoNormativo
+                  estado={RIESGO_CONFIG[result.riesgoGeneral].estado}
+                  label={RIESGO_CONFIG[result.riesgoGeneral].label}
+                  className="shrink-0"
+                />
+                <p className="text-sm text-foreground/80">{result.resumen}</p>
               </div>
             </CardContent>
           </Card>
 
           {/* Checks */}
-          <div className="space-y-2">
-            {result.checks.map((check, i) => {
-              const cfg = RESULTADO_CONFIG[check.resultado]
-              const Icon = cfg.icon
-              return (
-                <div key={i} className={`flex gap-3 rounded-lg border p-3 ${cfg.bg}`}>
-                  <Icon className={`size-5 shrink-0 mt-0.5 ${cfg.color}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-gray-800">{check.item}</p>
-                      <span className={`text-xs font-medium ${cfg.color}`}>{cfg.label}</span>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <h3 className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                Verificaciones OGUC
+              </h3>
+              <div className="h-px flex-1 bg-line-fine" />
+              <span className="num text-[10px] text-muted-foreground/60">
+                {result.checks.length.toString().padStart(2, "0")}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {result.checks.map((check, i) => {
+                const cfg = RESULTADO_CONFIG[check.resultado]
+                return (
+                  <div key={i} className="flex flex-col gap-2 rounded-[4px] border border-line-fine bg-card p-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-foreground">{check.item}</p>
+                      <EstadoNormativo estado={cfg.estado} label={cfg.label} className="shrink-0" />
                     </div>
-                    <p className="text-sm text-gray-600 mt-0.5">{check.detalle}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{check.articulo}</p>
+                    <p className="text-sm text-foreground/70">{check.detalle}</p>
+                    <p className="num text-[11px] text-muted-foreground">{check.articulo}</p>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
 
           {/* Recommendations */}
           {result.recomendaciones.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-primary">Recomendaciones antes de ingresar</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-1.5">
+            <Card className="rounded-[4px] border-line-fine shadow-none">
+              <CardContent className="space-y-3 p-5">
+                <div className="flex items-center gap-3">
+                  <h3 className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                    Recomendaciones antes de ingresar
+                  </h3>
+                  <div className="h-px flex-1 bg-line-fine" />
+                  <span className="num text-[10px] text-muted-foreground/60">
+                    {result.recomendaciones.length.toString().padStart(2, "0")}
+                  </span>
+                </div>
+                <ul className="divide-y divide-line-fine rounded-[4px] border border-line-fine bg-card">
                   {result.recomendaciones.map((rec, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-gray-700">
-                      <span className="text-primary font-bold shrink-0">{i + 1}.</span>
+                    <li key={i} className="flex gap-2.5 px-4 py-2.5 text-sm text-foreground/80">
+                      <span className="num shrink-0 text-[10px] text-muted-foreground/60">
+                        {(i + 1).toString().padStart(2, "0")}
+                      </span>
                       {rec}
                     </li>
                   ))}

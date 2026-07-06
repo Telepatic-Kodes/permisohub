@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, CheckCircle2, Copy, Download, FileSignature, Loader2 } from "lucide-react"
+import { ArrowLeft, Copy, Download, FileSignature, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { PageHeader } from "@/components/dashboard/page-header"
+import { Num } from "@/components/arch/dato"
+import { EstadoNormativo } from "@/components/arch/estado"
 
 const TIPOS_OBRA = [
   "Reparación de cubierta (techado)",
@@ -131,28 +133,36 @@ export default function DeclaracionJuradaPage() {
         <div className="mx-auto max-w-2xl space-y-6">
           <Link
             href="/herramientas"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-[var(--blueprint)]"
           >
             <ArrowLeft className="size-4" /> Herramientas
           </Link>
 
           {/* Info banner */}
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <div className="rounded-[4px] border border-line-fine bg-card p-4">
             <div className="flex items-start gap-3">
-              <FileSignature className="size-5 text-primary shrink-0 mt-0.5" />
+              <FileSignature className="mt-0.5 size-5 shrink-0 text-muted-foreground/60" />
               <div>
-                <p className="text-sm font-semibold text-primary">Ley 21.718 — Obras exentas de permiso</p>
-                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                  El artículo 5.1.2 OGUC permite que ciertas obras menores se ejecuten con una Declaración Jurada en lugar de permiso de edificación. Esta herramienta genera el documento conforme al formato legal chileno vigente.
+                <p className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                  Marco normativo
+                </p>
+                <p className="font-technical mt-1 text-sm font-semibold text-primary">
+                  <Num>Ley 21.718</Num> — Obras exentas de permiso
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  El artículo <Num>5.1.2</Num> OGUC permite que ciertas obras menores se ejecuten con una Declaración Jurada en lugar de permiso de edificación. Esta herramienta genera el documento conforme al formato legal chileno vigente.
                 </p>
               </div>
             </div>
           </div>
 
           {!declaracion ? (
-            <Card>
+            <Card className="rounded-[4px] border-line-fine">
               <CardHeader>
-                <CardTitle className="text-base">Datos de la obra</CardTitle>
+                <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                  Formulario
+                </p>
+                <CardTitle className="font-technical text-base">Datos de la obra</CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
                 {/* Tipo de obra */}
@@ -211,8 +221,11 @@ export default function DeclaracionJuradaPage() {
                 </div>
 
                 {/* Separador */}
-                <div className="border-t border-border pt-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Datos del propietario</p>
+                <div className="border-t border-line-fine pt-3">
+                  <div className="mb-3 flex items-center gap-3">
+                    <h3 className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">Datos del propietario</h3>
+                    <div className="h-px flex-1 bg-line-fine" />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label>Nombre completo</Label>
@@ -234,8 +247,11 @@ export default function DeclaracionJuradaPage() {
                 </div>
 
                 {/* Arquitecto */}
-                <div className="border-t border-border pt-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Datos del arquitecto proyectista</p>
+                <div className="border-t border-line-fine pt-3">
+                  <div className="mb-3 flex items-center gap-3">
+                    <h3 className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">Datos del arquitecto proyectista</h3>
+                    <div className="h-px flex-1 bg-line-fine" />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label>Nombre completo</Label>
@@ -279,10 +295,7 @@ export default function DeclaracionJuradaPage() {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="size-5 text-green-600" />
-                  <p className="text-sm font-semibold text-green-700">Declaración generada</p>
-                </div>
+                <EstadoNormativo estado="cumple" label="Declaración generada" />
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
@@ -312,7 +325,7 @@ export default function DeclaracionJuradaPage() {
                 </div>
               </div>
 
-              <Card>
+              <Card className="rounded-[4px] border-line-fine bg-blueprint-grid">
                 <CardContent className="pt-6">
                   <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-primary">
                     {declaracion}
@@ -320,9 +333,9 @@ export default function DeclaracionJuradaPage() {
                 </CardContent>
               </Card>
 
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  <strong>Importante:</strong> Este documento es una plantilla generada con IA. Debe ser revisado por el arquitecto proyectista antes de su firma. Verificar con la DOM de {form.municipio} que el tipo de obra específico se encuentra exento de permiso según el Art. 5.1.2 OGUC. Se recomienda firmar ante Notario.
+              <div className="rounded-[4px] border border-line-fine bg-card p-3">
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  <strong className="text-primary">Importante:</strong> Este documento es una plantilla generada con IA. Debe ser revisado por el arquitecto proyectista antes de su firma. Verificar con la DOM de {form.municipio} que el tipo de obra específico se encuentra exento de permiso según el artículo <Num>5.1.2</Num> OGUC. Se recomienda firmar ante Notario.
                 </p>
               </div>
             </div>

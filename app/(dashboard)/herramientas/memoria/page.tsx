@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { Num } from "@/components/arch/dato"
 import { ESTADISTICAS_MUNICIPIOS } from "@/lib/municipios-stats"
 
 interface MemoriaResult {
@@ -271,7 +272,10 @@ function MemoriaDescriptivaPageInner() {
               <form onSubmit={(e) => void handleSubmit(e)}>
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base text-primary">Datos del proyecto</CardTitle>
+                    <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                      Antecedentes del expediente
+                    </p>
+                    <CardTitle className="font-technical mt-1 text-base text-primary">Datos del proyecto</CardTitle>
                     <p className="text-sm text-muted-foreground">
                       IA genera la memoria técnica completa en segundos
                     </p>
@@ -360,6 +364,7 @@ function MemoriaDescriptivaPageInner() {
                         <Label>Sup. terreno m² *</Label>
                         <Input
                           type="number"
+                          className="num"
                           value={form.superficieTerreno}
                           onChange={(e) => setField('superficieTerreno', e.target.value)}
                           placeholder="400"
@@ -370,6 +375,7 @@ function MemoriaDescriptivaPageInner() {
                         <Label>Sup. a construir m² *</Label>
                         <Input
                           type="number"
+                          className="num"
                           value={form.superficieConstruida}
                           onChange={(e) => setField('superficieConstruida', e.target.value)}
                           placeholder="320"
@@ -380,6 +386,7 @@ function MemoriaDescriptivaPageInner() {
                         <Label>Sup. existente m²</Label>
                         <Input
                           type="number"
+                          className="num"
                           value={form.superficieExistente}
                           onChange={(e) => setField('superficieExistente', e.target.value)}
                           placeholder="0"
@@ -393,6 +400,7 @@ function MemoriaDescriptivaPageInner() {
                         <Label>N° pisos *</Label>
                         <Input
                           type="number"
+                          className="num"
                           value={form.pisos}
                           onChange={(e) => setField('pisos', e.target.value)}
                           placeholder="2"
@@ -404,6 +412,7 @@ function MemoriaDescriptivaPageInner() {
                         <Input
                           type="number"
                           step="0.1"
+                          className="num"
                           value={form.alturaMaxima}
                           onChange={(e) => setField('alturaMaxima', e.target.value)}
                           placeholder="8.5"
@@ -484,7 +493,14 @@ function MemoriaDescriptivaPageInner() {
                     </div>
 
                     {error && (
-                      <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                      <div
+                        className="rounded-[4px] border p-3 text-sm"
+                        style={{
+                          color: "var(--state-error)",
+                          borderColor: "var(--state-error)",
+                          background: "color-mix(in oklch, var(--state-error) 10%, transparent)",
+                        }}
+                      >
                         {error}
                       </div>
                     )}
@@ -526,7 +542,11 @@ function MemoriaDescriptivaPageInner() {
                   {result.secciones.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {result.secciones.map((s, i) => (
-                        <Badge key={i} variant="secondary" className="text-xs">
+                        <Badge
+                          key={i}
+                          variant="secondary"
+                          className="rounded-[3px] border border-line-fine bg-transparent font-technical text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground"
+                        >
                           {s}
                         </Badge>
                       ))}
@@ -556,25 +576,28 @@ function MemoriaDescriptivaPageInner() {
                   {/* Texto de la memoria */}
                   <Card className="flex-1">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm text-primary">Vista previa</CardTitle>
+                      <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                        Documento generado
+                      </p>
+                      <CardTitle className="font-technical mt-1 text-sm text-primary">Vista previa</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="max-h-[600px] overflow-y-auto rounded-md border border-border bg-muted/20 p-5">
+                      <div className="bg-blueprint-grid max-h-[600px] overflow-y-auto rounded-[4px] border border-line-fine p-5">
                         <MemoriaPreview text={result.memoria} />
                       </div>
                     </CardContent>
                   </Card>
                 </>
               ) : (
-                <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-primary/20 bg-white/60 px-8 py-16 text-center" style={{ minHeight: 420 }}>
+                <div className="bg-blueprint-grid flex flex-1 flex-col items-center justify-center rounded-[4px] border border-line-fine px-8 py-16 text-center" style={{ minHeight: 420 }}>
                   {/* Blueprint illustration */}
                   <div className="relative mb-6 flex size-20 items-center justify-center">
-                    <div className="absolute inset-0 rounded-2xl border-2 border-primary/12 bg-primary/4" />
-                    <div className="absolute inset-3 rounded-xl border border-primary/10" />
-                    <BookText className="relative size-8 text-primary/40" />
+                    <div className="absolute inset-0 rounded-[4px] border border-line-med" />
+                    <div className="absolute inset-3 rounded-[3px] border border-line-fine" />
+                    <BookText className="relative size-8 text-muted-foreground/50" />
                   </div>
 
-                  <p className="heading-section text-base text-primary/70 mb-1">
+                  <p className="font-technical text-base text-primary/80 mb-1">
                     Memoria Descriptiva
                   </p>
                   <p className="text-xs text-muted-foreground mb-8 max-w-[220px] leading-relaxed">
@@ -591,8 +614,8 @@ function MemoriaDescriptivaPageInner() {
                       { n: '05', label: 'Cumplimiento normativo' },
                     ].map((step) => (
                       <div key={step.n} className="flex items-center gap-3">
-                        <span className="shrink-0 font-mono text-[10px] font-bold text-primary/25">{step.n}</span>
-                        <div className="h-px flex-1 border-t border-dashed border-primary/15" />
+                        <Num className="shrink-0 text-[10px] font-semibold text-muted-foreground/40">{step.n}</Num>
+                        <div className="h-px flex-1 bg-line-fine" />
                         <span className="text-[11px] text-muted-foreground/60">{step.label}</span>
                       </div>
                     ))}

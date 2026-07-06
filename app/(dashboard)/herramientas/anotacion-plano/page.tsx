@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Num } from "@/components/arch/dato"
 import { cn } from "@/lib/utils"
 import {
   CONVENCION_LINEA,
@@ -300,9 +301,12 @@ export default function AnotacionPlanoPage() {
       <div className="flex-1 p-6 lg:p-8">
         <div className="mx-auto max-w-6xl space-y-6">
           {/* Carga + contexto */}
-          <Card>
+          <Card className="rounded-[4px] border-line-fine">
             <CardHeader>
-              <CardTitle>Sube las láminas y las observaciones</CardTitle>
+              <p className="font-technical text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">
+                Anotación sobre planos
+              </p>
+              <CardTitle className="font-technical">Sube las láminas y las observaciones</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
@@ -312,7 +316,7 @@ export default function AnotacionPlanoPage() {
               </p>
 
               <div>
-                <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/20 px-4 py-8 text-center transition-colors hover:border-primary/30 hover:bg-muted/40">
+                <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[4px] border border-dashed border-line-med bg-muted/20 px-4 py-8 text-center transition-colors hover:border-[var(--blueprint)] hover:bg-[var(--blueprint)]/[0.05]">
                   <ImagePlus className="size-6 text-muted-foreground/60" />
                   <span className="text-sm font-medium text-primary">Subir láminas (PDF · PNG · JPG)</span>
                   <span className="text-xs text-muted-foreground/70">
@@ -335,8 +339,8 @@ export default function AnotacionPlanoPage() {
                       key={l.id}
                       onClick={() => setActiveId(l.id)}
                       className={cn(
-                        "group relative overflow-hidden rounded-lg border-2 transition-all",
-                        activeId === l.id ? "border-primary" : "border-border hover:border-primary/40",
+                        "group relative overflow-hidden rounded-[4px] border transition-colors",
+                        activeId === l.id ? "border-[var(--blueprint)]" : "border-line-fine hover:border-[var(--blueprint)]",
                       )}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -351,7 +355,7 @@ export default function AnotacionPlanoPage() {
                         <X className="size-3" />
                       </span>
                       {(anotacionesPorLamina[l.id]?.length ?? 0) > 0 && (
-                        <span className="absolute bottom-0.5 left-0.5 rounded bg-primary px-1 text-[9px] font-bold text-white">
+                        <span className="num absolute bottom-0.5 left-0.5 rounded-[3px] bg-primary px-1 text-[9px] font-bold text-white">
                           {anotacionesPorLamina[l.id].length}
                         </span>
                       )}
@@ -367,7 +371,7 @@ export default function AnotacionPlanoPage() {
                     value={observaciones}
                     onChange={(e) => setObservaciones(e.target.value)}
                     placeholder="Pega aquí el acta de observaciones. Si la dejas vacía, detectamos los puntos probables."
-                    className="min-h-24 w-full resize-y rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary/40"
+                    className="min-h-24 w-full resize-y rounded-[4px] border border-line-fine bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--blueprint)]"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -376,7 +380,7 @@ export default function AnotacionPlanoPage() {
                     value={contexto}
                     onChange={(e) => setContexto(e.target.value)}
                     placeholder="Ej: Petshop en Kennedy. Objetivo: encaminar como 512, evitar permiso de alteración."
-                    className="min-h-24 w-full resize-y rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary/40"
+                    className="min-h-24 w-full resize-y rounded-[4px] border border-line-fine bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--blueprint)]"
                   />
                 </div>
               </div>
@@ -400,9 +404,15 @@ export default function AnotacionPlanoPage() {
           </Card>
 
           {error && (
-            <div className="flex gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
-              <AlertCircle className="mt-0.5 size-5 shrink-0 text-red-600" />
-              <p className="text-sm text-red-700">{error}</p>
+            <div
+              className="flex gap-3 rounded-[4px] border p-4"
+              style={{
+                borderColor: "var(--state-error)",
+                background: "color-mix(in oklch, var(--state-error) 8%, transparent)",
+              }}
+            >
+              <AlertCircle className="mt-0.5 size-5 shrink-0" style={{ color: "var(--state-error)" }} />
+              <p className="text-sm" style={{ color: "var(--state-error)" }}>{error}</p>
             </div>
           )}
 
@@ -413,8 +423,7 @@ export default function AnotacionPlanoPage() {
               <div className="space-y-3">
                 <div
                   ref={overlayRef}
-                  className="relative select-none overflow-hidden rounded-xl border border-border bg-white"
-                  style={{ boxShadow: "var(--shadow-card)" }}
+                  className="bg-blueprint-grid relative select-none overflow-hidden rounded-[4px] border border-line-med"
                   onPointerMove={onMarkPointerMove}
                   onPointerUp={onMarkPointerUp}
                 >
@@ -487,11 +496,17 @@ export default function AnotacionPlanoPage() {
 
               {/* Panel de observaciones */}
               <div className="space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {activeAnotaciones.length} observaciones en esta lámina
-                </p>
+                <div className="flex items-center gap-3 border-b border-line-med pb-2">
+                  <h3 className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    Observaciones en esta lámina
+                  </h3>
+                  <div className="h-px flex-1 bg-line-fine" />
+                  <span className="num text-[10px] text-muted-foreground/70">
+                    {activeAnotaciones.length}
+                  </span>
+                </div>
                 {activeAnotaciones.length === 0 && (
-                  <p className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 text-center text-xs text-muted-foreground">
+                  <p className="rounded-[4px] border border-dashed border-line-fine bg-muted/20 px-4 py-6 text-center text-xs text-muted-foreground">
                     Sin marcas en esta lámina. Analiza o cambia de lámina.
                   </p>
                 )}
@@ -505,8 +520,10 @@ export default function AnotacionPlanoPage() {
                       onMouseLeave={() => setHoverAnotacion(null)}
                       onClick={() => setSelectedAnotacion(a.id)}
                       className={cn(
-                        "w-full rounded-xl border bg-white p-3 text-left transition-all",
-                        isActive ? "border-primary/40 shadow-sm" : "border-border hover:border-primary/20",
+                        "w-full rounded-[4px] border bg-card p-3 text-left transition-colors",
+                        isActive
+                          ? "border-[var(--blueprint)] bg-[var(--blueprint)]/[0.05]"
+                          : "border-line-fine hover:border-[var(--blueprint)]",
                       )}
                     >
                       <div className="mb-1 flex items-start gap-2">
@@ -525,13 +542,13 @@ export default function AnotacionPlanoPage() {
                         </span>
                       </div>
                       {a.articulo && (
-                        <span className="mb-1 inline-block rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        <Num className="mb-1 inline-block rounded-[3px] border border-line-fine px-1.5 py-0.5 text-[10px] text-muted-foreground">
                           {a.articulo}
-                        </span>
+                        </Num>
                       )}
                       <p className="text-xs leading-relaxed text-foreground/75">{a.observacion}</p>
                       {a.sugerencia && (
-                        <p className="mt-1.5 rounded-md bg-primary/5 px-2 py-1 text-[11px] leading-relaxed text-primary/80">
+                        <p className="mt-1.5 rounded-[3px] border border-line-fine bg-muted/40 px-2 py-1 text-[11px] leading-relaxed text-foreground/80">
                           <span className="font-semibold">Corregir: </span>
                           {a.sugerencia}
                         </p>
