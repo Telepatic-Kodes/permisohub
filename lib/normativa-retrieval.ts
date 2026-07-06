@@ -157,3 +157,77 @@ export const REGLAS_CITACION = `## Reglas de citación (no inventar normativa)
 - NUNCA inventes números de ARTÍCULO. Si el punto no está cubierto por un artículo del contexto, describe la materia sin número (o deja el artículo vacío) en vez de adivinar un "Art. X.X.X".
 - Circulares DDU: puedes citar el número SOLO si esa circular aparece en el contexto con su número (ej. "DDU 328", "DDU-ESP 084-07"). Para cualquier otra circular, NUNCA inventes un número — refiérela por su MATERIA/título (ej. "DDU — modificación de proyecto").
 - Si ninguna circular del contexto aplica, no cites ninguna DDU.`
+
+// ─────────────────────────────────────────────────────────────────────────
+// Lookup por id → artículo citable (para fundamentar y enlazar observaciones).
+//
+// getArticuloById resuelve una cita estructurada { fuente, id } contra la base
+// curada y devuelve el texto + url + `verificado`. Es la pieza que permite que
+// un hallazgo del DD (o una marca de plano) muestre su artículo con su texto y
+// un link a la fuente. `verificado=false` cuando el id NO está en la base:
+// nunca se debe presentar como fundado.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface ArticuloCitable {
+  fuente: FuenteNormativa
+  id: string
+  etiqueta: string // texto para render: "Art. 5.1.2 OGUC" / "DDU 328"
+  titulo: string
+  texto: string
+  url?: string // link oficial real si existe; si no, usar FUENTE_FALLBACK_URL
+  verificado: boolean
+}
+
+// Link GENÉRICO oficial por fuente — solo como "ver norma" cuando el artículo
+// no tiene URL propia. NUNCA se fabrica un deep-link al artículo específico.
+export const FUENTE_FALLBACK_URL: Record<FuenteNormativa, string> = {
+  OGUC: 'https://www.bcn.cl/leychile/navegar?idNorma=8201', // D.S. 47/1992 (OGUC)
+  LGUC: 'https://www.bcn.cl/leychile/navegar?idNorma=13560', // DFL 458/1975 (LGUC)
+  DDU: 'https://www.minvu.gob.cl/elementos-tecnicos/circulares-division-de-desarrollo-urbano-ddu/',
+}
+
+// Normaliza un id de artículo para comparar ("5.1.2", " 116 BIS " → "116 bis").
+function normId(id: string): string {
+  return id.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+/**
+ * Resuelve una cita { fuente, id } contra la base curada.
+ * - OGUC/LGUC: match por id normalizado. `verificado` = existe en la base.
+ * - DDU: match por id (ej. 'ddu-328') o por número normalizado; `verificado` =
+ *   el flag de la circular; `url` = su fuente MINVU si está verificada.
+ * Devuelve null si no hay match (el llamador marca la cita "por verificar").
+ */
+export function getArticuloById(fuente: FuenteNormativa, id: string): ArticuloCitable | null {
+  const key = normId(id)
+  if (fuente === 'OGUC') {
+    const a = ARTICULOS_OGUC.find((x) => normId(x.id) === key)
+    if (!a) return null
+    return { fuente, id: a.id, etiqueta: `Art. ${a.id} OGUC`, titulo: a.titulo, texto: a.texto, url: a.url, verificado: true }
+  }
+  if (fuente === 'LGUC') {
+    const a = ARTICULOS_LGUC.find((x) => normId(x.id) === key)
+    if (!a) return null
+    return { fuente, id: a.id, etiqueta: `Art. ${a.id} LGUC`, titulo: a.titulo, texto: a.texto, url: a.url, verificado: true }
+  }
+  // DDU: por id de entrada o por número (con o sin el prefijo "ddu-").
+  const c =
+    CIRCULARES_DDU.find((x) => normId(x.id) === key) ??
+    CIRCULARES_DDU.find((x) => normId(x.numero) === key) ??
+    CIRCULARES_DDU.find((x) => normId(x.numero).replace(/\D/g, '') === key.replace(/\D/g, '') && key.replace(/\D/g, '') !== '')
+  if (!c) return null
+  return {
+    fuente,
+    id: c.id,
+    etiqueta: c.verificado ? c.numero : `${c.numero} (n° por verificar)`,
+    titulo: c.titulo,
+    texto: c.texto,
+    url: c.verificado && c.fuente ? c.fuente : undefined,
+    verificado: c.verificado,
+  }
+}
+
+// URL efectiva para un citable: la propia del artículo o el fallback de fuente.
+export function urlDeCitable(a: Pick<ArticuloCitable, 'fuente' | 'url'>): string {
+  return a.url ?? FUENTE_FALLBACK_URL[a.fuente]
+}

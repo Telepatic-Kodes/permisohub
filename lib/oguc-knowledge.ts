@@ -4,6 +4,11 @@ export interface ArticuloOGUC {
   texto: string
   keywords: string[]
   categoria: 'definiciones' | 'rasantes' | 'coeficientes' | 'permisos' | 'recepciones' | 'regularizaciones' | 'distanciamientos' | 'estacionamientos'
+  // Fuente oficial. `url` solo si existe un link oficial real al artículo; hoy
+  // ausente para OGUC (no fabricar deep-links). El fallback genérico vive en
+  // FUENTE_FALLBACK_URL (lib/normativa-retrieval.ts).
+  fuente?: string
+  url?: string
 }
 
 // OGUC D.S. N°47/1992 con modificaciones hasta D.S. N°2, D.O. 16.03.2026

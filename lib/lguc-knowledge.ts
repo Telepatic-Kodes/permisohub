@@ -26,6 +26,11 @@ export interface ArticuloLGUC {
   texto: string
   keywords: string[]
   categoria: CategoriaLGUC
+  // Fuente oficial. `url` solo si existe un link oficial real al artículo; hoy
+  // ausente para LGUC (no fabricar deep-links). El fallback genérico vive en
+  // FUENTE_FALLBACK_URL (lib/normativa-retrieval.ts).
+  fuente?: string
+  url?: string
 }
 
 export const ARTICULOS_LGUC: ArticuloLGUC[] = [
