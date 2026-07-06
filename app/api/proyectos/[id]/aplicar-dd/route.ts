@@ -46,8 +46,26 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     return Response.json({ error: 'No hay due diligence completado' }, { status: 400 })
   }
 
+  // Gate de verificación: solo fluyen los hallazgos revisados por el humano.
+  // Si queda alguno 'propuesto' (default para filas antiguas), 409 — el botón de
+  // la UI solo se habilita cuando 0. Solo los 'confirmado' se proyectan.
+  const hallazgos = result.hallazgos ?? []
+  const pendientes = hallazgos.filter((h) => (h.estadoRevision ?? 'propuesto') === 'propuesto').length
+  if (pendientes > 0) {
+    return Response.json({ error: 'DD_NO_VERIFICADO', pendientes }, { status: 409 })
+  }
+
   try {
-    // 1) Limpia lo previamente generado por el DD.
+    // 1a) Preserva el estado humano ('respondida') de las observaciones origen='dd'
+    // antes de borrarlas — se restaura por `numero` (=codigo del hallazgo).
+    const { data: prev } = await supabase
+      .from('observaciones_dom')
+      .select('numero, estado')
+      .eq('proyecto_id', id)
+      .eq('origen', 'dd')
+    const estadoPrev = new Map((prev ?? []).map((o) => [o.numero as string, o.estado as string]))
+
+    // 1b) Limpia lo previamente generado por el DD.
     await supabase.from('etapas').delete().eq('proyecto_id', id).eq('origen', 'dd')
     await supabase.from('observaciones_dom').delete().eq('proyecto_id', id).eq('origen', 'dd')
 
@@ -66,17 +84,24 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     }))
     await supabase.from('etapas').insert(etapasRows)
 
-    // 3) Observaciones desde los hallazgos.
+    // 3) Observaciones desde los hallazgos CONFIRMADOS (con edición humana + cita).
     const hoy = new Date().toISOString().slice(0, 10)
-    const obsRows = result.hallazgos.map((h) => ({
-      proyecto_id: id,
-      user_id: user.id,
-      numero: h.codigo,
-      texto: `${h.titulo} — ${h.descripcion}${h.refDOM ? ` (${h.refDOM})` : ''}`,
-      estado: 'pendiente',
-      origen: 'dd',
-      fecha: hoy,
-    }))
+    const obsRows = hallazgos
+      .filter((h) => (h.estadoRevision ?? 'propuesto') === 'confirmado')
+      .map((h) => {
+        const titulo = h.tituloEditado ?? h.titulo
+        const descripcion = h.descripcionEditada ?? h.descripcion
+        const cita = h.refNormativa?.find((r) => r.verificado)?.etiqueta ?? h.refNormativa?.[0]?.etiqueta
+        return {
+          proyecto_id: id,
+          user_id: user.id,
+          numero: h.codigo,
+          texto: `${titulo} — ${descripcion}${cita ? ` [${cita}]` : ''}${h.refDOM ? ` (${h.refDOM})` : ''}`,
+          estado: estadoPrev.get(h.codigo) ?? 'pendiente',
+          origen: 'dd',
+          fecha: hoy,
+        }
+      })
     if (obsRows.length > 0) await supabase.from('observaciones_dom').insert(obsRows)
 
     // 4) Actualiza estado / expediente del proyecto.
