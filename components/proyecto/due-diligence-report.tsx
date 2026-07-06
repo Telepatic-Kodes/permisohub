@@ -1,32 +1,48 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   AlertTriangle,
   Ban,
+  Check,
   CheckCircle2,
   Clock,
+  ExternalLink,
   FileSearch,
   Loader2,
+  Pencil,
   RefreshCw,
   ShieldAlert,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
 import PlanosAnotados from "@/components/proyecto/planos-anotados"
 import { cn } from "@/lib/utils"
 import type {
   DueDiligenceReportRow,
   DueDiligenceResult,
   EstadoInventario,
+  EstadoRevision,
   Hallazgo,
+  RefNormativa,
   RiesgoGlobal,
   Severidad,
   Vigencia,
 } from "@/lib/due-diligence"
+
+interface CambioHallazgo {
+  codigo: string
+  estadoRevision?: EstadoRevision
+  tituloEditado?: string
+  descripcionEditada?: string
+}
+
+const estadoRevisionDe = (h: Hallazgo): EstadoRevision => h.estadoRevision ?? "propuesto"
 
 export interface DueDiligenceReportProps {
   proyectoId: string
@@ -101,12 +117,86 @@ function vigenciaClasses(nivel: Vigencia["nivel"]): string {
 // ── Componente ───────────────────────────────────────────────────────────────
 
 export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChange }: DueDiligenceReportProps) {
-  const appliedRef = useRef(false)
   const [reportId, setReportId] = useState<string | null>(null)
   const [status, setStatus] = useState<UiStatus>("idle")
   const [progress, setProgress] = useState<DueDiligenceReportRow["progress"]>(null)
   const [result, setResult] = useState<DueDiligenceResult | null>(null)
   const [isStarting, setIsStarting] = useState(false)
+  // Verificación humana de los hallazgos.
+  const [editando, setEditando] = useState<string | null>(null)
+  const [aplicando, setAplicando] = useState(false)
+
+  // Persiste cambios de revisión (confirmar/editar/descartar) de forma
+  // optimista y recalcula revisionEstado en memoria.
+  const patchHallazgos = useCallback(
+    async (cambios: CambioHallazgo[]) => {
+      if (!reportId) return
+      setResult((prev) => {
+        if (!prev) return prev
+        const map = new Map(cambios.map((c) => [c.codigo, c]))
+        const hallazgos = prev.hallazgos.map((h) => {
+          const c = map.get(h.codigo)
+          if (!c) return h
+          const next = { ...h }
+          if (c.estadoRevision) next.estadoRevision = c.estadoRevision
+          if (c.tituloEditado !== undefined) next.tituloEditado = c.tituloEditado || undefined
+          if (c.descripcionEditada !== undefined) next.descripcionEditada = c.descripcionEditada || undefined
+          return next
+        })
+        const quedan = hallazgos.some((h) => estadoRevisionDe(h) === "propuesto")
+        return { ...prev, hallazgos, revisionEstado: quedan ? "pendiente" : "verificado" }
+      })
+      try {
+        const res = await fetch(`/api/proyectos/${proyectoId}/due-diligence/hallazgos`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reportId, cambios }),
+        })
+        if (!res.ok) throw new Error(String(res.status))
+      } catch {
+        toast.error("No se pudo guardar la revisión. Reintenta.")
+      }
+    },
+    [reportId, proyectoId],
+  )
+
+  const confirmarHallazgo = useCallback(
+    (codigo: string) => void patchHallazgos([{ codigo, estadoRevision: "confirmado" }]),
+    [patchHallazgos],
+  )
+  const descartarHallazgo = useCallback(
+    (codigo: string) => void patchHallazgos([{ codigo, estadoRevision: "descartado" }]),
+    [patchHallazgos],
+  )
+  const guardarEdicion = useCallback(
+    (codigo: string, titulo: string, descripcion: string) => {
+      void patchHallazgos([{ codigo, tituloEditado: titulo, descripcionEditada: descripcion, estadoRevision: "confirmado" }])
+      setEditando(null)
+    },
+    [patchHallazgos],
+  )
+
+  // Confirmar el DD y poblar la PMO (solo con 0 hallazgos 'propuesto').
+  const confirmarYContinuar = useCallback(async () => {
+    if (!result) return
+    const pendientes = result.hallazgos.filter((h) => estadoRevisionDe(h) === "propuesto").length
+    if (pendientes > 0) {
+      toast.error(`Revisa los ${pendientes} hallazgo(s) pendientes antes de continuar.`)
+      return
+    }
+    setAplicando(true)
+    try {
+      const res = await fetch(`/api/proyectos/${proyectoId}/aplicar-dd`, { method: "POST" })
+      if (!res.ok) {
+        toast.error("No se pudo aplicar el due diligence.")
+        return
+      }
+      toast.success("Due diligence verificado. Expediente actualizado.")
+      onApplied?.()
+    } finally {
+      setAplicando(false)
+    }
+  }, [result, proyectoId, onApplied])
 
   const isProcessing = isStarting || status === "pending" || status === "processing"
 
@@ -129,6 +219,7 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
         if (report.status === "done" && report.result) {
           setResult(report.result)
           setStatus("done")
+          setReportId(report.id) // necesario para PATCH de verificación
         } else if (report.status === "pending" || report.status === "processing") {
           setProgress(report.progress)
           setStatus(report.status)
@@ -162,13 +253,8 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
         if (row.status === "done") {
           setResult(row.result)
           clearInterval(intervalId)
-          // Run recién completado → poblar la PMO (una sola vez).
-          if (!appliedRef.current) {
-            appliedRef.current = true
-            void fetch(`/api/proyectos/${proyectoId}/aplicar-dd`, { method: "POST" })
-              .then(() => onApplied?.())
-              .catch(() => undefined)
-          }
+          // Ya NO se auto-aplica: el DD queda 'pendiente' de verificación
+          // humana. aplicar-dd lo dispara el botón "Confirmar y continuar".
         } else if (row.status === "error") {
           toast.error(row.error ?? "Ocurrió un error al generar el due diligence")
           clearInterval(intervalId)
@@ -435,53 +521,61 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
             )}
 
             {/* Hallazgos */}
-            {result.hallazgos.length > 0 && (
+            {result.hallazgos.length > 0 && (() => {
+              const revisados = result.hallazgos.filter((h) => estadoRevisionDe(h) !== "propuesto").length
+              const total = result.hallazgos.length
+              const todoRevisado = revisados === total
+              const yaVerificado = (result.revisionEstado ?? "pendiente") === "verificado"
+              return (
               <section className="space-y-2">
-                <h3 className="font-technical text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Hallazgos priorizados
-                </h3>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="font-technical text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Hallazgos · verificación
+                  </h3>
+                  <span className="num text-[11px] text-muted-foreground">
+                    {revisados} de {total} revisados
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Confirma, edita o descarta cada hallazgo. Solo lo confirmado pasa al PMO y a los planos.
+                </p>
                 <ul className="space-y-2">
-                  {result.hallazgos.map((hallazgo: Hallazgo) => {
-                    const sev = severidadClasses(hallazgo.severidad)
-                    return (
-                      <li
-                        key={hallazgo.codigo}
-                        className={cn("rounded-r-lg border-l-4 p-3", sev.stripe)}
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={cn("font-mono text-xs font-bold", sev.code)}>
-                            {hallazgo.codigo}
-                          </span>
-                          <span className={cn("text-[10px] font-semibold uppercase", sev.code)}>
-                            {sev.label}
-                          </span>
-                          <span className="text-sm font-semibold text-primary">
-                            {hallazgo.titulo}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                          {hallazgo.descripcion}
-                        </p>
-                        {(hallazgo.refDOM || hallazgo.refFuente) && (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {hallazgo.refDOM && (
-                              <Badge variant="outline" className="font-mono text-[10px]">
-                                {hallazgo.refDOM}
-                              </Badge>
-                            )}
-                            {hallazgo.refFuente && (
-                              <Badge variant="muted" className="text-[10px]">
-                                {hallazgo.refFuente}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                      </li>
-                    )
-                  })}
+                  {result.hallazgos.map((hallazgo) => (
+                    <HallazgoCard
+                      key={hallazgo.codigo}
+                      hallazgo={hallazgo}
+                      editando={editando === hallazgo.codigo}
+                      onEditar={() => setEditando(hallazgo.codigo)}
+                      onCancelar={() => setEditando(null)}
+                      onGuardar={guardarEdicion}
+                      onConfirmar={confirmarHallazgo}
+                      onDescartar={descartarHallazgo}
+                    />
+                  ))}
                 </ul>
+
+                {/* Barra de verificación → poblar la PMO */}
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-[3px] border border-line-strong bg-card px-4 py-3">
+                  <p className="text-xs text-muted-foreground">
+                    {todoRevisado
+                      ? yaVerificado
+                        ? "Due diligence verificado. Puedes continuar al PMO."
+                        : "Todos los hallazgos revisados. Confirma para actualizar el expediente."
+                      : `Faltan ${total - revisados} hallazgo(s) por revisar.`}
+                  </p>
+                  <Button
+                    size="sm"
+                    disabled={!todoRevisado || aplicando}
+                    onClick={() => void confirmarYContinuar()}
+                    className="bg-primary text-white hover:bg-primary/90"
+                  >
+                    {aplicando ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                    Confirmar Due Diligence y continuar →
+                  </Button>
+                </div>
               </section>
-            )}
+              )
+            })()}
 
             {/* Historial */}
             {result.historial.length > 0 && (
@@ -619,5 +713,174 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
         )}
       </CardContent>
     </Card>
+  )
+}
+
+// ── Cita normativa: link a la fuente o pill "sin fundamento verificado" ──────
+function CitaBadges({ refs }: { refs: RefNormativa[] }) {
+  const verificadas = refs.filter((r) => r.verificado)
+  if (verificadas.length === 0) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded-[3px] border px-1.5 py-0.5 text-[10px] font-medium"
+        style={{
+          color: "var(--state-warn)",
+          borderColor: "var(--state-warn)",
+          background: "color-mix(in oklch, var(--state-warn) 12%, transparent)",
+        }}
+        title="Ningún artículo de la base curada funda este hallazgo. Verifícalo contra la fuente oficial."
+      >
+        <AlertTriangle className="size-3" />
+        Sin fundamento verificado
+      </span>
+    )
+  }
+  return (
+    <>
+      {verificadas.map((r) => (
+        <a
+          key={`${r.fuente}-${r.id}`}
+          href={r.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="num inline-flex items-center gap-1 rounded-[3px] border border-line-med px-1.5 py-0.5 text-[10px] text-primary transition-colors hover:border-[var(--blueprint)] hover:text-[var(--blueprint)]"
+          title={`Ver ${r.etiqueta} en la fuente`}
+        >
+          {r.etiqueta}
+          <ExternalLink className="size-2.5" />
+        </a>
+      ))}
+    </>
+  )
+}
+
+interface HallazgoCardProps {
+  hallazgo: Hallazgo
+  editando: boolean
+  onEditar: () => void
+  onCancelar: () => void
+  onGuardar: (codigo: string, titulo: string, descripcion: string) => void
+  onConfirmar: (codigo: string) => void
+  onDescartar: (codigo: string) => void
+}
+
+function HallazgoCard({
+  hallazgo,
+  editando,
+  onEditar,
+  onCancelar,
+  onGuardar,
+  onConfirmar,
+  onDescartar,
+}: HallazgoCardProps) {
+  const sev = severidadClasses(hallazgo.severidad)
+  const estado = estadoRevisionDe(hallazgo)
+  const titulo = hallazgo.tituloEditado ?? hallazgo.titulo
+  const descripcion = hallazgo.descripcionEditada ?? hallazgo.descripcion
+  const refs = hallazgo.refNormativa ?? []
+  const descartado = estado === "descartado"
+
+  const [editTitulo, setEditTitulo] = useState(titulo)
+  const [editDesc, setEditDesc] = useState(descripcion)
+
+  if (editando) {
+    return (
+      <li className={cn("rounded-r-[3px] border-l-4 bg-card p-3", sev.stripe)}>
+        <input
+          value={editTitulo}
+          onChange={(e) => setEditTitulo(e.target.value)}
+          className="mb-2 w-full rounded-[3px] border border-line-med bg-background px-2 py-1 text-sm font-semibold text-primary"
+        />
+        <Textarea
+          value={editDesc}
+          onChange={(e) => setEditDesc(e.target.value)}
+          className="min-h-[64px] text-xs"
+        />
+        <div className="mt-2 flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => onGuardar(hallazgo.codigo, editTitulo, editDesc)}
+            className="bg-primary text-white hover:bg-primary/90"
+          >
+            <Check className="size-3.5" /> Guardar y confirmar
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onCancelar}>
+            Cancelar
+          </Button>
+        </div>
+      </li>
+    )
+  }
+
+  return (
+    <li className={cn("rounded-r-[3px] border-l-4 p-3 transition-opacity", sev.stripe, descartado && "opacity-55")}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={cn("num text-xs font-bold", sev.code)}>{hallazgo.codigo}</span>
+        <span className={cn("text-[10px] font-semibold uppercase", sev.code)}>{sev.label}</span>
+        <span className={cn("text-sm font-semibold text-primary", descartado && "line-through")}>{titulo}</span>
+        {estado === "confirmado" && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium" style={{ color: "var(--state-ok)" }}>
+            <CheckCircle2 className="size-3" /> Confirmado
+          </span>
+        )}
+        {descartado && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+            <Ban className="size-3" /> Descartado
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{descripcion}</p>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <CitaBadges refs={refs} />
+        {hallazgo.refDOM && (
+          <Badge variant="outline" className="num text-[10px]">
+            {hallazgo.refDOM}
+          </Badge>
+        )}
+        {hallazgo.refFuente && (
+          <Badge variant="muted" className="text-[10px]">
+            {hallazgo.refFuente}
+          </Badge>
+        )}
+      </div>
+
+      {/* Controles de verificación */}
+      <div className="mt-2 flex items-center gap-1.5 border-t border-line-fine pt-2">
+        <button
+          type="button"
+          onClick={() => onConfirmar(hallazgo.codigo)}
+          className={cn(
+            "inline-flex items-center gap-1 rounded-[3px] border px-2 py-0.5 text-[11px] transition-colors",
+            estado === "confirmado"
+              ? "border-transparent text-white"
+              : "border-line-med text-muted-foreground hover:border-[var(--state-ok)] hover:text-[var(--state-ok)]",
+          )}
+          style={estado === "confirmado" ? { background: "var(--state-ok)" } : undefined}
+        >
+          <Check className="size-3" /> Confirmar
+        </button>
+        <button
+          type="button"
+          onClick={onEditar}
+          className="inline-flex items-center gap-1 rounded-[3px] border border-line-med px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-[var(--blueprint)] hover:text-[var(--blueprint)]"
+        >
+          <Pencil className="size-3" /> Editar
+        </button>
+        <button
+          type="button"
+          onClick={() => onDescartar(hallazgo.codigo)}
+          className={cn(
+            "inline-flex items-center gap-1 rounded-[3px] border px-2 py-0.5 text-[11px] transition-colors",
+            descartado
+              ? "border-transparent text-white"
+              : "border-line-med text-muted-foreground hover:border-[var(--state-error)] hover:text-[var(--state-error)]",
+          )}
+          style={descartado ? { background: "var(--state-error)" } : undefined}
+        >
+          <X className="size-3" /> Descartar
+        </button>
+      </div>
+    </li>
   )
 }
