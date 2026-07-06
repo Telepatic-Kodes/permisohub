@@ -36,19 +36,28 @@ export interface ViaRecomendada {
   alertas: string[]
 }
 
-// Preguntas en orden de presentación. `pesada` marca las que empujan a una vía
-// más costosa (para pintar el toggle con color de estado en la UI).
-export const PREGUNTAS_VIA: {
+// Un nodo del árbol de decisión de vía: una pregunta Sí/No con su ayuda y, cuando
+// existe, el artículo que fundamenta *por qué* se pregunta / hacia dónde ramifica.
+// `fundamento` se resuelve contra la base curada (solo se muestra si `verificado`).
+export interface NodoVia {
   clave: keyof RespuestasVia
   label: string
   ayuda: string
-}[] = [
-  { clave: 'yaConstruido', label: '¿La obra ya está construida?', ayuda: 'Si ya se ejecutó, la vía es regularización, no un permiso ordinario.' },
-  { clave: 'alteraEstructura', label: '¿Interviene la estructura (muros soportantes, losas)?', ayuda: 'Trabajos estructurales empujan a permiso de alteración.' },
-  { clave: 'aumentaSuperficie', label: '¿Aumenta la superficie edificada?', ayuda: 'Un aumento de superficie es una modificación de proyecto.' },
-  { clave: 'cambiaDestino', label: '¿Cambia el destino/uso del inmueble?', ayuda: 'Ej.: de vivienda a local comercial.' },
+  fundamento?: { fuente: FuenteNormativa; id: string }
+}
+
+// Preguntas en orden de presentación. El mismo array sirve al panel plano
+// (`ViaDecision`) y al flujo guiado (`pasoSiguiente` → `ViaGuiada`).
+export const PREGUNTAS_VIA: NodoVia[] = [
+  { clave: 'yaConstruido', label: '¿La obra ya está construida?', ayuda: 'Si ya se ejecutó, la vía es regularización, no un permiso ordinario.', fundamento: { fuente: 'OGUC', id: '5.8.1' } },
+  { clave: 'alteraEstructura', label: '¿Interviene la estructura (muros soportantes, losas)?', ayuda: 'Trabajos estructurales empujan a permiso de alteración.', fundamento: { fuente: 'OGUC', id: '5.1.17' } },
+  { clave: 'aumentaSuperficie', label: '¿Aumenta la superficie edificada?', ayuda: 'Un aumento de superficie es una modificación de proyecto.', fundamento: { fuente: 'OGUC', id: '5.1.17' } },
+  { clave: 'cambiaDestino', label: '¿Cambia el destino/uso del inmueble?', ayuda: 'Ej.: de vivienda a local comercial.', fundamento: { fuente: 'DDU', id: 'ddu-esp-084-07' } },
   { clave: 'excedePRC', label: '¿Supera algún límite del PRC (constructibilidad, ocupación o altura)?', ayuda: 'Se prellena desde el cuadro de cálculo si ya lo cargaste.' },
 ]
+
+// Alias semántico: el árbol guiado recorre exactamente estas preguntas.
+export const NODOS_VIA = PREGUNTAS_VIA
 
 function citaDe(fuente: FuenteNormativa, id: string): CitaVia | null {
   const a = getArticuloById(fuente, id)
@@ -75,7 +84,7 @@ export function recomendarVia(r: RespuestasVia): ViaRecomendada {
       liviana: false,
       costoTiempo: 'Variable · según antigüedad y normativa vigente',
       razon: 'La obra ya está construida: no procede un permiso ordinario, sino una regularización.',
-      cita: null,
+      cita: citaDe('OGUC', '5.8.1'),
       alertas: [
         ...alertas,
         'Verifica la ley de regularización vigente aplicable (p. ej. Ley 20.898 y sus plazos): no está en la base curada, confírmala.',
@@ -118,4 +127,52 @@ export function recomendarVia(r: RespuestasVia): ViaRecomendada {
     cita: citaDe('OGUC', '5.1.17'),
     alertas,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Navegación del árbol guiado (una pregunta por pantalla).
+// ---------------------------------------------------------------------------
+
+// Cita verificada que fundamenta un nodo (o null si el nodo no tiene fundamento
+// curado; nunca se inventa un id).
+export function citaDeNodo(nodo: NodoVia): CitaVia | null {
+  if (!nodo.fundamento) return null
+  return citaDe(nodo.fundamento.fuente, nodo.fundamento.id)
+}
+
+export type PasoVia =
+  | { tipo: 'pregunta'; nodo: NodoVia; indice: number; total: number }
+  | { tipo: 'resultado'; via: ViaRecomendada; respuestas: RespuestasVia }
+
+function completar(r: Partial<RespuestasVia>): RespuestasVia {
+  return {
+    yaConstruido: r.yaConstruido ?? false,
+    cambiaDestino: r.cambiaDestino ?? false,
+    alteraEstructura: r.alteraEstructura ?? false,
+    aumentaSuperficie: r.aumentaSuperficie ?? false,
+    excedePRC: r.excedePRC ?? false,
+  }
+}
+
+/**
+ * Dado el conjunto de respuestas contestadas hasta ahora, decide la siguiente
+ * pantalla: la próxima pregunta pendiente o el resultado terminal.
+ *
+ * Ramifica (short-circuit): si la obra ya está construida, la vía es
+ * regularización sin importar el resto, así que no se pregunta lo demás.
+ * En otro caso recorre los nodos en orden y muestra el primero sin responder.
+ */
+export function pasoSiguiente(respuestas: Partial<RespuestasVia>): PasoVia {
+  if (respuestas.yaConstruido === true) {
+    const completas = completar(respuestas)
+    return { tipo: 'resultado', via: recomendarVia(completas), respuestas: completas }
+  }
+
+  const indice = NODOS_VIA.findIndex((n) => respuestas[n.clave] === undefined)
+  if (indice !== -1) {
+    return { tipo: 'pregunta', nodo: NODOS_VIA[indice], indice, total: NODOS_VIA.length }
+  }
+
+  const completas = completar(respuestas)
+  return { tipo: 'resultado', via: recomendarVia(completas), respuestas: completas }
 }

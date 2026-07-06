@@ -93,7 +93,29 @@ export async function POST(request: Request) {
       return apiError('Error al crear proyecto', 500, error)
     }
 
-    if (body.tipo === 'patente_comercial' && proyecto?.id && body.numero_expediente) {
+    // Persistir datos SII que el usuario ya cargó en el formulario (SIIEnricher).
+    // Antes se descartaban: el insert no los incluía. Con destino_sii persistido,
+    // el flujo guiado de vía pre-informa el destino actual del inmueble.
+    // Best-effort: si las columnas aún no existen (migración pendiente), se loguea
+    // pero NO se rompe la creación (el proyecto ya quedó insertado).
+    if (proyecto?.id) {
+      const sii = raw as Record<string, unknown>
+      const siiFields: Record<string, unknown> = {}
+      if (typeof sii.rol_sii === 'string') siiFields.rol_sii = sii.rol_sii
+      if (typeof sii.destino_sii === 'string') siiFields.destino_sii = sii.destino_sii
+      if (typeof sii.avaluo_fiscal_clp === 'number') siiFields.avaluo_fiscal_clp = sii.avaluo_fiscal_clp
+      if (typeof sii.superficie_terreno_m2 === 'number') siiFields.superficie_terreno_m2 = sii.superficie_terreno_m2
+      if (typeof sii.superficie_construida_m2 === 'number') siiFields.superficie_construida_m2 = sii.superficie_construida_m2
+      if (typeof sii.lat === 'number') siiFields.lat = sii.lat
+      if (typeof sii.lng === 'number') siiFields.lng = sii.lng
+      if (Object.keys(siiFields).length > 0) {
+        const { error: siiErr } = await supabase.from('proyectos').update(siiFields).eq('id', proyecto.id)
+        if (siiErr) console.error('No se pudieron persistir datos SII del proyecto:', siiErr.message)
+      }
+    }
+
+    // Fallback de scraping SII: patente sin datos del enricher pero con rol.
+    if (body.tipo === 'patente_comercial' && !(raw as Record<string, unknown>).destino_sii && proyecto?.id && body.numero_expediente) {
       const proyectoId = proyecto.id
       const rol = body.numero_expediente
       after(async () => {

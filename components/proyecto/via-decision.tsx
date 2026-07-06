@@ -1,11 +1,18 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { AlertTriangle, ExternalLink, GitFork } from "lucide-react"
+import { AlertTriangle, ExternalLink, Footprints, GitFork } from "lucide-react"
 
 import { PREGUNTAS_VIA, recomendarVia, type RespuestasVia } from "@/lib/via-tramitacion"
 import { calcularCuadro, type CuadroInput } from "@/lib/cuadros-calculo"
 import { cn } from "@/lib/utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { ViaGuiada } from "@/components/proyecto/via-guiada"
 
 const DEFAULT: RespuestasVia = {
   yaConstruido: false,
@@ -17,8 +24,9 @@ const DEFAULT: RespuestasVia = {
 
 // Decisor determinista de vía: unas pocas preguntas → la vía DOM y su artículo.
 // Es la sugerencia instantánea y citada del PMO; el asesor de vía (IA) profundiza.
-export function ViaDecision({ proyectoId }: { proyectoId: string }) {
+export function ViaDecision({ proyectoId, destinoSii }: { proyectoId: string; destinoSii?: string | null }) {
   const [r, setR] = useState<RespuestasVia>(DEFAULT)
+  const [guiadaOpen, setGuiadaOpen] = useState(false)
 
   // Prellena "excede PRC" desde el cuadro de cálculo guardado (determinista).
   useEffect(() => {
@@ -33,6 +41,25 @@ export function ViaDecision({ proyectoId }: { proyectoId: string }) {
         if (!c.incompleto && c.incumplimientos.length > 0) {
           setR((prev) => ({ ...prev, excedePRC: true }))
         }
+      } catch {
+        // silencioso: el prellenado es opcional
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [proyectoId])
+
+  // Prellena los toggles desde el flujo guiado persistido, si existe.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch(`/api/proyectos/${proyectoId}/via-tramitacion`)
+        if (!res.ok) return
+        const json = (await res.json()) as { data: { respuestas: Partial<RespuestasVia> } | null }
+        if (cancelled || !json.data?.respuestas) return
+        setR((prev) => ({ ...prev, ...json.data!.respuestas }))
       } catch {
         // silencioso: el prellenado es opcional
       }
@@ -135,9 +162,34 @@ export function ViaDecision({ proyectoId }: { proyectoId: string }) {
             </ul>
           )}
 
-          <p className="mt-3 border-t border-line-fine pt-2 text-[10px] leading-snug text-muted-foreground">
-            Orientativo. Para los ajustes específicos del proyecto, usa el asesor de vía (IA) más abajo.
-          </p>
+          <div className="mt-3 border-t border-line-fine pt-2.5">
+            <button
+              type="button"
+              onClick={() => setGuiadaOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-[3px] border border-line-med px-2.5 py-1.5 text-[11px] font-medium text-primary transition-colors hover:border-[var(--blueprint)] hover:text-[var(--blueprint)]"
+            >
+              <Footprints className="size-3.5" />
+              Guiarme paso a paso
+            </button>
+            <Dialog open={guiadaOpen} onOpenChange={setGuiadaOpen}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="font-technical">Vía de tramitación · guiada</DialogTitle>
+                </DialogHeader>
+                <ViaGuiada
+                  proyectoId={proyectoId}
+                  destinoSii={destinoSii}
+                  onSaved={(resp) => {
+                    setR((prev) => ({ ...prev, ...resp }))
+                    setGuiadaOpen(false)
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+            <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
+              Orientativo. Para los ajustes específicos del proyecto, usa el asesor de vía (IA) más abajo.
+            </p>
+          </div>
         </div>
       </div>
     </div>
