@@ -91,6 +91,7 @@
      Azul blueprint: eje/cota activa, dato en foco, la "tinta de plano".
      Estado normativo (ÚNICO color saturado que se permite en la UI). */
   --blueprint: oklch(0.52 0.13 245);
+  --blueprint-soft: oklch(0.52 0.13 245 / 0.10);
   --state-ok: oklch(0.55 0.12 155);
   --state-warn: oklch(0.66 0.15 68);
   --state-error: oklch(0.55 0.20 27);
@@ -142,6 +143,7 @@
   --sidebar-ring: oklch(0.78 0.16 78);
   /* Idioma del arquitecto — variante oscura */
   --blueprint: oklch(0.68 0.13 245);
+  --blueprint-soft: oklch(0.68 0.13 245 / 0.16);
   --state-ok: oklch(0.68 0.13 155);
   --state-warn: oklch(0.75 0.15 68);
   --state-error: oklch(0.70 0.19 22);

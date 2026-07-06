@@ -1,17 +1,18 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { AlertCircle, Download, Eye, EyeOff, Loader2, Maximize2, PencilRuler, RefreshCw } from "lucide-react"
+import { AlertCircle, Check, CircleDashed, Download, Eye, EyeOff, Loader2, Maximize2, PencilRuler, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 import { createClient } from "@/lib/supabase/client"
 import { esPlano } from "@/lib/planos"
 import { cn } from "@/lib/utils"
 import {
   CONVENCION_LINEA,
-  SEVERIDAD_COLOR,
   colorDeMarca,
   type Anotacion,
+  type Severidad,
 } from "@/lib/anotacion-convenciones"
 import {
   generarInformePDF,
@@ -46,6 +47,18 @@ interface Props {
   proyectoId: string
   result: DueDiligenceResult
 }
+
+// Severidad de la observación → veredicto normativo (único color saturado):
+// crítica = rechaza, media = observa, menor = neutro. Así el chip de la lista
+// habla el idioma del <EstadoNormativo> del resto de la ficha.
+const SEVERIDAD_VEREDICTO: Record<Severidad, Veredicto> = {
+  crítica: "rechaza",
+  media: "observa",
+  menor: "neutro",
+}
+
+// `estado` ausente (filas anteriores a jul 2026) se trata como "pendiente".
+const estaResuelta = (a: Anotacion): boolean => a.estado === "resuelta"
 
 export default function PlanosAnotados({ proyectoId, result }: Props) {
   const [loading, setLoading] = useState(false)
@@ -267,6 +280,34 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
     [guardar],
   )
 
+  // Alterna pendiente ⇄ resuelta de una marca y persiste la lámina activa
+  // reusando el mismo upsert de guardar() (array completo de anotaciones).
+  const toggleEstado = useCallback(
+    (laminaId: string, anotacionId: string) => {
+      setLaminas((prev) => {
+        const next = prev.map((l) =>
+          l.id !== laminaId
+            ? l
+            : {
+                ...l,
+                anotaciones: l.anotaciones.map((a) =>
+                  a.id !== anotacionId
+                    ? a
+                    : {
+                        ...a,
+                        estado: estaResuelta(a) ? ("pendiente" as const) : ("resuelta" as const),
+                      },
+                ),
+              },
+        )
+        const changed = next.find((l) => l.id === laminaId)
+        if (changed) void guardar([changed])
+        return next
+      })
+    },
+    [guardar],
+  )
+
   const active = laminas[activeIdx]
 
   return (
@@ -325,6 +366,7 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
         setHoverId={setHoverId}
         onGenerar={generar}
         onMoverMarca={moverMarca}
+        onToggleEstado={toggleEstado}
         cuadro={cuadro}
       />
     </Card>
@@ -350,10 +392,11 @@ interface BodyProps {
   setHoverId: (id: string | null) => void
   onGenerar: () => void
   onMoverMarca: (laminaId: string, anotacionId: string, x: number, y: number) => void
+  onToggleEstado: (laminaId: string, anotacionId: string) => void
   cuadro: CuadroResultado | null
 }
 
-function CardBody({ loading, rehidratando, error, done, active, hoverId, setHoverId, onGenerar, onMoverMarca, cuadro }: BodyProps) {
+function CardBody({ loading, rehidratando, error, done, active, hoverId, setHoverId, onGenerar, onMoverMarca, onToggleEstado, cuadro }: BodyProps) {
   const [zoom, setZoom] = useState(false)
   const [vinetaVisible, setVinetaVisible] = useState(true)
 
@@ -436,70 +479,15 @@ function CardBody({ loading, rehidratando, error, done, active, hoverId, setHove
         </div>
       </div>
 
-      {/* Panel de observaciones — bajo la lámina, en grilla */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {active.anotaciones.length} observaciones en esta lámina
-        </p>
-        {active.anotaciones.length === 0 && (
-          <p className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
-            Sin marcas en esta lámina.
-          </p>
-        )}
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {active.anotaciones.map((a, i) => {
-            const color = colorDeMarca(a.convencionLinea, a.severidad)
-            const on = hoverId === a.id
-            return (
-              <div
-                key={a.id}
-                onMouseEnter={() => setHoverId(a.id)}
-                onMouseLeave={() => setHoverId(null)}
-                className={cn(
-                  "rounded-lg border bg-white p-2.5 transition-all",
-                  on ? "border-primary/40 shadow-sm" : "border-border",
-                )}
-              >
-                <div className="mb-1 flex items-start gap-2">
-                  <span
-                    className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                    style={{ background: color }}
-                  >
-                    {i + 1}
-                  </span>
-                  <span className="text-xs font-semibold text-primary">{a.textoCorto}</span>
-                  <span
-                    className="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
-                    style={{ background: `${SEVERIDAD_COLOR[a.severidad]}1a`, color: SEVERIDAD_COLOR[a.severidad] }}
-                  >
-                    {a.severidad}
-                  </span>
-                </div>
-                {a.articulo && (
-                  <span className="mb-1 inline-block rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                    {a.articulo}
-                  </span>
-                )}
-                {a.ancla && (
-                  <p className="mb-1 text-[10px] italic text-muted-foreground">📍 {a.ancla}</p>
-                )}
-                {a.confianza < 0.5 && (
-                  <p className="mb-1 text-[10px] font-medium text-amber-600">
-                    Ubicación aproximada — verificar sobre el plano
-                  </p>
-                )}
-                <p className="text-[11px] leading-relaxed text-foreground/75">{a.observacion}</p>
-                {a.sugerencia && (
-                  <p className="mt-1 rounded bg-primary/5 px-1.5 py-1 text-[10px] leading-relaxed text-primary/80">
-                    <span className="font-semibold">Corregir: </span>
-                    {a.sugerencia}
-                  </p>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
+      {/* Markups List (patrón Bluebeam): registro compacto de observaciones,
+          hairlines, número que enlaza con la marca, artículo en mono, chip de
+          estado normativo y control pendiente ⇄ resuelta por fila. */}
+      <MarkupsList
+        anotaciones={active.anotaciones}
+        hoverId={hoverId}
+        setHoverId={setHoverId}
+        onToggle={(id) => onToggleEstado(active.id, id)}
+      />
 
       {/* Lightbox de zoom: lámina a pantalla (casi) completa con las marcas */}
       {zoom && (
@@ -531,6 +519,129 @@ function CardBody({ loading, rehidratando, error, done, active, hoverId, setHove
                 onMoverMarca={onMoverMarca}
               />
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Markups List (patrón Bluebeam): el panel de observaciones como registro
+// técnico, no como tarjetas. Cada fila enlaza con su marca por número (hover
+// bidireccional), muestra el artículo en mono, el chip de estado normativo por
+// severidad y un control pendiente ⇄ resuelta. Fila resuelta = atenuada/tachada.
+function MarkupsList({
+  anotaciones,
+  hoverId,
+  setHoverId,
+  onToggle,
+}: {
+  anotaciones: Anotacion[]
+  hoverId: string | null
+  setHoverId: (id: string | null) => void
+  onToggle: (id: string) => void
+}) {
+  const total = anotaciones.length
+  const resueltas = anotaciones.filter(estaResuelta).length
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="font-technical text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Markups · observaciones
+        </p>
+        <p className="num text-[11px] text-muted-foreground">
+          {total} observaciones · {resueltas} resueltas
+        </p>
+      </div>
+
+      {total === 0 ? (
+        <p className="rounded-[3px] border border-dashed border-line-fine bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
+          Sin marcas en esta lámina.
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-[3px] border border-line-fine">
+          <div className="divide-y divide-line-fine">
+            {anotaciones.map((a, i) => {
+              const color = colorDeMarca(a.convencionLinea, a.severidad)
+              const on = hoverId === a.id
+              const resuelta = estaResuelta(a)
+              return (
+                <div
+                  key={a.id}
+                  onMouseEnter={() => setHoverId(a.id)}
+                  onMouseLeave={() => setHoverId(null)}
+                  className={cn(
+                    "flex items-start gap-3 px-3 py-2.5 transition-colors",
+                    on && "bg-[color-mix(in_oklch,var(--blueprint)_8%,transparent)]",
+                    resuelta && "opacity-55",
+                  )}
+                >
+                  {/* Número — clave visual que enlaza fila ⇄ marca */}
+                  <span
+                    className="num mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                    style={{ background: color }}
+                  >
+                    {i + 1}
+                  </span>
+
+                  {/* Cuerpo */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span
+                        className={cn(
+                          "text-xs font-semibold text-primary",
+                          resuelta && "line-through",
+                        )}
+                      >
+                        {a.textoCorto}
+                      </span>
+                      {a.articulo && (
+                        <span className="num rounded-[3px] border border-line-fine bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                          {a.articulo}
+                        </span>
+                      )}
+                    </div>
+                    {a.ancla && (
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        <span className="num">↳</span> {a.ancla}
+                      </p>
+                    )}
+                    {a.confianza < 0.5 && (
+                      <p className="mt-1 text-[10px] font-medium" style={{ color: "var(--state-warn)" }}>
+                        Ubicación aproximada — verificar sobre el plano
+                      </p>
+                    )}
+                    <p className="mt-1 text-[11px] leading-relaxed text-foreground/75">{a.observacion}</p>
+                    {a.sugerencia && (
+                      <p className="mt-1 rounded-[3px] bg-[color-mix(in_oklch,var(--blueprint)_8%,transparent)] px-1.5 py-1 text-[10px] leading-relaxed text-[var(--blueprint)]">
+                        <span className="font-semibold">Corregir: </span>
+                        {a.sugerencia}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Estado: severidad normativa + toggle pendiente/resuelta */}
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <EstadoNormativo estado={SEVERIDAD_VEREDICTO[a.severidad]} label={a.severidad} />
+                    <button
+                      type="button"
+                      onClick={() => onToggle(a.id)}
+                      aria-pressed={resuelta}
+                      title={resuelta ? "Marcar como pendiente" : "Marcar como resuelta"}
+                      className={cn(
+                        "num inline-flex items-center gap-1 rounded-[3px] border px-1.5 py-0.5 text-[10px] font-medium transition-colors",
+                        resuelta ? "border-transparent text-white" : "border-line-med text-muted-foreground hover:border-line-strong",
+                      )}
+                      style={resuelta ? { background: "var(--state-ok)" } : undefined}
+                    >
+                      {resuelta ? <Check className="size-3" strokeWidth={3} /> : <CircleDashed className="size-3" />}
+                      {resuelta ? "Resuelta" : "Pendiente"}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -633,6 +744,7 @@ function LaminaOverlay({
         const color = colorDeMarca(a.convencionLinea, a.severidad)
         const on = hoverId === a.id
         const dragging = dragPos?.id === a.id
+        const resuelta = estaResuelta(a)
         const x = dragging ? dragPos.x : a.bbox.x
         const y = dragging ? dragPos.y : a.bbox.y
         return (
@@ -652,7 +764,8 @@ function LaminaOverlay({
               borderRadius: a.tipoMarca === "circulo" ? "9999px" : "4px",
               background: on || dragging ? `${color}1f` : "transparent",
               boxShadow: on || dragging ? `0 0 0 2px ${color}55` : "none",
-              opacity: a.confianza < 0.5 ? 0.7 : 1,
+              // Marca resuelta = muy atenuada; ubicación incierta = tenue.
+              opacity: resuelta ? 0.4 : a.confianza < 0.5 ? 0.7 : 1,
             }}
             title={a.ancla ? `${i + 1}. ${a.textoCorto} — ${a.ancla}` : `${i + 1}. ${a.textoCorto}`}
           >
@@ -662,6 +775,15 @@ function LaminaOverlay({
             >
               {i + 1}
             </span>
+            {resuelta && (
+              <span
+                className="absolute -right-2 -top-2 flex size-4 items-center justify-center rounded-full border border-white text-white"
+                style={{ background: "var(--state-ok)" }}
+                title="Resuelta"
+              >
+                <Check className="size-2.5" strokeWidth={3} />
+              </span>
+            )}
           </div>
         )
       })}

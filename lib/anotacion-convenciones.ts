@@ -77,6 +77,11 @@ export interface Anotacion {
   // comprometerse con una ubicación y permite verificarla. Opcional en filas
   // antiguas guardadas antes de jul 2026.
   ancla?: string
+  // Estado de resolución de la marca en el visor (Markups List, patrón
+  // Bluebeam): el arquitecto la alterna pendiente ⇄ resuelta a medida que
+  // corrige el plano. Opcional para no romper filas antiguas ni otros
+  // consumidores (informe-pdf); ausente se trata como "pendiente".
+  estado?: 'pendiente' | 'resuelta'
 }
 
 export interface LaminaAnotada {
