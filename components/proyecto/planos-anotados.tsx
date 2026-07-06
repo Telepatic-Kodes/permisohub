@@ -849,11 +849,14 @@ function CuadroVineta({ cuadro }: { cuadro: CuadroResultado }) {
   const vColor = (v: string) =>
     v === "excede" ? "#dc2626" : v === "cumple" ? "#16a34a" : "#6b7280"
   const filas = cuadro.filas.filter((f) =>
-    ["Constructibilidad", "Ocupación de suelo", "Altura de edificación"].includes(f.concepto),
+    ["Constructibilidad", "Ocupación de suelo", "Altura de edificación", "Rasante", "Distanciamiento"].includes(
+      f.concepto,
+    ),
   )
   const corto: Record<string, string> = {
     "Ocupación de suelo": "Ocupación",
     "Altura de edificación": "Altura",
+    Distanciamiento: "Distanc.",
   }
   return (
     <div className="absolute bottom-1.5 right-1.5 w-[22%] min-w-[110px] max-w-[170px] rounded border border-black/25 bg-white/95 p-1.5 text-[9px] leading-tight shadow-md">

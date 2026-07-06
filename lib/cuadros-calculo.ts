@@ -18,6 +18,21 @@ export interface NivelSuperficie {
   ocupadaSuelo?: number
 }
 
+// Envolvente (Δ4) — inputs de rasante y distanciamiento por reglas OGUC.
+// Ambos opcionales: el cálculo solo agrega su fila cuando hay datos. El factor
+// de rasante por defecto es 70° (pendiente 2.75/1) según el Art. 2.6.3; si el
+// PRC fija otro, lo ingresa el arquitecto. Los distanciamientos varían por PRC.
+export interface RasanteInput {
+  distanciaAlDeslindeM?: number // distancia horizontal desde el deslinde al punto
+  factorPendiente?: number // default 2.75 (70°); override si el PRC fija otro
+  alturaEnPuntoM?: number // altura proyectada en ese punto (para el veredicto)
+}
+export interface DistanciamientoInput {
+  alturaEdificacionM?: number
+  muro?: 'con_vanos' | 'ciego' // default 'con_vanos'
+  distanciaProyectadaM?: number // distancia proyectada al deslinde (para el veredicto)
+}
+
 export interface CuadroInput {
   // Superficie del predio (terreno), en m². Denominador de los coeficientes.
   superficiePredio: number
@@ -28,6 +43,9 @@ export interface CuadroInput {
   ocupacionSueloMaxPct?: number // ej. 40 (%)
   alturaMaxM?: number // ej. 10.5 (m)
   alturaProyectoM?: number // altura del proyecto, en m
+  // Envolvente (Δ4) — opcionales, aditivos (jsonb viejo sigue válido).
+  rasante?: RasanteInput
+  distanciamiento?: DistanciamientoInput
 }
 
 export type Veredicto = 'cumple' | 'excede' | 'sin_limite'
@@ -40,6 +58,9 @@ export interface FilaCuadro {
   veredicto: Veredicto
   // Detalle legible (ej. "184.21 / 500 m²").
   detalle?: string
+  // Dirección del límite: 'max' = incumple por encima (default; constructibilidad,
+  // altura, rasante); 'min' = incumple por debajo (distanciamiento).
+  sentido?: 'max' | 'min'
 }
 
 export interface CuadroResultado {
@@ -75,6 +96,37 @@ function excede(valor: number, limite: number): boolean {
 function veredictoDe(valor: number, limite: number | null): Veredicto {
   if (limite === null || limite <= 0) return 'sin_limite'
   return excede(valor, limite) ? 'excede' : 'cumple'
+}
+
+// Veredicto para reglas de MÍNIMO (distanciamiento): incumple cuando el valor
+// proyectado queda por debajo del mínimo exigido (con la misma tolerancia 0.5%).
+// Usa el mismo enum: 'excede' = "no cumple la norma" (aquí, bajo el mínimo).
+function veredictoMin(valor: number, minimo: number | null): Veredicto {
+  if (minimo === null || minimo <= 0) return 'sin_limite'
+  return valor < minimo * 0.995 ? 'excede' : 'cumple'
+}
+
+// --- Envolvente (Δ4): reglas OGUC deterministas, aritmética pura ---
+
+// Altura máxima admisible en un punto por rasante (Art. 2.6.3 OGUC). Por defecto
+// 70° = pendiente 2.75/1: por cada metro horizontal desde el deslinde se puede
+// subir 2.75 m. Si el PRC fija otro ángulo, se pasa su factor de pendiente.
+export function alturaMaxRasante(distanciaM: number, factor = 2.75): number {
+  const d = num(distanciaM)
+  const f = typeof factor === 'number' && factor > 0 ? factor : 2.75
+  return round(d * f, 2)
+}
+
+// Distanciamiento mínimo entre la edificación y el deslinde (Art. 2.6.6 pto 3):
+// un tercio de la altura, con piso de 3 m entre muros con vanos y 1,5 m entre
+// muros ciegos.
+export function distanciamientoMinimo(
+  alturaM: number,
+  muro: 'con_vanos' | 'ciego' = 'con_vanos',
+): number {
+  const h = num(alturaM)
+  const piso = muro === 'ciego' ? 1.5 : 3
+  return round(Math.max(h / 3, piso), 2)
 }
 
 /**
@@ -159,13 +211,57 @@ export function calcularCuadro(input: CuadroInput): CuadroResultado {
     })
   }
 
+  // Envolvente — Rasante (Art. 2.6.3): altura máxima admisible en el punto.
+  const rasante = input.rasante
+  const distRasante = rasante ? num(rasante.distanciaAlDeslindeM) : 0
+  if (distRasante > 0) {
+    const factor =
+      typeof rasante?.factorPendiente === 'number' && rasante.factorPendiente > 0
+        ? round(rasante.factorPendiente, 2)
+        : 2.75
+    const maxAltura = alturaMaxRasante(distRasante, factor)
+    const alturaEnPunto = num(rasante?.alturaEnPuntoM)
+    filas.push({
+      concepto: 'Rasante',
+      valor: alturaEnPunto > 0 ? round(alturaEnPunto, 2) : maxAltura,
+      unidad: 'm',
+      limite: maxAltura,
+      veredicto: alturaEnPunto > 0 ? veredictoDe(alturaEnPunto, maxAltura) : 'sin_limite',
+      detalle: `${round(distRasante, 2)} m × ${factor} = ${maxAltura} m`,
+      sentido: 'max',
+    })
+  }
+
+  // Envolvente — Distanciamiento (Art. 2.6.6): mínimo exigido (regla de MÍNIMO).
+  const dist = input.distanciamiento
+  const alturaDist = dist ? num(dist.alturaEdificacionM) : 0
+  if (alturaDist > 0) {
+    const muro = dist?.muro === 'ciego' ? 'ciego' : 'con_vanos'
+    const minimo = distanciamientoMinimo(alturaDist, muro)
+    const proyectada = num(dist?.distanciaProyectadaM)
+    const etiquetaMuro = muro === 'ciego' ? 'muro ciego' : 'muro con vanos'
+    filas.push({
+      concepto: 'Distanciamiento',
+      valor: proyectada > 0 ? round(proyectada, 2) : minimo,
+      unidad: 'm',
+      limite: minimo,
+      veredicto: proyectada > 0 ? veredictoMin(proyectada, minimo) : 'sin_limite',
+      detalle:
+        proyectada > 0
+          ? `proyectado ${round(proyectada, 2)} m · mínimo ${minimo} m (${etiquetaMuro})`
+          : `mínimo ${minimo} m (${etiquetaMuro})`,
+      sentido: 'min',
+    })
+  }
+
   const incumplimientos = filas
     .filter((f) => f.veredicto === 'excede')
-    .map((f) =>
-      f.limite !== null
-        ? `${f.concepto}: ${f.valor}${f.unidad} excede el máximo ${f.limite}${f.unidad}`
-        : f.concepto,
-    )
+    .map((f) => {
+      if (f.limite === null) return f.concepto
+      return f.sentido === 'min'
+        ? `${f.concepto}: ${f.valor}${f.unidad} bajo el mínimo ${f.limite}${f.unidad}`
+        : `${f.concepto}: ${f.valor}${f.unidad} excede el máximo ${f.limite}${f.unidad}`
+    })
 
   const incompleto = predio <= 0 || superficieTotalEdificada <= 0
 

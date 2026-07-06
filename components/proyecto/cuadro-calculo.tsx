@@ -4,9 +4,11 @@ import { useEffect, useState } from "react"
 import {
   AlertTriangle,
   Calculator,
+  ExternalLink,
   Info,
   Loader2,
   Plus,
+  Ruler,
   Save,
   Sparkles,
   Trash2,
@@ -20,9 +22,11 @@ import {
   calcularCuadro,
   cuadroVacio,
   type CuadroInput,
+  type FilaCuadro,
   type NivelSuperficie,
   type Veredicto,
 } from "@/lib/cuadros-calculo"
+import { getArticuloById, urlDeCitable, type FuenteNormativa } from "@/lib/normativa-retrieval"
 
 const VEREDICTO_STYLE: Record<Veredicto, string> = {
   cumple: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -34,6 +38,30 @@ const VEREDICTO_LABEL: Record<Veredicto, string> = {
   cumple: "Cumple",
   excede: "Excede",
   sin_limite: "Sin límite",
+}
+
+// Rótulo del veredicto respetando el sentido del límite: una regla de mínimo
+// (distanciamiento) que falla no "excede", queda "bajo el mínimo".
+function labelVeredicto(fila: FilaCuadro): string {
+  if (fila.veredicto === "excede" && fila.sentido === "min") return "Bajo el mínimo"
+  return VEREDICTO_LABEL[fila.veredicto]
+}
+
+// Link a la fuente del artículo, solo si está verificado en la base curada.
+function CitaLink({ fuente, id }: { fuente: FuenteNormativa; id: string }) {
+  const a = getArticuloById(fuente, id)
+  if (!a || !a.verificado) return null
+  return (
+    <a
+      href={urlDeCitable(a)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="num inline-flex items-center gap-1 rounded-[3px] border border-border px-1.5 py-0.5 text-[10px] text-foreground transition-colors hover:border-primary hover:text-primary"
+    >
+      {a.etiqueta}
+      <ExternalLink className="size-2.5" />
+    </a>
+  )
 }
 
 // Parseo tolerante: string vacío → 0 (para campos obligatorios) o undefined (opcionales).
@@ -359,6 +387,162 @@ export function CuadroCalculo({ proyectoId }: { proyectoId: string }) {
                 </div>
               </div>
             </div>
+
+            {/* Envolvente — rasante (2.6.3) y distanciamiento (2.6.6) */}
+            <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <Ruler className="size-3.5 text-primary" />
+                  Envolvente · rasante y distanciamiento
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <CitaLink fuente="OGUC" id="2.6.3" />
+                  <CitaLink fuente="OGUC" id="2.6.6" />
+                </div>
+              </div>
+
+              {/* Rasante */}
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-medium text-muted-foreground">
+                  Rasante — altura máx. en un punto (Art. 2.6.3)
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground">Dist. al deslinde (m)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      inputMode="decimal"
+                      value={show(input.rasante?.distanciaAlDeslindeM)}
+                      onChange={(e) =>
+                        setInput((prev) => ({
+                          ...prev,
+                          rasante: { ...prev.rasante, distanciaAlDeslindeM: toOptNum(e.target.value) },
+                        }))
+                      }
+                      placeholder="ej. 3.0"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground">Factor (pendiente)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      inputMode="decimal"
+                      value={show(input.rasante?.factorPendiente)}
+                      onChange={(e) =>
+                        setInput((prev) => ({
+                          ...prev,
+                          rasante: { ...prev.rasante, factorPendiente: toOptNum(e.target.value) },
+                        }))
+                      }
+                      placeholder="2.75 (70°)"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground">Altura en el punto (m)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      inputMode="decimal"
+                      value={show(input.rasante?.alturaEnPuntoM)}
+                      onChange={(e) =>
+                        setInput((prev) => ({
+                          ...prev,
+                          rasante: { ...prev.rasante, alturaEnPuntoM: toOptNum(e.target.value) },
+                        }))
+                      }
+                      placeholder="ej. 9.0"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Distanciamiento */}
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-medium text-muted-foreground">
+                  Distanciamiento — mínimo al deslinde (Art. 2.6.6)
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground">Altura edif. (m)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      inputMode="decimal"
+                      value={show(input.distanciamiento?.alturaEdificacionM)}
+                      onChange={(e) =>
+                        setInput((prev) => ({
+                          ...prev,
+                          distanciamiento: {
+                            ...prev.distanciamiento,
+                            alturaEdificacionM: toOptNum(e.target.value),
+                          },
+                        }))
+                      }
+                      placeholder="ej. 9.0"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground">Tipo de muro</label>
+                    <div className="flex h-9 overflow-hidden rounded-md border border-border">
+                      {(["con_vanos", "ciego"] as const).map((m) => {
+                        const active = (input.distanciamiento?.muro ?? "con_vanos") === m
+                        return (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() =>
+                              setInput((prev) => ({
+                                ...prev,
+                                distanciamiento: { ...prev.distanciamiento, muro: m },
+                              }))
+                            }
+                            className={cn(
+                              "flex-1 text-[11px] font-medium transition-colors",
+                              active
+                                ? "bg-primary text-white"
+                                : "bg-background text-muted-foreground hover:text-foreground",
+                            )}
+                          >
+                            {m === "con_vanos" ? "Con vanos" : "Ciego"}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-muted-foreground">Dist. proyectada (m)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      inputMode="decimal"
+                      value={show(input.distanciamiento?.distanciaProyectadaM)}
+                      onChange={(e) =>
+                        setInput((prev) => ({
+                          ...prev,
+                          distanciamiento: {
+                            ...prev.distanciamiento,
+                            distanciaProyectadaM: toOptNum(e.target.value),
+                          },
+                        }))
+                      }
+                      placeholder="ej. 3.0"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[10px] leading-snug text-muted-foreground">
+                Rasante por defecto 70° (factor 2.75); si tu PRC fija otro, ingrésalo. Los
+                distanciamientos varían por PRC — verifica el instrumento. Orientativo.
+              </p>
+            </div>
           </div>
 
           {/* ── Resultado en vivo ── */}
@@ -444,7 +628,7 @@ export function CuadroCalculo({ proyectoId }: { proyectoId: string }) {
                             VEREDICTO_STYLE[fila.veredicto],
                           )}
                         >
-                          {VEREDICTO_LABEL[fila.veredicto]}
+                          {labelVeredicto(fila)}
                         </span>
                       </td>
                     </tr>

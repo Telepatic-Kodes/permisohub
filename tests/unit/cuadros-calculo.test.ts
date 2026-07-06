@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  alturaMaxRasante,
   calcularCuadro,
   cuadroVacio,
+  distanciamientoMinimo,
   margenesCuadro,
   round,
   type CuadroInput,
@@ -115,6 +117,96 @@ describe('calcularCuadro', () => {
     })
     expect(r.filas.find((f) => f.concepto === 'Constructibilidad')?.veredicto).toBe('sin_limite')
     expect(r.filas.find((f) => f.concepto === 'Ocupación de suelo')?.veredicto).toBe('sin_limite')
+  })
+})
+
+describe('envolvente — funciones puras (Δ4)', () => {
+  it('alturaMaxRasante: factor por defecto 70° (2.75/1)', () => {
+    expect(alturaMaxRasante(3)).toBe(8.25) // 3 × 2.75
+    expect(alturaMaxRasante(1)).toBe(2.75)
+    expect(alturaMaxRasante(0)).toBe(0)
+  })
+
+  it('alturaMaxRasante: respeta un factor del PRC y descarta factores inválidos', () => {
+    expect(alturaMaxRasante(2, 2)).toBe(4)
+    expect(alturaMaxRasante(2, 0)).toBe(5.5) // factor <= 0 → default 2.75
+  })
+
+  it('distanciamientoMinimo: H/3 con piso 3 m (vanos) / 1,5 m (ciego)', () => {
+    expect(distanciamientoMinimo(9, 'con_vanos')).toBe(3) // H/3 = 3, piso 3
+    expect(distanciamientoMinimo(12, 'con_vanos')).toBe(4) // H/3 = 4 domina
+    expect(distanciamientoMinimo(3, 'ciego')).toBe(1.5) // H/3 = 1, piso 1.5 domina
+    expect(distanciamientoMinimo(6, 'ciego')).toBe(2) // H/3 = 2 domina
+    expect(distanciamientoMinimo(9)).toBe(3) // default 'con_vanos'
+  })
+})
+
+describe('calcularCuadro — filas de envolvente (Δ4)', () => {
+  it('rasante: altura en el punto sobre el máximo → excede', () => {
+    const r = calcularCuadro({
+      superficiePredio: 300,
+      niveles: [{ nombre: 'P1', edificada: 100 }],
+      rasante: { distanciaAlDeslindeM: 3, alturaEnPuntoM: 9 },
+    })
+    const fila = r.filas.find((f) => f.concepto === 'Rasante')
+    expect(fila?.limite).toBe(8.25)
+    expect(fila?.valor).toBe(9)
+    expect(fila?.veredicto).toBe('excede')
+    expect(fila?.sentido).toBe('max')
+  })
+
+  it('rasante: altura en el punto bajo el máximo → cumple; sin altura → informativa', () => {
+    const cumple = calcularCuadro({
+      superficiePredio: 300,
+      niveles: [{ nombre: 'P1', edificada: 100 }],
+      rasante: { distanciaAlDeslindeM: 4, alturaEnPuntoM: 8 },
+    }).filas.find((f) => f.concepto === 'Rasante')
+    expect(cumple?.veredicto).toBe('cumple') // 8 <= 11
+
+    const info = calcularCuadro({
+      superficiePredio: 300,
+      niveles: [{ nombre: 'P1', edificada: 100 }],
+      rasante: { distanciaAlDeslindeM: 4 },
+    }).filas.find((f) => f.concepto === 'Rasante')
+    expect(info?.veredicto).toBe('sin_limite')
+    expect(info?.valor).toBe(11) // muestra el máximo admisible
+  })
+
+  it('distanciamiento (regla de mínimo): bajo el mínimo → incumple con mensaje "bajo el mínimo"', () => {
+    const r = calcularCuadro({
+      superficiePredio: 300,
+      niveles: [{ nombre: 'P1', edificada: 100 }],
+      distanciamiento: { alturaEdificacionM: 9, muro: 'con_vanos', distanciaProyectadaM: 2 },
+    })
+    const fila = r.filas.find((f) => f.concepto === 'Distanciamiento')
+    expect(fila?.limite).toBe(3)
+    expect(fila?.veredicto).toBe('excede') // 'excede' = no cumple
+    expect(fila?.sentido).toBe('min')
+    expect(r.incumplimientos.some((i) => /Distanciamiento.*bajo el mínimo/.test(i))).toBe(true)
+  })
+
+  it('distanciamiento: proyectado sobre el mínimo → cumple', () => {
+    const fila = calcularCuadro({
+      superficiePredio: 300,
+      niveles: [{ nombre: 'P1', edificada: 100 }],
+      distanciamiento: { alturaEdificacionM: 9, distanciaProyectadaM: 3.5 },
+    }).filas.find((f) => f.concepto === 'Distanciamiento')
+    expect(fila?.veredicto).toBe('cumple')
+  })
+
+  it('sin inputs de envolvente no aparecen esas filas (aditivo, compatibilidad)', () => {
+    const r = calcularCuadro(base)
+    expect(r.filas.find((f) => f.concepto === 'Rasante')).toBeUndefined()
+    expect(r.filas.find((f) => f.concepto === 'Distanciamiento')).toBeUndefined()
+  })
+
+  it('es determinista con envolvente', () => {
+    const input: CuadroInput = {
+      ...base,
+      rasante: { distanciaAlDeslindeM: 3, alturaEnPuntoM: 9 },
+      distanciamiento: { alturaEdificacionM: 9, distanciaProyectadaM: 2 },
+    }
+    expect(calcularCuadro(input)).toEqual(calcularCuadro(input))
   })
 })
 

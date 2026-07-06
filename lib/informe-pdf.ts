@@ -211,11 +211,14 @@ function drawCuadroBlock(pdf: JsPDF, cuadro: CuadroResultado, W: number, H: numb
   const lh = rowFs * 1.7
 
   const relevantes = cuadro.filas.filter((f) =>
-    ["Constructibilidad", "Ocupación de suelo", "Altura de edificación"].includes(f.concepto),
+    ["Constructibilidad", "Ocupación de suelo", "Altura de edificación", "Rasante", "Distanciamiento"].includes(
+      f.concepto,
+    ),
   )
   const corto: Record<string, string> = {
     "Ocupación de suelo": "Ocupación",
     "Altura de edificación": "Altura",
+    Distanciamiento: "Distanc.",
   }
   const rows: { label: string; val: string; color: [number, number, number] }[] = [
     { label: "Sup. edificada", val: `${cuadro.superficieTotalEdificada} m²`, color: [30, 30, 30] },
