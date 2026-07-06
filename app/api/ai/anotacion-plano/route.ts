@@ -56,6 +56,12 @@ ${normativaCtx}
 
 ${REGLAS_CITACION}
 
+## Disciplina del "articulo" (CRÍTICO)
+- "articulo" debe ser la norma SUSTANTIVA que la observación incumple, y solo si un artículo del CONTEXTO NORMATIVO de arriba la funda DIRECTAMENTE.
+- NUNCA cites artículos de PROCEDIMIENTO/tramitación (solicitud o modificación de permiso: p. ej. 5.1.1, 5.1.2, 5.1.6, 5.1.17) como fundamento de un defecto físico, de diseño, de accesibilidad, de rasante/distanciamiento o de destino: esos regulan CÓMO se tramita, no la norma de fondo que se incumple.
+- Si el contexto NO trae un artículo que funde directamente esta observación, deja "articulo": "" (vacío) y explica la materia en "fundamento". Es mejor SIN artículo que con uno equivocado — el arquitecto verá "sin fundamento verificado" y lo revisará.
+- Ejemplo: una observación de accesibilidad SIN un artículo de accesibilidad en el contexto → "articulo": "" (no 5.1.2).
+
 ## Convención gráfica (obligatoria)
 - Línea roja segmentada ("rojo_segmentado") = muros perimetrales que se prolongan.
 - Línea amarilla segmentada ("amarillo_segmentado") = elementos eliminados o nuevos.
@@ -90,7 +96,7 @@ Responde SOLO con JSON válido (sin markdown), con esta forma:
       "severidad": "crítica" | "media" | "menor",
       "textoCorto": "etiqueta breve visible junto a la marca (máx 4 palabras)",
       "observacion": "la observación completa, redacción del revisor",
-      "articulo": "Art. X.X.X OGUC / DDU N / PRC",
+      "articulo": "Art. X.X.X OGUC / DDU N — o \"\" si ningún artículo del contexto funda la observación",
       "fundamento": "por qué se observa (norma y razón concreta)",
       "sugerencia": "qué debe dibujar/corregir el arquitecto",
       "confianza": 0.0-1.0

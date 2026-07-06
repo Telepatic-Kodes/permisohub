@@ -615,9 +615,23 @@ function MarkupsList({
                       >
                         {a.textoCorto}
                       </span>
-                      {a.articulo && (() => {
-                        const cita = citaDesdeTexto(a.articulo)
-                        const porVerificar = /por verificar/i.test(a.articulo)
+                      {(() => {
+                        const art = a.articulo?.trim()
+                        // Sin artículo → marcador honesto (paridad con el DD): la
+                        // observación no tiene fundamento normativo verificado.
+                        if (!art) {
+                          return (
+                            <span
+                              className="num rounded-[3px] border px-1.5 py-0.5 text-[10px]"
+                              style={{ color: "var(--state-warn)", borderColor: "var(--state-warn)", background: "color-mix(in oklch, var(--state-warn) 12%, transparent)" }}
+                              title="Ningún artículo de la base curada funda esta observación. Verifícala contra la fuente oficial."
+                            >
+                              Sin fundamento verificado
+                            </span>
+                          )
+                        }
+                        const cita = citaDesdeTexto(art)
+                        const porVerificar = /por verificar/i.test(art)
                         if (cita) {
                           return (
                             <a
@@ -625,9 +639,9 @@ function MarkupsList({
                               target="_blank"
                               rel="noopener noreferrer"
                               className="num inline-flex items-center gap-1 rounded-[3px] border border-line-med px-1.5 py-0.5 text-[10px] text-primary transition-colors hover:border-[var(--blueprint)] hover:text-[var(--blueprint)]"
-                              title={`Ver ${a.articulo} en la fuente`}
+                              title={`Ver ${art} en la fuente`}
                             >
-                              {a.articulo}
+                              {art}
                               <ExternalLink className="size-2.5" />
                             </a>
                           )
@@ -641,7 +655,7 @@ function MarkupsList({
                                 : { borderColor: "var(--line-fine)", color: "var(--muted-foreground)", background: "color-mix(in oklch, var(--muted-foreground) 8%, transparent)" }
                             }
                           >
-                            {a.articulo}
+                            {art}
                           </span>
                         )
                       })()}
