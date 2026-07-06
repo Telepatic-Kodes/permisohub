@@ -186,9 +186,21 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
     }
     setAplicando(true)
     try {
+      // Reconcilia la DB con el estado del cliente en un único PATCH batch —
+      // cierra cualquier carrera de PATCHes concurrentes previos antes del gate.
+      if (reportId) {
+        await fetch(`/api/proyectos/${proyectoId}/due-diligence/hallazgos`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reportId,
+            cambios: result.hallazgos.map((h) => ({ codigo: h.codigo, estadoRevision: estadoRevisionDe(h) })),
+          }),
+        })
+      }
       const res = await fetch(`/api/proyectos/${proyectoId}/aplicar-dd`, { method: "POST" })
       if (!res.ok) {
-        toast.error("No se pudo aplicar el due diligence.")
+        toast.error("No se pudo aplicar el due diligence. Revisa que todos los hallazgos estén confirmados o descartados.")
         return
       }
       toast.success("Due diligence verificado. Expediente actualizado.")
@@ -196,7 +208,7 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
     } finally {
       setAplicando(false)
     }
-  }, [result, proyectoId, onApplied])
+  }, [result, proyectoId, reportId, onApplied])
 
   const isProcessing = isStarting || status === "pending" || status === "processing"
 
