@@ -40,10 +40,10 @@ const CONFIANZA = [
 ];
 
 const COMPETENCIA = [
-  { solucion: "PermisoHub", para_arq: true, ia: true, nacional: true, saas: true, auto: true, destacado: true },
-  { solucion: "REVI (CChC+Google)", para_arq: false, ia: true, nacional: false, saas: false, auto: false },
-  { solucion: "DOM en Línea (MINVU)", para_arq: false, ia: false, nacional: true, saas: false, auto: false },
-  { solucion: "Consultoría tradicional", para_arq: true, ia: false, nacional: false, saas: false, auto: false },
+  { solucion: "PermisoHub", para_arq: true, plano: true, ia: true, nacional: true, saas: true, auto: true, destacado: true },
+  { solucion: "REVI (CChC+Google)", para_arq: false, plano: false, ia: true, nacional: false, saas: false, auto: false },
+  { solucion: "DOM en Línea (MINVU)", para_arq: false, plano: false, ia: false, nacional: true, saas: false, auto: false },
+  { solucion: "Consultoría tradicional", para_arq: true, plano: false, ia: false, nacional: false, saas: false, auto: false },
 ];
 
 const OPORTUNIDAD = [
@@ -334,6 +334,10 @@ export default async function MarketingPage({
           Prepara, predice, responde y acelera. La capa inteligente entre el
           arquitecto y la burocracia DOM — de principio a fin.
         </p>
+        <p className="mx-auto mt-4 max-w-2xl text-base text-[#1A3328]/80 md:text-lg">
+          Y marcamos cada observación <strong className="text-[#2D6A4F]">sobre tu plano</strong> —
+          como el revisor DOM lo hacía a mano sobre la lámina.
+        </p>
 
         <div className="mt-9 flex items-center justify-center">
           <Link
@@ -491,6 +495,7 @@ export default async function MarketingPage({
               <tr className="border-b border-[#1A3328]/8">
                 <th className="px-6 py-4 text-left font-semibold text-[#1A3328]">Solución</th>
                 <th className="px-4 py-4 text-center font-medium text-[#1A3328]/70">Para arquitectos</th>
+                <th className="px-4 py-4 text-center font-medium text-[#1A3328]/70">Marca el plano</th>
                 <th className="px-4 py-4 text-center font-medium text-[#1A3328]/70">IA integrada</th>
                 <th className="px-4 py-4 text-center font-medium text-[#1A3328]/70">Cobertura nacional</th>
                 <th className="px-4 py-4 text-center font-medium text-[#1A3328]/70">Modelo SaaS</th>
@@ -508,7 +513,7 @@ export default async function MarketingPage({
                   <td className={`px-6 py-4 font-semibold ${row.destacado ? "text-[#E9C46A]" : "text-[#1A3328]"}`}>
                     {row.solucion}
                   </td>
-                  {[row.para_arq, row.ia, row.nacional, row.saas, row.auto].map((val, i) => (
+                  {[row.para_arq, row.plano, row.ia, row.nacional, row.saas, row.auto].map((val, i) => (
                     <td key={i} className="px-4 py-4 text-center">
                       {val ? (
                         <CheckCircle2 className={`mx-auto size-5 ${row.destacado ? "text-[#E9C46A]" : "text-[#2D6A4F]"}`} />
@@ -540,6 +545,11 @@ export default async function MarketingPage({
               Norman (REVI) revisa el expediente <em>para</em> la DOM. Con <strong>Pre-revisión DOM</strong>,
               PermisoHub te entrega esa misma acta de observaciones <strong>antes</strong> de ingresar —
               con el artículo citado y cómo subsanar cada punto. Llegas a la ventanilla con el expediente limpio.
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-[#1A3328]/70">
+              Y hay algo que Revi aún tiene <em>en su roadmap</em> y nosotros ya hacemos:
+              <strong> marcar cada observación sobre la lámina</strong>, como el revisor DOM rayaba el plano a mano —
+              con su artículo y cómo corregirlo.
             </p>
           </div>
         </div>

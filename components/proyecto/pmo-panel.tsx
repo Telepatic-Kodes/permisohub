@@ -346,10 +346,10 @@ export function PmoPanel({
                 variant="outline"
                 size="sm"
                 nativeButton={false}
-                render={<a href={`/herramientas/auditor?proyectoId=${proyecto.id}`} />}
+                render={<a href={`/proyectos/${proyecto.id}/observaciones`} />}
               >
                 <CheckCircle2 className="size-4" />
-                Responder con IA
+                Subsanar acta con IA
               </Button>
               <Button
                 variant="outline"

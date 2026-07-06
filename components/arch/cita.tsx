@@ -22,9 +22,10 @@ import { getArticuloById, urlDeCitable, type FuenteNormativa } from "@/lib/norma
 // el número (dígitos y guiones) que se resuelve contra la base.
 const RE_DDU = /DDU(?:[\s-]*ESP)?[\s-]*N?[°º]?\s*(\d[\d-]*)/gi
 // Artículos OGUC/LGUC: número (con puntos o "bis") seguido de la fuente,
-// opcionalmente precedido de "Art." / "Artículo". Ej. "Art. 5.1.2 OGUC",
-// "artículo 116 bis LGUC", "5.2.5 OGUC".
-const RE_ART = /(?:art(?:[íi]?culos?)?\.?\s*)?(\d+(?:\.\d+)*(?:\s*bis)?)\s*(OGUC|LGUC)\b/gi
+// opcionalmente precedido de "Art." / "Artículo" y con un conector "de la / del /
+// de" intermedio (frecuente en prosa real: "Art. 2.7.1 de la OGUC"). Ej.
+// "Art. 5.1.2 OGUC", "artículo 116 bis del LGUC", "5.2.5 de la OGUC".
+const RE_ART = /(?:art(?:[íi]?culos?)?\.?\s*)?(\d+(?:\.\d+)*(?:\s*bis)?)\s*(?:de\s+la\s+|del\s+|de\s+)?(OGUC|LGUC)\b/gi
 
 interface Hit {
   start: number

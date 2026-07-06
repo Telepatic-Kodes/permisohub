@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { ESTADISTICAS_MUNICIPIOS } from "@/lib/municipios-stats"
+import { TextoConCitas } from "@/components/arch/cita"
 import type { Proyecto } from "@/types"
 
 interface Observacion {
@@ -16,6 +17,9 @@ interface Observacion {
   tipo: 'TECNICA' | 'FORMAL' | 'DOCUMENTOS'
   gravedad: 'ALTA' | 'MEDIA' | 'BAJA'
   respuestaGenerada?: string
+  queTePide?: string
+  comoSubsana?: string
+  cita?: string
   loadingRespuesta?: boolean
   expandida?: boolean
 }
@@ -120,17 +124,34 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           observacionTexto: obs.texto,
-          proyectoNombre: `Proyecto ${id}`,
-          municipio: result?.municipio ?? 'No especificado',
-          tipoPermiso: 'Permiso de edificación',
-          numeroExpediente: result?.expediente ?? undefined,
+          proyectoNombre: proyecto?.nombre ?? `Proyecto ${id}`,
+          municipio: result?.municipio ?? proyecto?.municipio ?? 'No especificado',
+          tipoPermiso: proyecto?.tipo ?? 'Permiso de edificación',
+          direccion: proyecto?.direccion ?? undefined,
+          numeroExpediente: result?.expediente ?? proyecto?.numero_expediente ?? undefined,
         }),
       })
-      const data = await res.json() as { ok: boolean; respuesta?: string; error?: string }
+      const data = await res.json() as {
+        ok: boolean
+        respuesta?: string
+        queTePide?: string
+        comoSubsana?: string
+        cita?: string
+        error?: string
+      }
       if (!res.ok || data.error) throw new Error(data.error ?? 'Error')
 
       setObservaciones(prev => prev.map((o, i) =>
-        i === index ? { ...o, respuestaGenerada: data.respuesta, loadingRespuesta: false } : o
+        i === index
+          ? {
+              ...o,
+              respuestaGenerada: data.respuesta,
+              queTePide: data.queTePide,
+              comoSubsana: data.comoSubsana,
+              cita: data.cita,
+              loadingRespuesta: false,
+            }
+          : o
       ))
     } catch {
       setObservaciones(prev => prev.map((o, i) =>
@@ -377,7 +398,9 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
                         <Badge className={cfg.badge}>{cfg.label}</Badge>
                         <Badge variant="outline" className="text-xs">{TIPO_LABELS[obs.tipo]}</Badge>
                         {obs.articuloCitado && (
-                          <span className="text-xs text-muted-foreground">{obs.articuloCitado}</span>
+                          <span className="text-xs text-muted-foreground">
+                            <TextoConCitas>{obs.articuloCitado}</TextoConCitas>
+                          </span>
                         )}
                       </div>
                       <button
@@ -417,8 +440,33 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
                       {/* Generated response */}
                       {obs.respuestaGenerada && (
                         <div className="space-y-2">
+                          {/* Capa didáctica: qué te pide / cómo se subsana + cita */}
+                          {(obs.queTePide || obs.comoSubsana) && (
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              {obs.queTePide && (
+                                <div className="rounded-lg border border-[#1A3328]/10 bg-white/80 p-3">
+                                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Qué te pide</p>
+                                  <p className="text-sm leading-relaxed text-gray-800">{obs.queTePide}</p>
+                                </div>
+                              )}
+                              {obs.comoSubsana && (
+                                <div className="rounded-lg border border-[#1A3328]/10 bg-white/80 p-3">
+                                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cómo se subsana</p>
+                                  <p className="text-sm leading-relaxed text-gray-800">
+                                    <TextoConCitas>{obs.comoSubsana}</TextoConCitas>
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {obs.cita && (
+                            <p className="text-xs text-muted-foreground">
+                              Fundamento: <TextoConCitas>{obs.cita}</TextoConCitas>
+                            </p>
+                          )}
+
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[#1A3328]">Respuesta generada por IA</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#1A3328]">Carta formal de respuesta</p>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -434,7 +482,7 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
                           </div>
                           <div className="rounded-lg bg-white border border-[#1A3328]/10 p-3">
                             <p className="text-sm text-gray-800 leading-relaxed" style={{ whiteSpace: 'pre-wrap' }}>
-                              {obs.respuestaGenerada}
+                              <TextoConCitas>{obs.respuestaGenerada}</TextoConCitas>
                             </p>
                           </div>
                           <Button

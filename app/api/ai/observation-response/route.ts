@@ -1,5 +1,5 @@
 import { isAIAvailable, aiComplete } from '@/lib/ai'
-import { getContextoOGUC } from '@/lib/oguc-knowledge'
+import { getContextoNormativo, REGLAS_CITACION, flagUnverifiedCita } from '@/lib/normativa-retrieval'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -29,9 +29,9 @@ export async function POST(request: Request) {
     return Response.json({ error: 'OPENAI_API_KEY no configurado' }, { status: 503 })
   }
 
-  const ogucContext = getContextoOGUC(body.observacionTexto)
+  const normativaCtx = getContextoNormativo(body.observacionTexto)
 
-  const prompt = `Eres una arquitecta chilena experta en permisos municipales. Debes redactar una respuesta formal y técnica a una observación de la DOM (Dirección de Obras Municipales).
+  const prompt = `Eres una arquitecta chilena experta en permisos municipales. Ayudas al arquitecto a ENTENDER y SUBSANAR una observación que la DOM (Dirección de Obras Municipales) le emitió, y le redactas la respuesta formal.
 
 ## Contexto del proyecto:
 - Nombre: ${body.proyectoNombre}
@@ -41,30 +41,59 @@ export async function POST(request: Request) {
 - N° Expediente: ${body.numeroExpediente ?? 'Pendiente'}
 - Arquitecta responsable: ${body.arquitecta ?? 'Estefanía Parada'}
 
-## Observación de la DOM a responder:
+## Observación de la DOM a responder (texto literal recibido):
 ${body.observacionTexto}
 
-## Artículos OGUC relevantes:
-${ogucContext}
+## Contexto normativo (OGUC · LGUC · DDU):
+${normativaCtx}
+
+${REGLAS_CITACION}
 
 ## INSTRUCCIONES:
-Redacta una respuesta formal en el siguiente formato exacto:
+Devuelve SOLO un JSON válido (sin markdown) con esta forma exacta:
+{
+  "queTePide": "en lenguaje simple y cercano, qué está pidiendo la DOM con esta observación (1-2 frases, sin jerga)",
+  "comoSubsana": "qué debe hacer o corregir el arquitecto, concreto y accionable (1-3 frases)",
+  "cita": "el artículo que funda la observación tal como aparece en el contexto (ej. \\"Art. 5.1.2 OGUC\\", \\"DDU 328\\") — o \\"\\" si ninguno del contexto la funda",
+  "cartaFormal": "la respuesta formal completa a la DOM de ${body.municipio}: encabezado formal, respuesta a la observación citando el artículo, documentos adjuntos corregidos a acompañar, y cierre con firma de la arquitecta. Tono técnico, formal y constructivo."
+}
 
-1. **ENCABEZADO FORMAL** — Dirigido a la DOM de ${body.municipio}
-2. **RESPUESTA A LA OBSERVACIÓN** — Cita el artículo OGUC o PRC correspondiente, explica cómo se subsana, menciona los documentos adjuntos corregidos
-3. **DOCUMENTOS ADJUNTOS** — Lista los documentos corregidos que se deben adjuntar (planos, memorias, etc.)
-4. **CIERRE FORMAL** — Con firma de la arquitecta
-
-El tono debe ser técnico, formal y constructivo. Cita siempre el artículo OGUC específico.
-Si la observación de la DOM parece incorrecta o aplicó mal la norma, indícalo respetuosamente con la cita normativa correcta.`
+Reglas: cita SOLO artículos presentes en el contexto normativo; si ninguno aplica deja "cita":"" y describe la materia sin número. Si la DOM aplicó mal la norma, indícalo respetuosamente en la carta con la cita correcta.`
 
   try {
-    const texto = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 2000 })
+    const texto = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 2200 })
+
+    // Parseo tolerante: si el modelo devolvió JSON estructurado, lo usamos; si no,
+    // caemos a tratar todo el texto como la carta formal (compatibilidad).
+    let queTePide = ''
+    let comoSubsana = ''
+    let cita = ''
+    let cartaFormal = texto
+    const match = texto.match(/\{[\s\S]*\}/)
+    if (match) {
+      try {
+        const raw = JSON.parse(match[0]) as {
+          queTePide?: unknown
+          comoSubsana?: unknown
+          cita?: unknown
+          cartaFormal?: unknown
+        }
+        if (typeof raw.cartaFormal === 'string' && raw.cartaFormal.trim()) cartaFormal = raw.cartaFormal
+        if (typeof raw.queTePide === 'string') queTePide = raw.queTePide
+        if (typeof raw.comoSubsana === 'string') comoSubsana = raw.comoSubsana
+        if (typeof raw.cita === 'string') cita = flagUnverifiedCita(raw.cita)
+      } catch {
+        // deja la carta = texto crudo
+      }
+    }
 
     recordUsage(auth.userId, 'ai_chats').catch(console.error)
     return Response.json({
       ok: true,
-      respuesta: texto,
+      respuesta: cartaFormal, // compatibilidad: la carta formal (la consume export/carta-respuesta)
+      queTePide,
+      comoSubsana,
+      cita,
       observacion: body.observacionTexto,
       proyecto: body.proyectoNombre,
     })

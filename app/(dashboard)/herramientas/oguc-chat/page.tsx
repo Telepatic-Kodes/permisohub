@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Num } from "@/components/arch/dato"
+import { TextoConCitas } from "@/components/arch/cita"
 
 interface Message {
   role: 'user' | 'assistant'
@@ -216,7 +217,7 @@ function OgucChatPageInner() {
             }`}
               style={{ whiteSpace: 'pre-wrap' }}
             >
-              {msg.content}
+              {msg.role === 'assistant' ? <TextoConCitas>{msg.content}</TextoConCitas> : msg.content}
             </div>
             {msg.role === 'user' && (
               <div className="flex size-8 shrink-0 items-center justify-center rounded-[3px] border border-line-fine bg-muted mt-1">

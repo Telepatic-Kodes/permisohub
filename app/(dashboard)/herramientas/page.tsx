@@ -6,6 +6,7 @@ import {
   Compass,
   FileSearch,
   FileSignature,
+  MailCheck,
   MessageSquare,
   PencilRuler,
   ShieldCheck,
@@ -34,6 +35,12 @@ const GROUPS: ToolGroup[] = [
   {
     categoria: "Revisión y control",
     tools: [
+      {
+        label: "Subsanar observaciones (acta real)",
+        description: "Sube el ordinario que te llegó de la DOM: extraemos cada observación y te explicamos y redactamos la subsanación citada. Elige un proyecto.",
+        href: "/proyectos",
+        Icon: MailCheck,
+      },
       {
         label: "Pre-revisión DOM",
         description: "Simula el acta de observaciones de la DOM antes de ingresar tu expediente",
