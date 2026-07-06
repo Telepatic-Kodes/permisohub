@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { AsesorVia } from "@/components/proyecto/asesor-via"
+import { ViaDecision } from "@/components/proyecto/via-decision"
 import { CuadroCalculo } from "@/components/proyecto/cuadro-calculo"
 import { getEstadoPlazoLey21718, formatFecha } from "@/lib/dias-habiles"
 import type { Proyecto, Etapa, Comunicacion } from "@/types"
@@ -175,7 +176,9 @@ export function PmoPanel({
 
   return (
     <div className="space-y-6">
-      {/* ── Cómo continuar — el asesor de vía encabeza el PMO ── */}
+      {/* ── Cómo continuar — decisor determinista de vía (instantáneo, citado)
+          seguido del asesor de vía (IA, profundiza con los ajustes) ── */}
+      <ViaDecision proyectoId={proyecto.id} />
       <AsesorVia proyectoId={proyecto.id} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
