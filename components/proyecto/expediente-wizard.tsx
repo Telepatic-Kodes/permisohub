@@ -6,11 +6,15 @@ import { ArrowRight, Check, FileText, Loader2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DocumentUpload } from "@/components/dashboard/document-upload"
 import DueDiligenceReport from "@/components/proyecto/due-diligence-report"
+import { ChecklistCompletitud } from "@/components/proyecto/checklist-completitud"
 import { cn } from "@/lib/utils"
 
 interface Props {
   proyectoId: string
   documentosIniciales: number
+  // Tipo de trámite (TipoPermiso). Opcional: si no llega, el checklist de
+  // completitud lo obtiene del proyecto o degrada a una checklist genérica.
+  tipo?: string
   // Se llama cuando el due diligence terminó y pobló la PMO.
   onComplete: () => void
 }
@@ -20,7 +24,7 @@ const STEPS = [
   { n: 2, label: "Due Diligence + verificación", icon: Sparkles },
 ]
 
-export function ExpedienteWizard({ proyectoId, documentosIniciales, onComplete }: Props) {
+export function ExpedienteWizard({ proyectoId, documentosIniciales, tipo, onComplete }: Props) {
   const [step, setStep] = useState(documentosIniciales > 0 ? 2 : 1)
   const [docCount, setDocCount] = useState(documentosIniciales)
   const [ddStatus, setDdStatus] = useState<"idle" | "processing" | "done" | "error">("idle")
@@ -92,6 +96,10 @@ export function ExpedienteWizard({ proyectoId, documentosIniciales, onComplete }
             </p>
           </div>
           <DocumentUpload proyectoId={proyectoId} onUploadComplete={() => setDocCount((c) => c + 1)} />
+          {/* Gate de completitud (determinista, sin IA): ¿están los documentos
+              que un expediente de este tipo suele tener? Se re-evalúa en vivo
+              con cada documento subido (refreshKey={docCount}). */}
+          <ChecklistCompletitud proyectoId={proyectoId} tipo={tipo} refreshKey={docCount} />
           <div className="flex items-center justify-between border-t border-border pt-4">
             <span className="text-xs text-muted-foreground">
               {docCount === 0 ? "Aún no has subido documentos" : `${docCount} documento${docCount === 1 ? "" : "s"} listo${docCount === 1 ? "" : "s"}`}
