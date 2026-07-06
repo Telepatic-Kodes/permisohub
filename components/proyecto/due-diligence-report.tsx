@@ -324,45 +324,47 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
               </Button>
             </div>
 
-            {/* KPIs */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className={cn("rounded-lg border p-3", riesgoClasses(result.riesgoGlobal))}>
+            {/* KPIs — cuadro de indicadores del expediente (dato con rigor de cota) */}
+            <div className="grid grid-cols-2 divide-x divide-y divide-line-fine overflow-hidden rounded-[3px] border border-line-strong sm:grid-cols-4 sm:divide-y-0">
+              <div className={cn("p-3", riesgoClasses(result.riesgoGlobal))}>
                 <div className="flex items-center gap-1.5">
                   <ShieldAlert className="size-3.5" />
-                  <p className="text-[10px] font-semibold uppercase tracking-wide">Riesgo global</p>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em]">Riesgo global</p>
                 </div>
-                <p className="mt-1 text-lg font-bold">{result.riesgoGlobal}</p>
+                <p className="font-technical mt-1.5 text-xl font-semibold leading-none">{result.riesgoGlobal}</p>
               </div>
 
-              <div className="rounded-lg border border-border bg-muted/20 p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="bg-card p-3">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Completitud
                 </p>
-                <p className="mt-1 text-lg font-bold tabular-nums text-primary">
+                <p className="num mt-1.5 text-xl font-semibold leading-none text-primary">
                   {result.completitud.presentes}
-                  <span className="text-muted-foreground">/{result.completitud.esperados}</span>
+                  <span className="text-sm text-muted-foreground">/{result.completitud.esperados}</span>
                 </p>
               </div>
 
-              <div className="rounded-lg border border-border bg-muted/20 p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="bg-card p-3">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Hallazgos
                 </p>
-                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-semibold tabular-nums">
-                  <span className="rounded bg-red-50 px-1.5 py-0.5 text-red-700">
-                    {result.conteos.criticos} críticos
+                <div className="mt-1.5 flex items-baseline gap-2">
+                  <span className="num text-xl font-semibold leading-none" style={{ color: "var(--state-error)" }}>
+                    {result.conteos.criticos}
+                    <span className="ml-0.5 text-[10px] font-medium text-muted-foreground">crít</span>
                   </span>
-                  <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-700">
-                    {result.conteos.altos} altos
+                  <span className="num text-xl font-semibold leading-none" style={{ color: "var(--state-warn)" }}>
+                    {result.conteos.altos}
+                    <span className="ml-0.5 text-[10px] font-medium text-muted-foreground">alt</span>
                   </span>
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border bg-muted/20 p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="bg-card p-3">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Medios
                 </p>
-                <p className="mt-1 text-lg font-bold tabular-nums text-blue-700">
+                <p className="num mt-1.5 text-xl font-semibold leading-none" style={{ color: "var(--blueprint)" }}>
                   {result.conteos.medios}
                 </p>
               </div>
@@ -371,7 +373,7 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
             {/* Resumen ejecutivo */}
             {result.resumenEjecutivo && (
               <section className="space-y-1.5">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h3 className="font-technical text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Resumen ejecutivo
                 </h3>
                 <p className="text-sm leading-relaxed text-foreground">{result.resumenEjecutivo}</p>
@@ -381,7 +383,7 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
             {/* Inventario */}
             {result.inventario.length > 0 && (
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h3 className="font-technical text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Inventario documental
                 </h3>
                 <div className="overflow-x-auto rounded-lg border border-border">
@@ -400,13 +402,13 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
                           key={`${item.indice}-${idx}`}
                           className="border-b border-border/60 last:border-0 align-top"
                         >
-                          <td className="px-3 py-2 tabular-nums text-muted-foreground">
+                          <td className="num px-3 py-2 text-muted-foreground">
                             {item.indice}
                           </td>
                           <td className="px-3 py-2">
                             <span className="font-medium text-primary">{item.documento}</span>
                             {item.fecha && (
-                              <span className="ml-1.5 text-xs text-muted-foreground">
+                              <span className="num ml-1.5 text-xs text-muted-foreground">
                                 {item.fecha}
                               </span>
                             )}
@@ -435,7 +437,7 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
             {/* Hallazgos */}
             {result.hallazgos.length > 0 && (
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h3 className="font-technical text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Hallazgos priorizados
                 </h3>
                 <ul className="space-y-2">
@@ -484,7 +486,7 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
             {/* Historial */}
             {result.historial.length > 0 && (
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h3 className="font-technical text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Historial
                 </h3>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -519,7 +521,7 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
             {/* Vigencias */}
             {result.vigencias.length > 0 && (
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h3 className="font-technical text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Vigencias
                 </h3>
                 <ul className="space-y-1.5">
@@ -552,7 +554,7 @@ export default function DueDiligenceReport({ proyectoId, onApplied, onStatusChan
             {/* Próximos pasos */}
             {result.proximosPasos.length > 0 && (
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h3 className="font-technical text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Próximos pasos
                 </h3>
                 <ol className="space-y-2">

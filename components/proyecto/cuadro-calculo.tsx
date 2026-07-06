@@ -392,7 +392,7 @@ export function CuadroCalculo({ proyectoId }: { proyectoId: string }) {
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/70">
                   Constructibilidad
                 </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums text-primary">
+                <p className="num mt-1 text-2xl font-semibold text-primary">
                   {resultado.constructibilidad}
                 </p>
               </div>
@@ -400,7 +400,7 @@ export function CuadroCalculo({ proyectoId }: { proyectoId: string }) {
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/70">
                   Ocupación de suelo
                 </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums text-primary">
+                <p className="num mt-1 text-2xl font-semibold text-primary">
                   {resultado.ocupacionSueloPct}%
                 </p>
               </div>
@@ -428,11 +428,11 @@ export function CuadroCalculo({ proyectoId }: { proyectoId: string }) {
                           </span>
                         )}
                       </td>
-                      <td className="py-2 px-2 text-right tabular-nums text-foreground">
+                      <td className="num py-2 px-2 text-right text-foreground">
                         {fila.valor}
                         {fila.unidad ? ` ${fila.unidad}` : ""}
                       </td>
-                      <td className="py-2 px-2 text-right tabular-nums text-muted-foreground">
+                      <td className="num py-2 px-2 text-right text-muted-foreground">
                         {fila.limite === null
                           ? "—"
                           : `${fila.limite}${fila.unidad ? ` ${fila.unidad}` : ""}`}

@@ -143,11 +143,11 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
           <div className="space-y-6">
             {/* Vía recomendada */}
             {result.viaRecomendada && (
-              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/70">
+              <div className="rounded-[3px] border-l-2 border-l-[var(--blueprint)] border-y border-r border-line-med bg-primary/5 p-4">
+                <p className="font-technical text-[10px] font-semibold uppercase tracking-[0.16em] text-primary/70">
                   Vía recomendada
                 </p>
-                <p className="mt-1 text-lg font-semibold text-primary">
+                <p className="font-technical mt-1 text-xl font-semibold text-primary">
                   {result.viaRecomendada}
                 </p>
                 {result.estrategia && (
