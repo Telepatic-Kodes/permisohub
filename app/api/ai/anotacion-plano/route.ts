@@ -16,6 +16,21 @@ import type { Anotacion, LaminaAnotada } from '@/lib/anotacion-convenciones'
 // El overlay y el arrastre manual de marcas viven en el cliente.
 // ---------------------------------------------------------------------------
 
+// Artículos OGUC de PROCEDIMIENTO (cómo se solicita/tramita el permiso): regulan
+// la tramitación, no una norma de fondo. Nunca fundan un defecto FÍSICO sobre el
+// plano. Si el modelo los cita en una anotación de lámina, se descartan de forma
+// determinista → la marca queda "sin fundamento verificado" (honesto, verificable
+// por el arquitecto) en vez de mostrar una cita falsa. La tesis de la app:
+// mejor SIN artículo que con uno equivocado. No incluye 5.1.17/5.1.18
+// (modificación de proyecto), que sí pueden relacionarse con cambios físicos.
+const ARTICULOS_PROCEDIMIENTO_OGUC = ['5.1.1', '5.1.2', '5.1.6']
+
+function sanitizarArticuloPlano(articulo: string): string {
+  const m = articulo.match(/\b(\d+(?:\.\d+)+)\s*OGUC\b/i)
+  if (m && ARTICULOS_PROCEDIMIENTO_OGUC.includes(m[1])) return ''
+  return flagUnverifiedCita(articulo)
+}
+
 interface LaminaInput {
   id: string
   nombre: string
@@ -222,7 +237,7 @@ function parseAnotaciones(text: string, laminaId: string): Anotacion[] {
         a.severidad === 'crítica' || a.severidad === 'media' ? a.severidad : 'menor',
       textoCorto: typeof a.textoCorto === 'string' ? a.textoCorto : `Obs. ${i + 1}`,
       observacion: typeof a.observacion === 'string' ? a.observacion : '',
-      articulo: flagUnverifiedCita(typeof a.articulo === 'string' ? a.articulo : ''),
+      articulo: sanitizarArticuloPlano(typeof a.articulo === 'string' ? a.articulo : ''),
       fundamento: typeof a.fundamento === 'string' ? a.fundamento : '',
       sugerencia: typeof a.sugerencia === 'string' ? a.sugerencia : '',
       confianza,
