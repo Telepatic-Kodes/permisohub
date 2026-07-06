@@ -47,6 +47,11 @@ interface NavGroup {
   defaultCollapsed?: boolean
 }
 
+// Enfoque en un solo usuario (Estefanía): oculta del menú los módulos
+// escalables/multi-tenant (Clientes/CRM + el grupo "Más"). Reversible: pon
+// false para restaurar todo. Las rutas ocultas siguen accesibles por URL.
+const NUCLEO_ONLY = true
+
 const NAV_GROUPS: NavGroup[] = [
   {
     label: null,
@@ -111,6 +116,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [perfil, setPerfil] = useState<{ nombre?: string; especialidad?: string } | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+
+  // En modo enfoque: quita el grupo "Más" y el item "Clientes" del expediente.
+  const navGroups = NUCLEO_ONLY
+    ? NAV_GROUPS.filter((g) => g.label !== "Más").map((g) => ({
+        ...g,
+        items: g.items.filter((it) => it.href !== "/clientes"),
+      }))
+    : NAV_GROUPS
 
   useEffect(() => {
     fetch('/api/configuracion/perfil')
@@ -186,7 +199,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1">
-        {NAV_GROUPS.map((group, groupIndex) => {
+        {navGroups.map((group, groupIndex) => {
           const isCollapsible = !!group.collapsible && !!group.label
           const groupOpen = isCollapsible
             ? (openGroups[group.label as string] ?? !group.defaultCollapsed)
