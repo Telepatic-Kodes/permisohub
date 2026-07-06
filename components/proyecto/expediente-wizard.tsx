@@ -17,7 +17,7 @@ interface Props {
 
 const STEPS = [
   { n: 1, label: "Documentos", icon: FileText },
-  { n: 2, label: "Due Diligence", icon: Sparkles },
+  { n: 2, label: "Due Diligence + verificación", icon: Sparkles },
 ]
 
 export function ExpedienteWizard({ proyectoId, documentosIniciales, onComplete }: Props) {
@@ -106,10 +106,11 @@ export function ExpedienteWizard({ proyectoId, documentosIniciales, onComplete }
       {step === 2 && (
         <div className="space-y-4">
           <div className="rounded-xl border border-border bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
-            <p className="text-sm font-semibold text-primary">Paso 2 · Genera el Due Diligence</p>
+            <p className="text-sm font-semibold text-primary">Paso 2 · Genera y verifica el Due Diligence</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              La IA lee todos los documentos, detecta riesgos e inconsistencias, y arma el plan de acción.
-              Al terminar se completa el expediente (etapas, observaciones y plazos).
+              La IA lee todos los documentos, detecta riesgos e inconsistencias y funda cada hallazgo en un
+              artículo (OGUC/LGUC/DDU). Revisa cada hallazgo —confirma, edita o descarta— y confírmalo: al
+              confirmar se completa el expediente (etapas, observaciones, plazos) y pasas al PMO.
             </p>
             <Button variant="ghost" size="sm" className="mt-2" onClick={() => setStep(1)}>
               ← Volver a subir documentos

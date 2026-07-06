@@ -114,6 +114,8 @@ export default function ProyectoDetallePage({
   const [ddResult, setDdResult] = useState<DueDiligenceResult | null>(null)
   const [ddLoading, setDdLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  // Pestaña activa (controlada): al verificar el DD se aterriza en el PMO.
+  const [activeTab, setActiveTab] = useState("resumen")
 
   // Re-carga los datos de la PMO (proyecto/etapas/observaciones/comunicaciones/documentos).
   const refetchPmo = useCallback(() => {
@@ -500,17 +502,20 @@ export default function ProyectoDetallePage({
             { label: "Días en trámite", valor: diasDesdeInicio },
           ]}
         />
-        {!ddResult ? (
+        {/* El expediente muestra las pestañas SOLO cuando el DD está verificado
+            por el humano; mientras tanto vive el wizard (subir + verificar). */}
+        {!(ddResult && (ddResult.revisionEstado ?? "pendiente") === "verificado") ? (
           <ExpedienteWizard
             proyectoId={id}
             documentosIniciales={documentos.length}
             onComplete={() => {
               refetchDD()
               refetchPmo()
+              setActiveTab("pmo") // al verificar, aterriza en el PMO ("cómo continuar")
             }}
           />
         ) : (
-          <Tabs defaultValue="resumen">
+          <Tabs defaultValue="resumen" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
               <TabsTrigger value="resumen">Resumen</TabsTrigger>
               <TabsTrigger value="documentos">Documentos</TabsTrigger>
