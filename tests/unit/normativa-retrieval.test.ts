@@ -4,7 +4,10 @@ import {
   flagUnverifiedArticulo,
   flagUnverifiedCita,
   flagUnverifiedDDU,
+  getArticuloById,
   getContextoNormativo,
+  urlDeCitable,
+  FUENTE_FALLBACK_URL,
 } from '@/lib/normativa-retrieval'
 import { CIRCULARES_DDU } from '@/lib/circulares-ddu'
 
@@ -61,6 +64,44 @@ describe('base de circulares DDU', () => {
     for (const c of CIRCULARES_DDU.filter((x) => x.verificado)) {
       expect(c.numero).not.toContain('VERIFICAR')
       expect(c.fuente).toMatch(/^https:\/\/www\.minvu\.gob\.cl\//)
+    }
+  })
+})
+
+describe('getArticuloById', () => {
+  it('resuelve artículos OGUC de la base (verificado, con etiqueta)', () => {
+    const a = getArticuloById('OGUC', '5.1.2')
+    expect(a).not.toBeNull()
+    expect(a?.verificado).toBe(true)
+    expect(a?.etiqueta).toBe('Art. 5.1.2 OGUC')
+    expect(a?.texto.length).toBeGreaterThan(0)
+  })
+
+  it('normaliza el id (espacios / mayúsculas, "116 bis")', () => {
+    expect(getArticuloById('OGUC', ' 5.1.2 ')?.id).toBe('5.1.2')
+    expect(getArticuloById('LGUC', '116 BIS')?.verificado).toBe(true)
+  })
+
+  it('DDU resuelve por id o por número, con url MINVU real', () => {
+    const porId = getArticuloById('DDU', 'ddu-328')
+    const porNumero = getArticuloById('DDU', '328')
+    expect(porId?.verificado).toBe(true)
+    expect(porId?.url).toMatch(/minvu\.gob\.cl/)
+    expect(porNumero?.id).toBe(porId?.id)
+  })
+
+  it('devuelve null para ids fuera de la base (nunca se presenta como fundado)', () => {
+    expect(getArticuloById('OGUC', '9.9.9')).toBeNull()
+    expect(getArticuloById('DDU', '99999')).toBeNull()
+  })
+
+  it('urlDeCitable cae al fallback de fuente cuando el artículo no tiene url propia', () => {
+    const a = getArticuloById('OGUC', '5.1.2')
+    expect(a).not.toBeNull()
+    if (a) {
+      // OGUC no tiene url por artículo → usa el fallback de fuente.
+      expect(a.url).toBeUndefined()
+      expect(urlDeCitable(a)).toBe(FUENTE_FALLBACK_URL.OGUC)
     }
   })
 })
