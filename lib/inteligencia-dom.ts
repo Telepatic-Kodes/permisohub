@@ -435,6 +435,66 @@ const BASE: InteligenciaMunicipio[] = [
       ],
     },
   },
+  {
+    // Estadísticas (tasaObservaciones..totalExpedientesBase): estimación,
+    // igual que el resto de esta base. El `planRegulador` tiene una
+    // salvedad importante: el PRC 2025 fue promulgado en octubre pero el
+    // texto final publicado no se pudo descargar (403) — los coeficientes
+    // de abajo vienen del ANTEPROYECTO ya aprobado por SEREMI MINVU
+    // (probablemente ≈ texto final, pero no verificado 1:1 contra él). La
+    // zona cordillerana (Farellones/Valle Nevado) es un instrumento
+    // regulatorio APARTE y no se detalla aquí — solo hay cobertura de
+    // prensa, no del articulado, así que no se citan cifras sin verificar.
+    nombre: 'Lo Barnechea',
+    tasaObservaciones: 41,
+    promedioObservaciones: 1.6,
+    tiempoRespuestaPromedio: 25,
+    tiempoAprobacionPromedio: 42,
+    totalExpedientesBase: 289,
+    ultimaActualizacion: '2026-07',
+    observacionesFrecuentes: [
+      { tipo: 'Código de zona exacto del predio', porcentaje: 32, descripcion: 'El PRC 2025 (Sector Valle) define muchas zonas próximas con coeficientes muy distintos (ej. ZHE-2.1 vs ZHE-6 vs ZHP-10) — confirmar el código exacto contra el plano antes de anteproyecto, no asumir por el barrio.', articuloOguc: 'Art. 2.1.1 Anteproyecto Ordenanza 2025' },
+      { tipo: 'Incentivos normativos', porcentaje: 24, descripcion: 'El PRC 2025 permite aumentar coeficiente/altura si el proyecto cumple condiciones de sustentabilidad (ej. manejo de laderas, certificación de vivienda sustentable) — evaluar si aplica antes de fijar el volumen del proyecto.', articuloOguc: 'Art. 1.5.1 Anteproyecto Ordenanza 2025' },
+      { tipo: 'Instrumento distinto en zona cordillerana', porcentaje: 20, descripcion: 'Farellones, La Parva, El Colorado y Valle Nevado NO se rigen por la ordenanza del Sector Valle — es un instrumento aparte (incorporado vía Modificación N°9). Verificar cuál aplica antes de diseñar en esos sectores.' },
+      { tipo: 'Restricción patrimonial/ambiental en El Arrayán', porcentaje: 12, descripcion: 'El sector de Fundos Los Nogales y San Enrique (El Arrayán) es Santuario de la Naturaleza (CMN, 1973) — protección ambiental formal distinta a una Zona Típica, con sus propias restricciones de intervención.' },
+    ],
+    alertas: [
+      { nivel: 'warning', texto: 'PRC actualizado en octubre 2025: los coeficientes de esta ficha vienen del anteproyecto ya aprobado por SEREMI, no del texto final publicado (no se pudo descargar). Confirmar con la DOM antes de un proyecto grande.' },
+      { nivel: 'info', texto: 'Plataformas de tramitación confirmadas: FileDOM (certificados, con plazos y precios publicados) y Smart DOM.' },
+    ],
+    consejos: [
+      'Pedir a la DOM el plano de zonificación vigente y el código exacto del predio antes de anteproyecto — hay muchas zonas colindantes con coeficientes distintos.',
+      'Si el proyecto está en Farellones, La Parva, El Colorado o Valle Nevado, confirmar que se está usando el instrumento de la zona cordillerana, no el del Sector Valle.',
+      'Evaluar temprano si el proyecto puede optar a incentivos normativos (Art. 1.5.1) — cambia el volumen edificable posible.',
+    ],
+    planRegulador: {
+      urlPRC: 'https://lobarnechea.cl/municipalidad/plan-regulador/plan-regulador-comunal-vigente/',
+      ultimaModificacion: '2025',
+      notaGeneral: 'PRC del "Área Urbana Sector Valle" actualizado por Decreto Municipal N°0970/2025 (9-oct-2025, vigente desde 30-oct-2025), tras aprobación favorable de la SEREMI MINVU RM (Ord. N°2613, 25-sep-2025). Los coeficientes aquí provienen del Anteproyecto de Ordenanza (documento técnico previo a la aprobación final) — no se pudo verificar 1:1 contra el texto definitivo publicado. La zona cordillerana (Farellones y centros de ski) se rige por un instrumento aparte, no cubierto en esta ficha.',
+      seccionales: [
+        {
+          codigo: 'ZHE-2.1',
+          nombre: 'Zona Habitacional Exclusiva 2.1',
+          descripcion: 'Predio mínimo 900 m². Altura máxima 2 pisos.',
+        },
+        {
+          codigo: 'ZHE-6',
+          nombre: 'Zona Habitacional Exclusiva 6',
+          descripcion: 'Predio mínimo 1.800 m². Altura máxima 6 pisos (21 m). Constructibilidad hasta 2,3 (con incentivos).',
+        },
+        {
+          codigo: 'ZHP-10',
+          nombre: 'Zona Habitacional Preferente 10',
+          descripcion: 'Altura máxima 10 pisos (35 m). Constructibilidad hasta 2,6.',
+        },
+        {
+          codigo: 'ZM-4',
+          nombre: 'Zona Mixta 4',
+          descripcion: 'Predio mínimo 900 m². Altura máxima 4 pisos (14 m). Constructibilidad 1,4.',
+        },
+      ],
+    },
+  },
 ]
 
 const MAP = new Map(BASE.map((m) => [m.nombre.toLowerCase(), m]))
