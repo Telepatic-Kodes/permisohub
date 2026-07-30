@@ -3,9 +3,9 @@
 ## Current Position
 
 Phase: 11 of 12 (Vista de Zonificación en el Proyecto) — En progreso (Wave 1, planes en paralelo)
-Plan: 02 de 8 completado (lib/zonificacion-zonas.ts + GET /api/zonificacion/zonas — data source para el fallback manual ZONE-05). Otros planes de Wave 1 (11-01, 11-03, 11-04) en ejecución paralela — ver commits de código ya presentes en el historial aunque sus SUMMARY.md aún no existan al momento de este update.
+Plan: 01, 02 y 03 de 8 completados. 01 ⚠️ parcial (types/index.ts zona_* + lib/zonificacion-format.ts ✅; migración 20260730_zonificacion_v2.sql creada/commiteada pero NO aplicada en vivo — herramientas MCP de Supabase no disponibles en esta sesión, ver 11-01-SUMMARY.md "Issues Encountered"). 02 ✅ (lib/zonificacion-zonas.ts + GET /api/zonificacion/zonas — data source para el fallback manual ZONE-05). 03 ✅ (lib/zonificacion-compat.ts + POST /api/proyectos/[id]/compatibilidad — COMPAT-01 backend). Plan 11-04 en ejecución paralela — ver commits de código ya presentes en el historial aunque su SUMMARY.md aún no exista al momento de este update.
 Status: In progress
-Last activity: 2026-07-30 — 11-02-PLAN.md completado: lib/zonificacion-zonas.ts (fetchZonasDisponibles, fetchZonaDetalle) + GET /api/zonificacion/zonas (público, rate-limited), live-verificado por curl contra ArcGIS real (Las Condes 71 zonas, Temuco 404 sin llamada de red). No toca ningún archivo de Phase 10.
+Last activity: 2026-07-30 — 11-03-PLAN.md completado: lib/zonificacion-compat.ts (verificarCompatibilidadUso, corto-circuito determinista + clasificación IA de 3 estados vía aiComplete) + POST /api/proyectos/[id]/compatibilidad (autenticado, ownedProject()). Live-verificado: AI path contra datos reales de zonificacion_cache (Las Condes/Providencia) y short-circuit (Ñuñoa, 0ms sin llamada de red).
 
 Progress: [█████░░░░░] 45%
 
@@ -14,7 +14,7 @@ Progress: [█████░░░░░] 45%
 | Phase | Title | Status |
 |---|---|---|
 | 10 | Motor de Zonificación | ✅ Completa — 10-01 ✅ (migración zonificacion_cache + proyectos.zona_* aplicada vía Supabase MCP) 10-02 ✅ (lib/zonificacion-comunas.ts, registro 4 comunas) 10-03 ✅ (lib/geocoding.ts, Nominatim geocoder) 10-04 ✅ (lib/zonificacion.ts + ruta GET /api/zonificacion/lookup, orquestación completa) 10-05 ✅ (lib/zonificacion-server.ts + after() en POST/PATCH /api/proyectos, persistencia automática de zona_* sin UI) |
-| 11 | Vista de Zonificación en el Proyecto | En progreso — 11-01 ⚠️ parcial (types/index.ts zona_* + lib/zonificacion-format.ts ✅; migración 20260730_zonificacion_v2.sql creada pero NO aplicada en vivo — bloqueada por falta de herramientas MCP/DB en la sesión) 11-02 ✅ (lib/zonificacion-zonas.ts, GET /api/zonificacion/zonas, data source del fallback manual ZONE-05) |
+| 11 | Vista de Zonificación en el Proyecto | En progreso — 11-01 ⚠️ parcial (types/index.ts zona_* + lib/zonificacion-format.ts ✅; migración 20260730_zonificacion_v2.sql creada pero NO aplicada en vivo — bloqueada por falta de herramientas MCP/DB en la sesión) 11-02 ✅ (lib/zonificacion-zonas.ts, GET /api/zonificacion/zonas, data source del fallback manual ZONE-05) 11-03 ✅ (lib/zonificacion-compat.ts + POST /api/proyectos/[id]/compatibilidad, backend COMPAT-01) |
 | 12 | Integración con Motores de Decisión | Not started — depende de Phase 11 |
 | 7 | Foundation | ✅ 07-01 service client, 07-02 checklist table, 07-03 Sheet component |
 | 8 | Copiloto Core | ✅ 08-01 ✅ (API) 08-02 ✅ (UI: drawer, trigger, 4 tabs) 08-03 ✅ (page integration: permisos, patentes, proyectos/[id]) |
