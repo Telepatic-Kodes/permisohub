@@ -9,6 +9,8 @@ import type { Proyecto } from "@/types"
 import { fixMojibakeArcGIS } from "@/lib/zonificacion-format"
 import { ZonificacionMapa, type ZonaPolygon } from "./zonificacion-mapa"
 import { ZonificacionDisclaimer } from "./zonificacion-disclaimer"
+import { ZonificacionManualFallback } from "./zonificacion-manual-fallback"
+import { UsoCompatibleCheck } from "./uso-compatible-check"
 
 interface ZonificacionCardProps {
   proyecto: Proyecto
@@ -76,7 +78,10 @@ export function ZonificacionCard({ proyecto, onUpdated }: ZonificacionCardProps)
           variant="ghost"
           size="sm"
           className="h-7 gap-1.5 text-xs"
-          onClick={() => void handleActualizar()}
+          onClick={() => {
+            if (proyecto.zona_origen === "manual" && !window.confirm("Esta zona fue confirmada manualmente. ¿Reemplazarla con un nuevo intento automático de geocoding?")) return
+            void handleActualizar()
+          }}
           disabled={actualizando}
         >
           {actualizando ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
@@ -96,6 +101,9 @@ export function ZonificacionCard({ proyecto, onUpdated }: ZonificacionCardProps)
             <p className="mt-1">
               La comuna &quot;{proyecto.municipio}&quot; no tiene capa PRC integrada todavía.
             </p>
+            <div className="mt-2">
+              <ZonificacionManualFallback proyectoId={proyecto.id} onApplied={refetchProyecto} />
+            </div>
           </div>
         )}
 
@@ -105,6 +113,9 @@ export function ZonificacionCard({ proyecto, onUpdated }: ZonificacionCardProps)
               <AlertTriangle className="size-3.5" /> No se pudo determinar la zona
             </p>
             <p className="mt-1">Verifica la dirección del proyecto o intenta Actualizar.</p>
+            <div className="mt-2">
+              <ZonificacionManualFallback proyectoId={proyecto.id} onApplied={refetchProyecto} />
+            </div>
           </div>
         )}
 
@@ -127,6 +138,11 @@ export function ZonificacionCard({ proyecto, onUpdated }: ZonificacionCardProps)
             </div>
 
             <ZonificacionMapa lat={geo?.lat ?? null} lng={geo?.lng ?? null} geometria={geo?.geometria ?? null} />
+            {proyecto.zona_origen === "manual" && !geo?.geometria && (
+              <p className="text-[11px] text-muted-foreground">
+                Zona seleccionada manualmente — no hay punto geocodificado, por lo que no se muestra un polígono de confirmación.
+              </p>
+            )}
 
             {proyecto.zona_usos_disponibles === false ? (
               <p className="text-xs text-muted-foreground">
@@ -161,6 +177,8 @@ export function ZonificacionCard({ proyecto, onUpdated }: ZonificacionCardProps)
                 </p>
               )}
             </div>
+
+            <UsoCompatibleCheck proyectoId={proyecto.id} />
           </>
         )}
 
