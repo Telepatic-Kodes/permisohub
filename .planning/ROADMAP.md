@@ -52,10 +52,17 @@ Plans:
 4. El arquitecto puede indicar el uso pretendido del proyecto y recibe una respuesta de tres estados — Permitido / No permitido / No especificado (requiere revisión) — nunca un veredicto binario
 5. El arquitecto puede forzar una actualización del resultado con una acción explícita "Actualizar" (sin refresco silencioso en background), y si el geocoding falla o la comuna no tiene cobertura, puede seleccionar manualmente comuna y zona desde un listado en vez de ver un error sin salida
 
-**Plans:** TBD
+**Plans:** 8 plans in 5 waves
 
 Plans:
-- [ ] 11-01: TBD (planning pendiente)
+- [ ] 11-01: Migración aditiva (geometria + zona_origen) + tipos Proyecto.zona_* + helper de mojibake
+- [ ] 11-02: Ruta pública de listado de zonas por comuna (fallback manual, ZONE-05)
+- [ ] 11-03: Backend de compatibilidad de uso — corto-circuito determinista + clasificación IA de 3 estados (COMPAT-01)
+- [ ] 11-04: Componente de mapa Leaflet (presentacional) + CSP para tiles OSM
+- [ ] 11-05: Ruta de lookup — returnGeometry+outSR, force+upsert, conversor Esri→GeoJSON
+- [ ] 11-06: Ruta proyecto-scoped GET/POST zonificación (polígono + Actualizar + selección manual)
+- [ ] 11-07: ZonificacionCard (automático) + disclaimer + mapa embebido + integración en la página de proyecto
+- [ ] 11-08: Fallback manual UI + verificador de compatibilidad UI + checkpoint humano final
 
 ---
 
