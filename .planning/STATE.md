@@ -2,18 +2,23 @@
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-30 — Milestone v1.4 Zonificación started (v1.3 Army of Skills complete: 09-01 ✅ 09-02 ✅ 09-03 ✅)
+Phase: 10 of 12 (Motor de Zonificación) — ready to plan
+Plan: — (planning pendiente)
+Status: Ready to plan
+Last activity: 2026-07-30 — ROADMAP.md creado para v1.4 Zonificación (Phases 10-12), 10/10 requirements mapeados
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
+| 10 | Motor de Zonificación | Not started — registro de cobertura, geocoding, adapter ArcGIS, cache y persistencia automática |
+| 11 | Vista de Zonificación en el Proyecto | Not started — depende de Phase 10 |
+| 12 | Integración con Motores de Decisión | Not started — depende de Phase 11 |
 | 7 | Foundation | ✅ 07-01 service client, 07-02 checklist table, 07-03 Sheet component |
 | 8 | Copiloto Core | ✅ 08-01 ✅ (API) 08-02 ✅ (UI: drawer, trigger, 4 tabs) 08-03 ✅ (page integration: permisos, patentes, proyectos/[id]) |
-| 9 | Automatizaciones | 09-01 ✅ (DOM scraper idempotency + WA guard decoupled) 09-02 ✅ (after() SII enrichment on patente_comercial creation) 09-03 ✅ (AI tip in weekly email + schedule fix) |
+| 9 | Automatizaciones | ✅ 09-01 (DOM scraper idempotency + WA guard decoupled) 09-02 (after() SII enrichment on patente_comercial creation) 09-03 (AI tip in weekly email + schedule fix) |
 | 6 | Dashboard Timeline View | ✅ app/(dashboard)/dashboard/page.tsx — Timeline View con 4 secciones |
 | 1 | Stripe Billing | ✅ app/api/billing/{checkout,portal,webhook}, lib/stripe.ts, /configuracion/billing |
 | 2 | Feature Gating | ✅ lib/plan-limits.ts, lib/usage.ts, upgrade prompt on /proyectos, API usage gate |
@@ -25,7 +30,7 @@ Last activity: 2026-07-30 — Milestone v1.4 Zonificación started (v1.3 Army of
 
 See: .planning/PROJECT.md
 **Core value:** El copiloto IA del arquitecto chileno — acelera y automatiza la tramitación de permisos DOM
-**Current focus:** v1.4 Zonificación — zona PRC + usos permitidos por dirección, automático y citado
+**Current focus:** v1.4 Zonificación — Phase 10 (Motor de Zonificación): geocoding + registro de cobertura + persistencia automática de zona PRC, sin UI todavía
 
 ## Accumulated Context
 
@@ -50,3 +55,16 @@ See: .planning/PROJECT.md
 - [v1.3] Copiloto UI live (08-02, 18eaa75) — CopilotoDrawer: idle shows 4 skill cards, card-click→loading→loaded state machine, Map<string,CopilotoResult> cache by proyectoId. CopilotoTrigger: thin Bot-icon button. 4 tab components: TabOguc (articles+cumple), TabObservaciones (riesgoGlobal+predictions), TabChecklist (optimistic PATCH toggle, 'pendiente'|'ok' union), TabEstimacion (plazo+derechos CLP/UF). All interfaces exported from copiloto-drawer.tsx. No shadcn Tabs. tsc exits 0. SKILL-01 complete.
 - [v1.3] Copiloto page integration live (08-03, a8576f7) — CopilotoTrigger per row in permisos + patentes list pages, CopilotoTrigger in PageHeader action div in proyectos/[id]. Shared CopilotoDrawer at page level (single instance). State pattern: copilotoProyecto (nullable Pick) + copilotoOpen (bool). Desarchivo covered by proyectos/[id] — no dedicated desarchivo list page exists. SKILL-01 fully operational across all views.
 - [v1.3] Weekly email AI tip live (09-03, ef5972e + e99aeb9) — sendResumenSemanal accepts tipSemanal?: string, renders blue card (#EFF6FF border #BFDBFE) via escapeHtml. weekly-summary route generates tip with isAIAvailable() guard + try/catch fallback to ''. vercel.json weekly-summary schedule corrected to 0 11 * * 1 (08:00 Santiago UTC-3, was 12:00 UTC). Pattern: isAIAvailable() guard + try/catch = safe AI feature degradation.
+- [v1.4] Roadmap decision (2026-07-30): 3 phases (10-12), not 4 as research suggested — merged research's Phase 1 (schema/registry/geocoder) + Phase 2 (adapter/lookup route/persistence) into a single Phase 10, since neither alone is user-observable and splitting them risked a horizontal-layers feel. Phase 10 has zero directly-mapped requirements (pure enabling infrastructure, verified via API/DB rather than UI) — ZONE-01 is owned by Phase 11 because the requirement text explicitly requires the architect to *see* the zone.
+- [v1.4] No existing geocoder in the codebase — `lib/geocoding.ts` (Nominatim) is a hard Phase 10 prerequisite, not incidental.
+- [v1.4] No PostGIS — zonificacion cache uses plain Supabase columns (lat/lng double precision + jsonb), matching the `proyectos_sii` convention. ArcGIS does the spatial math server-side (`returnGeometry=false`).
+- [v1.4] Explicit 3-state pattern required everywhere: lookup status (`encontrado`/`sin_cobertura`/`error`) and compatibility check (`Permitido`/`No permitido`/`No especificado`) must never collapse to a boolean — this was the #1 pitfall theme in research (PITFALLS.md).
+- [v1.4] New citation type needed: PRC/GIS data must NOT reuse `normativa-retrieval.ts`'s `verificado: true` badge (different trust axis) — needs its own `FuenteNormativa` value and disclaimer wording.
+- [v1.4] Phase 12 (via-tramitacion.ts, due-diligence.ts, copiloto integration) is strictly additive — `recomendarVia()`'s deterministic core must never be modified; sequenced last so an immature zoning feature can't corrupt engines that already work.
+- [v1.4] Map library selection (MapLibre vs Leaflet) is an open spike for Phase 11 planning — no mapping library exists in the codebase today, this is the one new frontend dependency in the milestone.
+
+## Session Continuity
+
+Last session: 2026-07-30
+Stopped at: ROADMAP.md written for v1.4 Zonificación (Phases 10-12); REQUIREMENTS.md traceability updated. Awaiting user approval before `/gsd:plan-phase 10`.
+Resume file: None

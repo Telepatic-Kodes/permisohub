@@ -43,21 +43,22 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| ZONE-01 | — | Pending |
-| ZONE-02 | — | Pending |
-| ZONE-03 | — | Pending |
-| ZONE-04 | — | Pending |
-| ZONE-05 | — | Pending |
-| ZONE-06 | — | Pending |
-| COMPAT-01 | — | Pending |
-| INTEG-01 | — | Pending |
-| INTEG-02 | — | Pending |
-| INTEG-03 | — | Pending |
+| ZONE-01 | 11 | Pending |
+| ZONE-02 | 11 | Pending |
+| ZONE-03 | 11 | Pending |
+| ZONE-04 | 11 | Pending |
+| ZONE-05 | 11 | Pending |
+| ZONE-06 | 11 | Pending |
+| COMPAT-01 | 11 | Pending |
+| INTEG-01 | 12 | Pending |
+| INTEG-02 | 12 | Pending |
+| INTEG-03 | 12 | Pending |
 
 **Coverage:**
 - v1.4 requirements: 10 total
-- Mapped to phases: 0 (pendiente — se completa al crear el roadmap)
-- Unmapped: 10 ⚠️ (esperado antes del roadmap)
+- Mapped to phases: 10/10 ✓
+- Unmapped: 0
+- Note: Phase 10 (Motor de Zonificación) has no directly-mapped requirement — it's enabling infrastructure (geocoding, coverage registry, ArcGIS adapter, cache, persistence) that Phase 11's user-facing requirements depend on.
 
 ---
 
@@ -171,4 +172,4 @@
 
 ---
 *Requirements defined: 2026-06-20*
-*Last updated: 2026-07-30 — v1.4 Zonificación requirements added; v1.1/v1.3 checkboxes corrected to reflect shipped status*
+*Last updated: 2026-07-30 — v1.4 Zonificación roadmap created (Phases 10-12), traceability mapped 10/10*
