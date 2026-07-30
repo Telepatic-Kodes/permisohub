@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { resolveComunaZonificacion } from '@/lib/zonificacion-comunas'
 import { geocodeDireccion } from '@/lib/geocoding'
 import { ArcGISQueryResponseSchema, type ZonaData, type ZonaLookupResponse } from '@/lib/zonificacion'
+import { esriRingsToGeoJSON } from '@/lib/zonificacion-geo'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 // Single adapter isolating all ArcGIS-specific knowledge (Pitfall 2) — never
@@ -39,6 +40,7 @@ export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url)
   const direccion = searchParams.get('direccion')
   const comuna = searchParams.get('comuna')
+  const force = searchParams.get('force') === 'true'
 
   if (!direccion || !comuna) {
     return Response.json(
@@ -84,24 +86,26 @@ export async function GET(request: Request): Promise<Response> {
     const latR = round6(lat)
     const lngR = round6(lng)
 
-    // 3. Cache read-through.
-    const { data: cached } = await supabase
-      .from('zonificacion_cache')
-      .select('*')
-      .eq('comuna_id', comunaConfig.comunaId)
-      .eq('lat_r', latR)
-      .eq('lng_r', lngR)
-      .maybeSingle()
+    // 3. Cache read-through — skipped when ?force=true (Plan 11-06's "Actualizar" button).
+    if (!force) {
+      const { data: cached } = await supabase
+        .from('zonificacion_cache')
+        .select('*')
+        .eq('comuna_id', comunaConfig.comunaId)
+        .eq('lat_r', latR)
+        .eq('lng_r', lngR)
+        .maybeSingle()
 
-    if (cached) {
-      const data: ZonaData = {
-        comunaId: cached.comuna_id, tier: cached.capa, region: cached.region, sector: cached.sector,
-        zona: cached.zona, nombreZona: cached.nombre_zona, uperm: cached.uperm, uproh: cached.uproh,
-        usosDisponibles: cached.usos_disponibles, fuenteUrl: cached.fuente_url,
-        fuenteActualizadaEl: cached.fuente_actualizada_el, lat, lng, cacheHit: true,
-        consultadoEl: cached.consultado_el,
+      if (cached) {
+        const data: ZonaData = {
+          comunaId: cached.comuna_id, tier: cached.capa, cacheId: cached.id, region: cached.region, sector: cached.sector,
+          zona: cached.zona, nombreZona: cached.nombre_zona, uperm: cached.uperm, uproh: cached.uproh,
+          usosDisponibles: cached.usos_disponibles, fuenteUrl: cached.fuente_url,
+          fuenteActualizadaEl: cached.fuente_actualizada_el, lat, lng, cacheHit: true,
+          consultadoEl: cached.consultado_el,
+        }
+        return Response.json({ ok: true, status: 'encontrado', data } satisfies ZonaLookupResponse, { status: 200 })
       }
-      return Response.json({ ok: true, status: 'encontrado', data } satisfies ZonaLookupResponse, { status: 200 })
     }
 
     // 4. Cache miss — query ArcGIS. Axis order is x,y = lng,lat; inSR MUST be
@@ -116,7 +120,8 @@ export async function GET(request: Request): Promise<Response> {
     arcgisUrl.searchParams.set('inSR', '4326')
     arcgisUrl.searchParams.set('spatialRel', 'esriSpatialRelIntersects')
     arcgisUrl.searchParams.set('outFields', outFields)
-    arcgisUrl.searchParams.set('returnGeometry', 'false')
+    arcgisUrl.searchParams.set('returnGeometry', 'true')
+    arcgisUrl.searchParams.set('outSR', '4326') // outSR es un parámetro DISTINTO de inSR (ya fijado arriba para el punto de entrada) — omitirlo deja el polígono en la proyección nativa de la capa (típicamente Web Mercator/3857), ilegible para un mapa Leaflet basado en WGS84 (Pitfall 5)
 
     const arcgisRes = await fetch(arcgisUrl.toString(), { signal: AbortSignal.timeout(10_000) })
     if (!arcgisRes.ok) {
@@ -169,26 +174,35 @@ export async function GET(request: Request): Promise<Response> {
       )
     }
 
+    const geometria = esriRingsToGeoJSON(parsed.data.features[0].geometry)
+
     const nowIso = new Date().toISOString()
+    // upsert (not insert) unconditionally — safe for BOTH the normal cache-miss
+    // path and the forced-refresh path: behaves identically to insert when no
+    // conflicting row exists, and correctly overwrites when one does (Pitfall 3).
     const { data: inserted, error: insertErr } = await supabase
       .from('zonificacion_cache')
-      .insert({
-        comuna_id: comunaConfig.comunaId,
-        lat_r: latR,
-        lng_r: lngR,
-        capa: comunaConfig.tier,
-        region: get(comunaConfig.fieldMap.region),
-        sector: get(comunaConfig.fieldMap.sector),
-        zona,
-        nombre_zona: nombreZona,
-        uperm: get(comunaConfig.fieldMap.uperm),
-        uproh: get(comunaConfig.fieldMap.uproh),
-        usos_disponibles: comunaConfig.usosDisponibles, // registry-level flag, NEVER derived from uperm/uproh being empty (Pitfall 8)
-        fuente_url: get(comunaConfig.fieldMap.url),
-        fuente_actualizada_el: null, // populate from FeatureServer metadata in a later pass if needed; not required for this phase's success criteria
-        raw: attrs,
-        consultado_el: nowIso,
-      })
+      .upsert(
+        {
+          comuna_id: comunaConfig.comunaId,
+          lat_r: latR,
+          lng_r: lngR,
+          capa: comunaConfig.tier,
+          region: get(comunaConfig.fieldMap.region),
+          sector: get(comunaConfig.fieldMap.sector),
+          zona,
+          nombre_zona: nombreZona,
+          uperm: get(comunaConfig.fieldMap.uperm),
+          uproh: get(comunaConfig.fieldMap.uproh),
+          usos_disponibles: comunaConfig.usosDisponibles, // registry-level flag, NEVER derived from uperm/uproh being empty (Pitfall 8)
+          fuente_url: get(comunaConfig.fieldMap.url),
+          fuente_actualizada_el: null, // populate from FeatureServer metadata in a later pass if needed; not required for this phase's success criteria
+          geometria,
+          raw: attrs,
+          consultado_el: nowIso,
+        },
+        { onConflict: 'comuna_id,lat_r,lng_r' },
+      )
       .select('*')
       .single()
 
@@ -196,7 +210,8 @@ export async function GET(request: Request): Promise<Response> {
       console.error('[zonificacion] No se pudo cachear el resultado:', insertErr?.message)
       // Still return the result even if caching failed — the lookup itself succeeded.
       const data: ZonaData = {
-        comunaId: comunaConfig.comunaId, tier: comunaConfig.tier, region: get(comunaConfig.fieldMap.region),
+        comunaId: comunaConfig.comunaId, tier: comunaConfig.tier, cacheId: '', // caché no se pudo escribir — sin fila real que referenciar; callers deben tratar '' como "sin cache_id" (falsy)
+        region: get(comunaConfig.fieldMap.region),
         sector: get(comunaConfig.fieldMap.sector), zona, nombreZona,
         uperm: get(comunaConfig.fieldMap.uperm), uproh: get(comunaConfig.fieldMap.uproh),
         usosDisponibles: comunaConfig.usosDisponibles, fuenteUrl: get(comunaConfig.fieldMap.url),
@@ -206,7 +221,7 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const data: ZonaData = {
-      comunaId: inserted.comuna_id, tier: inserted.capa, region: inserted.region, sector: inserted.sector,
+      comunaId: inserted.comuna_id, tier: inserted.capa, cacheId: inserted.id, region: inserted.region, sector: inserted.sector,
       zona: inserted.zona, nombreZona: inserted.nombre_zona, uperm: inserted.uperm, uproh: inserted.uproh,
       usosDisponibles: inserted.usos_disponibles, fuenteUrl: inserted.fuente_url,
       fuenteActualizadaEl: inserted.fuente_actualizada_el, lat, lng, cacheHit: false,

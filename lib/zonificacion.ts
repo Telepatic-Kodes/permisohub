@@ -11,6 +11,7 @@ export type ZonaStatus = 'encontrado' | 'sin_cobertura' | 'error'
 export interface ZonaData {
   comunaId: string
   tier: 'dedicada' | 'agregada'
+  cacheId: string // id de la fila en zonificacion_cache; permite a proyectos.zona_cache_id apuntar a un registro real. '' cuando la escritura de caché falló (sin fila real que referenciar) — tratar como falsy.
   region: string | null
   sector: string | null
   zona: string
@@ -39,6 +40,7 @@ export interface ZonaLookupResponse {
 // live in lib/zonificacion-comunas.ts's fieldMap, not here.
 export const ArcGISFeatureSchema = z.object({
   attributes: z.record(z.string(), z.unknown()),
+  geometry: z.unknown().optional(),
 })
 
 export const ArcGISQueryResponseSchema = z.object({
