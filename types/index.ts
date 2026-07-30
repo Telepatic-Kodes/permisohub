@@ -115,6 +115,7 @@ export interface Proyecto {
   // Campos de zonificación (Plan Regulador Comunal — Fase 10/11)
   zona_status?: 'pendiente' | 'encontrado' | 'sin_cobertura' | 'error'
   zona_cache_id?: string
+  zona_codigo?: string
   zona_sector?: string
   zona_nombre?: string
   zona_uperm?: string
