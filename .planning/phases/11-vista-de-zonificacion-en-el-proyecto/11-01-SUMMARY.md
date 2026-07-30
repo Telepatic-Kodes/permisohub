@@ -11,7 +11,7 @@ requires:
 provides:
   - "Proyecto TypeScript interface with all 9 zona_* fields from Phase 10 plus new zona_origen"
   - "fixMojibakeArcGIS() render-time helper for ArcGIS double-encoding corruption, client+server safe"
-  - "supabase/migrations/20260730_zonificacion_v2.sql (geometria jsonb + zona_origen text + CHECK) — file committed, NOT yet applied live"
+  - "supabase/migrations/20260730_zonificacion_v2.sql (geometria jsonb + zona_origen text + CHECK) — applied live to nojejnebedjpbdlynrqs by the orchestrator via Supabase MCP after this executor session found the tool unbound"
 affects: [11-02, 11-03, 11-04, 11-05, 11-06, 11-07, 11-08]
 
 # Tech tracking
@@ -41,7 +41,9 @@ completed: 2026-07-30
 
 # Phase 11 Plan 01: Zonificación schema foundation + Proyecto typing Summary
 
-**Additive Supabase migration (zonificacion_cache.geometria jsonb, proyectos.zona_origen text+CHECK) written and committed but NOT applied live due to unavailable Supabase MCP tooling in this session; Proyecto TypeScript type and a client-safe ArcGIS mojibake-repair helper are complete and verified.**
+**Additive Supabase migration (zonificacion_cache.geometria jsonb, proyectos.zona_origen text+CHECK) — written by the executor, applied live by the orchestrator via Supabase MCP after the executor session found the MCP tool unbound; Proyecto TypeScript type and a client-safe ArcGIS mojibake-repair helper are complete and verified.**
+
+**Post-execution update (orchestrator, same session):** the executor subagent that ran this plan did not have `mcp__supabase__*` tools bound (see Issues Encountered below for its investigation). The orchestrating session DOES have them (same MCP server used successfully throughout Phase 10). The orchestrator applied `20260730_zonificacion_v2.sql` directly via `mcp__supabase__apply_migration` immediately after this plan completed, and verified via `mcp__supabase__execute_sql`: `zonificacion_cache.geometria` (jsonb) exists, `proyectos.zona_origen` (text) exists, and `zona_origen_check` constraint reads `CHECK (((zona_origen IS NULL) OR (zona_origen = ANY (ARRAY['automatico'::text, 'manual'::text]))))`. **This migration is now live** — downstream plans (11-05, 11-06, 11-07) are unblocked. The "User Setup Required" section below is now historical, not an outstanding task.
 
 ## Performance
 
