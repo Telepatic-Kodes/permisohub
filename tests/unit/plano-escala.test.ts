@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { distanciaRealM, type EscalaPlano } from '@/lib/plano-escala'
+import { distanciaRealM, extraerCotasDeTexto, type EscalaPlano } from '@/lib/plano-escala'
 
 // Plano A1 apaisado a escala 1:50 — dimensiones reales de referencia para
 // verificar la conversión punto→mm→metro sin depender de pdfjs ni del DOM.
@@ -44,5 +44,51 @@ describe('distanciaRealM', () => {
     const distMm = 500 * (25.4 / 72)
     const esperado = Math.round(((distMm / 1000) * 100 + Number.EPSILON) * 100) / 100
     expect(distanciaRealM(a, b, cuadrada)).toBe(esperado)
+  })
+})
+
+describe('extraerCotasDeTexto', () => {
+  it('detecta una cota simple con punto decimal', () => {
+    expect(extraerCotasDeTexto('3.20')).toEqual([{ valorM: 3.2, texto: '3.20' }])
+  })
+
+  it('detecta una cota con coma decimal (convención chilena)', () => {
+    expect(extraerCotasDeTexto('H=2,40')).toEqual([{ valorM: 2.4, texto: 'H=2,40' }])
+  })
+
+  it('detecta varias cotas en el mismo texto', () => {
+    const r = extraerCotasDeTexto('ancho 3.20 alto 2.40')
+    expect(r.map((c) => c.valorM)).toEqual([3.2, 2.4])
+  })
+
+  it('ignora superficies en m² (no son una distancia)', () => {
+    expect(extraerCotasDeTexto('45.50 m²')).toEqual([])
+    expect(extraerCotasDeTexto('45.50m2')).toEqual([])
+  })
+
+  it('ignora fragmentos de un RUT', () => {
+    expect(extraerCotasDeTexto('12.345.678-9')).toEqual([])
+  })
+
+  it('ignora fragmentos de un número de 3+ dígitos enteros (superficie total, expediente)', () => {
+    expect(extraerCotasDeTexto('Total m2 edificados = 138,6 m2')).toEqual([])
+    expect(extraerCotasDeTexto('892.40')).toEqual([])
+  })
+
+  it('ignora citas normativas tipo "Art. 2.6.3 OGUC" (tres segmentos, no dos)', () => {
+    expect(extraerCotasDeTexto('Art. 2.6.3 OGUC')).toEqual([])
+  })
+
+  it('ignora valores fuera del rango plausible para un elemento constructivo', () => {
+    expect(extraerCotasDeTexto('0.01')).toEqual([]) // demasiado pequeño
+  })
+
+  it('acepta el límite inferior e superior del rango plausible', () => {
+    expect(extraerCotasDeTexto('0.05').map((c) => c.valorM)).toEqual([0.05])
+    expect(extraerCotasDeTexto('50.00').map((c) => c.valorM)).toEqual([50])
+  })
+
+  it('no encuentra nada en texto sin números con el patrón esperado', () => {
+    expect(extraerCotasDeTexto('PLANTA PRIMER PISO')).toEqual([])
   })
 })
