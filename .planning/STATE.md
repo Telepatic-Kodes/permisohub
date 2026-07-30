@@ -3,17 +3,17 @@
 ## Current Position
 
 Phase: 10 of 12 (Motor de Zonificación) — en ejecución
-Plan: 01, 02 y 03 de 5 completados (migración + registro de comunas + geocoder); 04 y 05 pendientes
+Plan: 01, 02, 03 y 04 de 5 completados (migración + registro de comunas + geocoder + ruta de lookup); 05 pendiente
 Status: In progress
-Last activity: 2026-07-30 — 10-01-PLAN.md checkpoint cerrado: migración 20260730_zonificacion.sql aplicada en Supabase vía MCP (apply_migration), verificada contra information_schema/pg_constraint/pg_policies
+Last activity: 2026-07-30 — 10-04-PLAN.md completado: lib/zonificacion.ts + app/api/zonificacion/lookup/route.ts, live-verificado contra las 4 comunas cubiertas + cache hit + sin_cobertura
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
-| 10 | Motor de Zonificación | In progress — 10-01 ✅ (migración zonificacion_cache + proyectos.zona_* aplicada vía Supabase MCP) 10-02 ✅ (lib/zonificacion-comunas.ts, registro 4 comunas) 10-03 ✅ (lib/geocoding.ts, Nominatim geocoder); 10-04 y 10-05 pendientes |
+| 10 | Motor de Zonificación | In progress — 10-01 ✅ (migración zonificacion_cache + proyectos.zona_* aplicada vía Supabase MCP) 10-02 ✅ (lib/zonificacion-comunas.ts, registro 4 comunas) 10-03 ✅ (lib/geocoding.ts, Nominatim geocoder) 10-04 ✅ (lib/zonificacion.ts + ruta GET /api/zonificacion/lookup, orquestación completa); 10-05 pendiente |
 | 11 | Vista de Zonificación en el Proyecto | Not started — depende de Phase 10 |
 | 12 | Integración con Motores de Decisión | Not started — depende de Phase 11 |
 | 7 | Foundation | ✅ 07-01 service client, 07-02 checklist table, 07-03 Sheet component |
@@ -65,9 +65,10 @@ See: .planning/PROJECT.md
 - [v1.4] Nominatim geocoder live (10-03, c134add) — `lib/geocoding.ts` exports `geocodeDireccion(direccion, comuna)`, server-side only (reuses `fetchWithTimeout` from `lib/scraper.ts`, custom Nominatim User-Agent). Live-verified: `lat`/`lon` return as strings (parsed via `parseFloat`), and `address.suburb` holds the real comuna while `address.city` collapses to "Santiago" — `comunaDetectada` reads `suburb` first, `city` only as fallback. In-module throttle (1.1s) respects Nominatim's 1 req/sec policy, no new dependency. Never throws — resolves `{ok:false, error}` on any failure. Comuna cross-check vs. requested comuna is deferred to Plan 10-04's caller (soft warning, not a gate).
 - [v1.4] Zonificación comuna registry live (10-02, 380798f) — `lib/zonificacion-comunas.ts` exports `ZONIFICACION_COMUNAS` (4 verified entries: las-condes/providencia/vitacura `dedicada` lowercase fieldMap, nunoa `agregada` UPPERCASE fieldMap against shared `PrcCuencaMaipo` layer), `resolveComunaZonificacion(nombreOMunicipio)` (display-name or slug → entry or `null`, never an empty-but-truthy object), and `getComunasConCobertura()` for Phase 11's manual-fallback UI. Ñuñoa flagged `usosDisponibles: false` (UPERM/UPROH structurally empty in source, confirmed 0/200 filled) — must be disclosed, not inferred from nullability. Kept fully separate from `lib/comunas-chile.ts`, same small-deep-registry pattern as `lib/municipios-stats.ts`. Pure data + one pure function, no new dependency.
 - [v1.4] Zonificación schema live (10-01, checkpoint closed 2026-07-30) — `zonificacion_cache` (17 cols, RLS on, `zonificacion_cache_read` policy) + `proyectos.zona_*` (9 cols) + `zona_status_check` CHECK constraint, all applied to Supabase project `nojejnebedjpbdlynrqs` via the Supabase MCP server's `apply_migration` (not the dashboard SQL Editor — MCP became available mid-phase). Supabase MCP is now configured at `user` scope in `~/.claude.json` (fresh Personal Access Token — the one reused from `permisohub`'s prior project-scoped config had expired) — reusable across sessions without reconfiguration going forward.
+- [v1.4] Zonificación lookup route live (10-04, 687c6d9 + ec7c5ea) — `lib/zonificacion.ts` (client-safe `ZonaStatus`/`ZonaData`/`ZonaLookupResponse` types, `ArcGISQueryResponseSchema` Zod boundary validation, `lookupZonificacion()` fetch helper) + `GET /api/zonificacion/lookup` (registry short-circuit → `geocodeDireccion()` → `zonificacion_cache` read-through by `(comuna_id, lat_r, lng_r)` → ArcGIS point-in-polygon query with explicit `geometry=lng,lat&inSR=4326` → Zod validation → cache upsert). No auth check on the route (precedent: `app/api/utils/uf/route.ts` — public data, must be callable from session-less `after()` in Plan 10-05), rate-limited by IP via `checkRateLimit()`. Live-verified against all 4 covered comunas via curl on a local dev server: Las Condes/Providencia/Vitacura return `usosDisponibles:true`, Ñuñoa returns `usosDisponibles:false` with `uperm:null`/`uproh:null`; repeat query hits cache (`cacheHit:true`, identical `consultadoEl`); Temuco returns `sin_cobertura` with zero network calls. Empty ArcGIS `features[]` deliberately maps to `status:'error'`, never `'sin_cobertura'` or a false `'encontrado'`. Some ArcGIS text fields contain source-side mojibake (pre-existing upstream encoding, out of scope) — flagged for Phase 11 UI awareness.
 
 ## Session Continuity
 
 Last session: 2026-07-30
-Stopped at: Completed 10-01-PLAN.md checkpoint (migración aplicada vía Supabase MCP), 10-02-PLAN.md (lib/zonificacion-comunas.ts) and 10-03-PLAN.md (lib/geocoding.ts). Phase 10 has 5 plans total; 10-04, 10-05 still pending (Wave 2 y 3).
+Stopped at: Completed 10-04-PLAN.md (lib/zonificacion.ts + app/api/zonificacion/lookup/route.ts, live-verified end-to-end). Phase 10 has 5 plans total; 10-05 (after() wiring into project creation, Wave 3) still pending.
 Resume file: None
