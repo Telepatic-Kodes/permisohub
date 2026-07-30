@@ -2,10 +2,10 @@
 
 ## Current Position
 
-Phase: 10 of 12 (Motor de Zonificación) — ready to plan
-Plan: — (planning pendiente)
-Status: Ready to plan
-Last activity: 2026-07-30 — ROADMAP.md creado para v1.4 Zonificación (Phases 10-12), 10/10 requirements mapeados
+Phase: 10 of 12 (Motor de Zonificación) — en ejecución
+Plan: 02 y 03 de 5 completados (registro de comunas + geocoder); 01 pendiente (migración con checkpoint manual)
+Status: In progress
+Last activity: 2026-07-30 — 10-02-PLAN.md y 10-03-PLAN.md ejecutados: lib/zonificacion-comunas.ts (registro de cobertura ArcGIS por comuna) + lib/geocoding.ts (Nominatim geocoder) live
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -13,7 +13,7 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Title | Status |
 |---|---|---|
-| 10 | Motor de Zonificación | Not started — registro de cobertura, geocoding, adapter ArcGIS, cache y persistencia automática |
+| 10 | Motor de Zonificación | In progress — 10-02 ✅ (lib/zonificacion-comunas.ts, registro 4 comunas) 10-03 ✅ (lib/geocoding.ts, Nominatim geocoder); 10-01 pendiente (migración, checkpoint manual) |
 | 11 | Vista de Zonificación en el Proyecto | Not started — depende de Phase 10 |
 | 12 | Integración con Motores de Decisión | Not started — depende de Phase 11 |
 | 7 | Foundation | ✅ 07-01 service client, 07-02 checklist table, 07-03 Sheet component |
@@ -62,9 +62,10 @@ See: .planning/PROJECT.md
 - [v1.4] New citation type needed: PRC/GIS data must NOT reuse `normativa-retrieval.ts`'s `verificado: true` badge (different trust axis) — needs its own `FuenteNormativa` value and disclaimer wording.
 - [v1.4] Phase 12 (via-tramitacion.ts, due-diligence.ts, copiloto integration) is strictly additive — `recomendarVia()`'s deterministic core must never be modified; sequenced last so an immature zoning feature can't corrupt engines that already work.
 - [v1.4] Map library selection (MapLibre vs Leaflet) is an open spike for Phase 11 planning — no mapping library exists in the codebase today, this is the one new frontend dependency in the milestone.
+- [v1.4] Nominatim geocoder live (10-03, c134add) — `lib/geocoding.ts` exports `geocodeDireccion(direccion, comuna)`, server-side only (reuses `fetchWithTimeout` from `lib/scraper.ts`, custom Nominatim User-Agent). Live-verified: `lat`/`lon` return as strings (parsed via `parseFloat`), and `address.suburb` holds the real comuna while `address.city` collapses to "Santiago" — `comunaDetectada` reads `suburb` first, `city` only as fallback. In-module throttle (1.1s) respects Nominatim's 1 req/sec policy, no new dependency. Never throws — resolves `{ok:false, error}` on any failure. Comuna cross-check vs. requested comuna is deferred to Plan 10-04's caller (soft warning, not a gate).
 
 ## Session Continuity
 
 Last session: 2026-07-30
-Stopped at: ROADMAP.md written for v1.4 Zonificación (Phases 10-12); REQUIREMENTS.md traceability updated. Awaiting user approval before `/gsd:plan-phase 10`.
+Stopped at: Completed 10-02-PLAN.md (lib/zonificacion-comunas.ts) and 10-03-PLAN.md (lib/geocoding.ts). Phase 10 has 5 plans total (01, 02, 03, 04, 05); 10-01 (migración, checkpoint manual), 10-04, 10-05 still pending.
 Resume file: None
