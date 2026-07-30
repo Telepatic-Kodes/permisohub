@@ -16,7 +16,7 @@
 
 ### COMPAT — Compatibilidad de Uso
 
-- [ ] **COMPAT-01**: El arquitecto puede indicar el uso pretendido del proyecto y el sistema responde con uno de tres estados — Permitido / No permitido / No especificado (requiere revisión) — nunca un veredicto binario
+- [x] **COMPAT-01**: El arquitecto puede indicar el uso pretendido del proyecto y el sistema responde con uno de tres estados — Permitido / No permitido / No especificado (requiere revisión) — nunca un veredicto binario
 
 ### INTEG — Integración con Motores Existentes
 
@@ -49,7 +49,7 @@
 | ZONE-04 | 11 | Pending |
 | ZONE-05 | 11 | Pending |
 | ZONE-06 | 11 | Pending |
-| COMPAT-01 | 11 | Pending |
+| COMPAT-01 | 11 | Complete |
 | INTEG-01 | 12 | Pending |
 | INTEG-02 | 12 | Pending |
 | INTEG-03 | 12 | Pending |

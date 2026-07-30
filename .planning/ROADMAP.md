@@ -5,7 +5,7 @@
 
 ## Phases
 
-- [ ] **Phase 10: Motor de Zonificación** — Geocoding, registro de cobertura por comuna y persistencia automática del resultado de zona (sin UI todavía)
+- [x] **Phase 10: Motor de Zonificación** — Geocoding, registro de cobertura por comuna y persistencia automática del resultado de zona (sin UI todavía) (completed 2026-07-30)
 - [ ] **Phase 11: Vista de Zonificación en el Proyecto** — Zona, mapa, usos citados, compatibilidad de uso y fallback manual, visibles para el arquitecto
 - [ ] **Phase 12: Integración con Motores de Decisión** — via-tramitacion.ts, due-diligence.ts y el copiloto IA incorporan la zona como señal aditiva citada
 
@@ -26,7 +26,7 @@
 4. Al crear o actualizar un proyecto con dirección, el resultado de zonificación se persiste automáticamente en el proyecto con un estado explícito (`encontrado` / `sin_cobertura` / `error`), nunca colapsado a un booleano
 5. Para una comuna fuera de las 4 iniciales, el sistema retorna explícitamente `sin_cobertura` en vez de un resultado vacío indistinguible de "sin restricciones"
 
-**Plans:** 5 plans in 3 waves
+**Plans:** 5/5 plans complete
 
 Plans:
 - [ ] 10-01-PLAN.md — Migración: zonificacion_cache + proyectos.zona_* + CHECK de estado (wave 1, checkpoint)
@@ -82,7 +82,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 10. Motor de Zonificación | 0/5 | Not started | - |
+| 10. Motor de Zonificación | 0/5 | Complete    | 2026-07-30 |
 | 11. Vista de Zonificación en el Proyecto | 0/TBD | Not started | - |
 | 12. Integración con Motores de Decisión | 0/TBD | Not started | - |
 
