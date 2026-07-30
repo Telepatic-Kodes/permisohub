@@ -36,13 +36,30 @@ El copiloto IA del arquitecto chileno — reduce el tiempo de tramitación DOM d
 - ✓ Cron jobs automatizados — v1.0
 - ✓ Pitch deck + Modelo de negocio (/documentos) — v1.0
 
-### Active (v1.1 — Cumplir la Promesa)
+- ✓ BILL-01→07: Stripe billing con 3 tiers (Starter $29.990 / Pro $79.990 / Estudio $149.990 CLP) — v1.1
+- ✓ GATE-01→06: Feature gating por tier (límites de proyectos, AI chats, PDF extractions) — v1.1
+- ✓ LAND-01→04: Landing page pública con pricing y SEO — v1.1
+- ✓ ONBD-01→03: Onboarding wizard 3 pasos post-signup — v1.1
+- ✓ PWA-01→03: App instalable en móvil — v1.1
+- ✓ Dashboard Timeline View (4 secciones de urgencia, hero stats) — v1.2
+- ✓ Copiloto IA drawer en Permisos, Desarchivo y Patentes — v1.3
+- ✓ Verificación DOM diaria automática (write-back sin click del arquitecto) — v1.3
+- ✓ Enriquecimiento SII automático al crear patente comercial — v1.3
+- ✓ Resumen semanal por email con tip de IA — v1.3
 
-- [ ] BILL-01→07: Stripe billing con 3 tiers (Starter $29.990 / Pro $79.990 / Estudio $149.990 CLP)
-- [ ] GATE-01→06: Feature gating por tier (límites de proyectos, AI chats, PDF extractions)
-- [ ] LAND-01→04: Landing page pública con pricing y SEO
-- [ ] ONBD-01→03: Onboarding wizard 3 pasos post-signup
-- [ ] PWA-01→03: App instalable en móvil
+### Active (v1.4 — Zonificación)
+
+- [ ] Zonificación automática por dirección dentro del proyecto (zona PRC + usos permitidos/prohibidos vía ArcGIS FeatureServer de MINVU/OCUC)
+- [ ] Verificación de compatibilidad: uso pretendido del proyecto vs. usos permitidos/prohibidos de la zona
+- [ ] Citación a fuente oficial (decreto/Diario Oficial) por resultado de zona, siguiendo el patrón de normativa-retrieval.ts
+- [ ] Cobertura inicial: Las Condes, Providencia, Vitacura, Ñuñoa — ampliable por comuna según disponibilidad de capa MINVU/OCUC
+- [ ] Manejo explícito de comunas sin cobertura (mensaje claro, no fallo silencioso)
+
+### Out of Scope (v1.4)
+
+- Coeficientes urbanísticos numéricos (FOS, coef. constructibilidad, altura máxima, rasante, distanciamiento) — ningún layer público de MINVU/OCUC los expone; requeriría parsear Ordenanza Local por comuna, esfuerzo de otro milestone
+- Cobertura nacional completa (345 comunas) — se amplía oportunistamente, no es meta de v1.4
+- Alianza o integración de datos con zonificación.cl — decisión explícita de no depender de terceros pudiendo usar la fuente pública (MINVU/OCUC) directamente
 
 ### Out of Scope (v1.1)
 
@@ -79,23 +96,21 @@ El copiloto IA del arquitecto chileno — reduce el tiempo de tramitación DOM d
 | Route: `/calculadora` no `/calculadora-derechos` | Turbopack unicode bug workaround | ✓ Good |
 | Dashboard en `/dashboard` (v1.1) | Landing page pública en `/` | — Pending |
 
-## Previous Milestone: v1.2 Dashboard Clarity (Complete ✅)
+## Previous Milestone: v1.3 Army of Skills (Complete ✅)
 
-**Shipped:** 2026-06-21 — Timeline View con 4 secciones de urgencia, 3 hero stats, quick actions, status bar.
+**Shipped:** 2026-06-26 — Copiloto IA drawer (Permisos/Desarchivo/Patentes), verificación DOM diaria automática, enriquecimiento SII automático, resumen semanal con tip de IA.
 
 ---
 
-## Current Milestone: v1.3 Army of Skills
+## Current Milestone: v1.4 Zonificación
 
-**Goal:** Crear el ejército de skills de IA específicas para cada módulo — un copiloto embebido (drawer) + automatizaciones de fondo que resuelven la brecha actual entre datos disponibles y valor entregado.
+**Goal:** Determinar la zona PRC y usos permitidos/prohibidos de un proyecto automáticamente a partir de su dirección, citando la fuente oficial — cerrando una brecha frente a servicios de pago como zonificación.cl usando datos públicos de MINVU/OCUC.
 
 **Target features:**
-- Copiloto IA drawer en Permisos, Desarchivo y Patentes
-- Análisis de expediente: diagnóstico OGUC, predicción de observaciones, checklist documentos, estimación tiempo/derechos
-- Verificación DOM diaria auto-actualiza DB (sin click del arquitecto)
-- WhatsApp automático al cliente cuando cambia estado DOM
-- Enriquecimiento SII al crear patente comercial
-- Resumen semanal IA por email (todos los lunes)
+- Zonificación automática por dirección dentro del proyecto (alimenta due-diligence.ts y via-tramitacion.ts)
+- Verificación de compatibilidad entre uso pretendido y usos permitidos/prohibidos de la zona
+- Citación a fuente oficial (decreto/Diario Oficial) por resultado
+- Cobertura inicial: Las Condes, Providencia, Vitacura, Ñuñoa
 
 ---
-*Last updated: 2026-06-25 — Milestone v1.3 started*
+*Last updated: 2026-07-30 — Milestone v1.4 started*

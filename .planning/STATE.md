@@ -2,10 +2,10 @@
 
 ## Current Position
 
-Phase: 9 — Automatizaciones
-Plan: 03 — COMPLETE
-Status: IN PROGRESS — 09-01 ✅ 09-02 ✅ 09-03 ✅
-Last activity: 2026-06-26 — 09-03 complete: sendResumenSemanal extended with tipSemanal? param + blue card HTML block; weekly-summary route adds AI tip via aiComplete with isAIAvailable guard; vercel.json schedule fixed to 0 11 * * 1 (08:00 Santiago UTC-3); tsc clean
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-30 — Milestone v1.4 Zonificación started (v1.3 Army of Skills complete: 09-01 ✅ 09-02 ✅ 09-03 ✅)
 
 ## Phases Status
 
@@ -25,7 +25,7 @@ Last activity: 2026-06-26 — 09-03 complete: sendResumenSemanal extended with t
 
 See: .planning/PROJECT.md
 **Core value:** El copiloto IA del arquitecto chileno — acelera y automatiza la tramitación de permisos DOM
-**Current focus:** v1.3 Army of Skills — copiloto drawer embebido + automatizaciones de fondo
+**Current focus:** v1.4 Zonificación — zona PRC + usos permitidos por dirección, automático y citado
 
 ## Accumulated Context
 
