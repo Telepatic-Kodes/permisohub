@@ -80,10 +80,13 @@ Plans:
 3. Los skills del copiloto IA (diagnóstico OGUC, checklist) reciben el texto de usos permitidos/prohibidos de la zona como contexto adicional al generar sus respuestas, cuando el proyecto tiene un resultado de zonificación disponible
 4. Un proyecto sin dirección geocodificable, sin cobertura, o sin zonificación consultada aún funciona exactamente igual que antes de este milestone en vía de tramitación, due diligence y copiloto (comportamiento estrictamente aditivo, sin regresiones)
 
-**Plans:** TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 12-01: TBD (planning pendiente)
+- [ ] 12-01-PLAN.md — Alerta citada de compatibilidad de uso en ViaDecision (wave 1, paralelo)
+- [ ] 12-02-PLAN.md — Cita PRC en due-diligence.ts (FuenteHallazgo + resolverRefNormativa) (wave 1, paralelo)
+- [ ] 12-03-PLAN.md — Contexto de zonificación en prompts OGUC + checklist del copiloto (wave 1, paralelo)
+- [ ] 12-04-PLAN.md — Checkpoint humano final: 3 integraciones + no-regresión (wave 2, checkpoint)
 
 ## Progress
 
@@ -91,7 +94,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 10. Motor de Zonificación | 0/5 | Complete    | 2026-07-30 |
 | 11. Vista de Zonificación en el Proyecto | 0/TBD | Complete    | 2026-07-30 |
-| 12. Integración con Motores de Decisión | 0/TBD | Not started | - |
+| 12. Integración con Motores de Decisión | 0/4 | Not started | - |
 
 ---
 
