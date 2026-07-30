@@ -20,9 +20,13 @@ import {
   Zap,
 } from "lucide-react";
 
+import { getAllMunicipiosConInteligencia } from "@/lib/inteligencia-dom";
+
 // ---------------------------------------------------------------------------
 // Datos estáticos de la landing
 // ---------------------------------------------------------------------------
+
+const N_COMUNAS_INTELIGENCIA = getAllMunicipiosConInteligencia().length;
 
 const STATS = [
   { value: "124 días", label: "promedio para aprobar un permiso en 2024 (vs 45 días en 2009)" },
@@ -144,7 +148,7 @@ const ALCANCE_HACE = [
   "Revisión normativa de documentos de texto del expediente (OGUC, Ley 21.718, LGUC y 14 circulares DDU verificadas contra MINVU).",
   "Pre-revisión DOM: acta de observaciones simulada con artículo citado y cómo subsanar.",
   "Medición de distancias reales sobre el plano vectorial (escala detectada del PDF, sin IA) para el cálculo de rasante y distanciamiento.",
-  "Inteligencia por municipio (estimada, 10 comunas): PRC, zonas típicas y observaciones frecuentes de cada DOM.",
+  `Inteligencia por municipio (estimada, ${N_COMUNAS_INTELIGENCIA} comunas): PRC, zonas típicas y observaciones frecuentes de cada DOM.`,
   "Seguimiento del estado del trámite conectándose a DOM en Línea.",
 ];
 
