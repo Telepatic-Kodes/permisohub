@@ -12,7 +12,7 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://*.supabase.co",
+      "img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org",
       "connect-src 'self' https://*.supabase.co https://api.openai.com https://api.stripe.com https://api.resend.com",
       "frame-src https://js.stripe.com https://hooks.stripe.com https://maps.google.com https://www.google.com",
       "frame-ancestors 'none'",
