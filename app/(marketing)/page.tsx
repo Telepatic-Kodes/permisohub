@@ -33,7 +33,7 @@ const STATS = [
 // Señales de confianza — SOLO hechos ya presentes en la landing (normativa,
 // cobertura de datos, integraciones). NO son métricas de tracción inventadas.
 const CONFIANZA = [
-  { icon: Building2, valor: "346", label: "municipios con inteligencia DOM" },
+  { icon: Building2, valor: "346", label: "comunas de Chile — cobertura nacional" },
   { icon: Bot, valor: "12", label: "herramientas con IA integradas" },
   { icon: Scale, valor: "Ley 21.718", label: "OGUC vigente 2026" },
   { icon: Sparkles, valor: "100%", label: "bootstrapped · arquitecta-fundadora" },
@@ -111,7 +111,7 @@ const FEATURES = [
     icon: BarChart3,
     title: "Inteligencia por municipio",
     description:
-      "PRC, seccionales, zonas típicas y observaciones frecuentes de cada DOM. Datos reales de Las Condes, Providencia, Vitacura y más.",
+      "PRC, seccionales, zonas típicas y observaciones frecuentes de cada DOM. Estimaciones para Las Condes, Providencia, Vitacura y más, afinándose con el uso real de la plataforma.",
   },
   {
     icon: TrendingUp,
@@ -141,15 +141,16 @@ const FEATURES = [
 
 // Alcance honesto — qué hace hoy y qué está en el roadmap (espejo del "Alcance actual" de REVI)
 const ALCANCE_HACE = [
-  "Revisión normativa de documentos de texto del expediente (OGUC, Ley 21.718).",
+  "Revisión normativa de documentos de texto del expediente (OGUC, Ley 21.718, LGUC y 14 circulares DDU verificadas contra MINVU).",
   "Pre-revisión DOM: acta de observaciones simulada con artículo citado y cómo subsanar.",
-  "Inteligencia por municipio: PRC, zonas típicas y observaciones frecuentes de cada DOM.",
+  "Medición de distancias reales sobre el plano vectorial (escala detectada del PDF, sin IA) para el cálculo de rasante y distanciamiento.",
+  "Inteligencia por municipio (estimada, 10 comunas): PRC, zonas típicas y observaciones frecuentes de cada DOM.",
   "Seguimiento del estado del trámite conectándose a DOM en Línea.",
 ];
 
 const ALCANCE_ROADMAP = [
-  "Lectura automática de planos arquitectónicos y verificación gráfica (BIM/DWG).",
-  "Cobertura normativa ampliada: LGUC, circulares DDU y PRC de más comunas.",
+  "Lectura automática de planos arquitectónicos y verificación gráfica completa (BIM/DWG).",
+  "Inteligencia por municipio en más comunas, y su transición de estimaciones a datos reales de uso de la plataforma.",
   "Integración con la API oficial de DOM en Línea cuando el MINVU la publique.",
 ];
 
