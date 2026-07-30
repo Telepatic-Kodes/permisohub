@@ -26,10 +26,56 @@
 
 ---
 
-## v1.1 — Cumplir la Promesa (In Progress)
+## v1.1 — Cumplir la Promesa (Shipped)
 
 **Started:** 2026-06-20
 **Phases:** 1–5
 
 ### Goal:
 Hacer el negocio real: Stripe billing, feature gating por tier, landing page pública, onboarding flow y PWA.
+
+### What shipped:
+- Stripe billing con 3 tiers (Starter/Pro/Estudio) + facturación anual
+- Feature gating por tier (proyectos, AI chats, PDF extractions) con reset mensual
+- Landing page pública con pricing y toggle mensual/anual
+- Onboarding wizard 3 pasos post-signup
+- PWA instalable (manifest, prompt, modo standalone)
+
+**Last phase number:** 5
+
+---
+
+## v1.2 — Dashboard Clarity (Shipped)
+
+**Shipped:** 2026-06-21
+**Phases:** 6
+
+### Goal:
+Rediseñar el dashboard para que la urgencia sea obvia de un vistazo.
+
+### What shipped:
+- Timeline View con 4 secciones de urgencia
+- 3 hero stats (Urgentes, Activos, Días prom.)
+- Estado visual como único indicador (sin badges redundantes)
+- Quick actions como pills horizontales
+
+**Last phase number:** 6
+
+---
+
+## v1.3 — Army of Skills (Shipped)
+
+**Shipped:** 2026-06-26
+**Phases:** 7–9
+
+### Goal:
+Crear el ejército de skills de IA específicas para cada módulo — copiloto embebido (drawer) + automatizaciones de fondo.
+
+### What shipped:
+- Copiloto IA drawer (4 skills) en Permisos, Desarchivo y Patentes
+- Verificación DOM diaria automática (write-back idempotente, sin click del arquitecto)
+- WhatsApp automático al cliente cuando cambia el estado DOM
+- Enriquecimiento SII automático al crear patente comercial
+- Resumen semanal por email con tip de IA
+
+**Last phase number:** 9
