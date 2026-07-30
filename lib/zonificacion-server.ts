@@ -19,19 +19,27 @@ export async function persistZonificacionParaProyecto(
   proyectoId: string,
   direccion: string,
   municipio: string,
+  options?: { force?: boolean },
 ): Promise<void> {
   const admin = createServiceClient()
   const nowIso = new Date().toISOString()
 
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
-    const params = new URLSearchParams({ direccion, comuna: municipio })
+    const params = new URLSearchParams({
+      direccion,
+      comuna: municipio,
+      ...(options?.force ? { force: 'true' } : {}),
+    })
     const res = await fetch(`${baseUrl}/api/zonificacion/lookup?${params.toString()}`)
     const json = (await res.json()) as ZonaLookupResponse
 
     if (json.status === 'encontrado' && json.data) {
       await admin.from('proyectos').update({
         zona_status: 'encontrado',
+        zona_origen: 'automatico',
+        zona_cache_id: json.data.cacheId || null,
+        zona_codigo: json.data.zona,
         zona_sector: json.data.sector,
         zona_nombre: json.data.nombreZona,
         zona_uperm: json.data.uperm,
