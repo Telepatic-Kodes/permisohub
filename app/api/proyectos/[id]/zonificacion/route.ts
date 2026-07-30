@@ -29,14 +29,12 @@ async function ownedProject(id: string) {
   }
   const { data: proyecto } = await supabase
     .from('proyectos')
-    // NOTA: proyectos.lat/proyectos.lng NO están en la base de datos en vivo
-    // — 20260705_proyectos_sii.sql las define pero nunca fue aplicada a este
-    // proyecto Supabase (drift pre-existente, descubierto durante este plan,
-    // fuera de alcance arreglar aquí). Seleccionarlas revienta el SELECT
-    // completo (Postgres error 42703), convirtiendo cada request legítimo en
-    // un falso 404 vía el guard de abajo. Por eso el fallback de lat/lng en
-    // GET usa únicamente zonificacion_cache.lat_r/lng_r, nunca proyecto.lat/lng.
-    .select('id, user_id, direccion, municipio, zona_cache_id, zona_status, zona_origen')
+    // proyectos.lat/lng were missing live in Supabase until the orchestrator
+    // applied 20260705_proyectos_sii.sql during this phase (pre-existing
+    // drift, unrelated to Phase 11 — see .planning/phases/11-vista-de-
+    // zonificacion-en-el-proyecto/deferred-items.md for the discovery).
+    // Now live — selecting them again restores the intended fallback below.
+    .select('id, user_id, direccion, municipio, zona_cache_id, zona_status, zona_origen, lat, lng')
     .eq('id', id)
     .maybeSingle()
   if (!proyecto || proyecto.user_id !== user.id) {
@@ -56,8 +54,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       ok: true,
       zonaStatus: proyecto.zona_status,
       zonaOrigen: proyecto.zona_origen ?? null,
-      lat: null,
-      lng: null,
+      lat: proyecto.lat ?? null,
+      lng: proyecto.lng ?? null,
       geometria: null,
     })
   }
@@ -72,8 +70,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     ok: true,
     zonaStatus: proyecto.zona_status,
     zonaOrigen: proyecto.zona_origen ?? null,
-    lat: cacheRow?.lat_r ?? null,
-    lng: cacheRow?.lng_r ?? null,
+    lat: cacheRow?.lat_r ?? proyecto.lat ?? null,
+    lng: cacheRow?.lng_r ?? proyecto.lng ?? null,
     geometria: cacheRow?.geometria ?? null,
   })
 }
