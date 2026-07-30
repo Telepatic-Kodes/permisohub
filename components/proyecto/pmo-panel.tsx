@@ -178,7 +178,7 @@ export function PmoPanel({
     <div className="space-y-6">
       {/* ── Cómo continuar — decisor determinista de vía (instantáneo, citado)
           seguido del asesor de vía (IA, profundiza con los ajustes) ── */}
-      <ViaDecision proyectoId={proyecto.id} destinoSii={proyecto.destino_sii} />
+      <ViaDecision proyecto={proyecto} />
       <AsesorVia proyectoId={proyecto.id} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
