@@ -1,13 +1,21 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { AlertCircle, Check, CircleDashed, Download, ExternalLink, Eye, EyeOff, Loader2, Maximize2, PencilRuler, RefreshCw } from "lucide-react"
+import { AlertCircle, Check, CircleDashed, Download, ExternalLink, Eye, EyeOff, Loader2, Maximize2, PencilRuler, RefreshCw, Ruler, Sparkles } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 import { createClient } from "@/lib/supabase/client"
 import { esPlano } from "@/lib/planos"
 import { getArticuloById, urlDeCitable, type FuenteNormativa } from "@/lib/normativa-retrieval"
+import {
+  detectarCotasPdf,
+  detectarEscalasPdf,
+  distanciaRealM,
+  type CotaDetectada,
+  type EscalaPlano,
+} from "@/lib/plano-escala"
 import { cn } from "@/lib/utils"
 
 // Resuelve el texto libre `articulo` de una marca a un link de fuente cuando el
@@ -42,6 +50,7 @@ import {
 import type { DueDiligenceResult } from "@/lib/due-diligence"
 import {
   calcularCuadro,
+  cuadroVacio,
   type CuadroInput,
   type CuadroResultado,
 } from "@/lib/cuadros-calculo"
@@ -60,6 +69,26 @@ interface LaminaConImagen {
   anotaciones: Anotacion[]
   documentoId: string
   pagina: number
+  // Escala gráfica detectada del PDF vectorial (null = imagen sin capa de
+  // texto o escala no encontrada en el rótulo → la Regla queda deshabilitada).
+  escalaPlano?: EscalaPlano | null
+  // Cotas impresas detectadas automáticamente — sugerencias sin verificar.
+  cotasDetectadas?: CotaDetectada[]
+}
+
+// Campo del Cuadro de cálculo (lib/cuadros-calculo.ts) que una medida real
+// sobre el plano puede rellenar. Espejo de RasanteInput/DistanciamientoInput.
+type CampoMedible =
+  | "rasante.distanciaAlDeslindeM"
+  | "rasante.alturaEnPuntoM"
+  | "distanciamiento.alturaEdificacionM"
+  | "distanciamiento.distanciaProyectadaM"
+
+const LABEL_CAMPO_MEDIBLE: Record<CampoMedible, string> = {
+  "rasante.distanciaAlDeslindeM": "Distancia al deslinde (rasante)",
+  "rasante.alturaEnPuntoM": "Altura en el punto (rasante)",
+  "distanciamiento.alturaEdificacionM": "Altura de edificación (distanciamiento)",
+  "distanciamiento.distanciaProyectadaM": "Distancia proyectada al deslinde (distanciamiento)",
 }
 
 interface Props {
@@ -140,9 +169,13 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
     const rasterizadas: LaminaConImagen[] = []
     for (const p of planos) {
       const base = p.nombre.replace(/\.pdf$/i, "")
-      const imgs = /\.pdf$/i.test(p.nombre)
-        ? await pdfUrlToImages(p.url, base)
-        : [{ nombre: base, dataUrl: p.url }]
+      const esPdf = /\.pdf$/i.test(p.nombre)
+      const imgs = esPdf ? await pdfUrlToImages(p.url, base) : [{ nombre: base, dataUrl: p.url }]
+      // Escala gráfica y cotas impresas por página — solo PDFs vectoriales las
+      // tienen. Si falla (PDF corrupto, escaneado sin texto), no bloquea la
+      // carga de la lámina.
+      const escalas = esPdf ? await detectarEscalasPdf(p.url).catch(() => []) : []
+      const cotas = esPdf ? await detectarCotasPdf(p.url).catch(() => []) : []
       imgs.forEach((im, i) =>
         rasterizadas.push({
           id: `${p.id}-${i}`,
@@ -151,6 +184,8 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
           nombre: im.nombre,
           dataUrl: im.dataUrl,
           anotaciones: [],
+          escalaPlano: escalas[i] ?? null,
+          cotasDetectadas: cotas[i] ?? [],
         }),
       )
     }
@@ -327,6 +362,38 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
     [guardar],
   )
 
+  // Guarda una distancia medida sobre el plano (metros reales, geometría
+  // pura — ver lib/plano-escala.ts) en el Cuadro de cálculo del proyecto.
+  // Lee el CuadroInput vigente, mezcla solo el campo medido (PUT reemplaza
+  // el objeto completo, así que no se puede perder lo que el arquitecto ya
+  // tecleó) y refresca la viñeta sobre la lámina con el resultado recalculado.
+  const usarMedidaEnCuadro = useCallback(
+    async (campo: CampoMedible, valorM: number) => {
+      try {
+        const res = await fetch(`/api/proyectos/${proyectoId}/cuadro-calculo`)
+        const json = (await res.json()) as { data: CuadroInput | null }
+        const base = json.data ?? cuadroVacio()
+        const [grupo, prop] = campo.split(".") as ["rasante" | "distanciamiento", string]
+        const next: CuadroInput = {
+          ...base,
+          [grupo]: { ...base[grupo], [prop]: valorM },
+        }
+        const put = await fetch(`/api/proyectos/${proyectoId}/cuadro-calculo`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: next }),
+        })
+        if (!put.ok) throw new Error()
+        const r = calcularCuadro(next)
+        if (!r.incompleto) setCuadro(r)
+        toast.success(`Guardado: ${LABEL_CAMPO_MEDIBLE[campo]} = ${valorM} m (medido en el plano)`)
+      } catch {
+        toast.error("No se pudo guardar la medida en el Cuadro de cálculo")
+      }
+    },
+    [proyectoId],
+  )
+
   const active = laminas[activeIdx]
 
   return (
@@ -386,6 +453,7 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
         onGenerar={generar}
         onMoverMarca={moverMarca}
         onToggleEstado={toggleEstado}
+        onUsarMedida={usarMedidaEnCuadro}
         cuadro={cuadro}
       />
     </Card>
@@ -412,12 +480,15 @@ interface BodyProps {
   onGenerar: () => void
   onMoverMarca: (laminaId: string, anotacionId: string, x: number, y: number) => void
   onToggleEstado: (laminaId: string, anotacionId: string) => void
+  onUsarMedida: (campo: CampoMedible, valorM: number) => void
   cuadro: CuadroResultado | null
 }
 
-function CardBody({ loading, rehidratando, error, done, active, hoverId, setHoverId, onGenerar, onMoverMarca, onToggleEstado, cuadro }: BodyProps) {
+function CardBody({ loading, rehidratando, error, done, active, hoverId, setHoverId, onGenerar, onMoverMarca, onToggleEstado, onUsarMedida, cuadro }: BodyProps) {
   const [zoom, setZoom] = useState(false)
   const [vinetaVisible, setVinetaVisible] = useState(true)
+  const [reglaActiva, setReglaActiva] = useState(false)
+  const [cotasVisibles, setCotasVisibles] = useState(false)
 
   if (!done) {
     if (rehidratando && !loading && !error) {
@@ -465,6 +536,9 @@ function CardBody({ loading, rehidratando, error, done, active, hoverId, setHove
           cuadro={vinetaVisible ? cuadro : null}
           onZoom={() => setZoom(true)}
           onMoverMarca={onMoverMarca}
+          reglaActiva={reglaActiva}
+          cotasVisibles={cotasVisibles}
+          onUsarMedida={onUsarMedida}
         />
         <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
           {Object.values(CONVENCION_LINEA).map((c) => (
@@ -479,6 +553,41 @@ function CardBody({ loading, rehidratando, error, done, active, hoverId, setHove
           </span>
           <span>Arrastra una marca para corregir su posición</span>
           <span className="ml-auto inline-flex items-center gap-2">
+            <button
+              onClick={() => setReglaActiva((v) => !v)}
+              disabled={!active.escalaPlano?.escala}
+              title={
+                active.escalaPlano?.escala
+                  ? `Escala detectada 1:${active.escalaPlano.escala} — mide distancias reales sobre la lámina`
+                  : "No se detectó la escala gráfica en este plano (rótulo sin '1:N' legible) — no se puede medir con precisión"
+              }
+              className={cn(
+                "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] disabled:cursor-not-allowed disabled:opacity-40",
+                reglaActiva
+                  ? "border-primary/40 bg-primary/5 text-primary"
+                  : "border-border hover:border-primary/40 hover:text-primary",
+              )}
+            >
+              <Ruler className="size-3" /> {reglaActiva ? "Regla activa" : "Regla"}
+            </button>
+            <button
+              onClick={() => setCotasVisibles((v) => !v)}
+              disabled={!active.cotasDetectadas?.length}
+              title={
+                active.cotasDetectadas?.length
+                  ? "Cotas impresas detectadas en el plano — sugerencias sin verificar, revísalas antes de usarlas"
+                  : "No se detectaron cotas impresas en este plano"
+              }
+              className={cn(
+                "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] disabled:cursor-not-allowed disabled:opacity-40",
+                cotasVisibles
+                  ? "border-primary/40 bg-primary/5 text-primary"
+                  : "border-border hover:border-primary/40 hover:text-primary",
+              )}
+            >
+              <Sparkles className="size-3" />
+              {cotasVisibles ? "Ocultar cotas" : `Cotas detectadas${active.cotasDetectadas?.length ? ` (${active.cotasDetectadas.length})` : ""}`}
+            </button>
             <button
               onClick={() => setZoom(true)}
               className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10px] hover:border-primary/40 hover:text-primary"
@@ -723,6 +832,9 @@ function LaminaOverlay({
   cuadro,
   onZoom,
   onMoverMarca,
+  reglaActiva,
+  cotasVisibles,
+  onUsarMedida,
 }: {
   lamina: LaminaConImagen
   hoverId: string | null
@@ -730,8 +842,35 @@ function LaminaOverlay({
   cuadro: CuadroResultado | null
   onZoom?: () => void
   onMoverMarca?: (laminaId: string, anotacionId: string, x: number, y: number) => void
+  reglaActiva?: boolean
+  cotasVisibles?: boolean
+  onUsarMedida?: (campo: CampoMedible, valorM: number) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const cotas = lamina.cotasDetectadas ?? []
+  // Cota seleccionada (popover abierto). Se reinicia al cambiar de lámina o
+  // al ocultar las cotas — mismo patrón de ajuste-durante-render que reglaKey.
+  const [cotaSeleccionada, setCotaSeleccionada] = useState<CotaDetectada | null>(null)
+  const cotaKey = `${lamina.id}:${cotasVisibles ? 1 : 0}`
+  const [prevCotaKey, setPrevCotaKey] = useState(cotaKey)
+  if (cotaKey !== prevCotaKey) {
+    setPrevCotaKey(cotaKey)
+    setCotaSeleccionada(null)
+  }
+  // Regla de medición: dos clicks (puntoA → puntoB) sobre la lámina. Se
+  // reinicia al cambiar de lámina o al salir del modo Regla — ajuste de
+  // estado durante el render (patrón recomendado por React para "resetear
+  // estado cuando cambia una prop"), no en un efecto.
+  const [puntoA, setPuntoA] = useState<{ x: number; y: number } | null>(null)
+  const [puntoB, setPuntoB] = useState<{ x: number; y: number } | null>(null)
+  const reglaKey = `${lamina.id}:${reglaActiva ? 1 : 0}`
+  const [prevReglaKey, setPrevReglaKey] = useState(reglaKey)
+  if (reglaKey !== prevReglaKey) {
+    setPrevReglaKey(reglaKey)
+    setPuntoA(null)
+    setPuntoB(null)
+  }
+  const medidaM = puntoA && puntoB ? distanciaRealM(puntoA, puntoB, lamina.escalaPlano) : null
   // Posición transitoria durante el arrastre (evita persistir en cada move).
   const [dragPos, setDragPos] = useState<{ id: string; x: number; y: number } | null>(null)
   const dragRef = useRef<{
@@ -791,14 +930,32 @@ function LaminaOverlay({
     setDragPos(null)
   }
 
+  const onContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!reglaActiva) {
+      onZoom?.()
+      return
+    }
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const x = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
+    const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height))
+    if (!puntoA || puntoB) {
+      setPuntoA({ x, y })
+      setPuntoB(null)
+    } else {
+      setPuntoB({ x, y })
+    }
+  }
+
   return (
     <div
       ref={containerRef}
       className={cn(
         "relative overflow-hidden rounded-lg border border-border",
-        onZoom && "cursor-zoom-in",
+        onZoom && !reglaActiva && "cursor-zoom-in",
+        reglaActiva && "cursor-crosshair",
       )}
-      onClick={onZoom}
+      onClick={onContainerClick}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
@@ -851,7 +1008,164 @@ function LaminaOverlay({
           </div>
         )
       })}
+      {reglaActiva && (puntoA || puntoB) && (
+        <svg
+          className="pointer-events-none absolute inset-0 size-full"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          {puntoA && puntoB && (
+            <line
+              x1={puntoA.x * 100}
+              y1={puntoA.y * 100}
+              x2={puntoB.x * 100}
+              y2={puntoB.y * 100}
+              stroke="var(--blueprint)"
+              strokeWidth={0.3}
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+          {[puntoA, puntoB].filter(Boolean).map((p, i) => (
+            <circle
+              key={i}
+              cx={(p as { x: number; y: number }).x * 100}
+              cy={(p as { x: number; y: number }).y * 100}
+              r={0.6}
+              fill="var(--blueprint)"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </svg>
+      )}
+      {reglaActiva && puntoA && puntoB && (
+        <div
+          className="absolute z-10 w-52 rounded-lg border border-primary/30 bg-white p-2 text-[11px] shadow-lg"
+          style={{
+            left: `${Math.min(95, Math.max(2, ((puntoA.x + puntoB.x) / 2) * 100))}%`,
+            top: `${Math.min(90, Math.max(2, ((puntoA.y + puntoB.y) / 2) * 100))}%`,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {medidaM !== null ? (
+            <>
+              <p className="num font-semibold text-primary">{medidaM} m medidos</p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">
+                Escala 1:{lamina.escalaPlano?.escala} · usar como:
+              </p>
+              <CampoMedibleButtons
+                valorM={medidaM}
+                onUsar={(campo, valorM) => {
+                  onUsarMedida?.(campo, valorM)
+                  setPuntoA(null)
+                  setPuntoB(null)
+                }}
+              />
+            </>
+          ) : (
+            <p className="text-muted-foreground">Sin escala detectada — no se puede medir.</p>
+          )}
+          <button
+            onClick={() => {
+              setPuntoA(null)
+              setPuntoB(null)
+            }}
+            className="mt-1.5 text-[10px] text-muted-foreground underline hover:text-primary"
+          >
+            Medir de nuevo
+          </button>
+        </div>
+      )}
+      {cotasVisibles && cotas.length > 0 && (
+        <svg
+          className="pointer-events-none absolute inset-0 size-full"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          {cotas.map((c, i) => (
+            <circle
+              key={i}
+              cx={c.x * 100}
+              cy={c.y * 100}
+              r={0.7}
+              fill="var(--state-warn)"
+              stroke="white"
+              strokeWidth={0.15}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </svg>
+      )}
+      {cotasVisibles &&
+        cotas.map((c, i) => (
+          <button
+            key={i}
+            onClick={(e) => {
+              e.stopPropagation()
+              setCotaSeleccionada(cotaSeleccionada === c ? null : c)
+            }}
+            title={`Cota detectada: "${c.texto}"`}
+            className="absolute size-3 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full"
+            style={{ left: `${c.x * 100}%`, top: `${c.y * 100}%` }}
+          />
+        ))}
+      {cotasVisibles && cotaSeleccionada && (
+        <div
+          className="absolute z-10 w-56 rounded-lg border p-2 text-[11px] shadow-lg"
+          style={{
+            left: `${Math.min(95, Math.max(2, cotaSeleccionada.x * 100))}%`,
+            top: `${Math.min(90, Math.max(2, cotaSeleccionada.y * 100))}%`,
+            background: "white",
+            borderColor: "var(--state-warn)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="num font-semibold text-primary">{cotaSeleccionada.valorM} m detectados</p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            Texto en el plano: "{cotaSeleccionada.texto}" — verifica que sea la cota correcta antes
+            de usarla.
+          </p>
+          <CampoMedibleButtons
+            valorM={cotaSeleccionada.valorM}
+            onUsar={(campo, valorM) => {
+              onUsarMedida?.(campo, valorM)
+              setCotaSeleccionada(null)
+            }}
+          />
+          <button
+            onClick={() => setCotaSeleccionada(null)}
+            className="mt-1.5 text-[10px] text-muted-foreground underline hover:text-primary"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
       {cuadro && <CuadroVineta cuadro={cuadro} />}
+    </div>
+  )
+}
+
+// Los 4 campos del motor de envolvente (Δ4) que una medida real puede
+// rellenar de un clic — compartido por el popover de la Regla y el de cotas
+// detectadas automáticamente, para que ambos flujos ofrezcan las mismas
+// opciones con el mismo texto.
+function CampoMedibleButtons({
+  valorM,
+  onUsar,
+}: {
+  valorM: number
+  onUsar: (campo: CampoMedible, valorM: number) => void
+}) {
+  return (
+    <div className="mt-1.5 flex flex-col gap-1">
+      {(Object.keys(LABEL_CAMPO_MEDIBLE) as CampoMedible[]).map((campo) => (
+        <button
+          key={campo}
+          onClick={() => onUsar(campo, valorM)}
+          className="rounded border border-border px-1.5 py-0.5 text-left text-[10px] hover:border-primary/40 hover:text-primary"
+        >
+          {LABEL_CAMPO_MEDIBLE[campo]}
+        </button>
+      ))}
     </div>
   )
 }

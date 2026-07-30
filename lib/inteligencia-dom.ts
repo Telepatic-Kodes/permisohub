@@ -389,6 +389,112 @@ const BASE: InteligenciaMunicipio[] = [
       'El Consejo de Monumentos Nacionales debe ser notificado para proyectos en radio de 500 m de monumentos históricos.',
     ],
   },
+  {
+    // Estadísticas (tasaObservaciones..totalExpedientesBase): estimación,
+    // igual que el resto de esta base — no hay tiempos de tramitación
+    // publicados por la DOM de La Reina en fuentes públicas. El
+    // `planRegulador` de abajo SÍ está verificado contra el Texto Aprobatorio
+    // oficial (Decreto Alcaldicio N°1.516, D.O. 09-09-2010) — ver notaGeneral.
+    nombre: 'La Reina',
+    tasaObservaciones: 46,
+    promedioObservaciones: 1.7,
+    tiempoRespuestaPromedio: 27,
+    tiempoAprobacionPromedio: 44,
+    totalExpedientesBase: 265,
+    ultimaActualizacion: '2026-07',
+    observacionesFrecuentes: [
+      { tipo: 'Coeficientes por zona (A vs A-1)', porcentaje: 30, descripcion: 'Zona A exige predio mínimo 300 m², COS 0,4 (0,5 esquina), constructibilidad 1,0 y altura máxima 9 m (2 pisos + mansarda). Zona A-1 permite constructibilidad 2,0 y 18 m (6 pisos) sobre predio mínimo 500 m² — confundir la zona del predio es el error más común.', articuloOguc: 'Art. 24.1.1 / 24.1.2 Ordenanza Local' },
+      { tipo: 'Inmuebles de Conservación Histórica (ICH)', porcentaje: 22, descripcion: 'La protección patrimonial en La Reina es predio a predio (12 inmuebles individuales listados en la Ordenanza), no por zona — a diferencia de Providencia o Ñuñoa. Verificar la lista antes de asumir que un barrio completo está protegido o libre de restricción.', articuloOguc: 'Art. 24.7 Ordenanza Local' },
+      { tipo: 'Vigencia de la altura máxima', porcentaje: 18, descripcion: 'Una modificación de 2019 que habría cambiado alturas fue objetada por la Contraloría General (mayo 2020), que exigió tramitarla como modificación completa vía MINVU en vez de enmienda simplificada. Verificar con la DOM cuál altura rige antes de anteproyecto.' },
+      { tipo: 'Densidad bruta', porcentaje: 15, descripcion: 'Zona A limita a 150 hab/ha y Zona A-1 a 400 hab/ha — relevante para loteos y edificación en altura, no solo la constructibilidad.' },
+    ],
+    alertas: [
+      { nivel: 'info', texto: 'Plataforma "DOM Digital" para ingreso y seguimiento de permisos — confirmada en el sitio municipal.' },
+      { nivel: 'warning', texto: 'No hay Zona Típica CMN confirmada en fuentes públicas para La Reina — a diferencia de Providencia, la protección patrimonial es solo por inmueble individual (ICH), no por zona.' },
+    ],
+    consejos: [
+      'Descargar el Texto Aprobatorio de la Modificación 2010 (lareina.cl/plan-regulador) y confirmar la zona exacta del predio — Zona A y A-1 son colindantes con coeficientes muy distintos.',
+      'Revisar la lista de los 12 Inmuebles de Conservación Histórica antes de descartar restricción patrimonial: la protección no es de área, es de dirección exacta.',
+      'Ante cualquier duda sobre altura máxima vigente, confirmar directamente con la DOM — hubo un intento de modificación (2019) que la Contraloría rechazó por la vía utilizada.',
+    ],
+    planRegulador: {
+      urlPRC: 'https://www.lareina.cl/plan-regulador/',
+      ultimaModificacion: '2015',
+      notaGeneral: 'Instrumento vigente: Modificación 2010 (Decreto Alcaldicio N°1.516, D.O. 09-09-2010), con enmienda de alturas en 2015 (Decreto N°1857, corregido por Decreto N°1929). Un intento de nueva enmienda en 2019 fue objetado por la Contraloría General en mayo 2020 por requerir el trámite de modificación completa (vía MINVU), no de enmienda — hasta donde permiten verificar las fuentes públicas, no hay modificación posterior vigente. La zonificación completa incluye además zonas K, C, F ("Parque Industrial"), I ("Reina Andina"), J-1 ("Carpay 1"), M (áreas verdes) y R (áreas restringidas), cuyos coeficientes específicos no están transcritos aquí — revisar el Texto Aprobatorio directamente para esas zonas.',
+      seccionales: [
+        {
+          codigo: 'A',
+          nombre: 'Zona Residencial A',
+          descripcion: 'Predio mínimo 300 m² (esquina 0,5). COS 0,4. Constructibilidad 1,0. Altura máxima 9 m (2 pisos + mansarda). Densidad bruta máxima 150 hab/ha. Agrupamiento aislado o pareado.',
+        },
+        {
+          codigo: 'A-1',
+          nombre: 'Zona Residencial A-1',
+          descripcion: 'Predio mínimo 500 m² (esquina 0,5). COS 0,4. Constructibilidad 2,0. Altura máxima 18 m (6 pisos). Densidad bruta máxima 400 hab/ha.',
+        },
+      ],
+    },
+  },
+  {
+    // Estadísticas (tasaObservaciones..totalExpedientesBase): estimación,
+    // igual que el resto de esta base. El `planRegulador` tiene una
+    // salvedad importante: el PRC 2025 fue promulgado en octubre pero el
+    // texto final publicado no se pudo descargar (403) — los coeficientes
+    // de abajo vienen del ANTEPROYECTO ya aprobado por SEREMI MINVU
+    // (probablemente ≈ texto final, pero no verificado 1:1 contra él). La
+    // zona cordillerana (Farellones/Valle Nevado) es un instrumento
+    // regulatorio APARTE y no se detalla aquí — solo hay cobertura de
+    // prensa, no del articulado, así que no se citan cifras sin verificar.
+    nombre: 'Lo Barnechea',
+    tasaObservaciones: 41,
+    promedioObservaciones: 1.6,
+    tiempoRespuestaPromedio: 25,
+    tiempoAprobacionPromedio: 42,
+    totalExpedientesBase: 289,
+    ultimaActualizacion: '2026-07',
+    observacionesFrecuentes: [
+      { tipo: 'Código de zona exacto del predio', porcentaje: 32, descripcion: 'El PRC 2025 (Sector Valle) define muchas zonas próximas con coeficientes muy distintos (ej. ZHE-2.1 vs ZHE-6 vs ZHP-10) — confirmar el código exacto contra el plano antes de anteproyecto, no asumir por el barrio.', articuloOguc: 'Art. 2.1.1 Anteproyecto Ordenanza 2025' },
+      { tipo: 'Incentivos normativos', porcentaje: 24, descripcion: 'El PRC 2025 permite aumentar coeficiente/altura si el proyecto cumple condiciones de sustentabilidad (ej. manejo de laderas, certificación de vivienda sustentable) — evaluar si aplica antes de fijar el volumen del proyecto.', articuloOguc: 'Art. 1.5.1 Anteproyecto Ordenanza 2025' },
+      { tipo: 'Instrumento distinto en zona cordillerana', porcentaje: 20, descripcion: 'Farellones, La Parva, El Colorado y Valle Nevado NO se rigen por la ordenanza del Sector Valle — es un instrumento aparte (incorporado vía Modificación N°9). Verificar cuál aplica antes de diseñar en esos sectores.' },
+      { tipo: 'Restricción patrimonial/ambiental en El Arrayán', porcentaje: 12, descripcion: 'El sector de Fundos Los Nogales y San Enrique (El Arrayán) es Santuario de la Naturaleza (CMN, 1973) — protección ambiental formal distinta a una Zona Típica, con sus propias restricciones de intervención.' },
+    ],
+    alertas: [
+      { nivel: 'warning', texto: 'PRC actualizado en octubre 2025: los coeficientes de esta ficha vienen del anteproyecto ya aprobado por SEREMI, no del texto final publicado (no se pudo descargar). Confirmar con la DOM antes de un proyecto grande.' },
+      { nivel: 'info', texto: 'Plataformas de tramitación confirmadas: FileDOM (certificados, con plazos y precios publicados) y Smart DOM.' },
+    ],
+    consejos: [
+      'Pedir a la DOM el plano de zonificación vigente y el código exacto del predio antes de anteproyecto — hay muchas zonas colindantes con coeficientes distintos.',
+      'Si el proyecto está en Farellones, La Parva, El Colorado o Valle Nevado, confirmar que se está usando el instrumento de la zona cordillerana, no el del Sector Valle.',
+      'Evaluar temprano si el proyecto puede optar a incentivos normativos (Art. 1.5.1) — cambia el volumen edificable posible.',
+    ],
+    planRegulador: {
+      urlPRC: 'https://lobarnechea.cl/municipalidad/plan-regulador/plan-regulador-comunal-vigente/',
+      ultimaModificacion: '2025',
+      notaGeneral: 'PRC del "Área Urbana Sector Valle" actualizado por Decreto Municipal N°0970/2025 (9-oct-2025, vigente desde 30-oct-2025), tras aprobación favorable de la SEREMI MINVU RM (Ord. N°2613, 25-sep-2025). Los coeficientes aquí provienen del Anteproyecto de Ordenanza (documento técnico previo a la aprobación final) — no se pudo verificar 1:1 contra el texto definitivo publicado. La zona cordillerana (Farellones y centros de ski) se rige por un instrumento aparte, no cubierto en esta ficha.',
+      seccionales: [
+        {
+          codigo: 'ZHE-2.1',
+          nombre: 'Zona Habitacional Exclusiva 2.1',
+          descripcion: 'Predio mínimo 900 m². Altura máxima 2 pisos.',
+        },
+        {
+          codigo: 'ZHE-6',
+          nombre: 'Zona Habitacional Exclusiva 6',
+          descripcion: 'Predio mínimo 1.800 m². Altura máxima 6 pisos (21 m). Constructibilidad hasta 2,3 (con incentivos).',
+        },
+        {
+          codigo: 'ZHP-10',
+          nombre: 'Zona Habitacional Preferente 10',
+          descripcion: 'Altura máxima 10 pisos (35 m). Constructibilidad hasta 2,6.',
+        },
+        {
+          codigo: 'ZM-4',
+          nombre: 'Zona Mixta 4',
+          descripcion: 'Predio mínimo 900 m². Altura máxima 4 pisos (14 m). Constructibilidad 1,4.',
+        },
+      ],
+    },
+  },
 ]
 
 const MAP = new Map(BASE.map((m) => [m.nombre.toLowerCase(), m]))

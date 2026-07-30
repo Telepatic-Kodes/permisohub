@@ -46,12 +46,13 @@ const NIVEL_CONFIG = {
 // ──────────────────────────────────────────────────
 // Page
 // ──────────────────────────────────────────────────
-export default function MunicipioDetallePage({
+export default async function MunicipioDetallePage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const comuna = COMUNAS_CHILE.find((c) => c.id === params.id)
+  const { id } = await params
+  const comuna = COMUNAS_CHILE.find((c) => c.id === id)
   if (!comuna) notFound()
 
   const intel = getInteligenciaMunicipio(comuna.nombre)
@@ -137,8 +138,20 @@ export default function MunicipioDetallePage({
               <div className="flex items-center gap-2 mb-3">
                 <BarChart3 className="size-3.5 text-muted-foreground" />
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                  Inteligencia DOM · {intel.totalExpedientesBase.toLocaleString("es-CL")} expedientes analizados
+                  Inteligencia DOM · {intel.totalExpedientesBase.toLocaleString("es-CL")} expedientes de referencia
                 </p>
+                <span
+                  className="inline-flex items-center gap-1 rounded-[3px] border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide"
+                  style={{
+                    color: "var(--state-warn)",
+                    borderColor: "var(--state-warn)",
+                    background: "color-mix(in oklch, var(--state-warn) 12%, transparent)",
+                  }}
+                  title="Datos sintéticos basados en estadísticas MINVU, informes SEREMI y práctica arquitectónica — aún no en datos reales de expedientes tramitados en PermisoHub. Se irán reemplazando con datos reales a medida que los arquitectos usen la plataforma."
+                >
+                  <AlertTriangle className="size-2.5" />
+                  Sintético
+                </span>
                 <span className="ml-auto text-[10px] text-muted-foreground/40">Actualizado {intel.ultimaActualizacion}</span>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

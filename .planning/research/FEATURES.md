@@ -1,382 +1,183 @@
-# Features Research — v1.3 Army of Skills
+# Feature Research
 
-**Domain:** AI copilot for B2B SaaS (Chilean architectural permitting)
-**Researched:** 2026-06-25
-**Overall confidence:** MEDIUM-HIGH (UX patterns HIGH via Intercom/industry analysis; Chilean DOM specifics MEDIUM from public sources)
+**Domain:** Zoning/land-use lookup for a B2B DOM-permitting SaaS (Chilean architects) — "zonificación automática por dirección"
+**Researched:** 2026-07-30
+**Confidence:** MEDIUM (zonificación.cl UX inferred from public marketing page, not a hands-on trial; ZoneOmics/US patterns verified via official product pages; general zoning-table semantics — Permitted/Conditional/Prohibited — is well-established US planning practice, MEDIUM-HIGH confidence; Chilean-specific PRC ambiguity handling is LOW confidence since no competitor documents it publicly)
 
----
+## Feature Landscape
 
-## Copiloto Drawer UX
+### Table Stakes (Users Expect These)
 
-### Table Stakes (users expect these — missing = broken product)
+Features an architect will assume exist the moment "zonificación" appears inside a project. Missing these makes the feature feel like a toy, not a professional tool.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Slide-in from right, doesn't replace main content | Standard B2B drawer pattern (Intercom, Zendesk, Linear) | Low | shadcn `Sheet` component, 420px wide |
-| Context injection on open | Copilot must know which project/expediente is currently open — without user re-typing it | Low | Pass `proyecto_id`, type, estado, municipio at open time |
-| Keyboard shortcut to toggle | `⌘K` or `⌘/` is standard SaaS expectation; reduces friction for power users | Low | Map to global keydown listener |
-| Persistent conversation within session | Follow-up questions referencing earlier answers ("and for article 2.1.15?") | Low | Keep thread in component state during session |
-| Source citations with hover preview | Professionals need to verify before acting — citing OGUC article numbers is non-negotiable | Medium | Return `{answer, sources: [{article, excerpt}]}` |
-| Loading/streaming state | AI takes 2-5s; no spinner-and-wait — stream tokens progressively | Low | SSE or Vercel AI SDK `useChat` |
-| Close and reopen without losing context | Drawer closed ≠ conversation reset | Low | Lift state to parent module, not inside Sheet |
-| Mobile-accessible (at minimum not broken) | Architects use phones on-site | Low | Full-screen Sheet on mobile breakpoint |
+| Address → zone lookup (geocode + point-in-polygon against PRC layer) | This is the entire premise of the feature — zonificación.cl's core loop is "busca una comuna o dirección" → zone resolves automatically. ZoneOmics: "enter an address and zoning data populates automatically." | MEDIUM | Depends on geocoding. `lib/sii-lookup.ts` already resolves `direccion + comuna → lat/lng`, but only when the address matches a SII rol — not a general-purpose geocoder. This feature needs its own geocode step (independent of SII match) feeding into a spatial (point-in-polygon) query against the MINVU/OCUC ArcGIS PRC feature layer. Reuse the `direccion`/`comuna` param shape from `sii-lookup.ts` for consistency, but do not assume SII lookup ran first. |
+| Zone code + zone name shown as text (not just a map pin) | Both zonificación.cl and ZoneOmics present a combined map+text view; architects need the zone identifier (e.g. "ZM-3") as a copyable/citable string for expedientes, memorias, and DOM correspondence — a map alone isn't citable. | LOW | Straightforward render once the lookup returns data. |
+| Map view confirming the point/parcel sits inside the returned zone polygon | Standard GIS lookup pattern: geocode → query parcel/zoning layer → render point over zoning polygon so the user can visually sanity-check the match (source: ArcGIS zoning-lookup workflow docs; zonificación.cl's "Mapa de análisis por dirección"). For an architect, a bare zone code with no visual boundary confirmation is not trustworthy — geocoding errors are common enough that visual confirmation is expected, not optional. | MEDIUM-HIGH | **New dependency**: no mapping library exists in the codebase today (`package.json` has no Leaflet/MapLibre/Mapbox/Google Maps). This is the single highest-complexity item in the table-stakes set — budget for adding a lightweight map lib (MapLibre GL or Leaflet) + a basemap tile source, not just an API call. |
+| `usos permitidos` / `usos prohibidos` shown verbatim, with source attribution | zonificación.cl's core value line: "identificar la zona normativa y sus restricciones... usos permitidos." Architects need the exact regulatory text, not a paraphrase — paraphrasing zoning text is a liability in a tool that feeds permit decisions. | LOW | Confirmed available in MINVU/OCUC data per milestone context. Follow the `normativa-retrieval.ts` citation convention: display raw text + a `verificado` flag + link to the official decree when the ArcGIS record includes one, fallback link (e.g. to the comuna's PRC page) when it doesn't — mirrors `FUENTE_FALLBACK_URL` pattern already used for OGUC/LGUC/DDU. |
+| Persisted/cached lookup result on the proyecto record | Architects reopen a project's zoning tab repeatedly (during design iteration, before DOM submission, during due diligence) — re-querying the ArcGIS service every page load is wasteful and fragile if MINVU's service has latency/downtime. | LOW | New Supabase column/table on `proyectos` (e.g. `zonificacion` jsonb + `zonificacion_fecha`), with an explicit "actualizar" action rather than silent background refresh — matches the app's existing pattern of explicit AI/lookup actions (due diligence, SII enrichment) rather than invisible polling. |
+| Manual fallback when address isn't found / geocode fails | Chilean addresses (rural sectors, new subdivisions, non-standard numbering) frequently fail geocoders. A tool that just errors out with no path forward is unusable for the ~10-20% of addresses geocoding will miss. | LOW-MEDIUM | Simplest version: let the architect manually select comuna + zone from a dropdown seeded from the same ArcGIS PRC layer (comuna's zone list), skipping the spatial query. Do not silently guess. |
+| "Informativo, no reemplaza el Certificado de Informaciones Previas" disclaimer | The zone shown is derived from public geospatial data, not the DOM's own record. Chilean architects know the CIP (Certificado de Informaciones Previas) is the only legally binding zoning document; a tool that implies otherwise misleads a professional user and creates liability exposure. | LOW | Copy-only. Mirrors the "ORIENTATIVO" framing already used verbatim in `via-tramitacion.ts` header comments and UI. |
 
-### Differentiators (valued but not expected — these win the comparison)
+### Differentiators (Competitive Advantage)
+
+Where PermisoHub can beat zonificación.cl and a raw MINVU/ArcGIS portal — not by having more zoning data, but by making zoning data operate as a first-class citable input across an existing DOM-permitting workflow instead of a standalone lookup silo.
 
 | Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Module-aware suggested prompts | On opening in Permisos: shows "Diagnosticar OGUC", "Predecir observaciones", "Ver checklist". On Patentes: "Enriquecer con SII", "Calcular derechos". Reduces cold-start blank-page friction | Medium | Hardcoded prompt cards per module, disappear after first message |
-| Switch between 4 analysis types without leaving drawer | Tabs or buttons inside drawer: Diagnóstico / Observaciones / Checklist / Estimación | Medium | Each tab triggers a different system prompt + returns structured data |
-| "Exportar a expediente" action | One-click to attach AI output to the project record (stored in DB) | Medium | Creates `ai_analysis` row linked to `proyecto_id` |
-| Inline OGUC article references with expand | Click article number → shows full article text inline without leaving drawer | High | Requires OGUC article lookup endpoint; defer to Phase 2 if needed |
-| Municipality-specific phrasing | "La DOM de Providencia suele observar X con frecuencia" — not generic "may be observed" | High | Requires municipal intelligence data (already built in v1.0) |
-
-### Anti-Features (explicitly do NOT build)
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| Full-page AI mode replacing main view | Destroys spatial context — architect needs to see the project while consulting copilot | Right drawer overlay only |
-| Generic chatbot persona ("Hi! I'm your assistant...") | Professionals find it infantilizing; wastes screen space | Skip pleasantries, jump straight to domain task |
-| "Ask me anything" open prompt as default state | Cold start is friction; blank box with no hints → abandonment | Show 3-4 task cards on first open |
-| Auto-suggest while user types in other fields | Cursor hijacking in form fields breaks focus, feels invasive | Only activate on explicit open (button or shortcut) |
-| Storing every conversation forever | GDPR/privacy exposure for professional communications; unnecessary DB bloat | Session-only conversation; persist only explicit "save to expediente" actions |
-| Typing indicator animation | Adds perceived latency; streaming tokens already shows progress | Stream tokens directly, skip animated dots |
-
----
-
-## AI Analysis — 4 Types
-
-### Type 1: Diagnóstico OGUC
-
-**Expected behavior:** Given a project's parameters (superficie, uso, zona, municipio, tipo permiso), identify which OGUC articles apply and flag where the project data suggests non-compliance risks.
-
-**What makes it good vs. generic:**
-- **Generic:** "Article 5.1.1 establishes setbacks. Your project may have setback issues."
-- **Good:** "Artículo 2.6.3 OGUC exige un escalafón de rasante de 70° para zonas residenciales R2. Según tu expediente, el costado norte tiene 4.5m de altura a 2.1m del deslindes → ángulo aproximado 65° → **observación probable**. Revisa plano de rasante antes de ingresar."
-
-The distinction is: project-specific numbers inserted into the regulatory formula, not generic alerts.
-
-**Required inputs from existing data:**
-- Superficie total (m²) — ya en expediente
-- Uso (habitacional, comercial, mixto) — ya en expediente
-- Zona DOM / Plan Regulador — depends on municipio intelligence (v1.0 built)
-- Tipo permiso (anteproyecto, permiso, recepción) — ya en expediente
-- Número de pisos, coeficiente ocupación (if available)
-
-**Output format:**
-```
-{
-  articulos_aplicables: [{numero, titulo, resumen_aplicacion}],
-  riesgos_incumplimiento: [{articulo, descripcion_riesgo, severidad: "alto|medio|bajo", dato_proyecto_involucrado}],
-  recomendaciones: [string]
-}
-```
-
-**Depth rule:** Each risk must reference a specific project data field, not be generic. If the data to evaluate a specific article is missing, say "No pude evaluar art. X — falta dato Y en el expediente" rather than skipping it silently.
-
-**Dependency on existing features:** Builds on OGUC compliance checker (v1.0) — same regulatory corpus, but now scoped to a specific project's data rather than a general query.
-
-**Complexity:** HIGH — requires structured project data → OGUC article mapping logic in system prompt. High hallucination risk on article numbers; mitigation: restrict model to a curated article corpus, not free recall.
-
----
-
-### Type 2: Predicción de Observaciones
-
-**Expected behavior:** Predict which observations this specific municipal DOM is likely to raise on this project before submission.
-
-**What makes it actionable vs. useless:**
-The output must answer: "What specific thing should I fix or prepare before submitting?" Generic warnings ("the municipality may have concerns about setbacks") are useless. Actionable output has:
-
-1. **Observation category** — what DOM reviewers typically flag
-2. **Probability signal** — "Alta frecuencia en esta DOM" vs "Ocasional en DOMs similares"
-3. **Specific trigger** — what in this expediente triggers the prediction
-4. **Preventive action** — exactly what to attach or modify
-
-**Example of actionable output:**
-```
-Observación probable: Plano de cálculo de derechos
-Frecuencia en DOM Providencia: Alta (basado en municipio tipo RM)
-Motivo en este proyecto: Superficie > 200m² requiere anexo D del formulario.
-Acción: Adjuntar formulario MINVU Anexo D con cálculo de derechos firmado.
-```
-
-**Data requirements:**
-- Municipio → classification (conservative, average, strict) from municipal intelligence (v1.0)
-- Tipo permiso
-- Superficie and uso
-- Documents already attached
-
-**Output format:**
-```
-{
-  observaciones_predichas: [
-    {
-      categoria: string,
-      probabilidad: "alta|media|baja",
-      motivo_especifico: string,
-      accion_preventiva: string,
-      fuente: "patron_municipal|oguc_articulo|experiencia_general"
-    }
-  ]
-}
-```
-
-**What NOT to include:** Generic OGUC articles that apply universally to all projects. If an observation applies to 100% of projects regardless of municipio, it belongs in the OGUC diagnostic, not here.
-
-**Dependency on existing features:** Requires municipal intelligence data (v1.0). The richer that data, the more specific predictions. Without it, this degrades to generic — still useful, but less differentiating.
-
-**Confidence flag requirement:** The system must surface its confidence: "Esta predicción se basa en patrones generales de DOMs metropolitanas, no en datos históricos de esta municipalidad específica." Honesty prevents professional errors.
-
-**Complexity:** HIGH — prediction without historical training data is hypothesis-based. System prompt must be carefully scoped. Risk: overconfident predictions cause architects to miss unexpected observations.
-
----
-
-### Type 3: Checklist de Documentos
-
-**Expected behavior:** For the specific permit type of this project, generate the required document list with status (attached / missing / uncertain) based on what's already in the expediente.
-
-**State management decision — PERSISTED to DB, not local:**
-
-This is the most important architectural decision for this feature. Rationale:
-- Architects return to the same project across days/sessions
-- The checklist status is collaborative context (arquitecto jefe vs asistente)
-- "Mark as pending" and "mark as complete" actions have real consequences for the workflow
-- Local state is lost on browser refresh — for a professional tool, that's unacceptable
-
-**Schema recommendation:**
-```sql
-document_checklist_items (
-  id uuid,
-  proyecto_id uuid REFERENCES proyectos(id),
-  item_key text,           -- stable identifier e.g. "plano_arquitectonico"
-  label text,              -- display name
-  estado text,             -- 'ok' | 'pendiente' | 'no_aplica'
-  updated_at timestamptz,
-  updated_by uuid,
-  notas text               -- architect can annotate why not-applicable
-)
-```
-
-Rationale for `item_key` over pure label: allows re-generating the checklist (e.g., after AI update) without losing manual state overrides.
-
-**Generated vs. manual items:** AI generates the base list per permit type + municipio. Architect can:
-- Mark any item `no_aplica` (with optional note)
-- Add custom items the AI didn't predict
-- Cannot delete AI-generated items (only mark `no_aplica`)
-
-**Output format (initial generation):**
-```
-{
-  checklist: [
-    {
-      item_key: string,
-      label: string,
-      oguc_base: string,        // "Art. 5.4.2" or null
-      requerido_municipio: boolean,
-      estado_inferido: "ok|pendiente|incierto",
-      inferencia_motivo: string // why AI thinks it's ok or missing
-    }
-  ]
-}
-```
-
-**Table stakes:** Required documents must be based on specific permit type (anteproyecto vs permiso de edificación vs recepción) — not a generic "all possible documents" dump.
-
-**Dependency on existing features:** PDF observation extractor (v1.0) can pre-populate `estado: ok` for documents mentioned in existing PDFs. This is a high-value integration — if the architect already uploaded a plano PDF, the checklist should know it.
-
-**Complexity:** MEDIUM — list generation is straightforward; the DB persistence and manual override UX is where effort lives.
-
----
-
-### Type 4: Estimación de Tiempo y Derechos
-
-**Expected behavior:** For this project, estimate total processing time in business days and total fees in CLP and UF.
-
-**Time estimate breakdown:**
-```
-Preparación expediente: X días hábiles (basado en complejidad)
-Revisión DOM (Ley 21.718 máximo 30 días hábiles): 30 días base
-Observaciones probables + respuesta: +N días (si predicción Tipo 2 indica observaciones)
-Buffer municipio [tipo]: +N días (si DOM históricamente más lenta)
-─────────────────────────────────────────────
-Total estimado: X–Y días hábiles
-Fecha estimada de resolución: [date]
-```
-
-**Fee estimate breakdown:** Builds directly on existing calculadora de derechos (v1.0). The new value is:
-- Combining it with the project's actual superficie/uso data (no manual re-entry)
-- Adding "otros costos típicos" context (certificados, copias, notaría) that the bare calculator doesn't show
-
-**Output format:**
-```
-{
-  tiempo: {
-    dias_habiles_total: {min: number, max: number},
-    fecha_estimada: date,
-    desglose: [{etapa, dias_habiles, base}]
-  },
-  derechos: {
-    monto_clp: number,
-    monto_uf: number,
-    calculo_base: string,   // "Artículo X OGUC, tabla Y"
-    otros_costos_tipicos: [{descripcion, monto_clp_aprox}]
-  },
-  advertencias: [string]    // e.g., "Estimación basada en DOM tipo metropolitana"
-}
-```
-
-**Dependency on existing features:** Calculadora de derechos (v1.0) — reuse the same calculation logic, wrap it with project-populated inputs.
-
-**Complexity:** LOW-MEDIUM — mostly data assembly + existing calculator. Main risk is the time estimate feeling fabricated; mitigate with transparent ranges and explicit methodology.
-
----
-
-## Background Automations
-
-### DOM Auto-Update (Verificación Diaria)
-
-**Expected behavior:** A cron job checks each active project's DOM status daily and updates `proyectos.estado_dom` in Supabase without any architect action.
-
-**Cadence:** Daily, not hourly. DOM status changes are not real-time in Chilean municipalities — DOM Digital updates business-day frequency at best. Hourly would be over-polling with no benefit.
-
-**Architecture pattern (established SaaS):** Vercel Cron Jobs (already in stack, v1.0) → API route → for each active project, check DOM Digital or municipio portal → compare to current DB state → if changed: update DB, trigger WhatsApp notification (Twilio, v1.0).
-
-**State machine:**
-```
-ingresado → en_revision → observado → subsanado → aprobado | rechazado
-```
-The cron only moves state forward (never backward) and only when external source confirms.
-
-**Table stakes:**
-- Idempotency: running the cron twice in same day must not double-send notifications
-- Audit trail: log each check attempt (status, timestamp, source response)
-- Error handling: DOM Digital is unreliable — 3-retry with exponential backoff, silent failure (no architect alarm for transient errors)
-
-**Anti-feature:** Do not poll all projects simultaneously — stagger checks over the cron window to avoid rate-limiting by municipal portals. Batch size: ≤ 10 concurrent checks.
-
-**Dependency:** WhatsApp automático (Twilio, v1.0) — auto-update triggers the existing notification pipeline.
-
-**Complexity:** MEDIUM — the cron infrastructure exists; the complexity is scraping reliability across 346 diverse municipal portals. Mitigation: MVP targets only DOM Digital-enabled municipalities first (covers ~30% of volume); manual fallback for others.
-
----
-
-### SII Auto-Fill on Patente Creation
-
-**Expected behavior:** When an architect creates a new patente comercial entry, the system auto-queries SII (Chile's tax authority public search) to enrich the record with: razón social, giro, dirección, fecha inicio actividades.
-
-**Data source:** SII public RUT query endpoint (no auth required for basic data). HIGH confidence this is publicly accessible.
-
-**Trigger:** On `patente` record creation with a valid RUT field — not a cron, an event trigger.
-
-**UX pattern:** Non-blocking enrichment. Form saves immediately, then a brief "Enriqueciendo datos SII..." indicator appears; fields populate within 2-3 seconds. Architect can override any auto-filled value.
-
-**Failure handling:** If SII lookup fails (timeout, invalid RUT, RUT not found), the form stays functional — enrichment is enhancement, not a blocker.
-
-**Anti-feature:** Do not lock the form waiting for SII response. Never block the save action on an external API.
-
-**Complexity:** LOW — simple HTTP fetch to public endpoint, map response to Supabase fields. Main risk: SII's public API changes format without notice (MEDIUM stability risk). Mitigation: wrap in a thin adapter layer.
-
----
-
-### Weekly AI Email Digest
-
-**Cadence:** Every Monday between 08:00–09:00 Chile time (America/Santiago). Rationale: Tuesday–Thursday are highest open-rate days industry-wide, but architects start their week on Monday reviewing pending work. The planning/reviewing behavior on Monday morning overrides the generic benchmark for this use case.
-
-**Format:** HTML email via Resend (already in stack). Single-column, mobile-optimized. Max 500 words of generated content.
-
-**Content structure (per user):**
+|---------|--------------------|------------|-------|
+| Zoning becomes a citable input to `via-tramitacion.ts` (specifically the `excedePRC` / `cambiaDestino` questions) | Today `excedePRC` and `cambiaDestino` are self-reported by the architect with no grounding. Cross-referencing the architect's stated intended use against the zone's `usos permitidos/prohibidos` lets the vía-de-tramitación decision cite a real source instead of trusting an unverified checkbox — directly strengthens the deterministic decision engine that is PermisoHub's core differentiator. | MEDIUM | Requires the activity-compatibility check (below) to exist first. Do not auto-answer `excedePRC` (that needs numeric coefficients, out of scope) — only pre-fill/flag `cambiaDestino`-adjacent signal ("el uso declarado no aparece en los usos permitidos de esta zona") as a warning `via-tramitacion.ts` can surface in its `alertas` array. |
+| Zoning data as grounding context for the AI copiloto drawer (`diagnóstico OGUC`, `checklist` skills) | Turns a static "here's your zone" lookup into the same AI-reasoning experience the rest of the app already delivers (e.g. explaining that a "taller artesanal" likely falls under "actividades productivas inofensivas" even if the PRC text doesn't use that exact phrase) — something a rigid keyword-matcher (or zonificación.cl's opaque black-box "compatible/no compatible" verdict) can't do transparently. | MEDIUM | Feed the zone's raw `usos permitidos/prohibidos` text into the existing skill prompts as additional context, same pattern as `getContextoNormativo()` feeding OGUC/LGUC/DDU text into prompts. |
+| Zoning becomes a citable `refNormativa`-style finding inside `due-diligence.ts` | When the DD engine detects a destino mismatch (e.g. SII `destino` says "Comercio" but the project's stated use in documents is residential), it can now cite the actual zone's permitted-uses text as evidence, not just flag an "incoherencia interna." Extends the DD product's core loop (fundamented findings, `verificado` boolean) into a new evidence source. | MEDIUM | Needs a `RefNormativa`-shaped citable object for zone data (new `fuente` type, e.g. `'PRC'`), parallel to `getArticuloById()` — same verified/unverified convention. |
+| Zero marginal cost per query vs zonificación.cl's ~CLP 10.000/consulta | Architects juggling many active proyectos would otherwise pay per-address on a competitor tool; folding this into the existing subscription removes a real, recurring out-of-pocket cost and a reason to tab out to a separate paid product mid-workflow. | LOW (business model, not a build item) | Reinforce by NOT metering the internal feature (see anti-features). |
+| Portfolio-wide zoning view across all active proyectos | A per-query-credit competitor structurally cannot offer a "show me zoning status/compatibility across all 40 of my active projects" dashboard economically — it's a natural extension once zoning is stored per-proyecto, and plays to PermisoHub's existing multi-project SaaS structure (vs. zonificación.cl's single-lookup tool). | MEDIUM | v1.x — depends on the table-stakes lookup+persistence existing first for every project. |
+| Data-freshness transparency ("PRC vigente desde [fecha]", flag if MINVU's underlying decree looks stale) | Research found no evidence zonificación.cl surfaces PRC vintage/staleness to the user — an opening for a tool built for professionals who care whether the plan they're relying on is the currently governing instrument (PRCs get modified/appealed and old zoning data circulating is a known real pitfall in Chile). | LOW-MEDIUM | Depends on whether the MINVU/OCUC ArcGIS layer exposes a decree/publication date field — verify at build time; if absent, at minimum timestamp "consultado el [fecha]" so the architect knows how fresh the app's own cache is. |
+| PDF/exhibit export of the zoning finding for the expediente | Architects assembling a DOM submission or a due-diligence packet need a citable artifact, not just an in-app screen — matches the existing pattern of exportable, citable outputs elsewhere in the product (DD reports, formal communications). | LOW-MEDIUM | v1.x, straightforward once the underlying data model is stable. |
+
+### Anti-Features (Commonly Requested, Often Problematic)
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|------------------|-------------|
+| Numeric urbanistic coefficients (FOS, coef. de constructibilidad, altura máxima, rasante, distanciamiento) | Feels like "the natural next step" once zone lookup exists — an architect will immediately ask "ok but what's my max height." | Explicitly out of scope this milestone: not reliably available in the free MINVU/OCUC data at the fidelity needed to be citable (unlike text-based usos, which are directly quotable). Building placeholder UI or a half-verified numeric feed risks presenting unverified numbers as fact in a tool whose whole value prop is trustworthy, citable output. | Ship text-based zone/uso data only this milestone; link out to the official decree/ordinance PDF (already required as a citation source) for coefficients, and flag numeric coefficients as a clearly-labeled "próximamente" or defer entirely to a future milestone with a paid/verified data source. |
+| Full GIS map explorer (browse the whole comuna without an address, draw custom polygons, toggle every layer as a standalone mapping product) | This is literally what zonificación.cl and ZoneOmics look like as products, so it's the "obvious" shape to copy. | PermisoHub's users are architects working a specific project at a specific address, not consumers or brokers browsing a city map. Building a general-purpose GIS explorer duplicates an entire competitor product surface, adds large ongoing maintenance cost (layer management, map performance, tile hosting), and dilutes the core value prop ("speed up DOM permit processing") rather than serving it. | Scope the map to a single fixed view: the project's address pinned inside its own zone polygon, nothing more. No free-roam exploration mode. |
+| National legal-document repository (all comunas' ordinances/decrees as a browsable library) | zonificación.cl advertises this as a differentiator ("base de datos legal completa... MINVU, MINSAL, MINEDUC, MMA, INE, SUBDERE"), so it looks table-stakes by association. | PermisoHub already has a curated, verified normativa layer (`normativa-retrieval.ts` — OGUC/LGUC/DDU) with its own "verificado" discipline. Duplicating a national ordinance library for zoning specifically is redundant infrastructure not needed to answer "what's my zone and is my use compatible" — and a large, hard-to-maintain scope expansion disconnected from the milestone's actual question. | Store/link only the specific decree relevant to the project's own comuna/zone (one link, resolved at lookup time), not a browsable national library. |
+| Automated, unconditional "SÍ, tu uso es compatible" verdict with no caveats | Feels like the most useful, decisive answer — and is literally what a "compatible/incompatible" binary check implies. | Dangerous in a B2B tool whose output feeds real permit-track decisions: PRC `usos permitidos/prohibidos` text is often written at a coarser grain than a specific real-world activity (e.g. PRC lists "Equipamiento — Salud" as a category; the architect's actual use is "clínica dental ambulatoria") — a rigid text match can produce false confidence in either direction. US zoning-table practice itself uses a three-state model (Permitted / Conditional-requires-review / not listed), not binary, precisely because binary answers overstate certainty. | Three-state result: **Permitido** / **No permitido** / **No especificado — requiere revisión** (when the stated use doesn't clearly match the zone's listed text), always paired with the CIP disclaimer already noted in table stakes. |
+| Risk-layer overlays (flood/tsunami/landslide/mass-movement zones) as a shipped feature this milestone | zonificación.cl bundles this ("Zonas de riesgo... inundaciones, remociones en masa, tsunamis") and it feels like a natural companion to zoning. | Milestone context confirms this data source is not yet confirmed/sourced. Building UI for a data feed that doesn't exist yet produces a broken-looking placeholder and scope creep beyond the milestone's defined target. | Defer to a future milestone once a public risk-layer data source is identified and verified; do not stub the UI in this milestone. |
+| Per-query internal credit/paywall metering for the zoning feature | Tempting because it "worked" for zonificación.cl and could look like a monetization lever. | Directly undermines the milestone's stated strategic rationale (build in-house on free public data specifically to avoid the CLP ~10.000/query cost architects currently pay a competitor) and adds friction to a feature meant to be a bundled differentiator inside the existing subscription. | Bundle unmetered inside existing plans; if usage-based limits are ever needed, gate at the plan tier (e.g. "N proyectos"), not per zoning query. |
+
+## Feature Dependencies
 
 ```
-Subject: "Tu semana en PermisoHub — [N] proyectos activos, [N] en riesgo de plazo"
-  → Subject must contain real numbers from the user's data, not generic text
+Address geocoding (new, general-purpose)
+    └──requires──> extends address-normalization conventions of lib/sii-lookup.ts
+                       (reuse direccion+comuna param shape; do NOT require an SII match first)
 
-Section 1: Estado de la semana (3-4 bullet points max)
-  - Proyectos aprobados esta semana
-  - Proyectos que recibieron observaciones
-  - Proyectos próximos a vencer plazo (Ley 21.718)
+Address → zone spatial lookup (MINVU/OCUC ArcGIS PRC layer)
+    └──requires──> Address geocoding
+    └──feeds──> Zone code/name + usos permitidos/prohibidos display
 
-Section 2: Acción urgente (if any — else omit this section)
-  - Projects within 5 business days of deadline
-  - Specific: project name, fecha límite, estado actual
+Map view (point-in-polygon confirmation)
+    └──requires──> Address → zone spatial lookup
+    └──requires──> NEW mapping library (none exists in package.json today)
 
-Section 3: Recordatorio IA (1 item, rotational)
-  - Weekly tip related to what the architect has been doing
-  - Examples: "Tip: Los proyectos en DOM Providencia que incluyen memoria descriptiva detallada tienen 40% menos observaciones según nuestros datos"
+usos permitidos/prohibidos citation (verificado/no verificado + source link)
+    └──requires──> Address → zone spatial lookup
+    └──parallels──> lib/normativa-retrieval.ts citation pattern (ArticuloCitable, FUENTE_FALLBACK_URL)
 
-CTA: "Ver en PermisoHub →" (one button, links to dashboard)
+Activity/use compatibility check (Permitido / No permitido / No especificado)
+    └──requires──> usos permitidos/prohibidos citation (needs the text to match against)
+
+via-tramitacion.ts enhancement (flag cambiaDestino risk from zone mismatch)
+    └──requires──> Activity/use compatibility check
+    └──enhances──> lib/via-tramitacion.ts (adds a grounded alerta, does not change the deterministic rule tree)
+
+due-diligence.ts enhancement (cite zone data as a finding source)
+    └──requires──> usos permitidos/prohibidos citation
+    └──enhances──> lib/due-diligence.ts (new refNormativa-shaped fuente: 'PRC')
+
+AI copiloto skill grounding (diagnóstico OGUC / checklist skills use zone text as context)
+    └──requires──> usos permitidos/prohibidos citation
+    └──enhances──> existing copiloto drawer skills (no change to their trigger UX)
+
+Portfolio-wide zoning dashboard
+    └──requires──> Address → zone spatial lookup persisted per-proyecto (table stakes, all projects)
+
+Numeric urbanistic coefficients (FOS, altura, rasante, etc.) ──conflicts with── this milestone's scope
+    (explicitly deferred; do not partially build)
+
+Risk-layer overlays ──conflicts with── this milestone's scope
+    (data source unconfirmed; do not stub UI)
 ```
 
-**Personalization rules:**
-- If user has 0 active projects: do not send the email (no value, trains unsubscribe habit)
-- If all projects are in `aprobado` state with no pending actions: send brief congratulatory summary only
-- Subject line must include real project counts — never generic "Your weekly update"
+### Dependency Notes
 
-**AI generation scope:** Section 3 tip only — the rest is templated from real data. Generating Sections 1 and 2 from AI introduces hallucination risk on professional timelines. Use AI for the narrative/tip layer, not for factual project status.
+- **Map view requires a new mapping library:** this is the one item in the table-stakes set that isn't a pure data/logic extension of existing code — it's a new frontend dependency (MapLibre GL or Leaflet + a basemap/tile source) with no precedent elsewhere in the codebase. Size this explicitly in planning; it's not "just another lib call" the way `sii-lookup.ts`-style features are.
+- **Activity compatibility requires usos permitidos/prohibidos citation to exist first:** you cannot answer "is my use compatible" before you have the zone's text to match against — this is a hard sequencing dependency, not just a nice-to-have ordering.
+- **`via-tramitacion.ts` and `due-diligence.ts` integrations are enhancements, not prerequisites:** both existing engines work today without zoning data (via self-reported flags / document-only evidence). Zoning-derived citations upgrade their grounding but should be additive — do not restructure either engine's core logic to depend on zoning data being present, since geocoding/lookup can fail (see anti-ambiguity fallback in table stakes) and both engines must keep working when it does.
+- **Numeric coefficients and risk layers conflict with this milestone's scope** in the sense that any partial building (e.g., a coefficients section with "N/A" placeholders) creates a broken/unfinished look rather than a clean, complete v1 — treat as fully deferred, not partially started.
 
-**Table stakes:**
-- Unsubscribe link (legal requirement + deliverability)
-- Correct timezone (America/Santiago)
-- Resend handles delivery; use Vercel Cron for scheduling (already in stack)
-- Plain-text fallback for email clients that block HTML
+## MVP Definition
 
-**Anti-features:**
+### Launch With (v1)
 
-| Anti-Feature | Why Avoid |
-|--------------|-----------|
-| Daily digest emails | Frequency fatigue → unsubscribe. Professionals have 121 emails/day already |
-| "Your AI assistant has insights!" generic subject | Zero information scent; low open rate |
-| Generating project statuses with AI | Architects cannot afford hallucinated deadlines; factual data only for statuses |
-| Digest emails for inactive users | Trains unsubscribe behavior; only send when there's real content |
-| HTML-only (no text fallback) | Deliverability penalty; some corporate email clients block HTML |
+- [ ] Address → geocode → point-in-polygon zone lookup against MINVU/OCUC ArcGIS PRC layer — the entire premise of the feature
+- [ ] Zone code + zone name displayed as text inside the project
+- [ ] Map view confirming the point sits inside the matched zone polygon — architects won't trust a bare code with no visual check
+- [ ] `usos permitidos` / `usos prohibidos` displayed verbatim, with source link when available (verificado/no verificado pattern from `normativa-retrieval.ts`)
+- [ ] Persisted lookup result on the proyecto record with an explicit "actualizar" action (no silent background polling)
+- [ ] Manual comuna/zone fallback when geocoding fails or address isn't matched
+- [ ] Activity/use compatibility check: architect states intended use → three-state result (Permitido / No permitido / No especificado—revisar), never a bare binary "compatible"
+- [ ] "Informativo, no reemplaza el CIP oficial" disclaimer on every zoning screen
 
-**Complexity:** MEDIUM — Resend + Vercel Cron infrastructure exists; complexity is per-user data assembly (query each user's active projects) and the template rendering logic. At scale, batch email generation per user needs to be parallelizable.
+### Add After Validation (v1.x)
 
----
+- [ ] Zoning-derived alerta feeding `via-tramitacion.ts`'s `cambiaDestino` decision — once the compatibility check is proven reliable enough to trust as a decision input
+- [ ] Zoning citation as a `due-diligence.ts` finding source — once the `RefNormativa`-shaped `'PRC'` fuente type is validated
+- [ ] AI copiloto skill grounding with zone text (diagnóstico OGUC, checklist) — once the base lookup+display is stable and the text-matching for compatibility has been tuned
+- [ ] PDF/exhibit export of the zoning finding — once the data model and citation format are stable
+- [ ] Portfolio-wide zoning dashboard across all active proyectos — once persistence exists for a meaningful number of projects
+- [ ] Data-freshness/staleness indicator ("PRC vigente desde...") — pending confirmation the ArcGIS layer exposes a usable date field
 
-## Feature Dependencies Map
+### Future Consideration (v2+)
 
-```
-Type 1 (OGUC Diagnostic)
-  → depends on: municipal intelligence (v1.0), OGUC compliance checker corpus (v1.0)
-  → enables: Type 2 (feeds risk signals)
+- [ ] Numeric urbanistic coefficients (FOS, coef. constructibilidad, altura máxima, rasante, distanciamiento) — needs a different/paid/verified data source; explicitly out of scope until then
+- [ ] Risk-layer overlays (flood, tsunami, mass movement) — needs a confirmed public data source not yet identified
+- [ ] PRI (planificación intercomunal) layer
+- [ ] Full GIS map explorer / standalone browsing mode — deliberately not planned (anti-feature, see above), only revisit if user research explicitly demands it
 
-Type 2 (Observation Prediction)
-  → depends on: municipal intelligence (v1.0), Type 1 risk signals (optional enrichment)
-  → enables: Type 3 time estimate (adds "observation buffer" to timeline)
+## Feature Prioritization Matrix
 
-Type 3 (Document Checklist)
-  → depends on: PDF extractor (v1.0, to pre-populate "ok" state), permit type from expediente
-  → persists to: Supabase (document_checklist_items table — NEW)
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|----------------------|----------|
+| Address → zone lookup (geocode + spatial query) | HIGH | MEDIUM | P1 |
+| Zone code/name text display | HIGH | LOW | P1 |
+| Map view (point-in-polygon confirmation) | HIGH | MEDIUM-HIGH (new map lib) | P1 |
+| usos permitidos/prohibidos text + citation | HIGH | LOW | P1 |
+| Persisted lookup + manual refresh | MEDIUM | LOW | P1 |
+| Manual fallback for unmatched addresses | MEDIUM | LOW-MEDIUM | P1 |
+| Activity compatibility check (3-state) | HIGH | MEDIUM | P1 |
+| CIP disclaimer | MEDIUM | LOW | P1 |
+| via-tramitacion.ts integration | HIGH | MEDIUM | P2 |
+| due-diligence.ts citation integration | MEDIUM-HIGH | MEDIUM | P2 |
+| AI copiloto grounding | MEDIUM | MEDIUM | P2 |
+| PDF export of zoning finding | MEDIUM | LOW-MEDIUM | P2 |
+| Portfolio-wide zoning dashboard | MEDIUM | MEDIUM | P3 |
+| Data-freshness indicator | LOW-MEDIUM | LOW-MEDIUM | P3 |
+| Numeric coefficients | HIGH (eventually) | HIGH | Deferred (v2+) |
+| Risk-layer overlays | MEDIUM | MEDIUM-HIGH | Deferred (v2+) |
 
-Type 4 (Time + Fee Estimate)
-  → depends on: calculadora derechos (v1.0), Type 2 output (observation probability → adds buffer)
-  → inputs auto-populated from expediente (no re-entry)
+**Priority key:**
+- P1: Must have for this milestone's launch
+- P2: Should have, natural v1.x extension once P1 is validated
+- P3: Nice to have, later
+- Deferred: explicitly out of scope per milestone context
 
-DOM Auto-Update
-  → depends on: existing cron infrastructure (v1.0), WhatsApp Twilio (v1.0)
-  → updates: proyectos.estado_dom in Supabase
+## Competitor Feature Analysis
 
-SII Auto-Fill
-  → depends on: nothing in v1.0 — net new
-  → triggers on: patente record creation event
+| Feature | zonificación.cl | ZoneOmics (US) | Our Approach |
+|---------|------------------|------------------|--------------|
+| Address search | Search box, comuna or address | Address entry or pin-drop on map | Address search reusing existing `direccion`/`comuna` conventions; add manual comuna/zone fallback |
+| Results presentation | Combined map + text ("Mapa de análisis por dirección" + key-info panel) | Map + auto-populated report | Combined map + text inside the project (not a separate app/tab) |
+| Compatibility check | "Actividades permitidas según PRC" — cross-references activity against zone; exact UX for activity selection undocumented publicly | "Zone Picker" tool, guided filters; largely US permitted/conditional table semantics | Explicit 3-state result (Permitido/No permitido/No especificado) rather than an opaque binary, to avoid false confidence |
+| Boundary/ambiguity handling | Not documented publicly (no visible confidence indicators, disambiguation, or staleness flags found) | Guided tours, zone picker for manual correction; no explicit boundary-proximity warning found | Manual fallback for unmatched addresses; treat as an open item to design (see Open Questions) |
+| Pricing | Credit-based, ~CLP 10.000/query, one free comuna (Recoleta) for trial | Not surfaced in this research pass | Bundled inside existing subscription, unmetered — a deliberate anti-feature to avoid |
+| Data layers | PRC zoning + PRI + risk zones + equipment/infra + SII property data + national legal doc repository | Zoning + parcel boundaries via geoJSON API | Zoning + usos permitidos/prohibidos only this milestone; explicitly no risk layers, no national doc repository (anti-features above) |
+| Numeric coefficients | Not confirmed present/absent from this research pass | Zoning API implies broader zoning attribute access (not confirmed to include buildability coefficients for Chile, N/A market) | Out of scope this milestone (confirmed by milestone context) |
+| Integration into a broader workflow | Standalone product; user must tab out from their permitting tool to use it | Standalone product/API for real estate use cases | Zoning is a first-class citable input inside `via-tramitacion.ts` and `due-diligence.ts` — this is the core differentiator, not the raw data itself |
 
-Weekly Email
-  → depends on: Resend (v1.0), Vercel Cron (v1.0)
-  → reads from: proyectos table, plazos, estado_dom
-  → AI generates: Section 3 tip only (not factual status data)
-```
+## Sources
 
----
+- [zonificación.cl](https://www.zonificacion.cl/) — MEDIUM confidence (marketing page fetched directly, not a hands-on account trial; UX details on activity-compatibility mechanism and pricing partially inferred/incomplete)
+- [Zoneomics — Zoning API for Developers](https://www.zoneomics.com/product/api) — MEDIUM-HIGH confidence (official product page)
+- [Zoneomics — Zoning Data Platform](https://www.zoneomics.com/product/platform) — MEDIUM-HIGH confidence (official product page)
+- [Zoneomics — October 2025 release notes](https://www.zoneomics.com/blog/october-2025-release) — MEDIUM confidence (official blog, confirms guided-tour/zone-picker UX patterns)
+- [LA City Zoning Code — "How do I find out if my use is permitted?"](https://zoning.lacity.gov/faq/use/how-do-i-find-out-if-my-use-permitted) — MEDIUM confidence, used to confirm US Permitted/Conditional/Prohibited table convention
+- [PAS QuickNotes — Conditional Uses (American Planning Association)](https://planning-org-uploaded-media.s3.amazonaws.com/document/PASQuickNotes41.pdf) — MEDIUM confidence, general planning-practice reference for the permitted/conditional/prohibited trichotomy
+- General ArcGIS zoning-lookup workflow (geocode → parcel query → zoning layer query → map render) — MEDIUM confidence, synthesized from multiple Esri/GIS practitioner sources found via search, not a single authoritative doc
+- Internal codebase review: `lib/sii-lookup.ts`, `lib/normativa-retrieval.ts`, `lib/via-tramitacion.ts`, `lib/due-diligence.ts` (read directly, HIGH confidence — these are the actual dependency/integration points)
 
-## Build Complexity Summary
+## Open Questions (not resolved by this research pass)
 
-| Feature | Complexity | Highest Risk | Mitigation |
-|---------|------------|--------------|------------|
-| Copiloto Drawer (shell) | LOW | Session state loss on close | Lift state to parent module |
-| Type 1: OGUC Diagnostic | HIGH | Hallucinated article numbers | Curated article corpus in system prompt, not free recall |
-| Type 2: Observation Prediction | HIGH | Overconfident predictions → architect errors | Always show confidence level + data basis |
-| Type 3: Document Checklist | MEDIUM | State lost on refresh | Persist to Supabase immediately on change |
-| Type 4: Time + Fee Estimate | LOW-MEDIUM | Time estimate feels fabricated | Show ranges (X–Y days), not point estimates; show formula |
-| DOM Auto-Update | MEDIUM | Municipal portal scraping unreliability | Start with DOM Digital only; idempotency + retry logic |
-| SII Auto-Fill | LOW | SII API format changes | Adapter layer isolating SII response parsing |
-| Weekly Email | MEDIUM | Hallucinated project statuses | Template factual data; AI writes tip only |
+- **Boundary-proximity ambiguity UX**: neither zonificación.cl nor ZoneOmics publicly documents how they handle an address whose geocoded point falls very close to a zone-polygon edge (common with geocoding imprecision). Recommend designing this explicitly rather than assuming a competitor pattern exists to copy — e.g., compute distance-to-nearest-boundary from the ArcGIS response and surface a "cerca del límite de zona — verifica en el CIP oficial" warning below some threshold.
+- **Text-matching mechanism for the activity compatibility check**: whether to implement as a curated OGUC-macro-use taxonomy (art. 2.1.24-style categories: Vivienda, Equipamiento, Actividades Productivas, Infraestructura, etc.) mapped against free-text PRC uses, vs. an AI-assisted classification (consistent with the `due-diligence.ts` map-reduce AI pattern already in the codebase) is a build-time design decision, not something this research resolved — flag for phase-specific research or a design spike before implementation.
+- **MINVU/OCUC ArcGIS layer's date/vintage field**: whether the confirmed-available data includes a decree/publication date usable for the staleness-indicator differentiator was not verified in this pass (out of scope per milestone context, which says only zone code/name/usos/decree-link are confirmed available) — check at implementation time.

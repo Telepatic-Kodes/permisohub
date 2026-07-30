@@ -95,8 +95,10 @@ export default function InteligenciaMunicipiosPage() {
       <div className="flex items-start gap-3 rounded-[4px] border border-line-fine bg-card p-4 text-sm text-muted-foreground">
         <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground/60" />
         <p>
-          Estadísticas basadas en datos anonimizados de proyectos gestionados
-          con PermisoHub. A mayor número de proyectos, mayor precisión.
+          Estadísticas sintéticas — estimadas a partir de fuentes públicas (MINVU, SEREMI) y
+          práctica arquitectónica, aún no de datos anonimizados de proyectos reales tramitados
+          en PermisoHub. Se irán reemplazando por datos reales a medida que más arquitectos usen
+          la plataforma.
         </p>
       </div>
 

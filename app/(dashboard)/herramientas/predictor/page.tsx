@@ -254,6 +254,9 @@ function PredictorPageInner() {
                       Tiempo promedio: <Num>{municipioStats.tiempoPromedioHabiles}</Num> días hábiles ·
                       Meses ágiles: {municipioStats.mesesMasAgiles.join(', ')}
                     </p>
+                    <p className="mt-1 text-[10px] text-muted-foreground/50">
+                      Estimación sintética — aún no proviene de expedientes reales tramitados en PermisoHub.
+                    </p>
                   </div>
                 )}
 
