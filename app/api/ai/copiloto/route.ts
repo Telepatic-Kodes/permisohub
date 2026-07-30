@@ -11,10 +11,20 @@ import { ESTADISTICAS_MUNICIPIOS } from '@/lib/municipios-stats'
 import { getInteligenciaMunicipio } from '@/lib/inteligencia-dom'
 import { calcularDerechosMunicipales, type TipoObra } from '@/lib/derechos-municipales'
 import { sumarDiasHabiles } from '@/lib/dias-habiles'
+import { fixMojibakeArcGIS } from '@/lib/zonificacion-format'
 import type { Proyecto } from '@/types'
 
 interface CopilotoRequest {
   proyectoId: string
+}
+
+function seccionZonificacion(p: Proyecto): string {
+  const utilizable = p.zona_status === 'encontrado' && p.zona_usos_disponibles === true
+  if (!utilizable) return ''
+  const uperm = fixMojibakeArcGIS(p.zona_uperm) ?? '(sin dato)'
+  const uproh = fixMojibakeArcGIS(p.zona_uproh) ?? '(sin dato)'
+  const nombre = fixMojibakeArcGIS(p.zona_nombre)
+  return `\n## Zonificación (PRC) — ${p.zona_codigo ?? ''}${nombre ? ` ${nombre}` : ''}\nUsos permitidos: ${uperm}\nUsos prohibidos: ${uproh}\n`
 }
 
 function buildOgucPrompt(p: Proyecto): string {
@@ -30,7 +40,7 @@ function buildOgucPrompt(p: Proyecto): string {
 - Superficie construida: ${p.superficie_construida_m2 ?? 'no disponible'} m²
 - Rol SII: ${p.rol_sii ?? 'no disponible'}
 - Avalúo fiscal: ${p.avaluo_fiscal_clp ? `$${p.avaluo_fiscal_clp.toLocaleString('es-CL')}` : 'no disponible'}
-
+${seccionZonificacion(p)}
 ## Artículos OGUC relevantes
 ${ogucCtx}
 
@@ -108,7 +118,7 @@ function buildChecklistPrompt(p: Proyecto): string {
 - Dirección: ${p.direccion}
 - Superficie construida: ${p.superficie_construida_m2 ?? 'no disponible'} m²
 - Expediente: ${p.numero_expediente ?? 'sin expediente'}
-
+${seccionZonificacion(p)}
 Responde SOLO con JSON válido:
 {
   "items": [
