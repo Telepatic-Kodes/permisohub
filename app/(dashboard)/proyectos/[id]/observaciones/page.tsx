@@ -374,6 +374,9 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
                   <> Observaciones frecuentes: {municipioStats.tiposObservacionFrequentes.slice(0, 3).join(', ')}.</>
                 )}
               </p>
+              <p className="mt-1.5 text-[10px] text-amber-700/60">
+                Estimación sintética — aún no proviene de expedientes reales tramitados en PermisoHub.
+              </p>
             </div>
           )}
 

@@ -359,7 +359,7 @@ export default function TimelinePage() {
                       Serie histórica · Ley 21.718
                     </p>
                     <CardTitle className="font-technical mt-1 text-base">
-                      Datos históricos DOM {municipioActivo.nombre}
+                      Estimación DOM {municipioActivo.nombre}
                     </CardTitle>
                   </div>
                   {municipioActivo.calificacion <= 2 ? (
@@ -414,6 +414,9 @@ export default function TimelinePage() {
                     </div>
                   )}
                 </dl>
+                <p className="mt-4 text-[10px] text-muted-foreground/50">
+                  Estimación sintética — aún no proviene de expedientes reales tramitados en PermisoHub.
+                </p>
               </CardContent>
             </Card>
 
