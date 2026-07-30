@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { NuevoProyectoSchema } from '@/lib/schemas'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { persistZonificacionParaProyecto } from '@/lib/zonificacion-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -150,6 +151,16 @@ export async function POST(request: Request) {
           // Fire-and-forget — silent failure intentional
         }
       })
+    }
+
+    // Zonificación: dispara el lookup ArcGIS/MINVU en background para todo
+    // proyecto creado con dirección + municipio. resolveComunaZonificacion()
+    // dentro del lookup route decide sin_cobertura — no se pre-filtra aquí.
+    if (proyecto?.id && body.direccion && body.municipio) {
+      const proyectoId = proyecto.id
+      const direccionZona = body.direccion
+      const municipioZona = body.municipio
+      after(() => persistZonificacionParaProyecto(proyectoId, direccionZona, municipioZona))
     }
 
     return Response.json({ ok: true, id: proyecto.id })
