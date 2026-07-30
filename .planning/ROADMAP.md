@@ -6,7 +6,7 @@
 ## Phases
 
 - [x] **Phase 10: Motor de Zonificación** — Geocoding, registro de cobertura por comuna y persistencia automática del resultado de zona (sin UI todavía) (completed 2026-07-30)
-- [ ] **Phase 11: Vista de Zonificación en el Proyecto** — Zona, mapa, usos citados, compatibilidad de uso y fallback manual, visibles para el arquitecto
+- [x] **Phase 11: Vista de Zonificación en el Proyecto** — Zona, mapa, usos citados, compatibilidad de uso y fallback manual, visibles para el arquitecto (completed 2026-07-30)
 - [ ] **Phase 12: Integración con Motores de Decisión** — via-tramitacion.ts, due-diligence.ts y el copiloto IA incorporan la zona como señal aditiva citada
 
 ## Phase Details
@@ -52,7 +52,7 @@ Plans:
 4. El arquitecto puede indicar el uso pretendido del proyecto y recibe una respuesta de tres estados — Permitido / No permitido / No especificado (requiere revisión) — nunca un veredicto binario
 5. El arquitecto puede forzar una actualización del resultado con una acción explícita "Actualizar" (sin refresco silencioso en background), y si el geocoding falla o la comuna no tiene cobertura, puede seleccionar manualmente comuna y zona desde un listado en vez de ver un error sin salida
 
-**Plans:** 8 plans in 5 waves
+**Plans:** 8/8 plans complete
 
 Plans:
 - [ ] 11-01: Migración aditiva (geometria + zona_origen) + tipos Proyecto.zona_* + helper de mojibake
@@ -90,7 +90,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 10. Motor de Zonificación | 0/5 | Complete    | 2026-07-30 |
-| 11. Vista de Zonificación en el Proyecto | 0/TBD | Not started | - |
+| 11. Vista de Zonificación en el Proyecto | 0/TBD | Complete    | 2026-07-30 |
 | 12. Integración con Motores de Decisión | 0/TBD | Not started | - |
 
 ---
