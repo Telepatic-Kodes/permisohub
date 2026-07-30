@@ -7,7 +7,7 @@
 
 - [x] **Phase 10: Motor de Zonificación** — Geocoding, registro de cobertura por comuna y persistencia automática del resultado de zona (sin UI todavía) (completed 2026-07-30)
 - [x] **Phase 11: Vista de Zonificación en el Proyecto** — Zona, mapa, usos citados, compatibilidad de uso y fallback manual, visibles para el arquitecto (completed 2026-07-30)
-- [ ] **Phase 12: Integración con Motores de Decisión** — via-tramitacion.ts, due-diligence.ts y el copiloto IA incorporan la zona como señal aditiva citada
+- [x] **Phase 12: Integración con Motores de Decisión** — via-tramitacion.ts, due-diligence.ts y el copiloto IA incorporan la zona como señal aditiva citada (completed 2026-07-30)
 
 ## Phase Details
 
@@ -80,7 +80,7 @@ Plans:
 3. Los skills del copiloto IA (diagnóstico OGUC, checklist) reciben el texto de usos permitidos/prohibidos de la zona como contexto adicional al generar sus respuestas, cuando el proyecto tiene un resultado de zonificación disponible
 4. Un proyecto sin dirección geocodificable, sin cobertura, o sin zonificación consultada aún funciona exactamente igual que antes de este milestone en vía de tramitación, due diligence y copiloto (comportamiento estrictamente aditivo, sin regresiones)
 
-**Plans:** 4 plans
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] 12-01-PLAN.md — Alerta citada de compatibilidad de uso en ViaDecision (wave 1, paralelo)
@@ -94,7 +94,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 10. Motor de Zonificación | 0/5 | Complete    | 2026-07-30 |
 | 11. Vista de Zonificación en el Proyecto | 0/TBD | Complete    | 2026-07-30 |
-| 12. Integración con Motores de Decisión | 0/4 | Not started | - |
+| 12. Integración con Motores de Decisión | 0/4 | Complete    | 2026-07-30 |
 
 ---
 

@@ -20,9 +20,9 @@
 
 ### INTEG — Integración con Motores Existentes
 
-- [ ] **INTEG-01**: `via-tramitacion.ts` muestra una alerta citada cuando el uso declarado no calza con los usos permitidos de la zona, sin modificar el árbol de decisión determinista (`recomendarVia()` no se altera)
-- [ ] **INTEG-02**: `due-diligence.ts` puede citar la zona como fuente de hallazgo (nuevo tipo `'PRC'` en `RefNormativa`) cuando detecta incoherencia entre el destino declarado y los usos permitidos
-- [ ] **INTEG-03**: Los skills del copiloto IA (diagnóstico OGUC, checklist) reciben el texto de usos permitidos/prohibidos como contexto adicional al generar sus respuestas
+- [x] **INTEG-01**: `via-tramitacion.ts` muestra una alerta citada cuando el uso declarado no calza con los usos permitidos de la zona, sin modificar el árbol de decisión determinista (`recomendarVia()` no se altera)
+- [x] **INTEG-02**: `due-diligence.ts` puede citar la zona como fuente de hallazgo (nuevo tipo `'PRC'` en `RefNormativa`) cuando detecta incoherencia entre el destino declarado y los usos permitidos
+- [x] **INTEG-03**: Los skills del copiloto IA (diagnóstico OGUC, checklist) reciben el texto de usos permitidos/prohibidos como contexto adicional al generar sus respuestas
 
 ### Future Requirements (v1.4.x / v2+)
 
@@ -50,9 +50,9 @@
 | ZONE-05 | 11 | Complete |
 | ZONE-06 | 11 | Complete |
 | COMPAT-01 | 11 | Complete |
-| INTEG-01 | 12 | Pending |
-| INTEG-02 | 12 | Pending |
-| INTEG-03 | 12 | Pending |
+| INTEG-01 | 12 | Complete |
+| INTEG-02 | 12 | Complete |
+| INTEG-03 | 12 | Complete |
 
 **Coverage:**
 - v1.4 requirements: 10 total
