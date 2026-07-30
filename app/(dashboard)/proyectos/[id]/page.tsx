@@ -43,6 +43,7 @@ import { WhatsAppDialog } from "@/components/dashboard/whatsapp-dialog"
 import { ExpedienteScore } from "@/components/proyecto/expediente-score"
 import { DesarchivoPanel } from "@/components/proyecto/desarchivo-panel"
 import { PredioMap } from "@/components/proyecto/predio-map"
+import { ZonificacionCard } from "@/components/proyecto/zonificacion-card"
 import DueDiligenceReport from "@/components/proyecto/due-diligence-report"
 import { ExpedienteWizard } from "@/components/proyecto/expediente-wizard"
 import { PmoPanel } from "@/components/proyecto/pmo-panel"
@@ -837,6 +838,11 @@ export default function ProyectoDetallePage({
                         />
                       </CardContent>
                     </Card>
+                  )}
+
+                  {/* Zonificación PRC */}
+                  {proyecto.direccion && (
+                    <ZonificacionCard proyecto={proyecto} onUpdated={setProyecto} />
                   )}
 
                   {/* Herramientas IA del proyecto */}
