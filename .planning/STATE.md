@@ -28,9 +28,9 @@ Progress: [██████████] 100% (milestone v1.4 completo — fas
 
 ## Project Reference
 
-See: .planning/PROJECT.md
+See: .planning/PROJECT.md (updated 2026-07-30 tras milestone v1.4)
 **Core value:** El copiloto IA del arquitecto chileno — acelera y automatiza la tramitación de permisos DOM
-**Current focus:** v1.4 Zonificación — Phase 10 (Motor de Zonificación): geocoding + registro de cobertura + persistencia automática de zona PRC, sin UI todavía
+**Current focus:** Milestone v1.4 (Zonificación) shipped 2026-07-30. Sin milestone activo — correr `/gsd:new-milestone` para el próximo ciclo.
 
 ## Accumulated Context
 

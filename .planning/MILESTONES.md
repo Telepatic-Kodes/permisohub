@@ -79,3 +79,22 @@ Crear el ejército de skills de IA específicas para cada módulo — copiloto e
 - Resumen semanal por email con tip de IA
 
 **Last phase number:** 9
+
+## v1.4 — Zonificación (Shipped: 2026-07-30)
+
+**Phases:** 10–12 (3 phases, 17 plans, 33 tasks)
+
+### Goal:
+Determinar automáticamente la zona PRC y usos permitidos/prohibidos de un proyecto a partir de su dirección (ArcGIS MINVU/OCUC), mostrarla con confirmación visual en mapa, verificar compatibilidad de uso, y citarla como señal aditiva en vía de tramitación, due diligence y copiloto IA — sin depender de servicios de pago como zonificación.cl.
+
+### What shipped:
+- Motor de zonificación: geocoding (Nominatim) + consulta espacial ArcGIS + caché compartida por coordenadas + persistencia automática con estado explícito (`encontrado`/`sin_cobertura`/`error`), sin UI (Fase 10)
+- Vista de zonificación en el proyecto: código+nombre+sector, mapa con polígono real (Leaflet+OSM), usos permitidos/prohibidos verbatim con cita a fuente oficial, disclaimer CIP siempre visible, botón "Actualizar" explícito, fallback manual comuna/zona, verificador de compatibilidad de uso con IA de 3 estados (Fase 11)
+- Integración aditiva en los motores existentes: alerta citada de incompatibilidad en vía de tramitación (sin alterar el motor determinista `recomendarVia()`), nuevo tipo de cita `'PRC'` en due diligence, contexto de usos de zona inyectado en los prompts de diagnóstico OGUC y checklist del copiloto (Fase 12)
+- Cobertura inicial: Las Condes, Providencia, Vitacura, Ñuñoa
+- Bugs de producción preexistentes encontrados y corregidos en el camino: migración SII nunca aplicada en producción (enriquecimiento silenciosamente roto desde julio), código de zona nunca persistido
+
+**Last phase number:** 12
+
+---
+
