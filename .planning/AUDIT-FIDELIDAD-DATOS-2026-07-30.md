@@ -101,13 +101,15 @@ No existe Sentry ni equivalente. Todo es `console.error` en logs de Vercel que n
 
 ## Plan de acción propuesto (orden sugerido)
 
-**Sprint 1 — "para de decir cosas falsas" (1-2 días):**
-1. C1+C2: tabla Art. 130 real + DFL2 a nota consultiva (`lib/derechos-municipales.ts`)
-2. C3: corregir entrada 5.1.2 OGUC
-3. C5: quitar el link muerto/genérico de Las Condes
-4. C6: `fixMojibakeArcGIS` en la ruta de compatibilidad
-5. A5: bump next a 16.2.12
-6. A4: constante UF compartida actualizada + flag al copiloto
+**Sprint 1 — "para de decir cosas falsas" — ✅ COMPLETADO 2026-07-30 (mismo día de la auditoría):**
+1. ✅ C1+C2: tabla Art. 130 real por tipo (1.5/1.0/0.75/0.5%) + revisor independiente −30% + DFL2 degradado a nota consultiva — commits 817f68c, 21543bd, con 18 tests unitarios nuevos (tests/unit/derechos-municipales.test.ts)
+2. ✅ C3: entrada 5.1.2 OGUC reescrita como obra menor real (fuentes secundarias, tag [VERIFICAR TEXTO OFICIAL]); texto desplazado eliminado (duplicado en 5.1.6/prórroga, o pertenecía a Art. 118 LGUC) — commit 5b1936f. Bonus: generate-communication ya no instruye a la IA a citar 5.1.2 para plazos (ahora Art. 118 LGUC) — commit babf31d
+3. ✅ C5: campo `url` removido del fieldMap de Las Condes — commit b234724. DB limpiada vía Supabase MCP: 3 filas de zonificacion_cache + proyectos con el link 410 → NULL (verificado 0 remanentes)
+4. ✅ C6: `fixMojibakeArcGIS` aplicado en compatibilidad/route.ts; verificado que due-diligence y copiloto ya lo tenían — commit 008dccb
+5. ✅ A5: next 16.2.9 → 16.2.12 — 9 advisories directas de next → 0; `next build --webpack` compila las 221 rutas — commit 878e582
+6. ✅ A4: `lib/uf.ts` con `UF_FALLBACK_CLP = 40800` (fechada y sourced), las 6 copias de 38000 reemplazadas, `ufFallback` propagado al copiloto con caveat visible en TabEstimacion y banner en patentes — commits 68057b2, 354e2d0
+
+Verificación final del sprint: `tsc --noEmit` limpio, `vitest run` 95/95 (7 archivos, incl. 18 tests nuevos de derechos y 14 de via-tramitacion sin cambios), eslint limpio en todos los archivos tocados.
 
 **Sprint 2 — "di lo que no sabes" (2-3 días):**
 7. C4: poblar y mostrar `fuente_actualizada_el`; advertencia fuerte Ñuñoa (o retirarla de cobertura)
