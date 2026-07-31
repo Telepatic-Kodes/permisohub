@@ -125,32 +125,47 @@ IMPORTANTE: Los pisos subterráneos generalmente no cuentan para el FOT. Terraza
     categoria: 'coeficientes',
   },
   {
+    // Corrección 2026-07-30 (Auditoría de Fidelidad de Datos, hallazgo C3): esta
+    // entrada estaba mal etiquetada — contenía texto genérico de "solicitud de
+    // permiso de edificación", no el Art. 5.1.2 real. El Art. 5.1.2 OGUC define
+    // OBRA MENOR y su procedimiento simplificado (Permiso de Obra Menor); es el
+    // artículo que lib/via-tramitacion.ts cita para la vía "obra menor" — el
+    // motor ya citaba bien, el texto mostrado al hacer click era de otro tema.
+    // El texto desplazado (requisitos generales de solicitud, plazos DOM Ley
+    // 21.718, prórroga D.S. N°2, observaciones DOM) se ELIMINÓ en vez de
+    // reasignarlo a un número adivinado: los plazos DOM (15/30 días hábiles,
+    // silencio negativo) corresponden en realidad al Art. 118 LGUC vía Ley
+    // 21.718 (fuera del alcance OGUC de este archivo — no confirmado con
+    // fuente primaria), la prórroga D.S. N°2 ya vive verbatim en la entrada
+    // '5.1.x-prorroga-2026' de este mismo archivo, y los documentos generales
+    // ya viven en la entrada '5.1.6'. Una entrada faltante es más segura que
+    // una mal numerada.
     id: '5.1.2',
-    titulo: 'Solicitud de permiso de edificación — requisitos generales',
-    texto: `Para obtener permiso de edificación se requiere:
+    titulo: 'Obra menor — procedimiento simplificado de Permiso de Obra Menor',
+    texto: `El Art. 5.1.2 OGUC regula la OBRA MENOR: intervenciones de menor escala sobre una edificación EXISTENTE que no requieren tramitar un permiso de edificación ordinario, sino el procedimiento simplificado de Permiso de Obra Menor (ver también la definición del Art. 1.1.2 OGUC en esta misma base).
 
-1. Presentar solicitud en la DOM con los documentos del Art. 5.1.6.
-2. El propietario o su representante (arquitecto con poder notarial) firma la solicitud.
-3. El arquitecto proyectista debe estar habilitado en el Colegio de Arquitectos de Chile.
-4. Planos firmados por los profesionales competentes (arquitecto, calculista, instaladores).
+CALIFICAN COMO OBRA MENOR:
+- Obras al interior o en la fachada de una edificación existente que NO alteran su estructura.
+- Modificación de tabiques no soportantes.
+- Modificación de instalaciones existentes (sanitarias, eléctricas, de gas).
+- Aumento o disminución de la carga de ocupación, sin alteración estructural.
+- Cambio o modificación del destino o actividad.
+- Ampliaciones ejecutadas por una sola vez o en forma sucesiva en el tiempo, hasta un máximo acumulado de 100 m² de superficie ampliada — por sobre ese límite corresponde permiso de edificación ordinario, no obra menor.
 
-PLAZOS LEGALES DE LA DOM (Ley 21.718, vigente 2025):
-- La DOM tiene 15 días hábiles para pronunciarse si el proyecto tiene Informe Favorable de Revisor Independiente.
-- Sin Revisor Independiente: 30 días hábiles para primer pronunciamiento.
-- Si la DOM no se pronuncia en el plazo → silencio negativo (arquitecto puede declarar denegación).
-- Publicación mensual obligatoria de todos los permisos otorgados.
+DOCUMENTOS HABITUALES PARA SOLICITAR EL PERMISO DE OBRA MENOR:
+1. Solicitud firmada por el propietario y el arquitecto proyectista.
+2. Copia del certificado de título/patente vigente del arquitecto (Colegio de Arquitectos de Chile).
+3. Declaración jurada simple de dominio del propietario.
+4. Planos de arquitectura de lo existente y de la obra menor propuesta, y especificaciones técnicas.
+5. Planos de las instalaciones que se incorporen o modifiquen, con certificados de recepción de la empresa/entidad competente cuando corresponda.
+6. Informe del arquitecto que identifique la normativa aplicable y certifique que la obra no altera la estructura.
 
-PRÓRROGA DE PERMISOS (D.S. N°2, D.O. 16.03.2026, vigente desde 25.04.2026):
-- El D.S. N°2 de 2026 extiende las prórrogas de permisos de edificación a un máximo de 30 meses.
-- Esta modificación aplica a permisos que soliciten prórroga a partir del 25.04.2026.
-- Antes de esta fecha, el plazo era menor. Verificar siempre la fecha de vigencia según la fecha de ingreso del permiso (Art. 1.1.3 OGUC: se aplica la norma vigente a la fecha de ingreso).
+MODIFICACIÓN D.S. N°13/2022 (MINVU): eximió de tramitar incluso el Permiso de Obra Menor a ciertas obras estrictamente no estructurales que no amplían superficie ni modifican la carga de ocupación — para esos casos basta informar a la DOM mediante declaración jurada posterior a la ejecución, sin tramitación previa.
 
-OBSERVACIONES DE LA DOM:
-- La DOM puede emitir observaciones técnicas (no aprobaciones ni rechazos) indicando deficiencias.
-- El arquitecto tiene 30 días hábiles para subsanar y volver a presentar.
-- Las observaciones deben ser específicas y citar el artículo OGUC o PRC infringido.
-- Si el arquitecto no está de acuerdo: puede apelar ante el MINVU Regional.`,
-    keywords: ['permiso', 'edificación', 'solicitud', 'DOM', 'plazo', 'observación', 'hábiles', 'silencio', 'Ley 21718'],
+Es la vía de tramitación más liviana cuando el proyecto no altera la estructura, no supera el límite acumulado de ampliación de 100 m² y no cambia el destino junto con obras (ver lib/via-tramitacion.ts, que cita este artículo para esa vía).
+
+[VERIFICAR TEXTO OFICIAL] — Esta entrada se reconstruyó a partir de guías de trámites municipales (DOM Estación Central, La Reina, Las Condes) y fuentes profesionales (arqydom.cl, regularizacion.cl) que citan y describen el Art. 5.1.2 OGUC, NO contra el texto oficial vigente de la OGUC. Confirmar el listado exacto de documentos, el alcance preciso del D.S. N°13/2022 y el límite de 100 m² contra el texto primario antes de usarlos en asesoría legal formal.`,
+    keywords: ['obra menor', 'permiso de obra menor', '5.1.2', 'no estructural', 'declaración jurada', 'ampliación', '100 m2', 'tabique', 'carga de ocupación', 'fachada', 'existente'],
     categoria: 'permisos',
   },
   {
