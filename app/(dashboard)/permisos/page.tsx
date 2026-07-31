@@ -34,8 +34,6 @@ import { TIPO_PERMISO_LABELS, type VigenciaPermiso } from "@/types"
 import type { ProyectoConVigencia } from "@/app/api/permisos/route"
 import { cn } from "@/lib/utils"
 import { CopilotoTrigger } from "@/components/copiloto/copiloto-trigger"
-import { CopilotoDrawer } from "@/components/copiloto/copiloto-drawer"
-import type { Proyecto } from "@/types"
 
 // ---------------------------------------------------------------------------
 // Constantes de presentación
@@ -297,7 +295,6 @@ function SkeletonRows() {
 // ---------------------------------------------------------------------------
 // Página
 // ---------------------------------------------------------------------------
-type CopilotoProyecto = Pick<Proyecto, 'id' | 'nombre' | 'municipio' | 'tipo' | 'estado'>
 
 export default function PermisosPage() {
   const [filtro, setFiltro] = useState<FiltroVigencia>("todos")
@@ -305,8 +302,6 @@ export default function PermisosPage() {
   const [resumen, setResumen] = useState<Resumen>(RESUMEN_VACIO)
   const [loading, setLoading] = useState(true)
   const [domChecks, setDomChecks] = useState<Record<string, { estado: string; etapa: string; fecha: string } | 'loading' | 'error'>>({})
-  const [copilotoProyecto, setCopilotoProyecto] = useState<CopilotoProyecto | null>(null)
-  const [copilotoOpen, setCopilotoOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -370,11 +365,6 @@ export default function PermisosPage() {
     } catch {
       setDomChecks((prev) => ({ ...prev, [permiso.id]: 'error' }))
     }
-  }
-
-  function handleCopiloto(proyecto: CopilotoProyecto) {
-    setCopilotoProyecto(proyecto)
-    setCopilotoOpen(true)
   }
 
   function handleSaved(
@@ -564,10 +554,7 @@ export default function PermisosPage() {
                           permiso={p}
                           onSaved={(campos) => handleSaved(p.id, campos)}
                         />
-                        <CopilotoTrigger
-                          proyecto={p as unknown as CopilotoProyecto}
-                          onClick={handleCopiloto}
-                        />
+                        <CopilotoTrigger proyecto={p} />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -584,11 +571,6 @@ export default function PermisosPage() {
         </p>
       </div>
 
-      <CopilotoDrawer
-        proyecto={copilotoProyecto}
-        open={copilotoOpen}
-        onClose={() => setCopilotoOpen(false)}
-      />
     </div>
   )
 }

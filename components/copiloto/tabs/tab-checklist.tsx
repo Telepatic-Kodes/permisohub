@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { CheckSquare, Square } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { ChecklistResult } from '../copiloto-drawer'
+import type { ChecklistResult } from '@/components/copiloto/tipos'
 
 interface TabChecklistProps {
   data: ChecklistResult
@@ -43,7 +43,7 @@ export function TabChecklist({ data, onToggle }: TabChecklistProps) {
   }
 
   return (
-    <div className="space-y-4 px-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
           {doneCount} de {data.items.length} documentos listos

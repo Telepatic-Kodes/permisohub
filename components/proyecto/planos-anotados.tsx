@@ -170,7 +170,12 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
     for (const p of planos) {
       const base = p.nombre.replace(/\.pdf$/i, "")
       const esPdf = /\.pdf$/i.test(p.nombre)
-      const imgs = esPdf ? await pdfUrlToImages(p.url, base) : [{ nombre: base, dataUrl: p.url }]
+      // 2600 px: el servidor recorta cada sub-dibujo de esta imagen para
+      // ubicar las marcas, y un recorte sacado de 1600 px no tiene detalle
+      // suficiente para leer cotas ni seguir un muro.
+      const imgs = esPdf
+        ? await pdfUrlToImages(p.url, base, 2600)
+        : [{ nombre: base, dataUrl: p.url }]
       // Escala gráfica y cotas impresas por página — solo PDFs vectoriales las
       // tienen. Si falla (PDF corrupto, escaneado sin texto), no bloquea la
       // carga de la lámina.

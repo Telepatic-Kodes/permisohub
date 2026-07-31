@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>PermisoHub — Guía de inicio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FFFFFF;
+    --paper-warm:#F9F7F3;
+    --ink:#16261D;
+    --ink-soft:#4A5A52;
+    --ink-faint:#8A968F;
+    --line-strong:#C3CCC7;
+    --line-fine:#E2E7E4;
+    --green:#2D6A4F;
+    --green-deep:#1A3328;
+    --blueprint:#3A7CA5;
+    --warn:#B7791F;
+    --error:#B23B2E;
+
+    --f-display:'Fraunces', 'Iowan Old Style', Georgia, serif;
+    --f-body:'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --f-tech:'Space Grotesk', -apple-system, 'Segoe UI', sans-serif;
+    --f-mono:'JetBrains Mono', ui-monospace, Menlo, monospace;
+  }
+
+  @page { size: A4 portrait; margin: 15mm 16mm 13mm; }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:var(--f-body);
+    color:var(--ink);
+    background:var(--paper);
+    font-size:10.2pt;
+    line-height:1.55;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  p{ margin:0; }
+  h1,h2{ margin:0; font-family:var(--f-display); font-weight:500; }
+
+  .hoja{
+    page-break-after:always;
+    break-after:page;
+    min-height:262mm;
+    display:flex;
+    flex-direction:column;
+  }
+  .hoja:last-child{ page-break-after:auto; break-after:auto; }
+
+  /* ── esquina de escuadra ── */
+  .escuadra{
+    display:inline-block; width:7px; height:7px;
+    border:1px solid var(--blueprint);
+    border-right:0; border-bottom:0;
+    margin-right:6px; vertical-align:1px;
+  }
+  .eyebrow{
+    font-family:var(--f-mono);
+    font-size:7.2pt; font-weight:700;
+    letter-spacing:.16em; text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+
+  /* ══ PORTADA ══ */
+  .portada{ justify-content:space-between; }
+  .portada-top{ border-bottom:1.4px solid var(--ink); padding-bottom:9mm; }
+  .marca{ display:flex; align-items:baseline; gap:9px; }
+  .marca .n{ font-family:var(--f-display); font-size:15pt; font-weight:600; letter-spacing:-.01em; }
+  .marca .s{ font-family:var(--f-mono); font-size:7pt; letter-spacing:.15em; text-transform:uppercase; color:var(--ink-faint); }
+  .portada h1{
+    font-size:41pt; line-height:1.0; letter-spacing:-.025em;
+    margin-top:26mm; max-width:15ch;
+  }
+  .portada .bajada{
+    margin-top:9mm; font-size:12pt; line-height:1.55;
+    color:var(--ink-soft); max-width:46ch;
+  }
+  .portada-mid{ flex:1; display:flex; align-items:flex-start; padding-top:16mm; }
+  .indice{ width:100%; border-top:1px solid var(--line-strong); }
+  .indice-t{ padding:3.5mm 0 2.5mm; }
+  .indice ol{ margin:0; padding:0; list-style:none; column-count:2; column-gap:12mm; }
+  .indice li{
+    display:flex; gap:7px; align-items:baseline;
+    padding:1.7mm 0; border-bottom:1px solid var(--line-fine);
+    break-inside:avoid; font-size:9.4pt;
+  }
+  .indice li .n{ font-family:var(--f-mono); font-size:7.6pt; color:var(--green); font-weight:700; width:16px; flex:none; }
+  .cajetin{
+    display:grid; grid-template-columns:repeat(4,1fr);
+    border:1px solid var(--line-strong);
+  }
+  .cajetin div{ padding:3mm 3.5mm; border-left:1px solid var(--line-fine); }
+  .cajetin div:first-child{ border-left:0; }
+  .cajetin .k{ font-family:var(--f-mono); font-size:6.6pt; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); }
+  .cajetin .v{ font-family:var(--f-tech); font-size:9.6pt; font-weight:600; margin-top:1mm; }
+
+  /* ══ PASO ══ */
+  .paso-top{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-bottom:1.2px solid var(--ink);
+    padding-bottom:2.6mm;
+  }
+  .paso-num{
+    font-family:var(--f-mono); font-size:8pt; font-weight:700;
+    letter-spacing:.14em; color:var(--green);
+  }
+  .paso-ruta{ font-family:var(--f-mono); font-size:7.2pt; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); }
+  .paso h2{
+    font-size:21pt; line-height:1.12; letter-spacing:-.02em;
+    margin-top:6mm; max-width:24ch;
+  }
+  .paso .lede{
+    margin-top:3.5mm; font-size:10.4pt; line-height:1.6;
+    color:var(--ink-soft); max-width:68ch;
+  }
+
+  .shot{
+    margin-top:6mm;
+    border:1px solid var(--line-strong);
+    background:var(--paper-warm);
+    padding:2.4mm;
+    display:flex; flex-direction:column;
+  }
+  /* La altura máxima evita que una captura alta empuje el resto de la hoja
+     a una segunda página; las anchas y bajas no la alcanzan. */
+  .shot img{
+    display:block; margin:0 auto;
+    max-width:100%; max-height:108mm;
+    width:auto; height:auto;
+    border:1px solid var(--line-fine);
+  }
+  .shot-pie{
+    font-family:var(--f-mono); font-size:6.8pt; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--ink-faint);
+    padding-top:2.2mm;
+  }
+
+  .puntos{ margin-top:6mm; }
+  .puntos dl{ margin:0; border-top:1px solid var(--line-strong); }
+  .puntos > dl > div{
+    display:grid; grid-template-columns:44mm 1fr; gap:6mm;
+    padding:2.6mm 0; border-bottom:1px solid var(--line-fine);
+    break-inside:avoid;
+  }
+  .puntos dt{ font-family:var(--f-tech); font-weight:600; font-size:9.6pt; }
+  .puntos dd{ margin:0; font-size:9.6pt; color:var(--ink-soft); line-height:1.5; }
+
+  .clave{
+    margin-top:auto; display:flex; gap:5mm;
+    border-left:2.5px solid var(--green);
+    background:var(--paper-warm);
+    padding:3.4mm 4.5mm;
+  }
+  .clave.aviso{ border-left-color:var(--warn); }
+  .clave .k{
+    font-family:var(--f-mono); font-size:6.8pt; font-weight:700;
+    letter-spacing:.15em; text-transform:uppercase; color:var(--green);
+    width:20mm; flex:none; padding-top:.6mm;
+  }
+  .clave.aviso .k{ color:var(--warn); }
+  .clave p{ font-size:9.5pt; line-height:1.55; }
+
+  .pie{
+    margin-top:5mm; padding-top:2.2mm;
+    border-top:1px solid var(--line-strong);
+    display:flex; justify-content:space-between;
+    font-family:var(--f-mono); font-size:6.6pt;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint);
+  }
+  .pie b{ color:var(--ink); font-weight:600; }
+
+  /* ══ CIERRE ══ */
+  .reglas{ margin-top:7mm; border-top:1px solid var(--line-strong); }
+  .regla{
+    display:grid; grid-template-columns:9mm 1fr; gap:4mm;
+    padding:3.6mm 0; border-bottom:1px solid var(--line-fine);
+    break-inside:avoid;
+  }
+  .regla .n{ font-family:var(--f-mono); font-size:8.4pt; font-weight:700; color:var(--green); }
+  .regla h3{ margin:0; font-family:var(--f-tech); font-size:10pt; font-weight:600; }
+  .regla p{ margin-top:1.2mm; font-size:9.5pt; color:var(--ink-soft); line-height:1.5; }
+  .mono{ font-family:var(--f-mono); font-size:.92em; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ PORTADA ═══════════ -->
+<section class="hoja portada">
+  <div>
+    <div class="portada-top">
+      <div class="marca">
+        <span class="n">PermisoHub</span>
+        <span class="s">Gestión de permisos de edificación</span>
+      </div>
+    </div>
+    <h1>Guía de inicio</h1>
+    <p class="bajada">
+      Cómo llevar un expediente de edificación de principio a fin: desde crear
+      el proyecto hasta controlar el plazo legal de la Dirección de Obras.
+      Diez pasos, con la pantalla real de cada uno.
+    </p>
+  </div>
+
+  <div class="portada-mid">
+    <div class="indice">
+      <div class="indice-t"><span class="eyebrow"><span class="escuadra"></span>Contenido</span></div>
+      <ol>
+        <li><span class="n">01</span><span>Dónde empezar: el Dashboard</span></li>
+        <li><span class="n">02</span><span>Crear el expediente</span></li>
+        <li><span class="n">03</span><span>El tablero de proyectos</span></li>
+        <li><span class="n">04</span><span>La ficha: verificación normativa</span></li>
+        <li><span class="n">05</span><span>Cargar láminas y antecedentes</span></li>
+        <li><span class="n">06</span><span>Due Diligence documental</span></li>
+        <li><span class="n">07</span><span>Observaciones sobre el plano</span></li>
+        <li><span class="n">08</span><span>Definir la vía de tramitación</span></li>
+        <li><span class="n">09</span><span>Etapas y plazos legales</span></li>
+        <li><span class="n">10</span><span>Herramientas IA</span></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="cajetin">
+    <div><p class="k">Documento</p><p class="v">Guía de inicio</p></div>
+    <div><p class="k">Producto</p><p class="v">PermisoHub v1.4</p></div>
+    <div><p class="k">Fecha</p><p class="v">Julio 2026</p></div>
+    <div><p class="k">Láminas</p><p class="v">01 — 10</p></div>
+  </div>
+</section>
+
+<!-- ═══════════ 01 ═══════════ -->
+<section class="hoja paso">
+  <div class="paso-top">
+    <span class="paso-num">PASO 01</span>
+    <span class="paso-ruta">Dashboard</span>
+  </div>
+  <h2>Al entrar, la app te dice qué requiere acción hoy.</h2>
+  <p class="lede">
+    El Dashboard no es un resumen decorativo: separa lo que está detenido
+    esperándote de lo que sigue su curso. Arriba, tus tres números de control;
+    abajo, los expedientes ordenados por urgencia.
+  </p>
+
+  <div class="shot">
+    <img src="capturas/ob-01-dashboard.png" alt="Dashboard de PermisoHub" />
+    <p class="shot-pie">Fig. 01 — Dashboard con acción requerida y expedientes en proceso</p>
+  </div>
+
+  <div class="puntos">
+    <dl>
+      <div><dt>Acción requerida</dt><dd>Expedientes con observaciones de la DOM o plazo vencido. Empieza siempre por aquí.</dd></div>
+      <div><dt>En proceso</dt><dd>El resto de tu cartera, con su estado actual.</dd></div>
+      <div><dt>Menú lateral</dt><dd>Proyectos y Herramientas IA para trabajar; Municipios y Calculadora para consultar. Se colapsa con el botón del encabezado.</dd></div>
+      <div><dt>Accesos rápidos</dt><dd>Predictor, Memoria, Verificador y Chat OGUC, sin pasar por el menú.</dd></div>
+    </dl>
+  </div>
+
+  <div class="clave">
+    <span class="k">Clave</span>
+    <p>Los números grandes son <b>urgentes</b>, <b>activos</b> y <b>días promedio</b> de tramitación de tu oficina. Ese promedio es tu línea base para prometer plazos a un cliente.</p>
+  </div>
+
+  <div class="pie">
+    <span>PermisoHub · <b>Guía de inicio</b></span>
+    <span>Paso <b>01</b> / 10</span>
+  </div>
+</section>
+
+<!-- ═══════════ 02 ═══════════ -->
+<section class="hoja paso">
+  <div class="paso-top">
+    <span class="paso-num">PASO 02</span>
+    <span class="paso-ruta">Proyectos › Nuevo proyecto</span>
+  </div>
+  <h2>Crea el expediente con los datos mínimos.</h2>
+  <p class="lede">
+    Solo cinco campos son obligatorios. Todo lo demás —zonificación, vía de
+    tramitación, plazos— se deduce después a partir de ellos.
+  </p>
+
+  <div class="shot">
+    <img src="capturas/ob-02-nuevo.png" alt="Formulario de nuevo proyecto" />
+    <p class="shot-pie">Fig. 02 — Formulario de creación con búsqueda de rol SII</p>
+  </div>
+
+  <div class="puntos">
+    <dl>
+      <div><dt>Obligatorios</dt><dd>Nombre, cliente, municipio, tipo de permiso, dirección y fecha de inicio.</dd></div>
+      <div><dt>Rol SII (opcional)</dt><dd>Búscalo y la app trae avalúo fiscal, superficie de terreno y superficie construida desde el SII. Aparece en la escritura o en sii.cl.</dd></div>
+      <div><dt>Etapas iniciales</dt><dd>Vienen premarcadas las siete etapas habituales. Desmarca las que no apliquen.</dd></div>
+    </dl>
+  </div>
+
+  <div class="clave">
+    <span class="k">Clave</span>
+    <p>Escribe la <b>dirección completa</b> (calle, número y comuna). Es lo que dispara la búsqueda automática de zonificación contra el Plan Regulador: una dirección incompleta deja el expediente sin zona.</p>
+  </div>
+
+  <div class="pie">
+    <span>PermisoHub · <b>Guía de inicio</b></span>
+    <span>Paso <b>02</b> / 10</span>
+  </div>
+</section>
+
+<!-- ═══════════ 03 ═══════════ -->
+<section class="hoja paso">
+  <div class="paso-top">
+    <span class="paso-num">PASO 03</span>
+    <span class="paso-ruta">Proyectos</span>
+  </div>
+  <h2>Tu cartera, ordenada por estado de trámite.</h2>
+  <p class="lede">
+    El tablero muestra en qué etapa está cada expediente. Cambia entre tres
+    vistas según lo que necesites: avanzar el flujo, comparar o buscar.
+  </p>
+
+  <div class="shot">
+    <img src="capturas/ob-03-kanban.png" alt="Tablero kanban de proyectos" />
+    <p class="shot-pie">Fig. 03 — Vista kanban; cada tarjeta es un rótulo con su código de expediente</p>
+  </div>
+
+  <div class="puntos">
+    <dl>
+      <div><dt>Kanban</dt><dd>Columnas por estado, de borrador a aprobado o rechazado. La vista por defecto.</dd></div>
+      <div><dt>Cuadrícula y lista</dt><dd>Para comparar en paralelo o buscar por cliente, comuna y fecha.</dd></div>
+      <div><dt>Filtros</dt><dd>Búsqueda libre más filtro por estado y por municipio.</dd></div>
+    </dl>
+  </div>
+
+  <div class="clave">
+    <span class="k">Clave</span>
+    <p>El <b>color solo aparece cuando la DOM se pronunció</b>: verde aprobado, ámbar con observaciones, rojo rechazado. Las etapas previas van en tinta neutra. Si ves color, hay algo que responder.</p>
+  </div>
+
+  <div class="pie">
+    <span>PermisoHub · <b>Guía de inicio</b></span>
+    <span>Paso <b>03</b> / 10</span>
+  </div>
+</section>
+
+<!-- ═══════════ 04 ═══════════ -->
+<section class="hoja paso">
+  <div class="paso-top">
+    <span class="paso-num">PASO 04</span>
+    <span class="paso-ruta">Proyecto › A-01 Resumen</span>
+  </div>
+  <h2>La ficha abre con lo que decide si el proyecto avanza.</h2>
+  <p class="lede">
+    Arriba, el rótulo del expediente y su cuadro de control. Debajo, la
+    verificación normativa: qué documentos faltan y qué permite el Plan
+    Regulador en esa dirección.
+  </p>
+
+  <div class="shot">
+    <img src="capturas/ob-04-ficha.png" alt="Ficha del expediente, lámina A-01 Resumen" />
+    <p class="shot-pie">Fig. 04 — Rótulo, cuadro de control y verificación normativa</p>
+  </div>
+
+  <div class="puntos">
+    <dl>
+      <div><dt>Índice de láminas</dt><dd><span class="mono">A-01</span> Resumen · <span class="mono">A-02</span> Documentos · <span class="mono">A-03</span> Due Diligence · <span class="mono">A-04</span> PMO.</dd></div>
+      <div><dt>Completitud</dt><dd>Porcentaje de avance y lista de los documentos obligatorios que faltan para poder ingresar.</dd></div>
+      <div><dt>Zonificación (PRC)</dt><dd>Zona asignada, usos permitidos y usos prohibidos, con el mapa del polígono.</dd></div>
+    </dl>
+  </div>
+
+  <div class="clave aviso">
+    <span class="k">Atención</span>
+    <p>La zonificación declara <b>de cuándo son sus datos de origen</b>. Si aparece el aviso de contenido posiblemente desactualizado, verifica siempre contra el Certificado de Informaciones Previas (CIP) oficial: la app es informativa y no lo reemplaza.</p>
+  </div>
+
+  <div class="pie">
+    <span>PermisoHub · <b>Guía de inicio</b></span>
+    <span>Paso <b>04</b> / 10</span>
+  </div>
+</section>
+
+<!-- ═══════════ 05 ═══════════ -->
+<section class="hoja paso">
+  <div class="paso-top">
+    <span class="paso-num">PASO 05</span>
+    <span class="paso-ruta">Proyecto › A-02 Documentos</span>
+  </div>
+  <h2>Sube el expediente: láminas por un lado, antecedentes por otro.</h2>
+  <p class="lede">
+    La app reconoce cuáles de tus archivos son planos y los separa. Las láminas
+    quedan numeradas como en una carpeta técnica y son las que después se
+    anotan.
+  </p>
+
+  <div class="shot">
+    <img src="capturas/ob-05-documentos.png" alt="Documentos del expediente separados en láminas y antecedentes" />
+    <p class="shot-pie">Fig. 05 — Láminas numeradas L-01, L-02 y tabla de antecedentes</p>
+  </div>
+
+  <div class="puntos">
+    <dl>
+      <div><dt>Láminas</dt><dd>Planos, plantas, cortes y elevaciones. Se numeran <span class="mono">L-01</span>, <span class="mono">L-02</span>… con vista previa.</dd></div>
+      <div><dt>Antecedentes</dt><dd>Certificados, memorias, recepciones y el resto del papeleo, con su tipo y fecha.</dd></div>
+      <div><dt>Ver anotada</dt><dd>Lleva esa lámina directo al visor con las observaciones marcadas encima.</dd></div>
+    </dl>
+  </div>
+
+  <div class="clave">
+    <span class="k">Clave</span>
+    <p>Sube los planos en <b>PDF</b> siempre que puedas: la app rasteriza el archivo y lee la escala del rótulo, lo que habilita después la regla de medición sobre la lámina.</p>
+  </div>
+
+  <div class="pie">
+    <span>PermisoHub · <b>Guía de inicio</b></span>
+    <span>Paso <b>05</b> / 10</span>
+  </div>
+</section>
+
+<!-- ═══════════ 06 ═══════════ -->
+<section class="hoja paso">
+  <div class="paso-top">
+    <span class="paso-num">PASO 06</span>
+    <span class="paso-ruta">Proyecto › A-03 Due Diligence</span>
+  </div>
+  <h2>La IA lee el contenido y cruza el expediente completo.</h2>
+  <p class="lede">
+    No es un checklist de nombres de archivo: abre cada documento, compara
+    direcciones, superficies y resoluciones entre ellos, y reporta las
+    inconsistencias que encuentra.
+  </p>
+
+  <div class="shot">
+    <img src="capturas/ob-06-dd.png" alt="Informe de Due Diligence documental" />
+    <p class="shot-pie">Fig. 06 — Riesgo global, completitud, hallazgos y resumen ejecutivo</p>
+  </div>
+
+  <div class="puntos">
+    <dl>
+      <div><dt>Riesgo global</dt><dd>Bajo, medio o alto, según la gravedad de los hallazgos.</dd></div>
+      <div><dt>Hallazgos</dt><dd>Contados por severidad: críticos, altos y medios.</dd></div>
+      <div><dt>Inventario documental</dt><dd>Documento por documento, con su estado y la observación detectada.</dd></div>
+      <div><dt>Regenerar</dt><dd>Vuelve a correr el análisis después de subir o corregir documentos.</dd></div>
+    </dl>
+  </div>
+
+  <div class="clave aviso">
+    <span class="k">Atención</span>
+    <p>Es una <b>revisión documental preliminar, no un pronunciamiento de la DOM</b>. Debes verificarla antes de actuar: la ficha solo habilita las láminas siguientes una vez que marcas el informe como verificado.</p>
+  </div>
+
+  <div class="pie">
+    <span>PermisoHub · <b>Guía de inicio</b></span>
+    <span>Paso <b>06</b> / 10</span>
+  </div>
+</section>
+
+<!-- ═══════════ 07 ═══════════ -->
+<section class="hoja paso">
+  <div class="paso-top">
+    <span class="paso-num">PASO 07</span>
+    <span class="paso-ruta">A-03 Due Diligence › Láminas anotadas</span>
+  </div>
+  <h2>Cada observación queda marcada sobre el plano.</h2>
+  <p class="lede">
+    Los hallazgos no se quedan en una lista: se dibujan sobre la lámina, en el
+    lugar donde ocurren. Es el lenguaje con el que ya revisas un proyecto.
+  </p>
+
+  <div class="shot">
+    <img src="capturas/ob-07-planos.png" alt="Lámina con observaciones marcadas y cuadro de cálculo" />
+    <p class="shot-pie">Fig. 07 — Marcas numeradas sobre la lámina, con cuadro de cálculo y leyenda</p>
+  </div>
+
+  <div class="puntos">
+    <dl>
+      <div><dt>Marcas numeradas</dt><dd>Cada una corresponde a una observación de la lista de abajo, con su severidad y su cita normativa.</dd></div>
+      <div><dt>Cuadro de cálculo</dt><dd>Constructibilidad, ocupación, altura y rasante, contra el límite del PRC. En rojo lo que excede.</dd></div>
+      <div><dt>Regla y cotas</dt><dd>Mide sobre el plano usando la escala detectada en el rótulo.</dd></div>
+      <div><dt>Corregir posición</dt><dd>Arrastra una marca si quedó mal ubicada.</dd></div>
+    </dl>
+  </div>
+
+  <div class="clave">
+    <span class="k">Clave</span>
+    <p>La leyenda distingue <b>muro que se prolonga</b> de <b>elemento eliminado o nuevo</b>, y marca en tono tenue las ubicaciones aproximadas. Una marca tenue significa que la IA no pudo fijar el punto exacto.</p>
+  </div>
+
+  <div class="pie">
+    <span>PermisoHub · <b>Guía de inicio</b></span>
+    <span>Paso <b>07</b> / 10</span>
+  </div>
+</section>
+
+<!-- ═══════════ 08 ═══════════ -->
+<section class="hoja paso">
+  <div class="paso-top">
+    <span class="paso-num">PASO 08</span>
+    <span class="paso-ruta">Proyecto › A-04 PMO</span>
+  </div>
+  <h2>Cinco preguntas definen por qué vía tramitar.</h2>
+  <p class="lede">
+    La decisión no la toma la IA: es un árbol determinista, siempre citado. Las
+    mismas respuestas dan siempre la misma vía, y la app te muestra el artículo
+    que la funda.
+  </p>
+
+  <div class="shot">
+    <img src="capturas/ob-08-pmo.png" alt="Decisión de vía de tramitación" />
+    <p class="shot-pie">Fig. 08 — Decisión de vía determinista con la vía recomendada y su artículo</p>
+  </div>
+
+  <div class="puntos">
+    <dl>
+      <div><dt>Las cinco preguntas</dt><dd>Si la obra ya está construida, si interviene la estructura, si aumenta superficie, si cambia el destino y si supera algún límite del PRC.</dd></div>
+      <div><dt>Vía recomendada</dt><dd>Con su rango de días, su costo relativo y el artículo que la respalda.</dd></div>
+      <div><dt>Guiarme paso a paso</dt><dd>Abre el flujo guiado que explica cada decisión con su fundamento.</dd></div>
+    </dl>
+  </div>
+
+  <div class="clave aviso">
+    <span class="k">Atención</span>
+    <p>Si el proyecto <b>excede un límite del PRC</b>, la app lo dice sin rodeos: ninguna vía liviana salva un incumplimiento normativo. Primero ajustas el proyecto para que el cuadro cumpla; después eliges vía.</p>
+  </div>
+
+  <div class="pie">
+    <span>PermisoHub · <b>Guía de inicio</b></span>
+    <span>Paso <b>08</b> / 10</span>
+  </div>
+</section>
+
+<!-- ═══════════ 09 ═══════════ -->
+<section class="hoja paso">
+  <div class="paso-top">
+    <span class="paso-num">PASO 09</span>
+    <span class="paso-ruta">A-04 PMO › Etapas y plazos</span>
+  </div>
+  <h2>Controla el avance y el plazo que corre contra la DOM.</h2>
+  <p class="lede">
+    Mismo panel, más abajo: en qué etapa vas, qué observaciones están
+    pendientes de respuesta y cuántos días hábiles le quedan al municipio para
+    pronunciarse.
+  </p>
+
+  <div class="shot">
+    <img src="capturas/ob-09-plazos.png" alt="Etapas, plan de acción y plazo Ley 21.718" />
+    <p class="shot-pie">Fig. 09 — Etapas, plan de acción, plazo Ley 21.718 y vigencias</p>
+  </div>
+
+  <div class="puntos">
+    <dl>
+      <div><dt>Etapas</dt><dd>De pre-revisión a recepción final, marcando la etapa en curso.</dd></div>
+      <div><dt>Observaciones DOM</dt><dd>Cada una con su fecha, su código y si está pendiente o respondida.</dd></div>
+      <div><dt>Plazo Ley 21.718</dt><dd>Días hábiles restantes y fecha de vencimiento, descontando feriados.</dd></div>
+      <div><dt>Vigencias</dt><dd>Certificados con fecha de expiración, para que ninguno venza a mitad de trámite.</dd></div>
+    </dl>
+  </div>
+
+  <div class="clave aviso">
+    <span class="k">Atención</span>
+    <p>Vencido el plazo aplica <b>silencio administrativo negativo</b>: la solicitud se entiende denegada y corresponde reclamar ante la SEREMI MINVU. La app te avisa antes de que ocurra.</p>
+  </div>
+
+  <div class="pie">
+    <span>PermisoHub · <b>Guía de inicio</b></span>
+    <span>Paso <b>09</b> / 10</span>
+  </div>
+</section>
+
+<!-- ═══════════ 10 ═══════════ -->
+<section class="hoja paso">
+  <div class="paso-top">
+    <span class="paso-num">PASO 10</span>
+    <span class="paso-ruta">Herramientas IA</span>
+  </div>
+  <h2>Trece instrumentos para lo que no cabe en el expediente.</h2>
+  <p class="lede">
+    Úsalos sueltos o desde la ficha de un proyecto, donde llegan ya con el
+    municipio y el tipo de trámite precargados.
+  </p>
+
+  <div class="shot">
+    <img src="capturas/ob-10-herramientas.png" alt="Índice de herramientas IA" />
+    <p class="shot-pie">Fig. 10 — Índice de herramientas agrupadas por tipo de trabajo</p>
+  </div>
+
+  <div class="puntos">
+    <dl>
+      <div><dt>Revisión y control</dt><dd>Subsanar observaciones a partir del acta real, pre-revisión DOM, verificador normativo, anticipar observaciones y revisor de expediente.</dd></div>
+      <div><dt>Normativa y tramitación</dt><dd>Chat OGUC, asesor de vía, checklist por municipio y cálculo de plazos.</dd></div>
+      <div><dt>Documentos y planos</dt><dd>Anotación sobre planos, memoria descriptiva, formularios MINVU y declaración jurada.</dd></div>
+    </dl>
+  </div>
+
+  <div class="clave">
+    <span class="k">Clave</span>
+    <p><b>Subsanar observaciones</b> es la más directa cuando ya te llegó el oficio: subes el acta de la DOM y la app extrae cada observación y redacta la respuesta citada.</p>
+  </div>
+
+  <div class="pie">
+    <span>PermisoHub · <b>Guía de inicio</b></span>
+    <span>Paso <b>10</b> / 10</span>
+  </div>
+</section>
+
+<!-- ═══════════ CIERRE ═══════════ -->
+<section class="hoja paso">
+  <div class="paso-top">
+    <span class="paso-num">CIERRE</span>
+    <span class="paso-ruta">Cómo leer lo que la app te entrega</span>
+  </div>
+  <h2>Cinco reglas antes de confiar en un dato.</h2>
+  <p class="lede">
+    PermisoHub está construida para no inventar. Estas son las señales que
+    debes saber leer para trabajar con lo que te muestra.
+  </p>
+
+  <div class="reglas">
+    <div class="regla">
+      <span class="n">01</span>
+      <div>
+        <h3>“(por verificar)” significa exactamente eso</h3>
+        <p>Toda cita normativa que la IA entrega y que no se puede contrastar contra el corpus curado de LGUC, OGUC y circulares DDU aparece marcada así. Compruébala antes de citarla en un expediente.</p>
+      </div>
+    </div>
+    <div class="regla">
+      <span class="n">02</span>
+      <div>
+        <h3>La zonificación no reemplaza el CIP</h3>
+        <p>Los datos vienen de la capa oficial de origen MINVU y la app declara de cuándo son. Es orientación para trabajar, no el Certificado de Informaciones Previas.</p>
+      </div>
+    </div>
+    <div class="regla">
+      <span class="n">03</span>
+      <div>
+        <h3>El Due Diligence es preliminar</h3>
+        <p>Es una revisión documental hecha por IA, no un pronunciamiento de la Dirección de Obras. Por eso exige tu verificación antes de habilitar el resto del expediente.</p>
+      </div>
+    </div>
+    <div class="regla">
+      <span class="n">04</span>
+      <div>
+        <h3>La vía es determinista; el plazo es estimado</h3>
+        <p>La vía de tramitación sale de un árbol de decisión citado y siempre da el mismo resultado. Los rangos de plazo del copiloto, en cambio, son estimaciones y la app los rotula como tales.</p>
+      </div>
+    </div>
+    <div class="regla">
+      <span class="n">05</span>
+      <div>
+        <h3>Los plazos corren en días hábiles</h3>
+        <p>El contador de la Ley 21.718 descuenta fines de semana y feriados. Si el calendario de feriados no cubre el año consultado, la app lo advierte en lugar de asumirlo.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="clave">
+    <span class="k">Soporte</span>
+    <p>¿Algo no calza con lo que ves en pantalla, o la app entrega un dato que no cuadra con el expediente real? Escríbenos a <b>contacto@permisohub.cl</b> con el número de expediente.</p>
+  </div>
+
+  <div class="pie">
+    <span>PermisoHub · <b>Guía de inicio</b> · v1.4 · Julio 2026</span>
+    <span>Cierre</span>
+  </div>
+</section>
+
+</body>
+</html>

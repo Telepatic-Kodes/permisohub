@@ -1,12 +1,22 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
+import sharp from 'sharp'
 import { isAIAvailable, aiCompleteWithImages } from '@/lib/ai'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getContextoNormativo, flagUnverifiedCita, REGLAS_CITACION } from '@/lib/normativa-retrieval'
 import type { Anotacion, LaminaAnotada } from '@/lib/anotacion-convenciones'
+import {
+  conMargen,
+  cuadrantesConTraslape,
+  recorteAHoja,
+  recorteEnPixeles,
+  sanearBBox,
+  valeLaPenaRecortar,
+  type BBox,
+} from '@/lib/plano-recorte'
 
 // ---------------------------------------------------------------------------
 // Anotación sobre planos — "rayar el plano" como el revisor DOM.
@@ -14,7 +24,34 @@ import type { Anotacion, LaminaAnotada } from '@/lib/anotacion-convenciones'
 // Ubica cada observación normativa SOBRE la lámina (bbox normalizado 0..1) con
 // su tipo de marca, convención de línea, artículo y sugerencia de corrección.
 // El overlay y el arrastre manual de marcas viven en el cliente.
+//
+// ESTRATEGIA ESPACIAL (por qué son dos pases y no uno)
+// Una lámina chilena trae 6-8 sub-dibujos en una hoja A1/A0. Enviada completa,
+// la API de visión la reescala a ~1024×768: cada sub-dibujo queda en ~340×250 px
+// y un muro concreto en ~15 px. A esa escala el modelo NO puede ubicar un
+// elemento — lo aproxima, y la marca aparece flotando en un espacio vacío.
+//
+// Por eso:
+//   Pase 1 (hoja completa) — tarea GRUESA que sí resuelve a baja resolución:
+//     inventariar los sub-dibujos y decidir en cuál cae cada observación.
+//   Pase 2 (un recorte por sub-dibujo) — el recorte recibe sus propios 768 px
+//     de lado corto, así que el modelo lee cotas, nombres de recinto y muros;
+//     ubica el elemento DENTRO del recorte y devolvemos la coordenada a la hoja.
+//
+// Si el pase 1 falla, se cae al pase único de antes: peor precisión, pero nunca
+// cero marcas.
 // ---------------------------------------------------------------------------
+
+/** Sub-dibujos a recortar por lámina. Acota el costo: cada uno es un request. */
+const MAX_RECORTES_POR_LAMINA = 4
+
+// NOTA SOBRE LOS EJEMPLOS DE JSON EN LOS PROMPTS
+// Van en UNA sola línea a propósito. Con `response_format: json_object`, un
+// ejemplo de esquema pretty-printed (multilínea, indentado) hacía que el modelo
+// devolviera contenido VACÍO — verificado contra este mismo plano: mismo prompt
+// con esquema multilínea → 0 caracteres; con el esquema compacto → respuesta
+// correcta. El síntoma era silencioso (caía al pase de respaldo), así que si
+// alguien vuelve a formatear estos ejemplos, el pipeline se degrada sin ruido.
 
 // Artículos OGUC de PROCEDIMIENTO (cómo se solicita/tramita el permiso): regulan
 // la tramitación, no una norma de fondo. Nunca fundan un defecto FÍSICO sobre el
@@ -122,79 +159,168 @@ Responde SOLO con JSON válido (sin markdown), con esta forma:
 Devuelve solo las anotaciones ubicables en ESTA lámina (hasta 10), ordenadas por severidad (crítica → menor). Si de verdad no hay nada ubicable en este dibujo, devuelve "anotaciones": [] — es mejor una lámina sin marcas que marcas inventadas.`
 }
 
-// Segundo pase de visión: el modelo revisa SUS PROPIAS marcas contra la lámina
-// y corrige bboxes desviados (o descarta lo no ubicable). Un solo request extra
-// por lámina; sube la precisión espacial sin tocar el flujo.
-function buildVerifyPrompt(nombre: string, anotaciones: Anotacion[]): string {
-  const compact = anotaciones.map((a) => ({
-    id: a.id,
-    bbox: a.bbox,
-    ancla: a.ancla ?? '',
-    textoCorto: a.textoCorto,
-    observacion: a.observacion,
-  }))
-  return `Estás verificando marcas de revisión sobre la lámina "${nombre}" (la imagen adjunta). Cada marca tiene un "ancla" (dónde DEBERÍA estar) y un "bbox" normalizado 0..1 (dónde ESTÁ dibujada).
+// ── PASE 1 · Inventario de la hoja ────────────────────────────────────────
+// Tarea deliberadamente GRUESA: qué sub-dibujos hay, dónde está cada uno y en
+// cuál cae cada observación. Eso sí se resuelve a la resolución de la hoja
+// completa; ubicar un muro, no.
+function buildInventarioPrompt(nombre: string, observaciones?: string, contexto?: string): string {
+  const obs = observaciones?.trim()
+    ? `## Hallazgos del expediente (pistas)\n${observaciones.trim()}`
+    : `## Sin acta adjunta\nNo hay observaciones previas: detecta tú, como revisor DOM, qué sub-dibujos muestran algo observable.`
+  const ctx = contexto?.trim() ? `## Contexto del proyecto\n${contexto.trim()}` : ''
 
-Para CADA marca, mira la imagen y responde:
-- Si el bbox ya encierra el elemento del ancla → mantenlo igual.
-- Si el bbox está desplazado o con tamaño equivocado → devuelve el bbox corregido que encierre el elemento del ancla (ajustado al elemento, no al sub-dibujo entero).
-- Si el elemento del ancla NO se ve en esta lámina → devuelve "descartar": true.
-- Si no logras decidir con certeza → conserva el bbox y baja "confianza" a menos de 0.5.
+  return `Estás mirando una lámina de arquitectura chilena ("${nombre}"). Una lámina de este tipo contiene VARIOS sub-dibujos en la misma hoja (plantas por piso, elevaciones, cortes, plano de emplazamiento, plano de ubicación, planta de techos, plano de accesibilidad, cuadros de superficies y la viñeta/rótulo).
 
-Marcas a verificar:
-${JSON.stringify(compact)}
+Tu tarea AHORA es solo inventariar y repartir. NO ubiques elementos concretos todavía.
 
-Responde SOLO con JSON válido:
-{
-  "marcas": [
-    { "id": "...", "bbox": { "x": 0-1, "y": 0-1, "w": 0-1, "h": 0-1 }, "confianza": 0.0-1.0, "descartar": false }
-  ]
-}
-Incluye TODAS las marcas recibidas (con "descartar": true las que no correspondan). No agregues marcas nuevas.`
-}
+${obs}
 
-interface VerifyMarca {
-  id?: string
-  bbox?: Partial<Anotacion['bbox']>
-  confianza?: number
-  descartar?: boolean
+${ctx}
+
+## Qué hacer
+1. Identifica cada sub-dibujo de la hoja y su recuadro aproximado (bbox normalizado 0..1 sobre la hoja completa). Incluye el título que lleva impreso si lo tiene (ej. "PLANO DE EMPLAZAMIENTO", "SEGUNDA AMPLIACIÓN CON P.E. 222/96", "PLANTA DE TECHOS").
+2. Para cada sub-dibujo, indica qué observaciones podrían verse EN ÉL, en una frase cada una. Reparte los hallazgos del contexto entre los sub-dibujos donde de verdad se apreciarían, y agrega los que tú detectes.
+3. NO incluyas la viñeta/rótulo ni los cuadros de superficies como candidatos a observación: son texto, no dibujo. Inventáríalos igual con "observables": [].
+4. Los hallazgos puramente DOCUMENTALES (direcciones que no coinciden entre documentos, numeración de permisos, documentos faltantes, firmas) NO van sobre ningún dibujo: omítelos por completo.
+
+El bbox debe encerrar el sub-dibujo COMPLETO, con su título si lo tiene. Es un recuadro amplio; la precisión fina viene después.
+
+Responde SOLO con JSON válido, con esta forma (una entrada por sub-dibujo): {"subdibujos":[{"titulo":"título impreso o descripción del sub-dibujo","bbox":{"x":0.66,"y":0.02,"w":0.33,"h":0.44},"observables":["qué se observaría aquí, una frase por ítem"]}]}
+
+Los cuatro valores del bbox van normalizados entre 0 y 1 sobre la hoja completa. Ordena los sub-dibujos poniendo primero los que tienen "observables" no vacío.`
 }
 
-// Aplica el resultado del pase de verificación. Ante cualquier problema de
-// parseo devuelve las anotaciones originales (el pase es mejora, no bloqueo).
-function applyVerification(anotaciones: Anotacion[], text: string): Anotacion[] {
-  let raw: { marcas?: unknown[] }
+interface SubDibujo {
+  titulo: string
+  bbox: BBox
+  observables: string[]
+}
+
+/**
+ * `null` = el inventario no se pudo leer → corresponde el pase único de
+ * respaldo. `[]` = se leyó bien y NO hay nada observable en esta lámina → se
+ * respeta y la lámina queda sin marcas. La distinción importa: caer al pase
+ * único cuando el inventario ya dijo "aquí no hay nada" reintroduce las marcas
+ * adivinadas que este pipeline vino a eliminar.
+ */
+function parseInventario(text: string): SubDibujo[] | null {
+  const match = text.match(/\{[\s\S]*\}/)
+  if (!match) {
+    console.warn('[anotacion-plano] inventario sin JSON:', text.slice(0, 160))
+    return null
+  }
+  let raw: { subdibujos?: unknown[] }
   try {
-    const match = text.match(/\{[\s\S]*\}/)
-    if (!match) return anotaciones
-    raw = JSON.parse(match[0]) as { marcas?: unknown[] }
+    raw = JSON.parse(match[0]) as { subdibujos?: unknown[] }
   } catch {
-    return anotaciones
+    // Causa habitual: la respuesta se cortó por max_tokens y el JSON quedó a
+    // medias. Se registra el final del texto porque ahí se ve el corte.
+    console.warn(
+      `[anotacion-plano] inventario ilegible (${text.length} chars), cola:`,
+      text.slice(-160),
+    )
+    return null
   }
-  if (!Array.isArray(raw.marcas)) return anotaciones
-  const byId = new Map<string, VerifyMarca>()
-  for (const m of raw.marcas) {
-    const v = m as VerifyMarca
-    if (typeof v.id === 'string') byId.set(v.id, v)
-  }
-  const clamp01 = (n: unknown, fallback: number) =>
-    typeof n === 'number' && Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : fallback
-  return anotaciones
-    .filter((a) => byId.get(a.id)?.descartar !== true)
-    .map((a) => {
-      const v = byId.get(a.id)
-      if (!v) return a
+  if (!Array.isArray(raw.subdibujos) || raw.subdibujos.length === 0) return null
+  return raw.subdibujos
+    .map((item): SubDibujo => {
+      const s = item as Partial<SubDibujo> & { bbox?: Partial<BBox> }
       return {
-        ...a,
-        bbox: {
-          x: clamp01(v.bbox?.x, a.bbox.x),
-          y: clamp01(v.bbox?.y, a.bbox.y),
-          w: clamp01(v.bbox?.w, a.bbox.w),
-          h: clamp01(v.bbox?.h, a.bbox.h),
-        },
-        confianza: clamp01(v.confianza, a.confianza),
+        titulo: typeof s.titulo === 'string' ? s.titulo : 'sub-dibujo',
+        bbox: sanearBBox(s.bbox, { x: 0, y: 0, w: 1, h: 1 }),
+        observables: Array.isArray(s.observables)
+          ? s.observables.filter((o): o is string => typeof o === 'string')
+          : [],
       }
     })
+    .filter((s) => s.observables.length > 0 && valeLaPenaRecortar(s.bbox))
+}
+
+// ── PASE 2 · Localización dentro de un recorte ────────────────────────────
+// Aquí el modelo ve el sub-dibujo a ~4× la resolución efectiva que tenía en la
+// hoja completa: puede leer cotas, nombres de recinto y seguir un muro. Las
+// coordenadas que devuelve son RELATIVAS AL RECORTE.
+function buildLocalizacionPrompt(
+  nombreLamina: string,
+  sub: SubDibujo,
+  observaciones?: string,
+  contexto?: string,
+): string {
+  const normativaCtx = getContextoNormativo(
+    `${sub.observables.join(' ')} ${observaciones ?? ''} ${contexto ?? ''} muros aleros rasante distanciamiento elevacion emplazamiento destino uso cotas`,
+  )
+
+  return `Actúas como revisor de la Dirección de Obras Municipales (DOM) de Chile, del lado del arquitecto. La imagen adjunta es UN RECORTE de la lámina "${nombreLamina}": corresponde al sub-dibujo "${sub.titulo}". Lo ves ampliado, así que puedes leer cotas, nombres de recinto y seguir muros.
+
+Antes de la pandemia el revisor rayaba el plano a mano y el arquitecto veía DÓNDE estaba el problema. Tú devuelves esa ubicación.
+
+${
+    sub.observables.length > 0
+      ? `## Lo que hay que ubicar en este recorte
+${sub.observables.map((o, i) => `${i + 1}. ${o}`).join('\n')}
+
+Son pistas, no una lista para colocar a la fuerza: marca solo lo que de verdad VEAS en este recorte. Si una pista no se aprecia aquí, omítela. Puedes agregar lo que el propio dibujo evidencie.`
+      : `## Qué buscar
+No hay una lista previa para este recorte: revísalo tú como revisor DOM y marca lo observable que veas. Si el recorte solo contiene rótulo, cuadros de texto o espacio en blanco, devuelve una lista vacía — es la respuesta correcta.
+${observaciones?.trim() ? `\nPara referencia, la DOM observó lo siguiente en el expediente (puede o no verse aquí):\n${observaciones.trim()}` : ''}`
+  }
+
+${contexto?.trim() ? `## Contexto del proyecto\n${contexto.trim()}\n` : ''}
+## Contexto normativo (OGUC · LGUC · DDU)
+${normativaCtx}
+
+${REGLAS_CITACION}
+
+## Disciplina del "articulo" (CRÍTICO)
+- "articulo" debe ser la norma SUSTANTIVA que la observación incumple, y solo si un artículo del CONTEXTO NORMATIVO de arriba la funda DIRECTAMENTE.
+- NUNCA cites artículos de PROCEDIMIENTO/tramitación (5.1.1, 5.1.2, 5.1.6, 5.1.17) como fundamento de un defecto físico, de diseño, de accesibilidad, de rasante/distanciamiento o de destino: regulan CÓMO se tramita, no la norma de fondo.
+- Si ningún artículo del contexto la funda, deja "articulo": "" y explica la materia en "fundamento". Mejor SIN artículo que con uno equivocado.
+
+## Convención gráfica (obligatoria)
+- "rojo_segmentado" = muros perimetrales que se prolongan.
+- "amarillo_segmentado" = elementos eliminados o nuevos.
+- Si no encaja, "convencionLinea": null.
+
+## Qué marcar y qué NO
+- Marca cosas ubicables: muros / aleros / vanos, cotas y niveles (NPT), rasantes y distanciamientos, superficies y recintos, destino o uso, accesos, escaleras, estacionamientos, elementos estructurales alterados, ampliaciones no reflejadas, discordancias entre lo dibujado y lo declarado.
+- NO marques hallazgos documentales (direcciones, numeración de permisos, documentos faltantes, firmas): esos no van sobre el dibujo.
+- NUNCA pongas la marca sobre el título, la leyenda o el cuadro de superficies del sub-dibujo: va sobre el ELEMENTO.
+
+## Coordenadas (CRÍTICO)
+- El bbox va normalizado 0..1 RESPECTO A ESTA IMAGEN RECORTADA, no respecto a la lámina completa. La esquina superior izquierda de esta imagen es (0,0) y la inferior derecha (1,1).
+- Ajusta el bbox AL ELEMENTO: un muro/alero/vano puntual ≈ 0.05–0.25 de este recorte; un recinto ≈ 0.15–0.40. Solo una observación de zona completa justifica más de 0.6.
+- En "ancla" describe el elemento concreto que estás encerrando (ej. "muro perimetral norponiente del 2° piso", "volumen agregado sobre la techumbre").
+- Si ves la observación pero no logras fijar el elemento, entrégala con "confianza" < 0.5. NUNCA inventes una ubicación.
+
+Responde SOLO con JSON válido, con esta forma: {"anotaciones":[{"bbox":{"x":0.31,"y":0.22,"w":0.12,"h":0.09},"ancla":"elemento concreto que encierras (obligatorio)","tipoMarca":"circulo","convencionLinea":"rojo_segmentado","severidad":"crítica","textoCorto":"etiqueta breve (máx 4 palabras)","observacion":"la observación completa, redacción del revisor","articulo":"Art. X.X.X OGUC o cadena vacía si ninguno la funda","fundamento":"por qué se observa","sugerencia":"qué debe dibujar/corregir el arquitecto","confianza":0.8}]}
+
+Valores admitidos: "tipoMarca" es "circulo", "flecha", "cuadro_nota" o "linea"; "convencionLinea" es "rojo_segmentado", "amarillo_segmentado" o null; "severidad" es "crítica", "media" o "menor"; "confianza" va entre 0 y 1. El bbox va normalizado entre 0 y 1 SOBRE ESTE RECORTE.
+
+Hasta 4 anotaciones en este recorte, por severidad. Si no hay nada ubicable aquí, devuelve una lista vacía en "anotaciones".`
+}
+
+/** Decodifica el data URL recibido a un buffer manipulable por sharp. */
+async function decodificarLamina(
+  dataUrl: string,
+): Promise<{ buffer: Buffer; width: number; height: number }> {
+  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
+  const buffer = Buffer.from(base64, 'base64')
+  const meta = await sharp(buffer).metadata()
+  if (!meta.width || !meta.height) throw new Error('No se pudo leer la lámina')
+  return { buffer, width: meta.width, height: meta.height }
+}
+
+/**
+ * Recorta el sub-dibujo. Se envía como JPEG de calidad alta: el recorte es
+ * pequeño en píxeles comparado con la hoja, así que la calidad no encarece el
+ * request y sí importa para leer cotas.
+ */
+async function recortarADataUrl(
+  buffer: Buffer,
+  rect: { left: number; top: number; width: number; height: number },
+): Promise<string> {
+  const out = await sharp(buffer).extract(rect).jpeg({ quality: 92 }).toBuffer()
+  return `data:image/jpeg;base64,${out.toString('base64')}`
 }
 
 function parseAnotaciones(text: string, laminaId: string): Anotacion[] {
@@ -246,6 +372,121 @@ function parseAnotaciones(text: string, laminaId: string): Anotacion[] {
   })
 }
 
+/** Pase único sobre la hoja completa: el comportamiento anterior, ahora solo
+ *  como red de seguridad si el inventario no devuelve sub-dibujos usables. */
+async function anotarPaseUnico(
+  lamina: LaminaInput,
+  observaciones?: string,
+  contexto?: string,
+): Promise<Anotacion[]> {
+  const text = await aiCompleteWithImages(
+    buildPrompt(lamina.nombre, observaciones, contexto),
+    [lamina.dataUrl],
+    { max_tokens: 3000, json: true },
+  )
+  return parseAnotaciones(text, lamina.id)
+}
+
+async function anotarLamina(
+  lamina: LaminaInput,
+  observaciones?: string,
+  contexto?: string,
+): Promise<Anotacion[]> {
+  // ── Pase 1: inventario de la hoja ──
+  // Se reintenta una vez: el modelo devuelve de forma intermitente una
+  // respuesta vacía (finish_reason "stop" con 10 tokens y cero contenido) y
+  // sin reintento la lámina se degradaba al pase único sin motivo real.
+  let subdibujos: SubDibujo[] | null = null
+  for (let intento = 1; intento <= 2 && subdibujos === null; intento++) {
+    try {
+      const inv = await aiCompleteWithImages(
+        buildInventarioPrompt(lamina.nombre, observaciones, contexto),
+        [lamina.dataUrl],
+        // Una lámina trae 6-8 sub-dibujos, cada uno con título, bbox y sus
+        // observables: con 1500 tokens el JSON se cortaba a medias y el
+        // inventario se descartaba entero, degradando al pase único.
+        { max_tokens: 3000, json: true },
+      )
+      subdibujos = parseInventario(inv)
+      if (subdibujos === null && intento === 1) {
+        console.info(`[anotacion-plano] "${lamina.nombre}": inventario vacío, reintentando`)
+      }
+    } catch (err) {
+      console.warn(`[anotacion-plano] inventario falló (intento ${intento}):`, err)
+    }
+  }
+
+  if (subdibujos === null) {
+    // Sin inventario seguimos recortando, solo que a ciegas por cuadrantes:
+    // se pierde el reparto por sub-dibujo pero se conserva la resolución, que
+    // es lo que hace que las marcas caigan sobre el elemento correcto.
+    console.info(`[anotacion-plano] "${lamina.nombre}": sin inventario → grilla de cuadrantes`)
+    subdibujos = cuadrantesConTraslape().map((bbox, i) => ({
+      titulo: `cuadrante ${i + 1} de la lámina`,
+      bbox,
+      observables: [],
+    }))
+  }
+  if (subdibujos.length === 0) {
+    // El inventario leyó la hoja y no encontró nada ubicable. Se respeta.
+    console.info(`[anotacion-plano] "${lamina.nombre}": sin sub-dibujos observables`)
+    return []
+  }
+
+  // ── Pase 2: un recorte por sub-dibujo con observables ──
+  let imagen: { buffer: Buffer; width: number; height: number }
+  try {
+    imagen = await decodificarLamina(lamina.dataUrl)
+  } catch (err) {
+    console.warn('[anotacion-plano] no se pudo decodificar la lámina:', err)
+    return anotarPaseUnico(lamina, observaciones, contexto)
+  }
+
+  const seleccion = subdibujos.slice(0, MAX_RECORTES_POR_LAMINA)
+  const porSubdibujo = await Promise.all(
+    seleccion.map(async (sub, i): Promise<{ ok: boolean; anotaciones: Anotacion[] }> => {
+      const recorte = conMargen(sub.bbox)
+      try {
+        const crop = await recortarADataUrl(
+          imagen.buffer,
+          recorteEnPixeles(recorte, imagen.width, imagen.height),
+        )
+        const text = await aiCompleteWithImages(
+          buildLocalizacionPrompt(lamina.nombre, sub, observaciones, contexto),
+          [crop],
+          { max_tokens: 2000, json: true },
+        )
+        // El modelo respondió en coordenadas DEL RECORTE: hay que devolverlas
+        // a la hoja para que la marca caiga donde corresponde en el visor.
+        return {
+          ok: true,
+          anotaciones: parseAnotaciones(text, `${lamina.id}-s${i + 1}`).map((a) => ({
+            ...a,
+            bbox: recorteAHoja(a.bbox, recorte),
+            ancla: a.ancla ? `${sub.titulo} — ${a.ancla}` : sub.titulo,
+          })),
+        }
+      } catch (err) {
+        console.warn(`[anotacion-plano] recorte "${sub.titulo}" falló:`, err)
+        return { ok: false, anotaciones: [] }
+      }
+    }),
+  )
+
+  // Un recorte sin marcas es un resultado válido ("aquí no hay nada"); un
+  // recorte que reventó, no. Solo si reventaron TODOS recurrimos al respaldo.
+  if (porSubdibujo.every((r) => !r.ok)) {
+    console.warn(`[anotacion-plano] "${lamina.nombre}": todos los recortes fallaron`)
+    return anotarPaseUnico(lamina, observaciones, contexto)
+  }
+
+  const anotaciones = porSubdibujo.flatMap((r) => r.anotaciones)
+  console.info(
+    `[anotacion-plano] "${lamina.nombre}": ${seleccion.length} recorte(s) → ${anotaciones.length} marca(s)`,
+  )
+  return anotaciones
+}
+
 export async function POST(request: Request) {
   const auth = await aiAuthGuard()
   if (auth instanceof Response) return auth
@@ -271,32 +512,11 @@ export async function POST(request: Request) {
 
   try {
     const laminas: LaminaAnotada[] = await Promise.all(
-      body.laminas.map(async (lamina) => {
-        const text = await aiCompleteWithImages(
-          buildPrompt(lamina.nombre, body.observaciones, body.contexto),
-          [lamina.dataUrl],
-          { max_tokens: 3000, json: true },
-        )
-        let anotaciones = parseAnotaciones(text, lamina.id)
-
-        // Pase de auto-verificación espacial: el modelo revisa sus marcas
-        // contra la lámina y corrige/descarta. Si falla, seguimos con el
-        // primer pase (mejora incremental, nunca bloqueo).
-        if (anotaciones.length > 0) {
-          try {
-            const verifyText = await aiCompleteWithImages(
-              buildVerifyPrompt(lamina.nombre, anotaciones),
-              [lamina.dataUrl],
-              { max_tokens: 1500, json: true },
-            )
-            anotaciones = applyVerification(anotaciones, verifyText)
-          } catch (err) {
-            console.warn('[anotacion-plano] pase de verificación falló:', err)
-          }
-        }
-
-        return { id: lamina.id, nombre: lamina.nombre, anotaciones }
-      }),
+      body.laminas.map(async (lamina) => ({
+        id: lamina.id,
+        nombre: lamina.nombre,
+        anotaciones: await anotarLamina(lamina, body.observaciones, body.contexto),
+      })),
     )
 
     recordUsage(auth.userId, 'ai_chats').catch(console.error)

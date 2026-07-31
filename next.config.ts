@@ -23,7 +23,11 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['pdfkit'],
+  // Sin esto Next infiere /Users/tomas como raíz del workspace (hay un
+  // package-lock.json suelto ahí) y confunde los dev servers de otros
+  // proyectos de la máquina con el de este.
+  outputFileTracingRoot: __dirname,
+  serverExternalPackages: ['pdfkit', 'sharp'],
   turbopack: {
     // Workaround: NFD unicode path bug in Turbopack on macOS (Estefanía dir)
     resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.json', '.css'],
