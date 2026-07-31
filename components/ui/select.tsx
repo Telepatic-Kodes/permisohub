@@ -1,12 +1,55 @@
 "use client"
 
+import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { Check, ChevronDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-function Select<Value>(props: SelectPrimitive.Root.Props<Value>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />
+// ---------------------------------------------------------------------------
+// Base UI no es Radix: su <Select.Value> muestra el VALOR CRUDO salvo que
+// <Select.Root> reciba `items` para resolver la etiqueta. Como este wrapper se
+// portó con la API de Radix (donde Value toma el texto del Item seleccionado),
+// todos los selects con valor inicial mostraban el valor de máquina: la
+// calculadora decía "obra_nueva" en vez de "Obra nueva", y los filtros de
+// Proyectos decían "todos" en vez de "Todos los estados".
+//
+// En vez de tocar los 24 archivos que usan Select, el wrapper deriva `items`
+// de los <SelectItem> que ya recibe como hijos. Así la API se comporta como
+// los llamadores ya asumen, y el arreglo cubre el código futuro.
+// ---------------------------------------------------------------------------
+
+type ItemDerivado = { label: React.ReactNode; value: unknown }
+
+function recolectarItems(node: React.ReactNode, acc: ItemDerivado[]): void {
+  React.Children.forEach(node, (child) => {
+    if (!React.isValidElement(child)) return
+    const props = child.props as { value?: unknown; children?: React.ReactNode }
+    if (child.type === SelectItem) {
+      acc.push({ value: props.value, label: props.children })
+      return
+    }
+    if (props.children) recolectarItems(props.children, acc)
+  })
+}
+
+function Select<Value>({ children, items, ...props }: SelectPrimitive.Root.Props<Value>) {
+  const derivados = React.useMemo(() => {
+    if (items) return items // un `items` explícito siempre manda
+    const acc: ItemDerivado[] = []
+    recolectarItems(children, acc)
+    return acc.length > 0 ? acc : undefined
+  }, [items, children])
+
+  return (
+    <SelectPrimitive.Root
+      data-slot="select"
+      items={derivados as SelectPrimitive.Root.Props<Value>["items"]}
+      {...props}
+    >
+      {children}
+    </SelectPrimitive.Root>
+  )
 }
 
 function SelectGroup(props: SelectPrimitive.Group.Props) {
