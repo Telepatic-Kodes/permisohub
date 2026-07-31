@@ -111,13 +111,17 @@ No existe Sentry ni equivalente. Todo es `console.error` en logs de Vercel que n
 
 Verificación final del sprint: `tsc --noEmit` limpio, `vitest run` 95/95 (7 archivos, incl. 18 tests nuevos de derechos y 14 de via-tramitacion sin cambios), eslint limpio en todos los archivos tocados.
 
-**Sprint 2 — "di lo que no sabes" (2-3 días):**
-7. C4: poblar y mostrar `fuente_actualizada_el`; advertencia fuerte Ñuñoa (o retirarla de cobertura)
-8. A1: corregir texto de fuente (espejo OCUC, no "capa oficial") — y Estefanía consulta la licencia CC BY-NC
-9. A6: disclosure de datos sintéticos en el copiloto + clamp del rango de plazo IA
-10. A9: mismatch de comuna visible
-11. A3: guard + extensión de feriados
-12. A10: tramo 60 días Ley 21.718
+**Sprint 2 — "di lo que no sabes" — ✅ COMPLETADO 2026-07-30:**
+7. ✅ C4: `fuente_actualizada_el` se puebla en cada cache-miss desde `editingInfo.dataLastEditDate` (verificado en vivo: 2020-03-09 exacto); backfill de las 6 filas existentes hecho vía SQL; card muestra fecha de actualización de fuente + advertencia amber para datos >3 años + advertencia específica Ñuñoa (contenido 2014, Mod. N°18/Enmienda N°1 2024 NO reflejadas). Ñuñoa se mantiene en cobertura con advertencia (decisión: warning > removal)
+8. ✅ A1: texto de fuente ahora dice "Observatorio de Ciudades UC (espejo de datos MINVU) — verificar vigencia" / "Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)" — la palabra "oficial" eliminada. **Pendiente para Estefanía: consulta legal por licencia CC BY-NC 4.0**
+9. ✅ A6: prompts del copiloto declaran los datos como "ESTIMADA (datos sintéticos, no medidos)"; clamp servidor del rango IA (plazoBase × [0.4, 2.5]); fallbacks derivados de plazoBase (antes 30/90 mágicos); disclosure visible en TabEstimacion y TabObservaciones — commit 5c08df0
+10. ✅ A9: `comunaFuente` extraído del `raw` jsonb de la caché (sin migración), expuesto en ambas rutas, advertencia amber en la card cuando difiere del municipio del proyecto
+11. ✅ A3: guard runtime (`feriadosIncompletos` + console.warn una vez por año) con aviso en la PlazoLey21718Card; tabla extendida 2028-2029 con derivación comentada por fecha (solsticios "por confirmar en D.O.") — commit 8e18c21
+12. ✅ A10: tramo 60 días hábiles (carga ocupación ≥1.000 personas, confirmado vía DLA Piper; RI reduce a la mitad ambos tramos → 60/30) como param opcional retrocompatible; texto de silencio negativo → reclamo SEREMI MINVU en estado VENCIDO — commit f9f9e5e
+
+Verificación final Sprint 2: `tsc` limpio, **106/106 tests** (8 archivos, +11 tests nuevos de dias-habiles), eslint limpio.
+
+**Hallazgo nuevo del Sprint 2 (follow-up, no corregido):** las fechas de Iglesias Evangélicas 2024-2027 en `FERIADOS_CHILE` lucen sospechosas (27-oct hardcodeado sin aplicar la regla de viernes movible) — verificar contra D.O. de cada año.
 
 **Sprint 3 — "entérate cuando falle" (2-3 días):**
 13. C8: Sentry en crons/after/apiError
