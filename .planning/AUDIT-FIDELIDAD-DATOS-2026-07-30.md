@@ -123,13 +123,24 @@ Verificación final Sprint 2: `tsc` limpio, **106/106 tests** (8 archivos, +11 t
 
 **Hallazgo nuevo del Sprint 2 (follow-up, no corregido):** las fechas de Iglesias Evangélicas 2024-2027 en `FERIADOS_CHILE` lucen sospechosas (27-oct hardcodeado sin aplicar la regla de viernes movible) — verificar contra D.O. de cada año.
 
-**Sprint 3 — "entérate cuando falle" (2-3 días):**
-13. C8: Sentry en crons/after/apiError
-14. A2: flag de citas en las 6 rutas restantes
-15. A7: Upstash en prod + warn
-16. M5: Zod en outputs IA (progresivo)
+**Sprint 3 — "entérate cuando falle" — ✅ COMPLETADO 2026-07-30:**
+13. ✅ C8: `@sentry/nextjs@10.69` instalado (compatible Next 16, no-op sin DSN) + funnel `lib/observability.ts` (`reportError`/`reportWarning`, siempre loguea estructurado + Sentry si está configurado) wireado en: `apiError()` (todo 5xx), el `after()` de SII (los 3 branches silenciosos eliminados), y ambos crons (try/catch de nivel superior + reporte agregado de errores parciales) — commits 956684a..c58587d. **Pendiente para Tomás: crear proyecto en sentry.io y setear SENTRY_DSN en Vercel**
+14. ✅ A2: `flagUnverifiedCita` wireado en las 6 superficies IA desprotegidas (compliance-check, pre-revision, extract-observations, predict-observations con solución para citas embebidas en prosa, copiloto OGUC) — commit d0dd8f6
+15. ✅ A7 (código): warn una vez por proceso cuando Upstash no está configurado — commit 255724b. **CONFIRMADO en Vercel prod: las vars de Upstash NO existen → rate limiting está desactivado en producción hoy** (ver hallazgo operacional abajo)
+16. ✅ M5: Zod en los outputs IA de las 5 rutas vía helper compartido `lib/ai-parse.ts` (`parseAiJson` + safeParse con degradación a los fallbacks existentes), 6 tests nuevos — commit d0dd8f6
 
-**Backlog:** M1-M12 restantes + verificación primaria pendiente (D.S. 2026, rasante 2.6.3, DDUs no muestreadas, Arts. 4.2.1/4.5.1/5.8.1).
+Verificación final Sprint 3: `tsc` limpio, **112/112 tests** (9 archivos), `next build --webpack` compila las 221 rutas con la instrumentación Sentry.
+
+**HALLAZGO OPERACIONAL (verificado vía `vercel env ls production`, 2026-07-30):** producción solo tiene 6 env vars (SITE_URL, APP_URL, SUPABASE ×3, OPENAI). Faltan:
+- `UPSTASH_REDIS_REST_URL/TOKEN` → rate limiting desactivado en prod (ahora al menos avisa en logs)
+- `CRON_SECRET` → `validateCronSecret` falla cerrado → **los crons daily-check y weekly-summary probablemente nunca han corrido en producción** (sin actualización DOM diaria, sin alertas de plazos, sin resumen semanal)
+- `TWILIO_*` → WhatsApp no funcional en prod
+- `RESEND_API_KEY`/`ADMIN_EMAIL` → emails no funcionales en prod
+- `STRIPE_*` → billing no funcional en prod
+- `SENTRY_DSN` → observabilidad inactiva hasta configurarla
+Ninguna es arreglable desde código — requieren crear cuentas/keys y setearlas en Vercel → Settings → Environment Variables.
+
+**Backlog:** M1-M4, M6-M12 restantes + verificación primaria pendiente (D.S. 2026, rasante 2.6.3, DDUs no muestreadas, Arts. 4.2.1/4.5.1/5.8.1) + fechas Iglesias Evangélicas 2024-2027 sospechosas + consulta legal licencia CC BY-NC (OCUC).
 
 ## Límites de esta auditoría (honestidad)
 
