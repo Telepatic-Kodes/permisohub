@@ -21,6 +21,11 @@ export interface ZonaData {
   usosDisponibles: boolean // false for Ñuñoa — see lib/zonificacion-comunas.ts. Never infer this from uperm/uproh being empty.
   fuenteUrl: string | null
   fuenteActualizadaEl: string | null
+  // Raw COMUNA value read from the ArcGIS feature's own attributes (or from
+  // the cached row's `raw` jsonb on a cache hit), for future consumers to
+  // compare against the requested comuna — mismatch is logged server-side
+  // (Auditoría 2026-07-30, A9) but callers may want to surface it themselves.
+  comunaFuente: string | null
   lat: number
   lng: number
   cacheHit: boolean

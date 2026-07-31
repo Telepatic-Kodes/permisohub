@@ -33,6 +33,16 @@ export interface ComunaZonificacionConfig {
   layerIndex: number
   fieldMap: ZonificacionFieldMap
   usosDisponibles: boolean // false for Ñuñoa — UPERM/UPROH are structurally empty in the source, must be disclosed, never inferred from nullability alone
+  // Provenance metadata surfaced to the architect (Auditoría de Fidelidad de
+  // Datos, 2026-07-30, hallazgos C4/A1). None of these layers are an official
+  // municipal feed — see per-comuna comments below for what each one actually is.
+  fuenteNombre: string
+  // ISO year-month (or date) the layer's OWN publisher declares its content
+  // current through — distinct from `fuente_actualizada_el` (ArcGIS's
+  // editingInfo.dataLastEditDate, a technical republish timestamp). Only set
+  // when the publisher states this explicitly in the layer description; leave
+  // undefined otherwise rather than guessing.
+  contenidoDeclaradoHasta?: string
 }
 
 export const ZONIFICACION_COMUNAS: Record<string, ComunaZonificacionConfig> = {
@@ -59,6 +69,14 @@ export const ZONIFICACION_COMUNAS: Record<string, ComunaZonificacionConfig> = {
       uproh: 'uproh',
     },
     usosDisponibles: true,
+    // Auditoría 2026-07-30 (C4/A1): esta capa es un espejo académico del
+    // Observatorio de Ciudades UC (ex Observatorio Urbano MINVU-PUC), no un
+    // feed municipal oficial — trae su propio disclaimer "verifique vigencia
+    // antes de reutilizar". Su `editingInfo.dataLastEditDate` real es
+    // 2020-03-09 pese a que el servicio muestra una "fecha de referencia"
+    // 2026 (republish técnico, no actualización de contenido). Las Condes
+    // tuvo Modificación N°10 (D.O. nov-2022) y N°11 (2021-2024) posteriores.
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
   },
   providencia: {
     comunaId: 'providencia',
@@ -76,6 +94,9 @@ export const ZONIFICACION_COMUNAS: Record<string, ComunaZonificacionConfig> = {
       uproh: 'uproh',
     },
     usosDisponibles: true,
+    // Ver comentario de procedencia en las-condes arriba (Auditoría 2026-07-30,
+    // C4/A1) — mismo espejo académico OCUC/PUC, mismo dataLastEditDate 2020-03-09.
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
   },
   vitacura: {
     comunaId: 'vitacura',
@@ -93,6 +114,9 @@ export const ZONIFICACION_COMUNAS: Record<string, ComunaZonificacionConfig> = {
       uproh: 'uproh',
     },
     usosDisponibles: true,
+    // Ver comentario de procedencia en las-condes arriba (Auditoría 2026-07-30,
+    // C4/A1) — mismo espejo académico OCUC/PUC, mismo dataLastEditDate 2020-03-09.
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
   },
   nunoa: {
     comunaId: 'nunoa',
@@ -113,6 +137,14 @@ export const ZONIFICACION_COMUNAS: Record<string, ComunaZonificacionConfig> = {
     // aunque la capa sí resuelve correctamente el código/nombre de zona. Debe declararse
     // explícitamente como no disponible — nunca inferirse solo de que el campo venga vacío.
     usosDisponibles: false,
+    // Auditoría 2026-07-30 (C4/A1): capa agregada "PrcCuencaMaipo" publicada
+    // desde una cuenta ArcGIS personal (no institucional), georreferenciación
+    // independiente — no un feed municipal. Su propia descripción declara
+    // contenido "actualizado hasta diciembre 2014". Ñuñoa tuvo Modificación
+    // N°18 y Enmienda N°1 (vigente dic-2024) no reflejadas. Se mantiene en
+    // cobertura (no se retira) a condición de la advertencia fuerte en la UI.
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
   },
 }
 
