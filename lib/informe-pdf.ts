@@ -30,9 +30,17 @@ interface Lamina {
 }
 
 // Rasteriza cada página de un PDF (por URL) a imagen JPEG en el cliente.
+/**
+ * Rasteriza un PDF a imágenes.
+ *
+ * `maxW` importa: el informe se conforma con 1600 px, pero la anotación sobre
+ * planos recorta sub-dibujos del resultado y necesita píxeles reales — un
+ * recorte sacado de 1600 px queda en ~550 px y el modelo solo ve interpolación.
+ */
 export async function pdfUrlToImages(
   url: string,
   base: string,
+  maxW = 1600,
 ): Promise<{ nombre: string; dataUrl: string }[]> {
   const pdfjs = await import("pdfjs-dist")
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -42,11 +50,10 @@ export async function pdfUrlToImages(
   const buf = await (await fetch(url)).arrayBuffer()
   const doc = await pdfjs.getDocument({ data: buf }).promise
   const out: { nombre: string; dataUrl: string }[] = []
-  const MAX_W = 1600
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i)
     const base1 = page.getViewport({ scale: 1 })
-    const scale = Math.min(2, MAX_W / base1.width)
+    const scale = Math.min(2, maxW / base1.width)
     const viewport = page.getViewport({ scale })
     const canvas = document.createElement("canvas")
     canvas.width = viewport.width
