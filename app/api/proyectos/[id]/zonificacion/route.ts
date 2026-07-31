@@ -5,6 +5,7 @@ import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { persistZonificacionParaProyecto } from '@/lib/zonificacion-server'
 import { fetchZonaDetalle } from '@/lib/zonificacion-zonas'
+import { resolveComunaZonificacion } from '@/lib/zonificacion-comunas'
 
 // ---------------------------------------------------------------------------
 // Ruta proyecto-scoped de zonificación (Fase 11, Plan 06):
@@ -49,6 +50,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if ('error' in ctx) return ctx.error
   const { supabase, proyecto } = ctx
 
+  // Registry-level provenance (Auditoría de Fidelidad de Datos 2026-07-30,
+  // C4/A1) — independent of whether a cache row exists yet, so it's resolved
+  // once here and included in every response branch below.
+  const comunaConfig = proyecto.municipio ? resolveComunaZonificacion(proyecto.municipio) : null
+  const fuenteNombre = comunaConfig?.fuenteNombre ?? null
+  const contenidoDeclaradoHasta = comunaConfig?.contenidoDeclaradoHasta ?? null
+
   if (!proyecto.zona_cache_id) {
     return Response.json({
       ok: true,
@@ -57,14 +65,28 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       lat: proyecto.lat ?? null,
       lng: proyecto.lng ?? null,
       geometria: null,
+      fuenteActualizadaEl: null,
+      fuenteNombre,
+      contenidoDeclaradoHasta,
+      comunaFuente: null,
     })
   }
 
   const { data: cacheRow } = await supabase
     .from('zonificacion_cache')
-    .select('geometria, lat_r, lng_r')
+    .select('geometria, lat_r, lng_r, fuente_actualizada_el, raw')
     .eq('id', proyecto.zona_cache_id)
     .maybeSingle()
+
+  // A9: the ArcGIS COMUNA field is already persisted inside the cache row's
+  // `raw` jsonb of feature attributes — no migration needed to surface it.
+  // Ñuñoa's fieldMap uses UPPERCASE keys, so this must go through the
+  // registry's fieldMap rather than a hardcoded 'comuna'/'COMUNA' guess.
+  const rawAttrs = cacheRow?.raw
+  const comunaFuenteRaw = comunaConfig && rawAttrs && typeof rawAttrs === 'object'
+    ? (rawAttrs as Record<string, unknown>)[comunaConfig.fieldMap.comuna]
+    : null
+  const comunaFuente = typeof comunaFuenteRaw === 'string' && comunaFuenteRaw.trim() !== '' ? comunaFuenteRaw.trim() : null
 
   return Response.json({
     ok: true,
@@ -73,6 +95,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     lat: cacheRow?.lat_r ?? proyecto.lat ?? null,
     lng: cacheRow?.lng_r ?? proyecto.lng ?? null,
     geometria: cacheRow?.geometria ?? null,
+    fuenteActualizadaEl: cacheRow?.fuente_actualizada_el ?? null,
+    fuenteNombre,
+    contenidoDeclaradoHasta,
+    comunaFuente,
   })
 }
 

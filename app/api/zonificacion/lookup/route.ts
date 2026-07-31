@@ -36,6 +36,39 @@ function normalizarTexto(s: string): string {
     .trim()
 }
 
+// Fetches the FeatureServer layer's own metadata (`?f=json`) to read
+// `editingInfo.dataLastEditDate` — a Unix ms timestamp of the last time the
+// layer's CONTENT was actually edited upstream, distinct from any "fecha de
+// referencia" the service publishes elsewhere (which can be a technical
+// republish with no content change — Auditoría de Fidelidad de Datos
+// 2026-07-30, C4). Best-effort: a short timeout and any failure here must
+// never block or fail the zonificación lookup itself, so this always
+// resolves to a value or null, never throws.
+async function fetchFuenteActualizadaEl(featureServerUrl: string, layerIndex: number): Promise<string | null> {
+  try {
+    const metaUrl = new URL(`${featureServerUrl}/${layerIndex}`)
+    metaUrl.searchParams.set('f', 'json')
+    const res = await fetch(metaUrl.toString(), { signal: AbortSignal.timeout(5_000) })
+    if (!res.ok) return null
+    const json: unknown = await res.json()
+    const ms = (json as { editingInfo?: { dataLastEditDate?: unknown } })?.editingInfo?.dataLastEditDate
+    if (typeof ms !== 'number' || !Number.isFinite(ms)) return null
+    return new Date(ms).toISOString()
+  } catch (err) {
+    console.warn(
+      '[zonificacion] No se pudo obtener editingInfo.dataLastEditDate de la capa — se continúa sin fecha de fuente:',
+      err instanceof Error ? err.message : err,
+    )
+    return null
+  }
+}
+
+function comunaDesdeRaw(raw: unknown, comunaKey: string | undefined): string | null {
+  if (!comunaKey || !raw || typeof raw !== 'object') return null
+  const v = (raw as Record<string, unknown>)[comunaKey]
+  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
 export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url)
   const direccion = searchParams.get('direccion')
@@ -101,7 +134,9 @@ export async function GET(request: Request): Promise<Response> {
           comunaId: cached.comuna_id, tier: cached.capa, cacheId: cached.id, region: cached.region, sector: cached.sector,
           zona: cached.zona, nombreZona: cached.nombre_zona, uperm: cached.uperm, uproh: cached.uproh,
           usosDisponibles: cached.usos_disponibles, fuenteUrl: cached.fuente_url,
-          fuenteActualizadaEl: cached.fuente_actualizada_el, lat, lng, cacheHit: true,
+          fuenteActualizadaEl: cached.fuente_actualizada_el,
+          comunaFuente: comunaDesdeRaw(cached.raw, comunaConfig.fieldMap.comuna),
+          lat, lng, cacheHit: true,
           consultadoEl: cached.consultado_el,
         }
         return Response.json({ ok: true, status: 'encontrado', data } satisfies ZonaLookupResponse, { status: 200 })
@@ -123,7 +158,13 @@ export async function GET(request: Request): Promise<Response> {
     arcgisUrl.searchParams.set('returnGeometry', 'true')
     arcgisUrl.searchParams.set('outSR', '4326') // outSR es un parámetro DISTINTO de inSR (ya fijado arriba para el punto de entrada) — omitirlo deja el polígono en la proyección nativa de la capa (típicamente Web Mercator/3857), ilegible para un mapa Leaflet basado en WGS84 (Pitfall 5)
 
-    const arcgisRes = await fetch(arcgisUrl.toString(), { signal: AbortSignal.timeout(10_000) })
+    // Run alongside the feature query (not sequentially) — it's a separate,
+    // best-effort request against the same FeatureServer and must not add to
+    // the critical-path latency of the lookup.
+    const [arcgisRes, fuenteActualizadaEl] = await Promise.all([
+      fetch(arcgisUrl.toString(), { signal: AbortSignal.timeout(10_000) }),
+      fetchFuenteActualizadaEl(comunaConfig.featureServerUrl, comunaConfig.layerIndex),
+    ])
     if (!arcgisRes.ok) {
       return Response.json(
         { ok: false, status: 'error', error: `ArcGIS HTTP ${arcgisRes.status}` } satisfies ZonaLookupResponse,
@@ -196,7 +237,7 @@ export async function GET(request: Request): Promise<Response> {
           uproh: get(comunaConfig.fieldMap.uproh),
           usos_disponibles: comunaConfig.usosDisponibles, // registry-level flag, NEVER derived from uperm/uproh being empty (Pitfall 8)
           fuente_url: get(comunaConfig.fieldMap.url),
-          fuente_actualizada_el: null, // populate from FeatureServer metadata in a later pass if needed; not required for this phase's success criteria
+          fuente_actualizada_el: fuenteActualizadaEl, // from the layer's own editingInfo.dataLastEditDate (Auditoría 2026-07-30, C4) — null when the metadata fetch failed or the field was absent
           geometria,
           raw: attrs,
           consultado_el: nowIso,
@@ -215,7 +256,7 @@ export async function GET(request: Request): Promise<Response> {
         sector: get(comunaConfig.fieldMap.sector), zona, nombreZona,
         uperm: get(comunaConfig.fieldMap.uperm), uproh: get(comunaConfig.fieldMap.uproh),
         usosDisponibles: comunaConfig.usosDisponibles, fuenteUrl: get(comunaConfig.fieldMap.url),
-        fuenteActualizadaEl: null, lat, lng, cacheHit: false, consultadoEl: nowIso,
+        fuenteActualizadaEl, comunaFuente: comunaArcgis, lat, lng, cacheHit: false, consultadoEl: nowIso,
       }
       return Response.json({ ok: true, status: 'encontrado', data } satisfies ZonaLookupResponse, { status: 200 })
     }
@@ -224,7 +265,9 @@ export async function GET(request: Request): Promise<Response> {
       comunaId: inserted.comuna_id, tier: inserted.capa, cacheId: inserted.id, region: inserted.region, sector: inserted.sector,
       zona: inserted.zona, nombreZona: inserted.nombre_zona, uperm: inserted.uperm, uproh: inserted.uproh,
       usosDisponibles: inserted.usos_disponibles, fuenteUrl: inserted.fuente_url,
-      fuenteActualizadaEl: inserted.fuente_actualizada_el, lat, lng, cacheHit: false,
+      fuenteActualizadaEl: inserted.fuente_actualizada_el,
+      comunaFuente: comunaDesdeRaw(inserted.raw, comunaConfig.fieldMap.comuna),
+      lat, lng, cacheHit: false,
       consultadoEl: inserted.consultado_el,
     }
     return Response.json({ ok: true, status: 'encontrado', data } satisfies ZonaLookupResponse, { status: 200 })
