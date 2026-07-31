@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { sendResumenSemanal } from '@/lib/email'
 import { aiComplete, isAIAvailable } from '@/lib/ai'
 import { apiError } from '@/lib/api-error'
+import { reportError } from '@/lib/observability'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,64 +15,80 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = createServiceClient()
+  // Todo el cuerpo corre dentro de este try/catch (C8): antes, un throw no
+  // capturado (ej. en aiComplete o en el envío de email) terminaba el run
+  // sin dejar rastro visible en los logs de Vercel Cron.
+  try {
+    const supabase = createServiceClient()
 
-  // Get all active projects
-  const { data: proyectos, error } = await supabase
-    .from('proyectos')
-    .select('*, clientes(*)')
-    .not('estado', 'in', '("rechazado","borrador")')
-    .order('fecha_estimada', { ascending: true })
+    // Get all active projects
+    const { data: proyectos, error } = await supabase
+      .from('proyectos')
+      .select('*, clientes(*)')
+      .not('estado', 'in', '("rechazado","borrador")')
+      .order('fecha_estimada', { ascending: true })
 
-  if (error) {
-    return apiError('Error al obtener proyectos', 500, error)
-  }
-
-  // Send to Estefanía (internal summary)
-  const ESTEFANIA_EMAIL = process.env.ADMIN_EMAIL ?? 'estefania@epgestion.cl'
-
-  const proyectosResumen = (proyectos ?? []).map((p) => ({
-    nombre: p.nombre,
-    municipio: p.municipio ?? '',
-    estado: p.estado,
-    etapa: p.etapa_actual ?? '',
-    fechaEstimada: p.fecha_estimada,
-    tieneAlerta: p.estado === 'con_observaciones',
-  }))
-
-  let tipSemanal = ''
-  if (isAIAvailable()) {
-    try {
-      const resumenTexto = proyectosResumen
-        .map(p =>
-          `${p.nombre} (${p.municipio}): ${p.estado}${p.tieneAlerta ? ' — ALERTA' : ''}`
-        )
-        .join('\n')
-      tipSemanal = await aiComplete(
-        [
-          {
-            role: 'user' as const,
-            content: `Eres un experto en tramitación DOM chilena. Analiza estos proyectos activos y entrega UN consejo práctico breve (2-3 oraciones) para la semana:\n\n${resumenTexto}\n\nEl consejo debe ser específico y accionable para la arquitecta.`,
-          },
-        ],
-        { max_tokens: 200 }
-      )
-    } catch {
-      tipSemanal = ''
+    if (error) {
+      return apiError('Error al obtener proyectos', 500, error)
     }
+
+    // Send to Estefanía (internal summary)
+    const ESTEFANIA_EMAIL = process.env.ADMIN_EMAIL ?? 'estefania@epgestion.cl'
+
+    const proyectosResumen = (proyectos ?? []).map((p) => ({
+      nombre: p.nombre,
+      municipio: p.municipio ?? '',
+      estado: p.estado,
+      etapa: p.etapa_actual ?? '',
+      fechaEstimada: p.fecha_estimada,
+      tieneAlerta: p.estado === 'con_observaciones',
+    }))
+
+    let tipSemanal = ''
+    if (isAIAvailable()) {
+      try {
+        const resumenTexto = proyectosResumen
+          .map(p =>
+            `${p.nombre} (${p.municipio}): ${p.estado}${p.tieneAlerta ? ' — ALERTA' : ''}`
+          )
+          .join('\n')
+        tipSemanal = await aiComplete(
+          [
+            {
+              role: 'user' as const,
+              content: `Eres un experto en tramitación DOM chilena. Analiza estos proyectos activos y entrega UN consejo práctico breve (2-3 oraciones) para la semana:\n\n${resumenTexto}\n\nEl consejo debe ser específico y accionable para la arquitecta.`,
+            },
+          ],
+          { max_tokens: 200 }
+        )
+      } catch (err) {
+        reportError(err, { scope: 'cron.weekly-summary.ai-tip' })
+        tipSemanal = ''
+      }
+    }
+
+    const result = await sendResumenSemanal({
+      to: ESTEFANIA_EMAIL,
+      clienteNombre: 'Estefanía Parada',
+      proyectos: proyectosResumen,
+      tipSemanal,
+    })
+
+    return Response.json({
+      ok: true,
+      timestamp: new Date().toISOString(),
+      proyectosSent: proyectosResumen.length,
+      emailResult: result,
+    })
+  } catch (err) {
+    reportError(err, { scope: 'cron.weekly-summary' })
+    return Response.json(
+      {
+        ok: false,
+        error: 'weekly-summary falló antes de completar',
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 }
+    )
   }
-
-  const result = await sendResumenSemanal({
-    to: ESTEFANIA_EMAIL,
-    clienteNombre: 'Estefanía Parada',
-    proyectos: proyectosResumen,
-    tipSemanal,
-  })
-
-  return Response.json({
-    ok: true,
-    timestamp: new Date().toISOString(),
-    proyectosSent: proyectosResumen.length,
-    emailResult: result,
-  })
 }
