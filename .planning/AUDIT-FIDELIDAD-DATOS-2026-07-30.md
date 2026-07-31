@@ -152,3 +152,20 @@ Ninguna es arreglable desde código — requieren crear cuentas/keys y setearlas
 
 ---
 *Auditoría ejecutada por 4 agentes paralelos con verificación en vivo (curl a servicios reales, web search a fuentes oficiales). Los hallazgos citan archivo:línea y son reproducibles.*
+
+## Configuración de producción — actualización 31 de julio
+
+De las 6 variables ausentes que reportó `vercel env ls production` en la auditoría original:
+
+**Configuradas hoy:**
+- `CRON_SECRET` — **corrige un bug activo**: sin ella, `validateCronSecret()` es fail-closed en producción y los crons `daily-check`/`weekly-summary` rechazaban con 401 TODA invocación, incluidas las de Vercel Cron. Los recordatorios de plazo y observaciones llevaban semanas sin enviarse. Verificado de punta a punta contra producción: sin secreto → 401, con secreto incorrecto → 401, con el secreto real → 200.
+- `ADMIN_EMAILS` — desbloquea la consola `/admin` fusionada desde permisohub-enterprise (ver commit `7d84126`).
+
+**Siguen pendientes — sin credenciales reales disponibles en esta máquina:**
+- `RESEND_API_KEY` — se encontró un valor en otro proyecto (Umo.cl_V2) pero es el texto literal `re_placeholder`, nunca reemplazado por una clave real. No se configuró: sin la variable el sistema hace un no-op limpio (`[email] RESEND_API_KEY no configurado. Email simulado a...`); con un placeholder generaría errores de autenticación activos contra la API de Resend, que es peor. Requiere crear cuenta en resend.com y verificar el dominio `permisohub.cl`.
+- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — rate limiting; ya tiene degradación segura (aviso una vez por proceso, sin bloquear).
+- `SENTRY_DSN` — reporte de errores; no-op seguro sin configurar (`instrumentation.ts`).
+- `STRIPE_SECRET_KEY` y las 10 variables `STRIPE_PRICE_*` — checkout/billing real, requiere cuenta de Stripe con productos y precios creados.
+- `TWILIO_*` — notificaciones WhatsApp; la UI que las dispara está detrás de `MOSTRAR_ACCIONES_EXTERNAS = false` en `proyectos/[id]/page.tsx`, así que hoy no es alcanzable de todas formas.
+
+Nota operativa: las variables de Production en Vercel son "sensitive" por defecto — write-only, no se pueden leer de vuelta ni con `vercel env pull` ni desde el dashboard. La única forma de verificar que un valor quedó bien es una prueba de comportamiento en vivo (como se hizo con `CRON_SECRET` arriba), no una lectura.
