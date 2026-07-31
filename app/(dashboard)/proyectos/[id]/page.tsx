@@ -19,7 +19,6 @@ import {
   Users,
 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -84,6 +83,19 @@ function formatDate(value?: string) {
     month: "long",
     year: "numeric",
   })
+}
+
+/** Rótulo de zona de la lámina: esquina de escuadra + etiqueta. */
+function SeccionLamina({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-2.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+      <span
+        className="inline-block h-2 w-2 border border-[var(--blueprint)]"
+        style={{ borderRightWidth: 0, borderBottomWidth: 0 }}
+      />
+      {children}
+    </p>
+  )
 }
 
 function docIcon(tipo: string) {
@@ -571,61 +583,94 @@ export default function ProyectoDetallePage({
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_minmax(0,360px)]">
-                {/* Left column */}
-                <div className="space-y-6">
-                  {/* Header */}
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <EstadoNormativo estado={veredicto} label={estadoCfg.label} />
-                      <Badge variant="outline">{TIPO_PERMISO_LABELS[proyecto.tipo]}</Badge>
-                      {plazoLegalExcedido && (
-                        <EstadoNormativo
-                          estado="observa"
-                          label={`Plazo legal excedido (${diasDesdeInicio} días)`}
-                        />
-                      )}
+              {/* El estado, el tipo de trámite y la dirección ya viven en el
+                  rótulo y en el cuadro de control: repetirlos aquí empujaba
+                  hacia abajo lo que de verdad decide si el expediente avanza. */}
+              {plazoLegalExcedido && (
+                <div className="mb-6">
+                  <EstadoNormativo
+                    estado="observa"
+                    label={`Plazo legal excedido — ${diasDesdeInicio} días desde el ingreso`}
+                  />
+                </div>
+              )}
+
+              {/* Desarchivo: cuando aplica es bloqueante, va arriba del todo. */}
+              <DesarchivoPanel
+                proyectoId={proyecto.id}
+                estadoProyecto={proyecto.estado}
+                proyectoNombre={proyecto.nombre}
+                municipio={proyecto.municipio}
+                numeroExpediente={proyecto.numero_expediente}
+              />
+
+              {/* ── Zona 1 — lo que define si el expediente avanza ──────────
+                  La zonificación es mucho más alta que la completitud (lleva
+                  mapa y advertencias), así que la columna izquierda apila las
+                  herramientas debajo en vez de dejar el hueco. */}
+              <section className="mt-6">
+                <SeccionLamina>Verificación normativa</SeccionLamina>
+                <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
+                  <div className="space-y-4">
+                    <ExpedienteScore
+                      tipo={proyecto.tipo}
+                      municipio={proyecto.municipio}
+                      documentos={documentos}
+                      proyectoId={proyecto.id}
+                    />
+
+                    {/* Herramientas IA del proyecto — lista técnica, sin emojis:
+                        el ícono de línea pertenece al idioma del plano. */}
+                    <div className="rotulo bg-card">
+                      <p className="border-b border-line-fine px-4 py-2.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        Herramientas IA
+                      </p>
+                      <div className="divide-y divide-line-fine">
+                        {[
+                          {
+                            label: "Generar Memoria Descriptiva",
+                            href: `/herramientas/memoria?nombre=${encodeURIComponent(proyecto.nombre)}&municipio=${encodeURIComponent(proyecto.municipio)}&direccion=${encodeURIComponent(proyecto.direccion ?? "")}&tipo=${encodeURIComponent(proyecto.tipo)}`,
+                            Icon: FileText,
+                          },
+                          {
+                            label: "Predecir observaciones DOM",
+                            href: `/herramientas/predictor?municipio=${encodeURIComponent(proyecto.municipio)}&tipo=${encodeURIComponent(proyecto.tipo)}`,
+                            Icon: Sparkles,
+                          },
+                          {
+                            label: "Consultar OGUC",
+                            href: `/herramientas/oguc-chat?municipio=${encodeURIComponent(proyecto.municipio)}`,
+                            Icon: MessageCircle,
+                          },
+                          {
+                            label: "Ver ficha DOM",
+                            href: `/municipios/${encodeURIComponent(proyecto.municipio.toLowerCase().replace(/\s+/g, "-"))}`,
+                            Icon: Landmark,
+                          },
+                        ].map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-[12px] font-medium text-foreground/75 transition-colors hover:bg-muted/40 hover:text-foreground"
+                          >
+                            <item.Icon className="size-3.5 text-muted-foreground" strokeWidth={1.75} />
+                            {item.label}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                    <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <MapPin className="size-4" />
-                      {proyecto.direccion}, {proyecto.municipio}
-                    </p>
                   </div>
 
-                  {/* Desarchivo de expediente */}
-                  <DesarchivoPanel
-                    proyectoId={proyecto.id}
-                    estadoProyecto={proyecto.estado}
-                    proyectoNombre={proyecto.nombre}
-                    municipio={proyecto.municipio}
-                    numeroExpediente={proyecto.numero_expediente}
-                  />
-
-                  {/* Notas */}
-                  <Card className="rounded-[3px] border-line-strong shadow-none">
-                    <CardHeader>
-                      <CardTitle className="font-technical">Notas</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <Textarea
-                        value={notas}
-                        onChange={(e) => setNotas(e.target.value)}
-                        placeholder="Notas internas del proyecto..."
-                        rows={5}
-                      />
-                      <Button
-                        className="bg-primary text-white hover:bg-primary/90"
-                        onClick={() => void saveNotas()}
-                        disabled={notasSaving}
-                      >
-                        {notasSaving ? "Guardando…" : "Guardar notas"}
-                      </Button>
-                    </CardContent>
-                  </Card>
+                  {proyecto.direccion && (
+                    <ZonificacionCard proyecto={proyecto} onUpdated={setProyecto} />
+                  )}
                 </div>
+              </section>
 
-                {/* Right column */}
-                <div className="space-y-6">
+              {/* ── Zona 2 — antecedentes de consulta ─────────────────────── */}
+              <section className="mt-6">
+                <SeccionLamina>Antecedentes del predio</SeccionLamina>
+                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
                   {/* Info card */}
                   <Card className="rounded-[3px] border-line-strong shadow-none">
                     <CardHeader className="flex-row items-center justify-between">
@@ -818,14 +863,6 @@ export default function ProyectoDetallePage({
                     </CardContent>
                   </Card>
 
-                  {/* Expediente Score */}
-                  <ExpedienteScore
-                    tipo={proyecto.tipo}
-                    municipio={proyecto.municipio}
-                    documentos={documentos}
-                    proyectoId={proyecto.id}
-                  />
-
                   {/* Mapa del predio */}
                   {proyecto.direccion && (
                     <Card className="rounded-[3px] border-line-strong shadow-none">
@@ -843,53 +880,30 @@ export default function ProyectoDetallePage({
                     </Card>
                   )}
 
-                  {/* Zonificación PRC */}
-                  {proyecto.direccion && (
-                    <ZonificacionCard proyecto={proyecto} onUpdated={setProyecto} />
-                  )}
-
-                  {/* Herramientas IA del proyecto — lista técnica, sin emojis:
-                      el ícono de línea pertenece al idioma del plano. */}
-                  <div className="rotulo bg-card">
-                    <p className="border-b border-line-fine px-4 py-2.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      Herramientas IA
-                    </p>
-                    <div className="divide-y divide-line-fine">
-                      {[
-                        {
-                          label: "Generar Memoria Descriptiva",
-                          href: `/herramientas/memoria?nombre=${encodeURIComponent(proyecto.nombre)}&municipio=${encodeURIComponent(proyecto.municipio)}&direccion=${encodeURIComponent(proyecto.direccion ?? "")}&tipo=${encodeURIComponent(proyecto.tipo)}`,
-                          Icon: FileText,
-                        },
-                        {
-                          label: "Predecir observaciones DOM",
-                          href: `/herramientas/predictor?municipio=${encodeURIComponent(proyecto.municipio)}&tipo=${encodeURIComponent(proyecto.tipo)}`,
-                          Icon: Sparkles,
-                        },
-                        {
-                          label: "Consultar OGUC",
-                          href: `/herramientas/oguc-chat?municipio=${encodeURIComponent(proyecto.municipio)}`,
-                          Icon: MessageCircle,
-                        },
-                        {
-                          label: "Ver ficha DOM",
-                          href: `/municipios/${encodeURIComponent(proyecto.municipio.toLowerCase().replace(/\s+/g, "-"))}`,
-                          Icon: Landmark,
-                        },
-                      ].map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className="flex items-center gap-2.5 px-4 py-2.5 text-[12px] font-medium text-foreground/75 transition-colors hover:bg-muted/40 hover:text-foreground"
-                        >
-                          <item.Icon className="size-3.5 text-muted-foreground" strokeWidth={1.75} />
-                          {item.label}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
                 </div>
-              </div>
+              </section>
+
+              {/* ── Zona 3 — notas internas, al cierre de la lámina ───────── */}
+              <section className="mt-6">
+                <SeccionLamina>Notas internas</SeccionLamina>
+                <Card className="rounded-[3px] border-line-strong shadow-none">
+                  <CardContent className="space-y-3 pt-5">
+                    <Textarea
+                      value={notas}
+                      onChange={(e) => setNotas(e.target.value)}
+                      placeholder="Notas internas del proyecto..."
+                      rows={3}
+                    />
+                    <Button
+                      className="bg-primary text-white hover:bg-primary/90"
+                      onClick={() => void saveNotas()}
+                      disabled={notasSaving}
+                    >
+                      {notasSaving ? "Guardando…" : "Guardar notas"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </section>
             </TabsContent>
 
             {/* ── Documentos ── */}
@@ -940,10 +954,7 @@ export default function ProyectoDetallePage({
                   <>
                     {laminas.length > 0 && (
                       <section>
-                        <p className="mb-2.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                          <span className="inline-block h-2 w-2 border border-[var(--blueprint)]" style={{ borderRightWidth: 0, borderBottomWidth: 0 }} />
-                          Láminas ({laminas.length})
-                        </p>
+                        <SeccionLamina>Láminas ({laminas.length})</SeccionLamina>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                           {laminas.map((d, i) => (
                             <div key={d.id} className="rotulo group overflow-hidden bg-card">
@@ -1000,10 +1011,7 @@ export default function ProyectoDetallePage({
                     )}
 
                     <section>
-                      <p className="mb-2.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        <span className="inline-block h-2 w-2 border border-line-strong" style={{ borderRightWidth: 0, borderBottomWidth: 0 }} />
-                        Antecedentes ({antecedentes.length})
-                      </p>
+                      <SeccionLamina>Antecedentes ({antecedentes.length})</SeccionLamina>
                       <div className="rotulo divide-y divide-line-fine bg-card">
                         {antecedentes.map((d) => (
                           <div key={d.id} className="flex items-center gap-3 px-4 py-2.5">

@@ -121,9 +121,9 @@ export function ZonificacionCard({ proyecto, onUpdated }: ZonificacionCardProps)
   )
 
   return (
-    <Card>
+    <Card className="rounded-[3px] border-line-strong shadow-none">
       <CardHeader className="flex-row items-center justify-between pb-3">
-        <CardTitle className="text-sm">Zonificación (PRC)</CardTitle>
+        <CardTitle className="font-technical text-sm">Zonificación (PRC)</CardTitle>
         <Button
           variant="ghost"
           size="sm"
