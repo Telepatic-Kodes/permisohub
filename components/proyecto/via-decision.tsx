@@ -13,6 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { ViaGuiada } from "@/components/proyecto/via-guiada"
+import type { Proyecto } from "@/types"
+import type { CompatEstado } from "@/lib/zonificacion-compat"
 
 const DEFAULT: RespuestasVia = {
   yaConstruido: false,
@@ -24,16 +26,17 @@ const DEFAULT: RespuestasVia = {
 
 // Decisor determinista de vía: unas pocas preguntas → la vía DOM y su artículo.
 // Es la sugerencia instantánea y citada del PMO; el asesor de vía (IA) profundiza.
-export function ViaDecision({ proyectoId, destinoSii }: { proyectoId: string; destinoSii?: string | null }) {
+export function ViaDecision({ proyecto }: { proyecto: Proyecto }) {
   const [r, setR] = useState<RespuestasVia>(DEFAULT)
   const [guiadaOpen, setGuiadaOpen] = useState(false)
+  const [compat, setCompat] = useState<{ estado: CompatEstado; justificacion: string } | null>(null)
 
   // Prellena "excede PRC" desde el cuadro de cálculo guardado (determinista).
   useEffect(() => {
     let cancelled = false
     void (async () => {
       try {
-        const res = await fetch(`/api/proyectos/${proyectoId}/cuadro-calculo`)
+        const res = await fetch(`/api/proyectos/${proyecto.id}/cuadro-calculo`)
         if (!res.ok) return
         const json = (await res.json()) as { data: CuadroInput | null }
         if (cancelled || !json.data) return
@@ -48,14 +51,14 @@ export function ViaDecision({ proyectoId, destinoSii }: { proyectoId: string; de
     return () => {
       cancelled = true
     }
-  }, [proyectoId])
+  }, [proyecto.id])
 
   // Prellena los toggles desde el flujo guiado persistido, si existe.
   useEffect(() => {
     let cancelled = false
     void (async () => {
       try {
-        const res = await fetch(`/api/proyectos/${proyectoId}/via-tramitacion`)
+        const res = await fetch(`/api/proyectos/${proyecto.id}/via-tramitacion`)
         if (!res.ok) return
         const json = (await res.json()) as { data: { respuestas: Partial<RespuestasVia> } | null }
         if (cancelled || !json.data?.respuestas) return
@@ -67,7 +70,36 @@ export function ViaDecision({ proyectoId, destinoSii }: { proyectoId: string; de
     return () => {
       cancelled = true
     }
-  }, [proyectoId])
+  }, [proyecto.id])
+
+  // INTEG-01: alerta citada de incompatibilidad de uso, automática y
+  // silenciosa — reutiliza el endpoint de COMPAT-01 (Phase 11), nunca toca
+  // recomendarVia()/pasoSiguiente() ni su árbol determinista.
+  useEffect(() => {
+    const zonaUtilizable = proyecto.zona_status === "encontrado" && proyecto.zona_usos_disponibles === true
+    if (!zonaUtilizable || !proyecto.destino_sii?.trim()) {
+      setCompat(null)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch(`/api/proyectos/${proyecto.id}/compatibilidad`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usoPretendido: proyecto.destino_sii }),
+        })
+        if (!res.ok) return
+        const data = (await res.json()) as { estado: CompatEstado; justificacion: string }
+        if (!cancelled) setCompat({ estado: data.estado, justificacion: data.justificacion })
+      } catch {
+        // silencioso: señal opcional, igual que los otros dos useEffect de este componente
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [proyecto.id, proyecto.destino_sii, proyecto.zona_status, proyecto.zona_usos_disponibles])
 
   const rec = useMemo(() => recomendarVia(r), [r])
   const toggle = (clave: keyof RespuestasVia, valor: boolean) =>
@@ -162,6 +194,34 @@ export function ViaDecision({ proyectoId, destinoSii }: { proyectoId: string; de
             </ul>
           )}
 
+          {compat?.estado === "no_permitido" && (
+            <div className="mt-2 space-y-1.5 border-t border-dashed border-line-fine pt-2">
+              <div className="flex items-start gap-1.5 text-[10.5px] leading-snug" style={{ color: "var(--state-warn)" }}>
+                <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                <span>
+                  El destino declarado ({proyecto.destino_sii}) no calza con los usos permitidos de la zona
+                  {proyecto.zona_codigo ? ` ${proyecto.zona_codigo}` : ""}. {compat.justificacion}
+                </span>
+              </div>
+              <div className="text-[10px]">
+                {proyecto.zona_fuente_url ? (
+                  <a
+                    href={proyecto.zona_fuente_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="num inline-flex items-center gap-1 text-primary hover:underline"
+                  >
+                    Ver decreto de zona <ExternalLink className="size-2.5" />
+                  </a>
+                ) : (
+                  <span className="text-muted-foreground">
+                    Fuente: capa oficial {proyecto.municipio} — sin link directo disponible para esta zona.
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="mt-3 border-t border-line-fine pt-2.5">
             <button
               type="button"
@@ -177,8 +237,8 @@ export function ViaDecision({ proyectoId, destinoSii }: { proyectoId: string; de
                   <DialogTitle className="font-technical">Vía de tramitación · guiada</DialogTitle>
                 </DialogHeader>
                 <ViaGuiada
-                  proyectoId={proyectoId}
-                  destinoSii={destinoSii}
+                  proyectoId={proyecto.id}
+                  destinoSii={proyecto.destino_sii}
                   onSaved={(resp) => {
                     setR((prev) => ({ ...prev, ...resp }))
                     setGuiadaOpen(false)

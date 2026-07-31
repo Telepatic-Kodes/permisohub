@@ -71,6 +71,7 @@ export interface EstimacionResult {
   derechosUF: number
   derechosDetalle: string[]
   derechosAdvertencias: string[]
+  ufFallback?: boolean
 }
 
 export interface CopilotoResult {

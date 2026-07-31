@@ -1,11 +1,39 @@
+import { z } from 'zod'
 import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { ARTICULOS_OGUC } from '@/lib/oguc-knowledge'
 import { ARTICULOS_LGUC } from '@/lib/lguc-knowledge'
+import { flagUnverifiedCita } from '@/lib/normativa-retrieval'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { parseAiJson } from '@/lib/ai-parse'
 
 export const dynamic = 'force-dynamic'
+
+// M5 (auditoría 2026-07-30): schema laxo — solo garantiza forma estructural
+// (arrays son arrays, campos existen con un valor por defecto razonable). No
+// se restringen los valores de enum ("resultado"/"riesgo") a un set cerrado:
+// eso ya era así antes de esta migración (cast `as X` sin chequeo) y una
+// restricción estricta aquí solo agregaría fallos de parseo por drift menor
+// del modelo sin beneficio real.
+const CheckSchema = z
+  .object({
+    item: z.string().default(''),
+    resultado: z.string().default('VERIFICAR'),
+    detalle: z.string().default(''),
+    articulo: z.string().default(''),
+    riesgo: z.string().default('BAJO'),
+  })
+  .passthrough()
+
+const ComplianceSchema = z
+  .object({
+    riesgoGeneral: z.string().default('VERIFICAR'),
+    resumen: z.string().default(''),
+    checks: z.array(CheckSchema).default([]),
+    recomendaciones: z.array(z.string()).default([]),
+  })
+  .passthrough()
 
 interface ComplianceRequest {
   municipio: string
@@ -95,14 +123,23 @@ Si no tienes datos suficientes para verificar algo, ponlo como "VERIFICAR" con i
   try {
     const text = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 2000 })
 
-    // Parse JSON response
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    const result = jsonMatch ? JSON.parse(jsonMatch[0]) as {
-      riesgoGeneral: string
-      resumen: string
-      checks: Array<{ item: string; resultado: string; detalle: string; articulo: string; riesgo: string }>
-      recomendaciones: string[]
-    } : { riesgoGeneral: 'VERIFICAR', resumen: text, checks: [], recomendaciones: [] }
+    // M5: parseo validado con zod (antes: regex + JSON.parse + cast `as` sin
+    // validación de runtime). En fallo, degrada al mismo fallback que existía.
+    const parsed = parseAiJson(text, ComplianceSchema, 'compliance-check') ?? {
+      riesgoGeneral: 'VERIFICAR',
+      resumen: text,
+      checks: [],
+      recomendaciones: [],
+    }
+
+    // A2 (auditoría 2026-07-30): el modelo puede inventar un número de
+    // artículo. Cada `articulo` pasa por el guard anti-citas-inventadas antes
+    // de salir al cliente — gana el sufijo "(por verificar)" si no está en la
+    // base curada.
+    const result = {
+      ...parsed,
+      checks: parsed.checks.map((c) => ({ ...c, articulo: flagUnverifiedCita(c.articulo) })),
+    }
 
     recordUsage(auth.userId, 'ai_chats').catch(console.error)
     return Response.json({ ok: true, ...result })

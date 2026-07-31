@@ -1,6 +1,9 @@
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { persistZonificacionParaProyecto } from '@/lib/zonificacion-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -117,6 +120,27 @@ export async function PATCH(
 
     if (error) {
       return apiError('Error interno', 500, error)
+    }
+
+    // Zonificación: si la dirección o el municipio cambiaron, re-dispara el
+    // lookup. PATCH puede tocar solo uno de los dos campos, así que se lee
+    // la fila actual completa en background en vez de asumir que `updates`
+    // trae ambos valores.
+    if (updates.direccion !== undefined || updates.municipio !== undefined) {
+      after(async () => {
+        try {
+          const admin = createServiceClient()
+          const { data: actual } = await admin
+            .from('proyectos')
+            .select('direccion, municipio')
+            .eq('id', id)
+            .single()
+          if (!actual?.direccion || !actual?.municipio) return
+          await persistZonificacionParaProyecto(id, actual.direccion, actual.municipio)
+        } catch (err) {
+          console.error(`[zonificacion] Error al re-consultar zonificación tras PATCH de proyecto ${id}:`, err instanceof Error ? err.message : err)
+        }
+      })
     }
 
     return Response.json({ ok: true })

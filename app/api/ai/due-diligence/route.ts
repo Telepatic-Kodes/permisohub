@@ -41,6 +41,14 @@ interface ProyectoRow {
   municipio: string | null
   rol_sii: string | null
   tipo: string | null
+  destino_sii: string | null
+  zona_status: string | null
+  zona_usos_disponibles: boolean | null
+  zona_codigo: string | null
+  zona_nombre: string | null
+  zona_uperm: string | null
+  zona_uproh: string | null
+  zona_fuente_url: string | null
 }
 
 /** Campos del documento que usamos para descargar y analizar. */
@@ -169,6 +177,14 @@ async function procesar(
       municipio: proyecto.municipio,
       rol_sii: proyecto.rol_sii,
       tipo: proyecto.tipo,
+      destino_sii: proyecto.destino_sii,
+      zona_status: proyecto.zona_status,
+      zona_usos_disponibles: proyecto.zona_usos_disponibles,
+      zona_codigo: proyecto.zona_codigo,
+      zona_nombre: proyecto.zona_nombre,
+      zona_uperm: proyecto.zona_uperm,
+      zona_uproh: proyecto.zona_uproh,
+      zona_fuente_url: proyecto.zona_fuente_url,
     }
 
     const generadoEl = new Date().toISOString()

@@ -25,14 +25,9 @@ import {
   type TipoObra,
 } from "@/lib/derechos-municipales"
 import { COMUNAS_CHILE } from "@/lib/comunas-chile"
+import { UF_FALLBACK_CLP, type UfData } from "@/lib/uf"
 
 const TIPOS_OBRA = Object.entries(TIPO_OBRA_LABELS) as [TipoObra, string][]
-
-interface UfData {
-  valor: number
-  fecha: string | null
-  fallback: boolean
-}
 
 export default function CalculadoraDerechosPage() {
   const [resultado, setResultado] = useState<CalculoDerechos | null>(null)
@@ -42,7 +37,7 @@ export default function CalculadoraDerechosPage() {
     fetch('/api/utils/uf')
       .then(r => r.json() as Promise<UfData & { ok: boolean }>)
       .then(data => setUfActual({ valor: data.valor, fecha: data.fecha, fallback: data.fallback ?? false }))
-      .catch(() => setUfActual({ valor: 38000, fecha: null, fallback: true }))
+      .catch(() => setUfActual({ valor: UF_FALLBACK_CLP, fecha: null, fallback: true }))
   }, [])
 
   const [form, setForm] = useState({
@@ -51,6 +46,7 @@ export default function CalculadoraDerechosPage() {
     presupuestoObra: "",
     superficieConstruida: "",
     esDFL2: false,
+    tieneRevisorIndependiente: false,
   })
 
   function setField<K extends keyof typeof form>(
@@ -80,7 +76,8 @@ export default function CalculadoraDerechosPage() {
         Number(form.superficieConstruida),
         form.esDFL2,
         form.municipio,
-        ufActual?.valor ?? 38000
+        ufActual?.valor ?? UF_FALLBACK_CLP,
+        form.tieneRevisorIndependiente
       )
     )
   }
@@ -217,7 +214,17 @@ export default function CalculadoraDerechosPage() {
                   setField("esDFL2", checked === true)
                 }
               />
-              ¿Es vivienda DFL2? (descuento <Num>50%</Num> en derechos hasta <Num>140 m²</Num>)
+              ¿Es vivienda DFL2? (posible beneficio en CBR/contribuciones — no confirmado para derechos municipales)
+            </label>
+
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-primary">
+              <Checkbox
+                checked={form.tieneRevisorIndependiente}
+                onCheckedChange={(checked) =>
+                  setField("tieneRevisorIndependiente", checked === true)
+                }
+              />
+              ¿Cuenta con revisor independiente? (reducción <Num>30%</Num> en derechos, Art. 116 bis LGUC)
             </label>
 
             <Button

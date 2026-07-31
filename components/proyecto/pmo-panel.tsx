@@ -178,7 +178,7 @@ export function PmoPanel({
     <div className="space-y-6">
       {/* ── Cómo continuar — decisor determinista de vía (instantáneo, citado)
           seguido del asesor de vía (IA, profundiza con los ajustes) ── */}
-      <ViaDecision proyectoId={proyecto.id} destinoSii={proyecto.destino_sii} />
+      <ViaDecision proyecto={proyecto} />
       <AsesorVia proyectoId={proyecto.id} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -747,6 +747,22 @@ function PlazoLey21718Card({
           <p className={cn("rounded-lg px-3 py-2 text-xs font-medium", cfg.badge)}>
             {estado.labelEstado}
           </p>
+
+          {estado.estado === "VENCIDO" && (
+            <p className="text-xs text-muted-foreground">
+              Vencido el plazo sin pronunciamiento de la DOM, opera el silencio
+              administrativo <span className="font-medium">negativo</span> (Ley
+              21.718): puedes reclamar ante la SEREMI MINVU de tu región.
+            </p>
+          )}
+
+          {estado.feriadosIncompletos && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Cálculo sin feriados verificados para{" "}
+              {estado.fechaVencimiento.getFullYear()} — el conteo de días
+              hábiles puede variar.
+            </p>
+          )}
 
           {necesitaCarta && (
             <button

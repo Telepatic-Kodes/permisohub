@@ -39,6 +39,10 @@ export function TabObservaciones({ data }: TabObservacionesProps) {
         {data.resumen}
       </p>
 
+      <p className="text-[11px] text-muted-foreground">
+        Predicciones generadas por IA a partir de estadísticas DOM sintéticas/estimadas, no medidas — usa criterio profesional.
+      </p>
+
       <div className="space-y-3">
         {data.predicciones.map((pred, idx) => (
           <div key={idx} className="rounded-xl border border-border bg-white p-4">

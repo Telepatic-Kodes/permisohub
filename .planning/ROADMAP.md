@@ -1,90 +1,23 @@
-# Roadmap: Milestone v1.4 — Zonificación
+# Roadmap: PermisoHub
 
-**Started:** 2026-07-30
-**Phases:** 3 (numbered 10-12, continues from v1.3)
+## Milestones
 
-## Phases
+- ✅ **v1.4 Zonificación** — Phases 10-12 (shipped 2026-07-30) — [full detail](milestones/1.4-ROADMAP.md)
 
-- [ ] **Phase 10: Motor de Zonificación** — Geocoding, registro de cobertura por comuna y persistencia automática del resultado de zona (sin UI todavía)
-- [ ] **Phase 11: Vista de Zonificación en el Proyecto** — Zona, mapa, usos citados, compatibilidad de uso y fallback manual, visibles para el arquitecto
-- [ ] **Phase 12: Integración con Motores de Decisión** — via-tramitacion.ts, due-diligence.ts y el copiloto IA incorporan la zona como señal aditiva citada
+<details>
+<summary>✅ v1.4 Zonificación (Phases 10-12) — SHIPPED 2026-07-30</summary>
 
-## Phase Details
+- [x] Phase 10: Motor de Zonificación (5/5 plans) — completed 2026-07-30
+- [x] Phase 11: Vista de Zonificación en el Proyecto (8/8 plans) — completed 2026-07-30
+- [x] Phase 12: Integración con Motores de Decisión (4/4 plans) — completed 2026-07-30
 
-### Phase 10: Motor de Zonificación
+Full details archived: `.planning/milestones/1.4-ROADMAP.md`
 
-**Goal:** El sistema puede determinar automáticamente, para una dirección dentro de las comunas cubiertas (Las Condes, Providencia, Vitacura, Ñuñoa), la zona PRC y sus usos permitidos/prohibidos — geocodificando, consultando el FeatureServer ArcGIS de MINVU/OCUC, cacheando el resultado y persistiéndolo en el proyecto — distinguiendo explícitamente "encontrado" / "sin cobertura" / "error", sin exponer aún interfaz al arquitecto.
-
-**Depends on:** Nothing (first phase of milestone)
-
-**Requirements:** Ninguno directamente — infraestructura habilitante. Los requirements ZONE-01→06 y COMPAT-01 se completan de cara al arquitecto en la Phase 11, que depende de este motor.
-
-**Success Criteria** (what must be TRUE):
-1. Dado un proyecto con dirección en una comuna cubierta, el sistema geocodifica correctamente y el lat/lng resultante corresponde a la comuna real del proyecto (verificable contra un set de direcciones conocidas)
-2. Al consultar el endpoint de zonificación para esa dirección, el sistema retorna código de zona PRC, nombre y usos permitidos/prohibidos en texto verbatim, validado con Zod contra el shape real de ArcGIS
-3. El resultado queda cacheado en una tabla compartida por coordenadas redondeadas — una segunda consulta al mismo punto no repite la llamada a ArcGIS
-4. Al crear o actualizar un proyecto con dirección, el resultado de zonificación se persiste automáticamente en el proyecto con un estado explícito (`encontrado` / `sin_cobertura` / `error`), nunca colapsado a un booleano
-5. Para una comuna fuera de las 4 iniciales, el sistema retorna explícitamente `sin_cobertura` en vez de un resultado vacío indistinguible de "sin restricciones"
-
-**Plans:** 5 plans in 3 waves
-
-Plans:
-- [ ] 10-01-PLAN.md — Migración: zonificacion_cache + proyectos.zona_* + CHECK de estado (wave 1, checkpoint)
-- [ ] 10-02-PLAN.md — lib/zonificacion-comunas.ts: registro ArcGIS por comuna (wave 1, paralelo)
-- [ ] 10-03-PLAN.md — lib/geocoding.ts: geocoder Nominatim (wave 1, paralelo)
-- [ ] 10-04-PLAN.md — lib/zonificacion.ts + app/api/zonificacion/lookup/route.ts: orquestación end-to-end (wave 2)
-- [ ] 10-05-PLAN.md — lib/zonificacion-server.ts + wiring en after() de POST/PATCH proyectos (wave 3)
+</details>
 
 ---
 
-### Phase 11: Vista de Zonificación en el Proyecto
-
-**Goal:** El arquitecto ve la zona PRC de su proyecto con confirmación visual en mapa, lee los usos permitidos/prohibidos citados a fuente oficial, verifica si su uso pretendido es compatible, controla explícitamente cuándo actualizar el resultado, y tiene una salida manual cuando el geocoding falla o la comuna no tiene cobertura — con el disclaimer del CIP siempre visible.
-
-**Depends on:** Phase 10 (motor de lookup y persistencia)
-
-**Requirements:** ZONE-01, ZONE-02, ZONE-03, ZONE-04, ZONE-05, ZONE-06, COMPAT-01
-
-**Success Criteria** (what must be TRUE):
-1. Al abrir un proyecto con dirección en una comuna cubierta, el arquitecto ve automáticamente la zona PRC (código + nombre) sin ejecutar ninguna acción manual
-2. El arquitecto ve un mapa que confirma visualmente que el punto geocodificado cae dentro del polígono de la zona retornada
-3. El arquitecto ve los usos permitidos y prohibidos en texto verbatim, con cita a la fuente oficial (link al decreto cuando existe, tratamiento "no verificado" cuando no) y el disclaimer "Informativo, no reemplaza el Certificado de Informaciones Previas (CIP) oficial" visible en toda pantalla de zonificación
-4. El arquitecto puede indicar el uso pretendido del proyecto y recibe una respuesta de tres estados — Permitido / No permitido / No especificado (requiere revisión) — nunca un veredicto binario
-5. El arquitecto puede forzar una actualización del resultado con una acción explícita "Actualizar" (sin refresco silencioso en background), y si el geocoding falla o la comuna no tiene cobertura, puede seleccionar manualmente comuna y zona desde un listado en vez de ver un error sin salida
-
-**Plans:** TBD
-
-Plans:
-- [ ] 11-01: TBD (planning pendiente)
-
----
-
-### Phase 12: Integración con Motores de Decisión
-
-**Goal:** Los motores existentes — vía de tramitación, due diligence y copiloto IA — incorporan la zonificación como señal adicional citada, de forma estrictamente aditiva: `recomendarVia()` no cambia su lógica determinista, y todo proyecto sin dato de zonificación disponible sigue funcionando exactamente igual que hoy.
-
-**Depends on:** Phase 11 (la compatibilidad de uso debe estar visualmente verificada antes de confiar en ella como señal de integración)
-
-**Requirements:** INTEG-01, INTEG-02, INTEG-03
-
-**Success Criteria** (what must be TRUE):
-1. Cuando el uso declarado del proyecto no calza con los usos permitidos de la zona, `via-tramitacion.ts` muestra una alerta citada en la pantalla de vía de tramitación, sin que `recomendarVia()` altere su árbol de decisión ni sus resultados
-2. `due-diligence.ts` puede citar la zona como fuente de un hallazgo (nuevo tipo `'PRC'` en `RefNormativa`) cuando detecta incoherencia entre el destino declarado y los usos permitidos
-3. Los skills del copiloto IA (diagnóstico OGUC, checklist) reciben el texto de usos permitidos/prohibidos de la zona como contexto adicional al generar sus respuestas, cuando el proyecto tiene un resultado de zonificación disponible
-4. Un proyecto sin dirección geocodificable, sin cobertura, o sin zonificación consultada aún funciona exactamente igual que antes de este milestone en vía de tramitación, due diligence y copiloto (comportamiento estrictamente aditivo, sin regresiones)
-
-**Plans:** TBD
-
-Plans:
-- [ ] 12-01: TBD (planning pendiente)
-
-## Progress
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 10. Motor de Zonificación | 0/5 | Not started | - |
-| 11. Vista de Zonificación en el Proyecto | 0/TBD | Not started | - |
-| 12. Integración con Motores de Decisión | 0/TBD | Not started | - |
+**Note (2026-07-30):** This is the first time `/gsd:complete-milestone` has run for this project. Milestones v1.1 ("Cumplir la Promesa"), v1.2 ("Dashboard Clarity"), and v1.3 ("Army of Skills") were already shipped previously but were never separately archived — their full phase details remain below, un-collapsed, exactly as they were before this milestone close. Deliberately left them in place rather than retroactively archiving them (out of scope for closing v1.4; do this properly in a future `/gsd:cleanup` pass if desired, extracting each into its own `.planning/milestones/v{X.Y}-ROADMAP.md`).
 
 ---
 

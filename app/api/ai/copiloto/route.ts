@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 90
 
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { aiAuthGuard } from '@/lib/ai-guard'
@@ -11,10 +12,88 @@ import { ESTADISTICAS_MUNICIPIOS } from '@/lib/municipios-stats'
 import { getInteligenciaMunicipio } from '@/lib/inteligencia-dom'
 import { calcularDerechosMunicipales, type TipoObra } from '@/lib/derechos-municipales'
 import { sumarDiasHabiles } from '@/lib/dias-habiles'
+import { fixMojibakeArcGIS } from '@/lib/zonificacion-format'
+import { UF_FALLBACK_CLP } from '@/lib/uf'
+import { flagUnverifiedCita } from '@/lib/normativa-retrieval'
+import { parseAiJson } from '@/lib/ai-parse'
 import type { Proyecto } from '@/types'
 
 interface CopilotoRequest {
   proyectoId: string
+}
+
+// M5 (auditoría 2026-07-30): schemas laxos para los 4 parses de este endpoint
+// (antes: regex + JSON.parse sin validación, tipado implícito `any`). Solo se
+// garantiza forma estructural; los valores de enum no se restringen a un set
+// cerrado para que un drift menor del modelo no tumbe el parseo completo.
+const OgucArticuloSchema = z
+  .object({
+    numero: z.string().default(''),
+    titulo: z.string().default(''),
+    formula: z.string().default(''),
+    valor_normativo: z.string().default(''),
+    valor_proyecto: z.string().default(''),
+    cumple: z.boolean().nullable().default(null),
+    observacion: z.string().default(''),
+  })
+  .passthrough()
+
+const OgucSchema = z
+  .object({
+    articulos: z.array(OgucArticuloSchema).default([]),
+    resumen: z.string().default(''),
+  })
+  .passthrough()
+
+const ObsPrediccionSchema = z
+  .object({
+    categoria: z.string().default(''),
+    frecuencia: z.string().default(''),
+    triggerEspecifico: z.string().default(''),
+    accionPreventiva: z.string().default(''),
+  })
+  .passthrough()
+
+const ObservacionesSchema = z
+  .object({
+    riesgoGlobal: z.string().default('MEDIO'),
+    predicciones: z.array(ObsPrediccionSchema).default([]),
+    resumen: z.string().default(''),
+  })
+  .passthrough()
+
+const ChecklistItemSchema = z
+  .object({
+    item_key: z.string().default(''),
+    nombre: z.string().default(''),
+    articulo_normativo: z.string().default(''),
+    descripcion: z.string().default(''),
+    obligatorio: z.boolean().default(false),
+  })
+  .passthrough()
+
+const ChecklistSchema = z
+  .object({
+    items: z.array(ChecklistItemSchema).default([]),
+  })
+  .passthrough()
+
+const EstimacionSchema = z
+  .object({
+    plazoMinDias: z.number().optional(),
+    plazoMaxDias: z.number().optional(),
+    factores: z.array(z.string()).default([]),
+    recomendacion: z.string().default(''),
+  })
+  .passthrough()
+
+function seccionZonificacion(p: Proyecto): string {
+  const utilizable = p.zona_status === 'encontrado' && p.zona_usos_disponibles === true
+  if (!utilizable) return ''
+  const uperm = fixMojibakeArcGIS(p.zona_uperm) ?? '(sin dato)'
+  const uproh = fixMojibakeArcGIS(p.zona_uproh) ?? '(sin dato)'
+  const nombre = fixMojibakeArcGIS(p.zona_nombre)
+  return `\n## Zonificación (PRC) — ${p.zona_codigo ?? ''}${nombre ? ` ${nombre}` : ''}\nUsos permitidos: ${uperm}\nUsos prohibidos: ${uproh}\n`
 }
 
 function buildOgucPrompt(p: Proyecto): string {
@@ -30,7 +109,7 @@ function buildOgucPrompt(p: Proyecto): string {
 - Superficie construida: ${p.superficie_construida_m2 ?? 'no disponible'} m²
 - Rol SII: ${p.rol_sii ?? 'no disponible'}
 - Avalúo fiscal: ${p.avaluo_fiscal_clp ? `$${p.avaluo_fiscal_clp.toLocaleString('es-CL')}` : 'no disponible'}
-
+${seccionZonificacion(p)}
 ## Artículos OGUC relevantes
 ${ogucCtx}
 
@@ -55,11 +134,16 @@ function buildObservacionesPrompt(p: Proyecto): string {
   const stats = ESTADISTICAS_MUNICIPIOS.find(m => m.nombre === p.municipio)
   const intel = getInteligenciaMunicipio(p.municipio)
 
+  // A6 (auditoría 2026-07-30): estas estadísticas son sintéticas (ver
+  // lib/municipios-stats.ts), no mediciones de expedientes reales. Se
+  // etiquetan como referencia estimada para que el modelo no las trate
+  // como hechos verificados.
   const statsSection = stats
-    ? `## Estadísticas DOM ${p.municipio}
-- Tasa histórica de observaciones: ${Math.round(stats.tasaObservaciones * 100)}%
-- Observaciones frecuentes: ${stats.tiposObservacionFrequentes.join(', ')}
-- Meses más ágiles: ${stats.mesesMasAgiles.join(', ')}
+    ? `## Estadísticas DOM ${p.municipio} — Referencia histórica ESTIMADA (datos sintéticos, no medidos)
+Trata estos valores como un prior aproximado y cualitativo, NO como una medición verificada de expedientes reales.
+- Tasa histórica de observaciones (estimada): ${Math.round(stats.tasaObservaciones * 100)}%
+- Observaciones frecuentes (estimadas): ${stats.tiposObservacionFrequentes.join(', ')}
+- Meses más ágiles (estimados): ${stats.mesesMasAgiles.join(', ')}
 - Notas: ${stats.notas}`
     : ''
 
@@ -108,7 +192,7 @@ function buildChecklistPrompt(p: Proyecto): string {
 - Dirección: ${p.direccion}
 - Superficie construida: ${p.superficie_construida_m2 ?? 'no disponible'} m²
 - Expediente: ${p.numero_expediente ?? 'sin expediente'}
-
+${seccionZonificacion(p)}
 Responde SOLO con JSON válido:
 {
   "items": [
@@ -125,10 +209,12 @@ Responde SOLO con JSON válido:
 Genera entre 8 y 15 ítems específicos para el tipo "${p.tipo}" en ${p.municipio}. Usa item_key snake_case sin tildes, únicos y descriptivos (ej: "plano_arquitectura_firmado", "certificado_informaciones_previas").`
 }
 
-function buildEstimacionPrompt(p: Proyecto, derechosInfo: string): string {
-  const stats = ESTADISTICAS_MUNICIPIOS.find(m => m.nombre === p.municipio)
-  const plazoBase = stats?.tiempoPromedioHabiles ?? 45
-
+function buildEstimacionPrompt(p: Proyecto, derechosInfo: string, plazoBase: number): string {
+  // A6 (auditoría 2026-07-30): plazoBase viene de ESTADISTICAS_MUNICIPIOS,
+  // que es sintético (ver lib/municipios-stats.ts). Se etiqueta como
+  // referencia estimada, no como una medición, y el servidor además
+  // aplica un clamp numérico sobre plazoMinDias/plazoMaxDias basado en
+  // este mismo valor — ver el clamp tras el parseo del JSON en POST().
   return `Eres un experto en plazos de tramitación DOM en Chile. Estima el plazo y derechos para este proyecto.
 
 ## Proyecto
@@ -136,7 +222,10 @@ function buildEstimacionPrompt(p: Proyecto, derechosInfo: string): string {
 - Tipo: ${p.tipo}
 - Superficie construida: ${p.superficie_construida_m2 ?? 'no disponible'} m²
 - Expediente: ${p.numero_expediente ?? 'sin expediente'}
-- Plazo típico histórico DOM ${p.municipio}: ${plazoBase} días hábiles
+
+## Plazo histórico
+Referencia histórica ESTIMADA (dato sintético, no medido): plazo típico DOM ${p.municipio} ≈ ${plazoBase} días hábiles.
+Trátalo como un prior aproximado, no como una medición verificada. Tu rango plazoMinDias/plazoMaxDias debe mantenerse razonablemente cercano a este valor (no un orden de magnitud distinto) — el servidor aplicará además un límite numérico automático basado en él.
 
 ## Derechos calculados
 ${derechosInfo}
@@ -186,13 +275,20 @@ export async function POST(request: Request) {
     .select('*')
     .eq('proyecto_id', body.proyectoId)
 
-  let ufValor = 38000
+  let ufValor = UF_FALLBACK_CLP
+  // A4 (auditoría 2026-07-30): la calculadora ya mostraba "UF referencial" en
+  // fallback, pero el copiloto callaba el flag — se propaga en `estimacion`
+  // para que TabEstimacion pueda mostrar el mismo aviso.
+  let ufFallback = true
   try {
     const ufRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'}/api/utils/uf`)
-    const ufData = await ufRes.json() as { valor?: number }
-    if (ufData.valor) ufValor = ufData.valor
+    const ufData = await ufRes.json() as { valor?: number; fallback?: boolean }
+    if (ufData.valor) {
+      ufValor = ufData.valor
+      ufFallback = ufData.fallback ?? false
+    }
   } catch {
-    // Use default 38000 if UF fetch fails
+    // Use UF_FALLBACK_CLP if UF fetch fails; ufFallback stays true
   }
 
   const TIPO_PERMISO_TO_OBRA: Record<string, string> = {
@@ -219,6 +315,11 @@ export async function POST(request: Request) {
     ...derechos.advertencias,
   ].join('\n')
 
+  // A6 (auditoría 2026-07-30): plazoBase (sintético) se calcula una sola vez
+  // aquí para que el prompt y el clamp del resultado usen el mismo valor.
+  const statsMunicipio = ESTADISTICAS_MUNICIPIOS.find(m => m.nombre === p.municipio)
+  const plazoBase = statsMunicipio?.tiempoPromedioHabiles ?? 45
+
   try {
     const hasExistingChecklist = (existingChecklist?.length ?? 0) > 0
 
@@ -228,14 +329,27 @@ export async function POST(request: Request) {
       hasExistingChecklist
         ? Promise.resolve(null)
         : aiComplete([{ role: 'user', content: buildChecklistPrompt(p) }], { max_tokens: 2000 }),
-      aiComplete([{ role: 'user', content: buildEstimacionPrompt(p, derechosInfo) }], { max_tokens: 800 }),
+      aiComplete([{ role: 'user', content: buildEstimacionPrompt(p, derechosInfo, plazoBase) }], { max_tokens: 800 }),
     ])
 
-    const ogucMatch = ogucText.match(/\{[\s\S]*\}/)
-    const oguc = ogucMatch ? JSON.parse(ogucMatch[0]) : { articulos: [], resumen: ogucText }
+    // M5: parseo validado con zod (antes: regex + JSON.parse sin validación).
+    const ogucParsed = parseAiJson(ogucText, OgucSchema, 'copiloto:oguc') ?? {
+      articulos: [],
+      resumen: ogucText,
+    }
+    // A2 (auditoría 2026-07-30): el modelo puede inventar un número de
+    // artículo en el diagnóstico OGUC. Cada `numero` pasa por el guard
+    // anti-citas-inventadas antes de salir al cliente.
+    const oguc = {
+      ...ogucParsed,
+      articulos: ogucParsed.articulos.map((a) => ({ ...a, numero: flagUnverifiedCita(a.numero) })),
+    }
 
-    const obsMatch = observacionesText.match(/\{[\s\S]*\}/)
-    const observaciones = obsMatch ? JSON.parse(obsMatch[0]) : { riesgoGlobal: 'MEDIO', predicciones: [], resumen: observacionesText }
+    const observaciones = parseAiJson(observacionesText, ObservacionesSchema, 'copiloto:observaciones') ?? {
+      riesgoGlobal: 'MEDIO',
+      predicciones: [],
+      resumen: observacionesText,
+    }
 
     let checklist: { items: Array<{ id?: string; item_key: string; nombre: string; articulo_normativo: string; descripcion: string; obligatorio: boolean; estado: string }> }
 
@@ -252,10 +366,8 @@ export async function POST(request: Request) {
         })),
       }
     } else if (checklistText) {
-      const checklistMatch = checklistText.match(/\{[\s\S]*\}/)
-      const parsed = checklistMatch
-        ? JSON.parse(checklistMatch[0]) as { items: Array<{ item_key: string; nombre: string; articulo_normativo: string; descripcion: string; obligatorio: boolean }> }
-        : { items: [] }
+      // M5: parseo validado con zod (antes: regex + JSON.parse + cast `as`).
+      const parsed = parseAiJson(checklistText, ChecklistSchema, 'copiloto:checklist') ?? { items: [] }
 
       if (parsed.items.length > 0) {
         const rows = parsed.items.map((item) => ({
@@ -277,10 +389,29 @@ export async function POST(request: Request) {
       checklist = { items: [] }
     }
 
-    const estMatch = estimacionText.match(/\{[\s\S]*\}/)
-    const estimacionParsed = estMatch ? JSON.parse(estMatch[0]) : {}
-    const plazoMinDias: number = estimacionParsed.plazoMinDias ?? 30
-    const plazoMaxDias: number = estimacionParsed.plazoMaxDias ?? 90
+    // M5: parseo validado con zod (antes: regex + JSON.parse sin validación).
+    // No se toca la lógica de clamp/derechos que sigue abajo — solo el parseo.
+    const estimacionParsed: Partial<z.infer<typeof EstimacionSchema>> =
+      parseAiJson(estimacionText, EstimacionSchema, 'copiloto:estimacion') ?? {}
+
+    // A6 (auditoría 2026-07-30): plazoBase es sintético (ver
+    // lib/municipios-stats.ts), así que el rango que devuelve la IA se
+    // acota a una banda razonable alrededor de él en vez de confiar en el
+    // número crudo del modelo. Los fallbacks ante fallo de parseo también
+    // se derivan de plazoBase en lugar de constantes arbitrarias (30/90).
+    const plazoFloor = Math.max(5, Math.round(plazoBase * 0.4))
+    const plazoCeil = Math.round(plazoBase * 2.5)
+    const plazoMinRaw: number = estimacionParsed.plazoMinDias ?? Math.round(plazoBase * 0.8)
+    const plazoMaxRaw: number = estimacionParsed.plazoMaxDias ?? Math.round(plazoBase * 1.5)
+
+    let plazoMinDias = Math.min(Math.max(plazoMinRaw, plazoFloor), plazoCeil)
+    let plazoMaxDias = Math.min(Math.max(plazoMaxRaw, plazoFloor), plazoCeil)
+    if (plazoMinDias > plazoMaxDias) {
+      const tmp = plazoMinDias
+      plazoMinDias = plazoMaxDias
+      plazoMaxDias = tmp
+    }
+
     const hoy = new Date()
     const estimacion = {
       plazoMinDias,
@@ -293,6 +424,7 @@ export async function POST(request: Request) {
       derechosUF: parseFloat((derechos.montoDerechos / ufValor).toFixed(2)),
       derechosDetalle: derechos.detalle,
       derechosAdvertencias: derechos.advertencias,
+      ufFallback,
     }
 
     recordUsage(auth.userId, 'ai_chats').catch(console.error)

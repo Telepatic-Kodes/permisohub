@@ -21,6 +21,7 @@ import {
   REGLAS_CITACION,
   type FuenteNormativa,
 } from '@/lib/normativa-retrieval'
+import { fixMojibakeArcGIS } from '@/lib/zonificacion-format'
 
 // ── Tipos compartidos (contrato entre route ⇆ UI) ──────────────────────────
 
@@ -59,12 +60,19 @@ export interface InventarioItem {
   observacion: string
 }
 
-// Cita normativa estructurada que fundamenta un hallazgo (OGUC/LGUC/DDU).
-// `verificado=true` solo si getArticuloById() encontró el id en la base curada.
+// Fuente de un hallazgo: las tres curadas (OGUC/LGUC/DDU, resueltas contra
+// normativa-retrieval.ts) más 'PRC' — la zonificación real del proyecto,
+// resuelta directamente desde sus datos de zona (NUNCA contra la base curada,
+// que no sabe resolver PRC; ver Anti-Pattern del research de Fase 12).
+export type FuenteHallazgo = FuenteNormativa | 'PRC'
+
+// Cita normativa estructurada que fundamenta un hallazgo (OGUC/LGUC/DDU/PRC).
+// `verificado=true` solo si getArticuloById() encontró el id en la base curada
+// (o, para PRC, si la zona del proyecto era utilizable).
 export interface RefNormativa {
-  fuente: FuenteNormativa
-  id: string // id contra la base: '5.1.2' (OGUC), '116 bis' (LGUC), 'ddu-328' (DDU)
-  etiqueta: string // texto para render: "Art. 5.1.2 OGUC" / "DDU 328"
+  fuente: FuenteHallazgo
+  id: string // id contra la base: '5.1.2' (OGUC), '116 bis' (LGUC), 'ddu-328' (DDU); zona_codigo o 'zona' (PRC)
+  etiqueta: string // texto para render: "Art. 5.1.2 OGUC" / "DDU 328" / "Zona ZC-3 — ..."
   url?: string // link a la fuente (propio o fallback); ausente si no aplica
   verificado: boolean
 }
@@ -166,6 +174,14 @@ export interface ProyectoContexto {
   municipio?: string | null
   rol_sii?: string | null
   tipo?: string | null
+  destino_sii?: string | null
+  zona_status?: string | null
+  zona_usos_disponibles?: boolean | null
+  zona_codigo?: string | null
+  zona_nombre?: string | null
+  zona_uperm?: string | null
+  zona_uproh?: string | null
+  zona_fuente_url?: string | null
 }
 
 // ── Utilidades ──────────────────────────────────────────────────────────────
@@ -296,12 +312,30 @@ function buildRetrievalQuery(extracts: DocExtract[], proyecto: ProyectoContexto)
     .slice(0, 1200) // acota el input del scorer de keywords
 }
 
+// Sección opcional de zonificación (PRC) del proyecto, para que la síntesis
+// pueda contrastar el destino declarado (SII) contra los usos permitidos y
+// prohibidos de la zona. Mismo guard compuesto que el resto de la fase: la
+// zona debe estar 'encontrado' Y tener usos disponibles (una comuna como
+// Ñuñoa queda 'encontrado' pero sin texto de uperm/uproh que comparar — ver
+// Pitfall 1 del research). Aplica fixMojibakeArcGIS() a todo texto de zona
+// antes de inyectarlo en el prompt. Vacía (string '') si la zona no es
+// utilizable — no hay nada que agregar al prompt en ese caso.
+function seccionZonaProyecto(proyecto: ProyectoContexto): string {
+  const utilizable = proyecto.zona_status === 'encontrado' && proyecto.zona_usos_disponibles === true
+  if (!utilizable) return ''
+  const uperm = fixMojibakeArcGIS(proyecto.zona_uperm) ?? '(sin dato)'
+  const uproh = fixMojibakeArcGIS(proyecto.zona_uproh) ?? '(sin dato)'
+  const nombre = fixMojibakeArcGIS(proyecto.zona_nombre)
+  return `\n## Zonificación (PRC) del proyecto\n- Zona: ${proyecto.zona_codigo ?? ''}${nombre ? ` — ${nombre}` : ''}\n- Usos permitidos: ${uperm}\n- Usos prohibidos: ${uproh}\n- Destino declarado (SII): ${proyecto.destino_sii ?? 'no informado'}\n`
+}
+
 function buildSynthesisPrompt(extracts: DocExtract[], proyecto: ProyectoContexto): string {
   // Contexto normativo real (OGUC/LGUC/DDU) para que los hallazgos se funden en
   // artículos existentes y no en invención. Cap de tamaño por presupuesto de
   // tokens (el JSON de extracts ya es grande).
   const ctxRaw = getContextoNormativo(buildRetrievalQuery(extracts, proyecto), 5)
   const contextoNormativo = ctxRaw.length > 4000 ? `${ctxRaw.slice(0, 4000)}\n…(contexto truncado)` : ctxRaw
+  const zonaSeccion = seccionZonaProyecto(proyecto)
 
   return `Eres un revisor senior de permisos de edificación en Chile (OGUC/LGUC + Plan Regulador). Recibes los resúmenes estructurados de TODOS los documentos de un expediente. Tu tarea es producir un DUE DILIGENCE documental: cruzar la información entre documentos, detectar el estado real ante la DOM y priorizar hallazgos FUNDAMENTADOS en la normativa.
 
@@ -317,14 +351,14 @@ ${JSON.stringify(extracts, null, 2)}
 
 ## Contexto normativo (OGUC · LGUC · DDU)
 ${contextoNormativo}
-
+${zonaSeccion}
 ${REGLAS_CITACION}
 
 ## Instrucciones
 1. ESTADO DOM: si algún documento es un acto de la DOM que rechaza/observa el ingreso, el estado es RECHAZADO; usa su N° de resolución, fecha y expediente. Ese rechazo domina el riesgo global (ALTO).
 2. INVENTARIO: una fila por documento (usa el índice numérico si el nombre lo trae, ej. "01"). Marca faltantes evidentes (documentos que un expediente de este tipo debería tener y no aparecen).
 3. HALLAZGOS: prioriza. Cada observación de la DOM es al menos "alto"; un rechazo de fondo o falta de documento esencial es "critico". Las contradicciones ENTRE documentos (superficies, carga de ocupación, numeración de permisos/recepciones) son hallazgos: cítalas en refFuente. Códigos: C1,C2… (crítico), A1,A2… (alto), M1,M2… (medio/saneo).
-4. FUNDAMENTO NORMATIVO — obligatorio: por cada hallazgo, en "refNormativa", cita el/los artículo(s) del CONTEXTO NORMATIVO que lo fundan, usando el "id" EXACTO tal como aparece (OGUC/LGUC: el número de artículo, ej. "5.1.2"; DDU: el id "ddu-###" o el número). Cita SOLO ids presentes en el contexto. Si NINGÚN artículo del contexto funda el hallazgo, deja "refNormativa": [] (se mostrará como "sin fundamento verificado" — es preferible a inventar).
+4. FUNDAMENTO NORMATIVO — obligatorio: por cada hallazgo, en "refNormativa", cita el/los artículo(s) del CONTEXTO NORMATIVO que lo fundan, usando el "id" EXACTO tal como aparece (OGUC/LGUC: el número de artículo, ej. "5.1.2"; DDU: el id "ddu-###" o el número). Cita SOLO ids presentes en el contexto. Si además, según la sección "Zonificación (PRC) del proyecto" (cuando esté presente), el DESTINO DECLARADO no calza con los usos permitidos de la zona (o coincide con un uso prohibido), agrega un hallazgo adicional citando "fuente": "PRC" (el "id" puede ser cualquier valor, ej. "zona" — se resuelve automáticamente contra los datos de zona del proyecto, no contra este contexto). Si NINGÚN artículo del contexto funda un hallazgo y no aplica PRC, deja "refNormativa": [] (se mostrará como "sin fundamento verificado" — es preferible a inventar).
 5. VIGENCIAS: lista certificados con caducidad y su estado (ok/warn/crit).
 6. PRÓXIMOS PASOS: acciones concretas en orden; marca critico=true las de fondo.
 
@@ -335,7 +369,7 @@ Responde SOLO con JSON válido (sin markdown), con esta forma EXACTA:
   "estadoDOM": { "rechazado": boolean, "resolucion": string|null, "fecha": string|null, "expediente": string|null, "detalle": string|null },
   "resumenEjecutivo": "2-4 frases",
   "inventario": [ { "indice": "01", "documento": "…", "fecha": "…"|null, "estado": "conforme|revisar|corregir|faltante|vigente|legible|acto_dom", "estadoLabel": "…", "observacion": "…" } ],
-  "hallazgos": [ { "codigo": "C1", "severidad": "critico|alto|medio", "titulo": "…", "descripcion": "…", "refDOM": "…"|null, "refFuente": "…"|null, "refNormativa": [ { "fuente": "OGUC|LGUC|DDU", "id": "<id EXACTO del contexto>" } ] } ],
+  "hallazgos": [ { "codigo": "C1", "severidad": "critico|alto|medio", "titulo": "…", "descripcion": "…", "refDOM": "…"|null, "refFuente": "…"|null, "refNormativa": [ { "fuente": "OGUC|LGUC|DDU|PRC", "id": "<id EXACTO del contexto, o 'zona' para PRC>" } ] } ],
   "historial": [ { "periodo": "…", "titulo": "…", "detalle": "…", "m2": "…"|null, "critico": false } ],
   "vigencias": [ { "hito": "…", "fecha": "…", "estado": "…", "nivel": "ok|warn|crit" } ],
   "proximosPasos": [ { "titulo": "…", "detalle": "…", "critico": false } ]
@@ -364,17 +398,36 @@ interface SynthesisPayload {
 
 const FUENTES_VALIDAS: FuenteNormativa[] = ['OGUC', 'LGUC', 'DDU']
 
-// Resuelve las citas crudas del modelo contra la base curada: setea
-// verificado/url/etiqueta. Una cita cuyo id no existe en la base queda
-// verificado=false con la etiqueta marcada "(por verificar)" — nunca se
-// presenta como fundada. Descarta citas con fuente inválida.
-function resolverRefNormativa(raw: RawRefNormativa[] | undefined): RefNormativa[] {
+// Resuelve las citas crudas del modelo. OGUC/LGUC/DDU: contra la base curada
+// (setea verificado/url/etiqueta; id inexistente queda verificado=false con
+// "(por verificar)" — nunca se presenta como fundada). PRC: NUNCA contra
+// getArticuloById (no conoce PRC) — se construye directo desde los datos de
+// zona del proyecto, solo si la zona es utilizable; si no, se descarta la
+// cita en silencio (nunca una cita a medias). Descarta citas con fuente
+// inválida.
+function resolverRefNormativa(raw: RawRefNormativa[] | undefined, proyecto: ProyectoContexto): RefNormativa[] {
   if (!Array.isArray(raw)) return []
   const out: RefNormativa[] = []
+  const zonaUtilizable = proyecto.zona_status === 'encontrado' && proyecto.zona_usos_disponibles === true
   for (const r of raw) {
-    const fuente = typeof r.fuente === 'string' ? (r.fuente.toUpperCase() as FuenteNormativa) : null
+    const fuenteRaw = typeof r.fuente === 'string' ? r.fuente.toUpperCase() : null
+    if (fuenteRaw === 'PRC') {
+      if (zonaUtilizable) {
+        const nombre = fixMojibakeArcGIS(proyecto.zona_nombre)
+        out.push({
+          fuente: 'PRC',
+          id: proyecto.zona_codigo ?? 'zona',
+          etiqueta: `Zona ${proyecto.zona_codigo ?? ''}${nombre ? ` — ${nombre}` : ''}`.trim(),
+          url: proyecto.zona_fuente_url ?? undefined,
+          verificado: true,
+        })
+      }
+      // zona no utilizable: descarta la cita silenciosamente, no empuja nada a `out`.
+      continue
+    }
+    const fuente = fuenteRaw && FUENTES_VALIDAS.includes(fuenteRaw as FuenteNormativa) ? (fuenteRaw as FuenteNormativa) : null
     const id = typeof r.id === 'string' ? r.id.trim() : ''
-    if (!fuente || !FUENTES_VALIDAS.includes(fuente) || !id) continue
+    if (!fuente || !id) continue
     const art = getArticuloById(fuente, id)
     if (art) {
       out.push({ fuente, id: art.id, etiqueta: art.etiqueta, url: urlDeCitable(art), verificado: art.verificado })
@@ -405,7 +458,7 @@ export async function synthesizeDueDiligence(
   // con su fundamento normativo resuelto y verificado contra la base.
   const hallazgos: Hallazgo[] = (parsed?.hallazgos ?? []).map((h) => ({
     ...h,
-    refNormativa: resolverRefNormativa(h.refNormativa),
+    refNormativa: resolverRefNormativa(h.refNormativa, proyecto),
     estadoRevision: 'propuesto' as const,
   }))
   const conteos = {

@@ -31,6 +31,9 @@ export function TabEstimacion({ data }: TabEstimacionProps) {
         <p className="mt-1 text-xs text-muted-foreground">
           ≈ {Math.round(data.plazoMinDias / 5)}–{Math.round(data.plazoMaxDias / 5)} semanas calendario
         </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Estimación generada por IA a partir de datos históricos sintéticos/estimados — no es un plazo garantizado ni oficial.
+        </p>
 
         {data.factores.length > 0 && (
           <div className="mt-3 space-y-1">
@@ -59,6 +62,12 @@ export function TabEstimacion({ data }: TabEstimacionProps) {
           </span>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">{data.derechosUF} UF al valor actual</p>
+
+        {data.ufFallback && (
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            UF referencial — mindicador.cl no disponible
+          </p>
+        )}
 
         {data.derechosDetalle.length > 0 && (
           <div className="mt-3 space-y-1">

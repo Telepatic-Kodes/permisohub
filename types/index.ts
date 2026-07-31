@@ -112,6 +112,18 @@ export interface Proyecto {
   destino_sii?: string                // destino SII: CASA HABITACION, COMERCIO…
   lat?: number                        // latitud del predio (para mapa)
   lng?: number                        // longitud del predio (para mapa)
+  // Campos de zonificación (Plan Regulador Comunal — Fase 10/11)
+  zona_status?: 'pendiente' | 'encontrado' | 'sin_cobertura' | 'error'
+  zona_cache_id?: string
+  zona_codigo?: string
+  zona_sector?: string
+  zona_nombre?: string
+  zona_uperm?: string
+  zona_uproh?: string
+  zona_usos_disponibles?: boolean
+  zona_fuente_url?: string
+  zona_consultada_el?: string
+  zona_origen?: 'automatico' | 'manual'
   // Campos enterprise (cadena comercial)
   local_id?: string
   centro_id?: string

@@ -41,9 +41,9 @@ El tono debe ser profesional, claro y tranquilizador. Incluye: estado actual, qu
 
     seguimiento_dom: `Redacta una carta formal de seguimiento a la DOM de ${body.municipio} sobre el Expediente N°${body.numeroExpediente ?? '[NÚMERO]'} del proyecto "${body.proyectoNombre}" (${body.direccion ?? ''}).
 Ingresado el: ${body.fechaIngreso ?? '[FECHA]'}. Han transcurrido aproximadamente ${body.diasHabiles ?? '?'} días hábiles.
-El tono debe ser formal y respetuoso. Cita el Artículo 5.1.2 OGUC sobre plazos de pronunciamiento.`,
+El tono debe ser formal y respetuoso. Cita el Artículo 118 de la LGUC (modificado por Ley 21.718) sobre plazos de pronunciamiento de la DOM.`,
 
-    reclamo_ley21718: `Redacta una carta formal de reclamo por vencimiento de plazo legal, conforme a la Ley 21.718 (Art. 118 LGUC) y el Artículo 5.1.2 OGUC.
+    reclamo_ley21718: `Redacta una carta formal de reclamo por vencimiento de plazo legal, conforme a la Ley 21.718 (Art. 118 LGUC).
 Proyecto: "${body.proyectoNombre}" en ${body.municipio}. Expediente N°${body.numeroExpediente ?? '[NÚMERO]'}.
 Ingresado el: ${body.fechaIngreso ?? '[FECHA]'}. Han transcurrido ${body.diasHabiles ?? '?'} días hábiles sin pronunciamiento.
 El tono debe ser firme pero respetuoso. Solicita pronunciamiento formal dentro de los plazos legales.`,

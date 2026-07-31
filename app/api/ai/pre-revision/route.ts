@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 90
 
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { aiAuthGuard } from '@/lib/ai-guard'
@@ -9,6 +10,8 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
 import { ESTADISTICAS_MUNICIPIOS } from '@/lib/municipios-stats'
 import { getInteligenciaMunicipio } from '@/lib/inteligencia-dom'
+import { flagUnverifiedCita } from '@/lib/normativa-retrieval'
+import { parseAiJson } from '@/lib/ai-parse'
 import type { Proyecto } from '@/types'
 
 // ---------------------------------------------------------------------------
@@ -43,6 +46,31 @@ interface ActaResult {
   observaciones: ObservacionActa[]
   veredicto: string
 }
+
+// M5 (auditoría 2026-07-30): schema laxo — garantiza forma estructural
+// (arrays/objetos/tipos base), no restringe valores de enum a un set cerrado
+// para que un drift menor del modelo no tumbe todo el parseo.
+const ObservacionActaSchema = z
+  .object({
+    numero: z.number().default(0),
+    materia: z.string().default(''),
+    articulo: z.string().default(''),
+    severidad: z.string().default('menor'),
+    observacion: z.string().default(''),
+    fundamento: z.string().default(''),
+    comoSubsanar: z.string().default(''),
+  })
+  .passthrough()
+
+const ActaSchema = z
+  .object({
+    riesgoGlobal: z.string().default('MEDIO'),
+    probabilidadAprobacion: z.number().default(50),
+    resumen: z.string().default(''),
+    observaciones: z.array(ObservacionActaSchema).default([]),
+    veredicto: z.string().default(''),
+  })
+  .passthrough()
 
 function buildActaPrompt(p: Proyecto): string {
   const stats = ESTADISTICAS_MUNICIPIOS.find((m) => m.nombre === p.municipio)
@@ -142,26 +170,37 @@ export async function POST(request: Request) {
       max_tokens: 2500,
     })
 
-    const match = text.match(/\{[\s\S]*\}/)
-    const parsed = match
-      ? (JSON.parse(match[0]) as Omit<ActaResult, 'expediente' | 'municipio'>)
-      : {
-          riesgoGlobal: 'MEDIO' as const,
-          probabilidadAprobacion: 50,
-          resumen: text,
-          observaciones: [] as ObservacionActa[],
-          veredicto: '',
-        }
+    // M5: parseo validado con zod (antes: regex + JSON.parse + cast `as` sin
+    // validación de runtime). En fallo, degrada al mismo fallback que existía.
+    const parsed = parseAiJson(text, ActaSchema, 'pre-revision') ?? {
+      riesgoGlobal: 'MEDIO',
+      probabilidadAprobacion: 50,
+      resumen: text,
+      observaciones: [],
+      veredicto: '',
+    }
+
+    const riesgoGlobal: ActaResult['riesgoGlobal'] =
+      parsed.riesgoGlobal === 'BAJO' || parsed.riesgoGlobal === 'ALTO' ? parsed.riesgoGlobal : 'MEDIO'
 
     const acta: ActaResult = {
       expediente: p.numero_expediente ?? p.nombre,
       municipio: p.municipio,
-      riesgoGlobal: parsed.riesgoGlobal ?? 'MEDIO',
-      probabilidadAprobacion:
-        typeof parsed.probabilidadAprobacion === 'number' ? parsed.probabilidadAprobacion : 50,
-      resumen: parsed.resumen ?? '',
-      observaciones: parsed.observaciones ?? [],
-      veredicto: parsed.veredicto ?? '',
+      riesgoGlobal,
+      probabilidadAprobacion: parsed.probabilidadAprobacion,
+      resumen: parsed.resumen,
+      // A2 (auditoría 2026-07-30): el modelo puede inventar un número de
+      // artículo en el acta simulada. Cada `articulo` pasa por el guard
+      // anti-citas-inventadas antes de salir al cliente.
+      observaciones: parsed.observaciones.map((o) => ({
+        ...o,
+        severidad:
+          o.severidad === 'crítica' || o.severidad === 'media'
+            ? (o.severidad as ObservacionActa['severidad'])
+            : 'menor',
+        articulo: flagUnverifiedCita(o.articulo),
+      })),
+      veredicto: parsed.veredicto,
     }
 
     recordUsage(auth.userId, 'ai_chats').catch(console.error)

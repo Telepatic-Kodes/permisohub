@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { isAIAvailable, aiCompleteWithPDF } from '@/lib/ai'
 import { createClient } from '@/lib/supabase/server'
 import { getUserPlan } from '@/lib/subscription'
@@ -5,8 +6,33 @@ import { getLimits, isWithinLimit } from '@/lib/plan-limits'
 import { getUsageThisMonth, recordUsage } from '@/lib/usage'
 import type { PlanId } from '@/lib/stripe'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { flagUnverifiedCita } from '@/lib/normativa-retrieval'
+import { parseAiJson } from '@/lib/ai-parse'
 
 export const dynamic = 'force-dynamic'
+
+// M5 (auditoría 2026-07-30): schema laxo — garantiza forma estructural, no
+// restringe "tipo"/"gravedad" a un set cerrado (drift menor del modelo no
+// tumba el parseo completo).
+const ObservacionExtraidaSchema = z
+  .object({
+    numero: z.number().default(0),
+    texto: z.string().default(''),
+    articuloCitado: z.string().nullable().default(null),
+    tipo: z.string().default('TECNICA'),
+    gravedad: z.string().default('MEDIA'),
+  })
+  .passthrough()
+
+const ExtractSchema = z
+  .object({
+    observaciones: z.array(ObservacionExtraidaSchema).default([]),
+    municipio: z.string().nullable().default(null),
+    expediente: z.string().nullable().default(null),
+    fechaOrdinario: z.string().nullable().default(null),
+    plazoRespuesta: z.number().nullable().default(null),
+  })
+  .passthrough()
 
 export async function POST(request: Request) {
   if (!isAIAvailable()) {
@@ -89,21 +115,22 @@ Si el documento no contiene observaciones (ya fue aprobado o es otro tipo de doc
 
   try {
     const text = await aiCompleteWithPDF(prompt, pdfBase64, fileName, { max_tokens: 3000 })
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('No JSON en respuesta')
 
-    const result = JSON.parse(jsonMatch[0]) as {
-      observaciones: Array<{
-        numero: number
-        texto: string
-        articuloCitado: string | null
-        tipo: string
-        gravedad: string
-      }>
-      municipio: string | null
-      expediente: string | null
-      fechaOrdinario: string | null
-      plazoRespuesta: number | null
+    // M5: parseo validado con zod (antes: regex + JSON.parse + cast `as` sin
+    // validación de runtime). Semántica preservada: sin JSON válido/parseable
+    // esta ruta siempre respondió 500 ("No JSON en respuesta") — se mantiene.
+    const parsed = parseAiJson(text, ExtractSchema, 'extract-observations')
+    if (!parsed) throw new Error('No JSON en respuesta')
+
+    // A2 (auditoría 2026-07-30): el modelo puede inventar un número de
+    // artículo al citar la observación de la DOM. Cada `articuloCitado` pasa
+    // por el guard anti-citas-inventadas antes de salir al cliente.
+    const result = {
+      ...parsed,
+      observaciones: parsed.observaciones.map((o) => ({
+        ...o,
+        articuloCitado: o.articuloCitado ? flagUnverifiedCita(o.articuloCitado) : o.articuloCitado,
+      })),
     }
 
     // Register a successful extraction against the user's monthly quota.

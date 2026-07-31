@@ -1,5 +1,20 @@
-// Chilean holidays 2024-2030 (fixed + movable dates pre-calculated)
-// Source: Ley N°2.977 + modifications
+// Chilean holidays, pre-calculated per year.
+// Source: Ley N°2.977 (feriados base) + Ley N°19.973/20.983 ("ley de lunes":
+// San Pedro y San Pablo, Encuentro de Dos Mundos), Ley N°20.299 (Iglesias
+// Evangélicas y Protestantes, con traslado a viernes), Ley N°21.357 (Día
+// Nacional de los Pueblos Indígenas = solsticio de invierno).
+//
+// MANTENCIÓN: Tabla requiere refresco anual — feriados nuevos por ley
+// (irrenunciables, únicos, ad-hoc) no son predecibles y no están cubiertos
+// aquí. Antes de cada año nuevo, verificar el Diario Oficial / boletín de
+// feriados y agregar la entrada correspondiente. Si un año no está en esta
+// tabla, `getEstadoPlazoLey21718` lo señala vía `feriadosIncompletos` y se
+// emite un console.warn — no falla silenciosamente, pero tampoco calcula
+// bien los días hábiles de ese año hasta que se agregue.
+//
+// TODO: evaluar reemplazar esta tabla estática por una fuente externa
+// (p. ej. API de boostr.cl/feriados o equivalente oficial) para no depender
+// de actualizaciones manuales anuales. Fuera de alcance de este sprint.
 
 const FERIADOS_CHILE: Record<number, string[]> = {
   2024: [
@@ -75,10 +90,77 @@ const FERIADOS_CHILE: Record<number, string[]> = {
     '2027-12-08',
     '2027-12-25',
   ],
+  2028: [
+    '2028-01-01', // Año Nuevo — fijo
+    '2028-04-14', // Viernes Santo — movible religioso (searched: feriadoschilenos.cl / calendariochile.com)
+    '2028-04-15', // Sábado Santo — movible religioso (searched)
+    '2028-05-01', // Día del Trabajo — fijo
+    '2028-05-21', // Glorias Navales — fijo
+    // Día Nacional de los Pueblos Indígenas (Ley 21.357): coincide con el
+    // solsticio de invierno. 2028-06-20 es martes (día de semana), por lo
+    // que no aplica el traslado a lunes que sí opera si cae fin de semana.
+    // fecha por confirmar en D.O. — el decreto específico del año aún no
+    // ha sido gazetado a esta distancia; calculada astronómicamente y
+    // cruzada con feriadoschilenos.cl.
+    '2028-06-20', // Día de los Pueblos Indígenas — solsticio, por confirmar en D.O.
+    '2028-06-26', // San Pedro y San Pablo — ley de lunes: 29-jun-2028 es jueves → traslada al lunes anterior (26-jun)
+    '2028-07-16', // Virgen del Carmen — fijo
+    '2028-08-15', // Asunción de la Virgen — fijo
+    '2028-09-18', // Independencia Nacional — fijo
+    '2028-09-19', // Glorias del Ejército — fijo
+    '2028-10-09', // Encuentro de Dos Mundos — ley de lunes: 12-oct-2028 es jueves → traslada al lunes anterior (9-oct)
+    '2028-10-27', // Iglesias Evangélicas y Protestantes — Ley 20.299: 31-oct-2028 es martes → traslada al viernes de la semana anterior (27-oct)
+    '2028-11-01', // Todos los Santos — fijo
+    '2028-12-08', // Inmaculada Concepción — fijo
+    '2028-12-25', // Navidad — fijo
+  ],
+  2029: [
+    '2029-01-01', // Año Nuevo — fijo
+    '2029-03-30', // Viernes Santo — movible religioso (searched)
+    '2029-03-31', // Sábado Santo — movible religioso (searched)
+    '2029-05-01', // Día del Trabajo — fijo
+    '2029-05-21', // Glorias Navales — fijo
+    // 2029-06-20 es miércoles (día de semana) → no aplica traslado a lunes.
+    // fecha por confirmar en D.O. — mismo criterio que 2028 (ver comentario arriba).
+    '2029-06-20', // Día de los Pueblos Indígenas — solsticio, por confirmar en D.O.
+    '2029-07-02', // San Pedro y San Pablo — ley de lunes: 29-jun-2029 es viernes → traslada al lunes siguiente (2-jul)
+    '2029-07-16', // Virgen del Carmen — fijo
+    '2029-08-15', // Asunción de la Virgen — fijo
+    '2029-09-18', // Independencia Nacional — fijo
+    '2029-09-19', // Glorias del Ejército — fijo
+    '2029-10-15', // Encuentro de Dos Mundos — ley de lunes: 12-oct-2029 es viernes → traslada al lunes siguiente (15-oct)
+    '2029-11-01', // Todos los Santos — fijo
+    '2029-11-02', // Iglesias Evangélicas y Protestantes — Ley 20.299: 31-oct-2029 es miércoles → traslada al viernes de la misma semana (2-nov)
+    '2029-12-08', // Inmaculada Concepción — fijo
+    '2029-12-25', // Navidad — fijo
+  ],
+}
+
+/** Años con datos completos en FERIADOS_CHILE. Se usa para el runtime guard. */
+function anioTieneFeriados(year: number): boolean {
+  return year in FERIADOS_CHILE
+}
+
+// Set module-level: evita spamear console.warn en cada llamada para el
+// mismo año faltante (p. ej. un cron que corre a diario).
+const aniosAdvertidos = new Set<number>()
+
+function advertirFeriadosIncompletos(year: number): void {
+  if (aniosAdvertidos.has(year)) return
+  aniosAdvertidos.add(year)
+  console.warn(
+    `[dias-habiles] FERIADOS_CHILE no tiene datos para el año ${year}. ` +
+      'Los cálculos de días hábiles para ese año solo excluyen sábado/domingo ' +
+      '(sin feriados), lo que puede entregar plazos legales incorrectos. ' +
+      'Agregar el año a la tabla en lib/dias-habiles.ts.'
+  )
 }
 
 function isFeriado(date: Date): boolean {
   const year = date.getFullYear()
+  if (!anioTieneFeriados(year)) {
+    advertirFeriadosIncompletos(year)
+  }
   const dateStr = date.toISOString().split('T')[0]
   const holidays = FERIADOS_CHILE[year] ?? []
   return holidays.includes(dateStr)
@@ -142,6 +224,21 @@ export interface EstadoPlazoLey21718 {
   tieneRevisorIndependiente: boolean
   labelEstado: string
   diasHabilesDesdeIngreso: number
+  /**
+   * true si algún año involucrado en el cálculo (entre fechaIngreso y el
+   * mayor de {hoy, fechaVencimiento}) no está cubierto por FERIADOS_CHILE.
+   * En ese caso el conteo de días hábiles de ese año solo excluye
+   * sábado/domingo (sin feriados) y el resultado puede variar respecto al
+   * cálculo legal real. La UI debe mostrar una advertencia cuando es true.
+   */
+  feriadosIncompletos: boolean
+  /**
+   * true si el proyecto corresponde al tramo extendido de 60 días hábiles
+   * de Ley 21.718 (proyectos habitacionales de mayor envergadura). Ver
+   * parámetro `plazoExtendido60` de getEstadoPlazoLey21718 para el detalle
+   * de la condición gatillante y su fuente.
+   */
+  plazoExtendido60: boolean
 }
 
 /**
@@ -149,14 +246,30 @@ export interface EstadoPlazoLey21718 {
  * @param fechaIngreso - Date the permit was submitted to DOM
  * @param tieneRevisorIndependiente - Whether independent reviewer (RI) was used
  * @param hoy - Current date (defaults to now, accept parameter for testing)
+ * @param plazoExtendido60 - Whether the extended 60-business-day tier applies
+ *   instead of the standard 30. Per Ley 21.718 this tier applies to
+ *   "proyectos habitacionales de mayor envergadura" with carga de ocupación
+ *   igual o superior a 1.000 personas (confirmed via DLA Piper's summary of
+ *   the law, Dec-2024, and corroborated by portal.ijuridica.cl / arqydom.cl —
+ *   no direct BCN primary-text citation obtained in this pass; if this
+ *   trigger condition needs to be re-verified against the Diario Oficial
+ *   text, treat it as the thing to check). Defaults to false so existing
+ *   callers are unaffected. When true, this OVERRIDES the 30/15 logic: the
+ *   base plazo becomes 60 (or 30 with revisor independiente) instead of 30
+ *   (or 15). The same sources indicate the revisor-independiente discount
+ *   ("los plazos indicados se reducen a la mitad") applies uniformly to
+ *   both tiers, so the 60-day tier is halved to 30 just like 30→15 — this
+ *   was confirmed by two independent secondary sources, not primary BCN text.
  */
 export function getEstadoPlazoLey21718(
   fechaIngreso: Date,
   tieneRevisorIndependiente: boolean,
-  hoy?: Date
+  hoy?: Date,
+  plazoExtendido60 = false
 ): EstadoPlazoLey21718 {
   const today = hoy ?? new Date()
-  const plazoTotal = tieneRevisorIndependiente ? 15 : 30
+  const plazoBase = plazoExtendido60 ? 60 : 30
+  const plazoTotal = tieneRevisorIndependiente ? plazoBase / 2 : plazoBase
 
   const diasHabilesDesdeIngreso = contarDiasHabiles(fechaIngreso, today)
   const fechaVencimiento = sumarDiasHabiles(fechaIngreso, plazoTotal)
@@ -187,6 +300,20 @@ export function getEstadoPlazoLey21718(
     labelEstado = `${diasHabilesRestantes} días hábiles restantes de ${plazoTotal}`
   }
 
+  // Runtime guard (A3): señala si algún año tocado por el cálculo no está
+  // en FERIADOS_CHILE. isFeriado() ya emite console.warn una vez por año
+  // faltante durante contarDiasHabiles/sumarDiasHabiles; acá se resuelve
+  // el flag para exponerlo a la UI incluso si el rango no llegó a iterar
+  // sobre un día de ese año (p. ej. plazoTotal 0).
+  const anioMax = Math.max(today.getFullYear(), fechaVencimiento.getFullYear())
+  let feriadosIncompletos = false
+  for (let y = fechaIngreso.getFullYear(); y <= anioMax; y++) {
+    if (!anioTieneFeriados(y)) {
+      advertirFeriadosIncompletos(y)
+      feriadosIncompletos = true
+    }
+  }
+
   return {
     diasHabilesTranscurridos,
     diasHabilesRestantes,
@@ -198,6 +325,8 @@ export function getEstadoPlazoLey21718(
     tieneRevisorIndependiente,
     labelEstado,
     diasHabilesDesdeIngreso,
+    feriadosIncompletos,
+    plazoExtendido60,
   }
 }
 

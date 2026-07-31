@@ -7,22 +7,22 @@
 
 ### ZONE — Zonificación por Dirección (Núcleo)
 
-- [ ] **ZONE-01**: Al abrir un proyecto con dirección, el arquitecto ve automáticamente la zona PRC (código + nombre) determinada por geocoding + consulta espacial contra el layer ArcGIS de MINVU/OCUC
-- [ ] **ZONE-02**: El resultado incluye un mapa que confirma visualmente que el punto geocodificado cae dentro del polígono de la zona retornada
-- [ ] **ZONE-03**: El resultado muestra los usos permitidos y usos prohibidos de la zona en texto verbatim, con cita a la fuente oficial (link al decreto cuando esté disponible, tratamiento no-verificado cuando no — distinto del flag `verificado` de normativa-retrieval.ts)
-- [ ] **ZONE-04**: El resultado de zonificación queda persistido en el proyecto, con una acción explícita "Actualizar" — sin refresco silencioso en background
-- [ ] **ZONE-05**: Si el geocoding falla o la comuna no tiene cobertura, el arquitecto puede seleccionar manualmente comuna y zona desde un listado en vez de ver un error sin salida
-- [ ] **ZONE-06**: Toda pantalla de zonificación muestra el disclaimer "Informativo, no reemplaza el Certificado de Informaciones Previas (CIP) oficial"
+- [x] **ZONE-01**: Al abrir un proyecto con dirección, el arquitecto ve automáticamente la zona PRC (código + nombre) determinada por geocoding + consulta espacial contra el layer ArcGIS de MINVU/OCUC
+- [x] **ZONE-02**: El resultado incluye un mapa que confirma visualmente que el punto geocodificado cae dentro del polígono de la zona retornada
+- [x] **ZONE-03**: El resultado muestra los usos permitidos y usos prohibidos de la zona en texto verbatim, con cita a la fuente oficial (link al decreto cuando esté disponible, tratamiento no-verificado cuando no — distinto del flag `verificado` de normativa-retrieval.ts)
+- [x] **ZONE-04**: El resultado de zonificación queda persistido en el proyecto, con una acción explícita "Actualizar" — sin refresco silencioso en background
+- [x] **ZONE-05**: Si el geocoding falla o la comuna no tiene cobertura, el arquitecto puede seleccionar manualmente comuna y zona desde un listado en vez de ver un error sin salida
+- [x] **ZONE-06**: Toda pantalla de zonificación muestra el disclaimer "Informativo, no reemplaza el Certificado de Informaciones Previas (CIP) oficial"
 
 ### COMPAT — Compatibilidad de Uso
 
-- [ ] **COMPAT-01**: El arquitecto puede indicar el uso pretendido del proyecto y el sistema responde con uno de tres estados — Permitido / No permitido / No especificado (requiere revisión) — nunca un veredicto binario
+- [x] **COMPAT-01**: El arquitecto puede indicar el uso pretendido del proyecto y el sistema responde con uno de tres estados — Permitido / No permitido / No especificado (requiere revisión) — nunca un veredicto binario
 
 ### INTEG — Integración con Motores Existentes
 
-- [ ] **INTEG-01**: `via-tramitacion.ts` muestra una alerta citada cuando el uso declarado no calza con los usos permitidos de la zona, sin modificar el árbol de decisión determinista (`recomendarVia()` no se altera)
-- [ ] **INTEG-02**: `due-diligence.ts` puede citar la zona como fuente de hallazgo (nuevo tipo `'PRC'` en `RefNormativa`) cuando detecta incoherencia entre el destino declarado y los usos permitidos
-- [ ] **INTEG-03**: Los skills del copiloto IA (diagnóstico OGUC, checklist) reciben el texto de usos permitidos/prohibidos como contexto adicional al generar sus respuestas
+- [x] **INTEG-01**: `via-tramitacion.ts` muestra una alerta citada cuando el uso declarado no calza con los usos permitidos de la zona, sin modificar el árbol de decisión determinista (`recomendarVia()` no se altera)
+- [x] **INTEG-02**: `due-diligence.ts` puede citar la zona como fuente de hallazgo (nuevo tipo `'PRC'` en `RefNormativa`) cuando detecta incoherencia entre el destino declarado y los usos permitidos
+- [x] **INTEG-03**: Los skills del copiloto IA (diagnóstico OGUC, checklist) reciben el texto de usos permitidos/prohibidos como contexto adicional al generar sus respuestas
 
 ### Future Requirements (v1.4.x / v2+)
 
@@ -43,16 +43,16 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| ZONE-01 | 11 | Pending |
-| ZONE-02 | 11 | Pending |
-| ZONE-03 | 11 | Pending |
-| ZONE-04 | 11 | Pending |
-| ZONE-05 | 11 | Pending |
-| ZONE-06 | 11 | Pending |
-| COMPAT-01 | 11 | Pending |
-| INTEG-01 | 12 | Pending |
-| INTEG-02 | 12 | Pending |
-| INTEG-03 | 12 | Pending |
+| ZONE-01 | 11 | Complete |
+| ZONE-02 | 11 | Complete |
+| ZONE-03 | 11 | Complete |
+| ZONE-04 | 11 | Complete |
+| ZONE-05 | 11 | Complete |
+| ZONE-06 | 11 | Complete |
+| COMPAT-01 | 11 | Complete |
+| INTEG-01 | 12 | Complete |
+| INTEG-02 | 12 | Complete |
+| INTEG-03 | 12 | Complete |
 
 **Coverage:**
 - v1.4 requirements: 10 total
