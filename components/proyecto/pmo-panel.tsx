@@ -748,6 +748,14 @@ function PlazoLey21718Card({
             {estado.labelEstado}
           </p>
 
+          {estado.feriadosIncompletos && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Cálculo sin feriados verificados para{" "}
+              {estado.fechaVencimiento.getFullYear()} — el conteo de días
+              hábiles puede variar.
+            </p>
+          )}
+
           {necesitaCarta && (
             <button
               onClick={() => void handleGenerarCarta()}
