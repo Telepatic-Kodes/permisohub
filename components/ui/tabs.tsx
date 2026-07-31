@@ -72,6 +72,7 @@ export function TabsTrigger({
       type="button"
       role="tab"
       aria-selected={active}
+      data-state={active ? "active" : "inactive"}
       onClick={() => setValue(value)}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",

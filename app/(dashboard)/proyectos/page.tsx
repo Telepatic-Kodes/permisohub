@@ -15,7 +15,11 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { EstadoBadge } from "@/components/dashboard/estado-badge"
+import {
+  EstadoNormativo,
+  colorDeVeredicto,
+  veredictoDeExpediente,
+} from "@/components/arch/estado"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Input } from "@/components/ui/input"
 import {
@@ -62,13 +66,11 @@ const ESTADO_COLUMN_LABEL: Record<EstadoExpediente, string> = {
   rechazado:         "Rechazado",
 }
 
-const ESTADO_COLUMN_DOT: Record<EstadoExpediente, string> = {
-  borrador:          "bg-gray-400",
-  ingresado:         "bg-sky-500",
-  en_revision:       "bg-blue-500",
-  con_observaciones: "bg-amber-500",
-  aprobado:          "bg-emerald-500",
-  rechazado:         "bg-red-500",
+// El punto de la columna sigue la regla del sistema: color saturado SOLO
+// cuando el estado es un veredicto de la DOM; las etapas previas van en tinta.
+function estadoDotColor(estado: EstadoExpediente): string {
+  const { veredicto } = veredictoDeExpediente(estado)
+  return veredicto === "neutro" ? "var(--line-strong)" : colorDeVeredicto(veredicto)
 }
 
 const ESTADO_OPTIONS = [
@@ -92,6 +94,8 @@ function formatDate(value?: string) {
 // ---------------------------------------------------------------------------
 // Project card — used in kanban + grid
 // ---------------------------------------------------------------------------
+// La tarjeta es un mini-rótulo: esquina de escuadra, nombre en tipografía
+// técnica, estado como veredicto normativo y pie de celdas con línea fina.
 function ProyectoCard({
   proyecto,
   compact = false,
@@ -100,60 +104,60 @@ function ProyectoCard({
   compact?: boolean
 }) {
   const fecha = formatDate(proyecto.fecha_estimada)
+  const { veredicto, label } = veredictoDeExpediente(proyecto.estado)
 
   return (
     <Link href={`/proyectos/${proyecto.id}`} className="block group">
-      <div
-        className={cn(
-          "rounded-xl border border-border bg-white transition-all hover:border-primary/20 hover:shadow-md",
-          compact ? "p-3" : "p-4"
-        )}
-        style={{ boxShadow: "var(--shadow-card)" }}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <EstadoBadge estado={proyecto.estado} />
-          {fecha && (
-            <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-              <Calendar className="size-3" />
-              {fecha}
-            </span>
-          )}
-        </div>
+      <div className="rotulo overflow-hidden bg-card transition-colors hover:border-[var(--blueprint)]/40">
+        <div className={cn(compact ? "px-3 pt-2.5 pb-2" : "px-4 pt-3 pb-2.5")}>
+          <div className="flex items-start justify-between gap-2">
+            <p className="flex min-w-0 items-center gap-1.5 text-[8.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <span
+                className="inline-block h-1.5 w-1.5 shrink-0 border border-[var(--blueprint)]"
+                style={{ borderRightWidth: 0, borderBottomWidth: 0 }}
+              />
+              <span className="truncate">{proyecto.numero_expediente ?? "Sin expediente"}</span>
+            </p>
+            {fecha && (
+              <span className="num flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
+                <Calendar className="size-3" />
+                {fecha}
+              </span>
+            )}
+          </div>
 
-        <h3
-          className={cn(
-            "mt-2.5 font-medium leading-snug text-primary group-hover:text-primary/80 transition-colors line-clamp-2",
-            compact ? "text-[13px]" : "text-sm"
-          )}
-        >
-          {proyecto.nombre}
-        </h3>
+          <h3
+            className={cn(
+              "font-technical mt-1.5 font-semibold leading-snug text-foreground transition-colors group-hover:text-primary line-clamp-2",
+              compact ? "text-[13px]" : "text-sm"
+            )}
+          >
+            {proyecto.nombre}
+          </h3>
 
-        <div
-          className={cn(
-            "mt-2 flex flex-col gap-1",
-            compact ? "mt-1.5" : "mt-2"
-          )}
-        >
-          {proyecto.cliente?.nombre && (
+          <div className={cn("flex flex-col gap-1", compact ? "mt-1.5" : "mt-2")}>
+            {proyecto.cliente?.nombre && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Building2 className="size-3 shrink-0" />
+                <span className="truncate">{proyecto.cliente.nombre}</span>
+              </div>
+            )}
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Building2 className="size-3 shrink-0" />
-              <span className="truncate">{proyecto.cliente.nombre}</span>
+              <MapPin className="size-3 shrink-0" />
+              <span className="truncate">{proyecto.municipio}</span>
             </div>
-          )}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="size-3 shrink-0" />
-            <span className="truncate">{proyecto.municipio}</span>
           </div>
         </div>
 
-        {!compact && (
-          <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">
+        {/* Pie de rótulo: veredicto + tipo de trámite en celdas */}
+        <div className="flex items-center justify-between gap-2 border-t border-line-fine px-3 py-2">
+          <EstadoNormativo estado={veredicto} label={label} className="text-[10px]" />
+          {!compact && (
+            <span className="truncate text-[10.5px] text-muted-foreground">
               {TIPO_PERMISO_LABELS[proyecto.tipo]}
             </span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </Link>
   )
@@ -171,13 +175,16 @@ function KanbanColumn({
 }) {
   return (
     <div className="flex w-[272px] shrink-0 flex-col">
-      {/* Column header */}
-      <div className="flex items-center gap-2 mb-3 px-0.5">
-        <span className={cn("size-2 rounded-full shrink-0", ESTADO_COLUMN_DOT[estado])} />
-        <span className="text-sm font-medium text-foreground">
+      {/* Column header — cabecera de columna como título de sección de lámina */}
+      <div className="mb-3 flex items-center gap-2 border-b border-line-med px-0.5 pb-2">
+        <span
+          className="size-2 shrink-0 rounded-full"
+          style={{ background: estadoDotColor(estado) }}
+        />
+        <span className="font-technical text-[12px] font-semibold uppercase tracking-[0.08em] text-foreground">
           {ESTADO_COLUMN_LABEL[estado]}
         </span>
-        <span className="ml-auto flex size-5 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+        <span className="num ml-auto rounded-[3px] border border-line-fine px-1.5 py-px text-[10px] font-semibold text-muted-foreground">
           {proyectos.length}
         </span>
       </div>
@@ -188,7 +195,7 @@ function KanbanColumn({
           <ProyectoCard key={p.id} proyecto={p} compact />
         ))}
         {proyectos.length === 0 && (
-          <div className="rounded-xl border border-dashed border-border bg-muted/30 px-3 py-5 text-center">
+          <div className="rounded-[3px] border border-dashed border-line-med bg-muted/20 px-3 py-5 text-center">
             <p className="text-xs text-muted-foreground">Sin proyectos</p>
           </div>
         )}
@@ -250,8 +257,8 @@ export default function ProyectosPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <PageHeader
-        emoji="📁"
         title="Proyectos"
+        subtitle="Expedientes de edificación de la oficina"
         action={
           <Button
             nativeButton={false}
@@ -334,7 +341,7 @@ export default function ProyectosPage() {
         }
       />
 
-      <div className="flex-1 overflow-auto p-8 space-y-4">
+      <div className="flex-1 overflow-auto bg-blueprint-grid p-8 space-y-4">
         {/* Upgrade banner */}
         {atStarterLimit && (
           <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/5 p-4">
@@ -413,24 +420,26 @@ export default function ProyectosPage() {
       {/* LIST VIEW                                                           */}
       {/* ------------------------------------------------------------------ */}
       {view === "lista" && (
-        <div className="rounded-xl border border-border bg-white overflow-hidden">
+        <div className="rotulo overflow-hidden bg-card">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
-                <TableHead className="font-semibold">Proyecto</TableHead>
-                <TableHead className="font-semibold">Cliente</TableHead>
-                <TableHead className="font-semibold">Municipio</TableHead>
-                <TableHead className="font-semibold">Estado</TableHead>
-                <TableHead className="font-semibold">Fecha estimada</TableHead>
-                <TableHead className="text-right font-semibold">Acción</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-[0.12em]">Proyecto</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-[0.12em]">Cliente</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-[0.12em]">Municipio</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-[0.12em]">Estado</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-[0.12em]">Fecha estimada</TableHead>
+                <TableHead className="text-right text-[10px] font-semibold uppercase tracking-[0.12em]">Acción</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {proyectos.map((p) => (
+              {proyectos.map((p) => {
+                const { veredicto, label } = veredictoDeExpediente(p.estado)
+                return (
                 <TableRow key={p.id} className="hover:bg-background">
                   <TableCell>
                     <div>
-                      <p className="font-medium text-primary text-sm">{p.nombre}</p>
+                      <p className="font-technical text-sm font-medium text-foreground">{p.nombre}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {TIPO_PERMISO_LABELS[p.tipo]}
                       </p>
@@ -443,9 +452,9 @@ export default function ProyectosPage() {
                     {p.municipio}
                   </TableCell>
                   <TableCell>
-                    <EstadoBadge estado={p.estado} />
+                    <EstadoNormativo estado={veredicto} label={label} />
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="num text-sm text-muted-foreground">
                     {formatDate(p.fecha_estimada) ?? "—"}
                   </TableCell>
                   <TableCell className="text-right">
@@ -460,7 +469,8 @@ export default function ProyectosPage() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                )
+              })}
               {proyectos.length === 0 && (
                 <TableRow>
                   <TableCell

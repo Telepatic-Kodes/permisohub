@@ -44,3 +44,20 @@ export function EstadoNormativo({ estado, label, className, dot = true }: Estado
 export function colorDeVeredicto(estado: Veredicto): string {
   return MAP[estado].color
 }
+
+// El estado de workflow del expediente solo lleva color cuando ES un veredicto
+// de la DOM (aprobado/observado/rechazado); las etapas previas van en tinta.
+import type { EstadoExpediente } from "@/types"
+
+const EXPEDIENTE_MAP: Record<EstadoExpediente, { veredicto: Veredicto; label: string }> = {
+  borrador:          { veredicto: "neutro",  label: "Borrador" },
+  ingresado:         { veredicto: "neutro",  label: "Ingresado" },
+  en_revision:       { veredicto: "neutro",  label: "En revisión" },
+  con_observaciones: { veredicto: "observa", label: "Con observaciones" },
+  aprobado:          { veredicto: "cumple",  label: "Aprobado" },
+  rechazado:         { veredicto: "rechaza", label: "Rechazado" },
+}
+
+export function veredictoDeExpediente(estado: EstadoExpediente): { veredicto: Veredicto; label: string } {
+  return EXPEDIENTE_MAP[estado] ?? { veredicto: "neutro", label: estado }
+}

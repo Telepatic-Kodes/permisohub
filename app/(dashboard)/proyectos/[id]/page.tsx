@@ -3,17 +3,18 @@
 import { use, useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import {
-  AlertTriangle,
   Check,
   Download,
   FileSpreadsheet,
   FileText,
+  Landmark,
   Link2,
   Loader2,
   MapPin,
   MessageCircle,
   Pencil,
   RefreshCw,
+  Sparkles,
   Upload,
   Users,
 } from "lucide-react"
@@ -35,7 +36,9 @@ import { toast } from "sonner"
 import { ESTADO_CONFIG, TIPO_PERMISO_LABELS, type Proyecto, type Etapa, type Comunicacion, type Documento } from "@/types"
 import { cn } from "@/lib/utils"
 import { Rotulo } from "@/components/arch/rotulo"
-import { type Veredicto } from "@/components/arch/estado"
+import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
+import { Dato } from "@/components/arch/dato"
+import { esPlano } from "@/lib/planos"
 import { CopilotoTrigger } from "@/components/copiloto/copiloto-trigger"
 import { CopilotoDrawer } from "@/components/copiloto/copiloto-drawer"
 import { DocumentUpload } from "@/components/dashboard/document-upload"
@@ -517,51 +520,55 @@ export default function ProyectoDetallePage({
           />
         ) : (
           <Tabs defaultValue="resumen" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="resumen">Resumen</TabsTrigger>
-              <TabsTrigger value="documentos">Documentos</TabsTrigger>
-              <TabsTrigger value="dd">Due Diligence</TabsTrigger>
-              <TabsTrigger value="pmo">PMO</TabsTrigger>
+            {/* Índice de láminas: las pestañas como códigos de lámina de una
+                carpeta técnica (A-01…A-04), no como tabs de app web. */}
+            <TabsList className="mb-6 w-full justify-start gap-0 overflow-x-auto rounded-[3px] border-line-strong bg-card p-0">
+              {(
+                [
+                  { value: "resumen", code: "A-01", label: "Resumen" },
+                  { value: "documentos", code: "A-02", label: "Documentos" },
+                  { value: "dd", code: "A-03", label: "Due Diligence" },
+                  { value: "pmo", code: "A-04", label: "PMO" },
+                ] as const
+              ).map((t) => (
+                <TabsTrigger
+                  key={t.value}
+                  value={t.value}
+                  className={cn(
+                    "rounded-none border-r border-line-fine px-4 py-2.5 shadow-none last:border-r-0",
+                    "data-[state=active]:bg-transparent data-[state=active]:shadow-[inset_0_-2px_0_var(--blueprint)]",
+                  )}
+                >
+                  <span className="num mr-2 text-[10px] text-muted-foreground">{t.code}</span>
+                  <span className="font-technical text-[13px]">{t.label}</span>
+                </TabsTrigger>
+              ))}
             </TabsList>
 
             {/* ── Resumen ── */}
             <TabsContent value="resumen">
-              {/* Barra de estadísticas rápidas */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                <div className="rounded-xl border border-border bg-white p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                    Días en tramitación
-                  </p>
-                  <p className="text-xl font-semibold text-primary num mt-1">
-                    {diasDesdeInicio}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-border bg-white p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              {/* Cuadro de control: una sola pieza con celdas divididas por
+                  línea fina, como el cuadro de superficies de una lámina. */}
+              <div className="rotulo mb-6 grid grid-cols-2 divide-x divide-y divide-line-fine bg-card lg:grid-cols-4 lg:divide-y-0">
+                <Dato
+                  className="px-4 py-3"
+                  label="Días en tramitación"
+                  valor={diasDesdeInicio}
+                  unidad="días"
+                  estado={plazoLegalExcedido ? "observa" : undefined}
+                />
+                <div className="min-w-0 px-4 py-3">
+                  <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                     Estado actual
                   </p>
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium mt-1 ${estadoCfg.color}`}
-                  >
-                    {estadoCfg.label}
-                  </span>
+                  <EstadoNormativo estado={veredicto} label={estadoCfg.label} />
                 </div>
-                <div className="rounded-xl border border-border bg-white p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                    Documentos
-                  </p>
-                  <p className="text-xl font-semibold text-primary num mt-1">
-                    {documentos.length}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-border bg-white p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                    N° Expediente
-                  </p>
-                  <p className="text-xl font-semibold text-primary num mt-1">
-                    {proyecto.numero_expediente ?? "Sin asignar"}
-                  </p>
-                </div>
+                <Dato className="px-4 py-3" label="Documentos" valor={documentos.length} />
+                <Dato
+                  className="px-4 py-3"
+                  label="N° Expediente"
+                  valor={proyecto.numero_expediente ?? "Sin asignar"}
+                />
               </div>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_minmax(0,360px)]">
@@ -570,17 +577,13 @@ export default function ProyectoDetallePage({
                   {/* Header */}
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${estadoCfg.color}`}
-                      >
-                        {estadoCfg.label}
-                      </span>
+                      <EstadoNormativo estado={veredicto} label={estadoCfg.label} />
                       <Badge variant="outline">{TIPO_PERMISO_LABELS[proyecto.tipo]}</Badge>
                       {plazoLegalExcedido && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
-                          <AlertTriangle className="size-3" />
-                          Plazo legal excedido ({diasDesdeInicio} días)
-                        </span>
+                        <EstadoNormativo
+                          estado="observa"
+                          label={`Plazo legal excedido (${diasDesdeInicio} días)`}
+                        />
                       )}
                     </div>
                     <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -599,9 +602,9 @@ export default function ProyectoDetallePage({
                   />
 
                   {/* Notas */}
-                  <Card>
+                  <Card className="rounded-[3px] border-line-strong shadow-none">
                     <CardHeader>
-                      <CardTitle>Notas</CardTitle>
+                      <CardTitle className="font-technical">Notas</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <Textarea
@@ -624,9 +627,9 @@ export default function ProyectoDetallePage({
                 {/* Right column */}
                 <div className="space-y-6">
                   {/* Info card */}
-                  <Card>
+                  <Card className="rounded-[3px] border-line-strong shadow-none">
                     <CardHeader className="flex-row items-center justify-between">
-                      <CardTitle>Información</CardTitle>
+                      <CardTitle className="font-technical">Información</CardTitle>
                       {editMode ? (
                         <div className="flex items-center gap-1.5">
                           <Button
@@ -825,9 +828,9 @@ export default function ProyectoDetallePage({
 
                   {/* Mapa del predio */}
                   {proyecto.direccion && (
-                    <Card>
+                    <Card className="rounded-[3px] border-line-strong shadow-none">
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-sm">Ubicación del predio</CardTitle>
+                        <CardTitle className="font-technical text-sm">Ubicación del predio</CardTitle>
                       </CardHeader>
                       <CardContent className="pt-0">
                         <PredioMap
@@ -845,115 +848,199 @@ export default function ProyectoDetallePage({
                     <ZonificacionCard proyecto={proyecto} onUpdated={setProyecto} />
                   )}
 
-                  {/* Herramientas IA del proyecto */}
-                  <div className="rounded-xl border border-border bg-white p-4 space-y-2">
-                    <p className="text-xs font-semibold text-primary/60 uppercase tracking-wider">Herramientas IA</p>
-                    {[
-                      {
-                        label: "Generar Memoria Descriptiva",
-                        href: `/herramientas/memoria?nombre=${encodeURIComponent(proyecto.nombre)}&municipio=${encodeURIComponent(proyecto.municipio)}&direccion=${encodeURIComponent(proyecto.direccion ?? "")}&tipo=${encodeURIComponent(proyecto.tipo)}`,
-                        icon: "📄",
-                      },
-                      {
-                        label: "Predecir observaciones DOM",
-                        href: `/herramientas/predictor?municipio=${encodeURIComponent(proyecto.municipio)}&tipo=${encodeURIComponent(proyecto.tipo)}`,
-                        icon: "🔮",
-                      },
-                      {
-                        label: "Consultar OGUC",
-                        href: `/herramientas/oguc-chat?municipio=${encodeURIComponent(proyecto.municipio)}`,
-                        icon: "💬",
-                      },
-                      {
-                        label: "Ver ficha DOM",
-                        href: `/municipios/${encodeURIComponent(proyecto.municipio.toLowerCase().replace(/\s+/g, "-"))}`,
-                        icon: "🏛️",
-                      },
-                    ].map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[11.5px] font-medium text-primary/70 hover:bg-[#F9F7F3] hover:text-primary transition-colors"
-                      >
-                        <span className="text-sm">{item.icon}</span>
-                        {item.label}
-                      </Link>
-                    ))}
+                  {/* Herramientas IA del proyecto — lista técnica, sin emojis:
+                      el ícono de línea pertenece al idioma del plano. */}
+                  <div className="rotulo bg-card">
+                    <p className="border-b border-line-fine px-4 py-2.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Herramientas IA
+                    </p>
+                    <div className="divide-y divide-line-fine">
+                      {[
+                        {
+                          label: "Generar Memoria Descriptiva",
+                          href: `/herramientas/memoria?nombre=${encodeURIComponent(proyecto.nombre)}&municipio=${encodeURIComponent(proyecto.municipio)}&direccion=${encodeURIComponent(proyecto.direccion ?? "")}&tipo=${encodeURIComponent(proyecto.tipo)}`,
+                          Icon: FileText,
+                        },
+                        {
+                          label: "Predecir observaciones DOM",
+                          href: `/herramientas/predictor?municipio=${encodeURIComponent(proyecto.municipio)}&tipo=${encodeURIComponent(proyecto.tipo)}`,
+                          Icon: Sparkles,
+                        },
+                        {
+                          label: "Consultar OGUC",
+                          href: `/herramientas/oguc-chat?municipio=${encodeURIComponent(proyecto.municipio)}`,
+                          Icon: MessageCircle,
+                        },
+                        {
+                          label: "Ver ficha DOM",
+                          href: `/municipios/${encodeURIComponent(proyecto.municipio.toLowerCase().replace(/\s+/g, "-"))}`,
+                          Icon: Landmark,
+                        },
+                      ].map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-[12px] font-medium text-foreground/75 transition-colors hover:bg-muted/40 hover:text-foreground"
+                        >
+                          <item.Icon className="size-3.5 text-muted-foreground" strokeWidth={1.75} />
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
             </TabsContent>
 
             {/* ── Documentos ── */}
-            <TabsContent value="documentos">
-              <Card>
-                <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle>Documentos</CardTitle>
-                  <Button variant="outline" size="sm" onClick={() => setUploadDialogOpen(true)}>
-                    <Upload className="size-4" />
-                    Subir
-                  </Button>
-                  <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-                    <DialogContent className="max-w-lg">
-                      <DialogHeader>
-                        <DialogTitle>Subir documentos</DialogTitle>
-                      </DialogHeader>
-                      <DocumentUpload
-                        proyectoId={proyecto.id}
-                        onUploadComplete={(doc) => {
-                          setDocumentos((prev) => [
-                            ...prev,
-                            {
-                              id: `new-${Date.now()}`,
-                              proyecto_id: proyecto.id,
-                              nombre: doc.nombre,
-                              tipo: doc.tipo,
-                              url: doc.url,
-                              tamano: doc.tamano,
-                              created_at: new Date().toISOString(),
-                            },
-                          ])
-                        }}
-                      />
-                    </DialogContent>
-                  </Dialog>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {documentos.map((d) => (
-                    <div
-                      key={d.id}
-                      className="flex items-center gap-3 rounded-lg border border-border p-3"
-                    >
-                      {docIcon(d.tipo)}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-primary">
-                          {d.nombre}
+            {/* El expediente distingue lo que un archivador de arquitectura
+                distingue: LÁMINAS (planos, numerados L-01…) y ANTECEDENTES
+                (certificados, memorias, el resto del papeleo). */}
+            <TabsContent value="documentos" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <p className="font-technical text-sm font-semibold text-foreground">
+                  Documentos del expediente{" "}
+                  <span className="num text-xs text-muted-foreground">({documentos.length})</span>
+                </p>
+                <Button variant="outline" size="sm" onClick={() => setUploadDialogOpen(true)}>
+                  <Upload className="size-4" />
+                  Subir
+                </Button>
+                <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Subir documentos</DialogTitle>
+                    </DialogHeader>
+                    <DocumentUpload
+                      proyectoId={proyecto.id}
+                      onUploadComplete={(doc) => {
+                        setDocumentos((prev) => [
+                          ...prev,
+                          {
+                            id: `new-${Date.now()}`,
+                            proyecto_id: proyecto.id,
+                            nombre: doc.nombre,
+                            tipo: doc.tipo,
+                            url: doc.url,
+                            tamano: doc.tamano,
+                            created_at: new Date().toISOString(),
+                          },
+                        ])
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {(() => {
+                const laminas = documentos.filter((d) => esPlano(d.tipo))
+                const antecedentes = documentos.filter((d) => !esPlano(d.tipo))
+                const esImagen = (url: string) => /\.(png|jpe?g|webp|gif)(\?|$)/i.test(url)
+                return (
+                  <>
+                    {laminas.length > 0 && (
+                      <section>
+                        <p className="mb-2.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          <span className="inline-block h-2 w-2 border border-[var(--blueprint)]" style={{ borderRightWidth: 0, borderBottomWidth: 0 }} />
+                          Láminas ({laminas.length})
                         </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {d.tipo} · {formatDate(d.created_at)}
-                        </p>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                          {laminas.map((d, i) => (
+                            <div key={d.id} className="rotulo group overflow-hidden bg-card">
+                              {/* Vista de la lámina: imagen real si la hay; si es
+                                  PDF, papel milimetrado como sustituto honesto. */}
+                              <div className="bg-blueprint-grid relative flex h-36 items-center justify-center border-b border-line-fine">
+                                {esImagen(d.url) ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={d.url}
+                                    alt={d.nombre}
+                                    className="h-full w-full object-contain p-2"
+                                  />
+                                ) : (
+                                  <FileText className="size-8 text-[var(--blueprint)]/50" strokeWidth={1.25} />
+                                )}
+                                <span className="num absolute left-2 top-2 rounded-[3px] border border-line-med bg-card/90 px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+                                  L-{String(i + 1).padStart(2, "0")}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 px-3 py-2.5">
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-technical truncate text-[13px] font-medium text-foreground">
+                                    {d.nombre}
+                                  </p>
+                                  <p className="num truncate text-[10.5px] text-muted-foreground">
+                                    {d.tipo} · {formatDate(d.created_at)}
+                                  </p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-[11px] text-muted-foreground"
+                                  onClick={() => setActiveTab("dd")}
+                                  title="Ver la lámina anotada en el Due Diligence"
+                                >
+                                  Ver anotada
+                                </Button>
+                                <Button
+                                  nativeButton={false}
+                                  render={<a href={d.url} target="_blank" rel="noopener noreferrer" download />}
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label="Descargar"
+                                  className="text-muted-foreground"
+                                >
+                                  <Download className="size-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    <section>
+                      <p className="mb-2.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        <span className="inline-block h-2 w-2 border border-line-strong" style={{ borderRightWidth: 0, borderBottomWidth: 0 }} />
+                        Antecedentes ({antecedentes.length})
+                      </p>
+                      <div className="rotulo divide-y divide-line-fine bg-card">
+                        {antecedentes.map((d) => (
+                          <div key={d.id} className="flex items-center gap-3 px-4 py-2.5">
+                            {docIcon(d.tipo)}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[13px] font-medium text-foreground">
+                                {d.nombre}
+                              </p>
+                            </div>
+                            <p className="num hidden shrink-0 text-[11px] text-muted-foreground sm:block">
+                              {d.tipo}
+                            </p>
+                            <p className="num shrink-0 text-[11px] text-muted-foreground">
+                              {formatDate(d.created_at)}
+                            </p>
+                            <Button
+                              nativeButton={false}
+                              render={<a href={d.url} target="_blank" rel="noopener noreferrer" download />}
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Descargar"
+                              className="text-muted-foreground"
+                            >
+                              <Download className="size-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        {antecedentes.length === 0 && (
+                          <p className="px-4 py-6 text-center text-xs text-muted-foreground">
+                            Sin antecedentes adjuntos.
+                          </p>
+                        )}
                       </div>
-                      <Button
-                        nativeButton={false}
-                        render={
-                          <a
-                            href={d.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            download
-                          />
-                        }
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Descargar"
-                        className="text-muted-foreground"
-                      >
-                        <Download className="size-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+                    </section>
+                  </>
+                )
+              })()}
             </TabsContent>
 
             {/* ── Due Diligence ── */}
