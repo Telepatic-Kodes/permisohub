@@ -9,7 +9,18 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/pricing") ||
-    pathname.startsWith("/docs")
+    pathname.startsWith("/docs") ||
+    // Marketing y legales públicos (antes redirigían a /login en producción):
+    pathname.startsWith("/centros") ||
+    pathname.startsWith("/terminos-y-condiciones") ||
+    pathname.startsWith("/politica-de-privacidad") ||
+    // Portal del mandante — su gracia es funcionar SIN login (token en la URL):
+    pathname.startsWith("/portal") ||
+    // Las rutas API autogestionan su auth (createClient + getUser → 401 JSON,
+    // o CRON_SECRET, o son deliberadamente públicas como /api/zonificacion/*).
+    // Redirigirlas con 307 a /login rompía crons, el self-fetch de
+    // zonificación y el portal en producción.
+    pathname.startsWith("/api")
 
   // BYPASS_AUTH only works outside production — never allow in Vercel prod env.
   // En vez de dejar pasar sin usuario (lo que rompe RLS y hace que las API
