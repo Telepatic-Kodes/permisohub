@@ -25,14 +25,9 @@ import {
   type TipoObra,
 } from "@/lib/derechos-municipales"
 import { COMUNAS_CHILE } from "@/lib/comunas-chile"
+import { UF_FALLBACK_CLP, type UfData } from "@/lib/uf"
 
 const TIPOS_OBRA = Object.entries(TIPO_OBRA_LABELS) as [TipoObra, string][]
-
-interface UfData {
-  valor: number
-  fecha: string | null
-  fallback: boolean
-}
 
 export default function CalculadoraDerechosPage() {
   const [resultado, setResultado] = useState<CalculoDerechos | null>(null)
@@ -42,7 +37,7 @@ export default function CalculadoraDerechosPage() {
     fetch('/api/utils/uf')
       .then(r => r.json() as Promise<UfData & { ok: boolean }>)
       .then(data => setUfActual({ valor: data.valor, fecha: data.fecha, fallback: data.fallback ?? false }))
-      .catch(() => setUfActual({ valor: 38000, fecha: null, fallback: true }))
+      .catch(() => setUfActual({ valor: UF_FALLBACK_CLP, fecha: null, fallback: true }))
   }, [])
 
   const [form, setForm] = useState({
@@ -81,7 +76,7 @@ export default function CalculadoraDerechosPage() {
         Number(form.superficieConstruida),
         form.esDFL2,
         form.municipio,
-        ufActual?.valor ?? 38000,
+        ufActual?.valor ?? UF_FALLBACK_CLP,
         form.tieneRevisorIndependiente
       )
     )

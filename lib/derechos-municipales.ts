@@ -1,3 +1,5 @@
+import { UF_FALLBACK_CLP } from './uf'
+
 export type TipoObra =
   | 'obra_nueva'
   | 'ampliacion'
@@ -68,7 +70,7 @@ export function calcularDerechosMunicipales(
   superficieConstruida: number,
   esDFL2: boolean,
   municipio: string,
-  ufCLP: number = 38000,
+  ufCLP: number = UF_FALLBACK_CLP,
   tieneRevisorIndependiente?: boolean
 ): CalculoDerechos {
   const detalle: string[] = []
