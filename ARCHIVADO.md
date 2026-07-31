@@ -64,3 +64,11 @@ debe poder otorgarse la primera.
 El trabajo de esta app está en la rama `feature/outsourcing-enterprise` del
 repositorio compartido (commit `1428edf`). Se subió al remoto el 31 de julio;
 hasta entonces existía **solo en este disco**.
+
+## Si ves builds fallidos de esta rama en Vercel
+
+Son esperables. `feature/outsourcing-enterprise` contiene **otra aplicación**
+dentro del mismo repositorio, así que Vercel intenta construirla como si fuera
+`permisohub` y falla. No hay nada que arreglar: la rama existe solo como
+historial y no debe desplegarse. Si molesta el ruido, se descarta con un
+"Ignored Build Step" en la configuración del proyecto.
