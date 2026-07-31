@@ -1,11 +1,37 @@
+import { z } from 'zod'
 import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
 import { ESTADISTICAS_MUNICIPIOS } from '@/lib/municipios-stats'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { flagUnverifiedCita } from '@/lib/normativa-retrieval'
+import { parseAiJson } from '@/lib/ai-parse'
 
 export const dynamic = 'force-dynamic'
+
+// M5 (auditoría 2026-07-30): schema laxo — garantiza forma estructural, no
+// restringe "riesgoGlobal" a un set cerrado (drift menor del modelo no tumba
+// el parseo completo).
+const PrediccionSchema = z
+  .object({
+    categoria: z.string().default(''),
+    probabilidad: z.number().default(0),
+    descripcion: z.string().default(''),
+    accion: z.string().default(''),
+    frecuenciaLocal: z.boolean().default(false),
+  })
+  .passthrough()
+
+const PredictSchema = z
+  .object({
+    municipio: z.string().default(''),
+    riesgoGlobal: z.string().default('MEDIO'),
+    mesOptimo: z.string().default(''),
+    predicciones: z.array(PrediccionSchema).default([]),
+    resumen: z.string().default(''),
+  })
+  .passthrough()
 
 interface PredictRequest {
   municipio: string
@@ -138,13 +164,41 @@ Ordena predicciones de mayor a menor probabilidad. Máximo 6 predicciones. Sé e
 
   try {
     const text = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 2000 })
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) as PredictResult : {
+
+    // M5: parseo validado con zod (antes: regex + JSON.parse + cast `as` sin
+    // validación de runtime). En fallo, degrada al mismo fallback que existía.
+    const validated = parseAiJson(text, PredictSchema, 'predict-observations') ?? {
       municipio: body.municipio,
-      riesgoGlobal: 'MEDIO' as const,
+      riesgoGlobal: 'MEDIO',
       mesOptimo: stats?.mesesMasAgiles[0] ?? 'Enero',
-      predicciones: [] as Prediccion[],
+      predicciones: [],
       resumen: text,
+    }
+
+    const riesgoGlobal: PredictResult['riesgoGlobal'] =
+      validated.riesgoGlobal === 'BAJO' || validated.riesgoGlobal === 'ALTO'
+        ? validated.riesgoGlobal
+        : 'MEDIO'
+
+    // A2 (auditoría 2026-07-30): a diferencia de las demás rutas, aquí no hay
+    // un campo `articulo` separado — el modelo embebe la cita DENTRO de la
+    // prosa de "categoria" (ej. "Rasantes Art. 2.6.3"). El render path
+    // (app/(dashboard)/herramientas/predictor/page.tsx) imprime `categoria`
+    // como texto plano — no pasa por <TextoConCitas> (ese componente solo
+    // LINKIFICA citas verificadas dentro de prosa, no anota "por verificar"
+    // las no verificadas, así que por sí solo no basta como guard). Por eso
+    // se aplica flagUnverifiedCita directo sobre el string de "categoria":
+    // es la misma función usada en el resto de la app para anotar citas no
+    // verificadas, y opera por regex sobre CUALQUIER string, no solo sobre
+    // campos de artículo puros — si el número citado no está en la base
+    // curada, el sufijo "(por verificar)" queda visible en la etiqueta.
+    const parsed: PredictResult = {
+      ...validated,
+      riesgoGlobal,
+      predicciones: validated.predicciones.map((p) => ({
+        ...p,
+        categoria: flagUnverifiedCita(p.categoria),
+      })),
     }
 
     recordUsage(auth.userId, 'ai_chats').catch(console.error)

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 90
 
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { aiAuthGuard } from '@/lib/ai-guard'
@@ -13,11 +14,78 @@ import { calcularDerechosMunicipales, type TipoObra } from '@/lib/derechos-munic
 import { sumarDiasHabiles } from '@/lib/dias-habiles'
 import { fixMojibakeArcGIS } from '@/lib/zonificacion-format'
 import { UF_FALLBACK_CLP } from '@/lib/uf'
+import { flagUnverifiedCita } from '@/lib/normativa-retrieval'
+import { parseAiJson } from '@/lib/ai-parse'
 import type { Proyecto } from '@/types'
 
 interface CopilotoRequest {
   proyectoId: string
 }
+
+// M5 (auditoría 2026-07-30): schemas laxos para los 4 parses de este endpoint
+// (antes: regex + JSON.parse sin validación, tipado implícito `any`). Solo se
+// garantiza forma estructural; los valores de enum no se restringen a un set
+// cerrado para que un drift menor del modelo no tumbe el parseo completo.
+const OgucArticuloSchema = z
+  .object({
+    numero: z.string().default(''),
+    titulo: z.string().default(''),
+    formula: z.string().default(''),
+    valor_normativo: z.string().default(''),
+    valor_proyecto: z.string().default(''),
+    cumple: z.boolean().nullable().default(null),
+    observacion: z.string().default(''),
+  })
+  .passthrough()
+
+const OgucSchema = z
+  .object({
+    articulos: z.array(OgucArticuloSchema).default([]),
+    resumen: z.string().default(''),
+  })
+  .passthrough()
+
+const ObsPrediccionSchema = z
+  .object({
+    categoria: z.string().default(''),
+    frecuencia: z.string().default(''),
+    triggerEspecifico: z.string().default(''),
+    accionPreventiva: z.string().default(''),
+  })
+  .passthrough()
+
+const ObservacionesSchema = z
+  .object({
+    riesgoGlobal: z.string().default('MEDIO'),
+    predicciones: z.array(ObsPrediccionSchema).default([]),
+    resumen: z.string().default(''),
+  })
+  .passthrough()
+
+const ChecklistItemSchema = z
+  .object({
+    item_key: z.string().default(''),
+    nombre: z.string().default(''),
+    articulo_normativo: z.string().default(''),
+    descripcion: z.string().default(''),
+    obligatorio: z.boolean().default(false),
+  })
+  .passthrough()
+
+const ChecklistSchema = z
+  .object({
+    items: z.array(ChecklistItemSchema).default([]),
+  })
+  .passthrough()
+
+const EstimacionSchema = z
+  .object({
+    plazoMinDias: z.number().optional(),
+    plazoMaxDias: z.number().optional(),
+    factores: z.array(z.string()).default([]),
+    recomendacion: z.string().default(''),
+  })
+  .passthrough()
 
 function seccionZonificacion(p: Proyecto): string {
   const utilizable = p.zona_status === 'encontrado' && p.zona_usos_disponibles === true
@@ -264,11 +332,24 @@ export async function POST(request: Request) {
       aiComplete([{ role: 'user', content: buildEstimacionPrompt(p, derechosInfo, plazoBase) }], { max_tokens: 800 }),
     ])
 
-    const ogucMatch = ogucText.match(/\{[\s\S]*\}/)
-    const oguc = ogucMatch ? JSON.parse(ogucMatch[0]) : { articulos: [], resumen: ogucText }
+    // M5: parseo validado con zod (antes: regex + JSON.parse sin validación).
+    const ogucParsed = parseAiJson(ogucText, OgucSchema, 'copiloto:oguc') ?? {
+      articulos: [],
+      resumen: ogucText,
+    }
+    // A2 (auditoría 2026-07-30): el modelo puede inventar un número de
+    // artículo en el diagnóstico OGUC. Cada `numero` pasa por el guard
+    // anti-citas-inventadas antes de salir al cliente.
+    const oguc = {
+      ...ogucParsed,
+      articulos: ogucParsed.articulos.map((a) => ({ ...a, numero: flagUnverifiedCita(a.numero) })),
+    }
 
-    const obsMatch = observacionesText.match(/\{[\s\S]*\}/)
-    const observaciones = obsMatch ? JSON.parse(obsMatch[0]) : { riesgoGlobal: 'MEDIO', predicciones: [], resumen: observacionesText }
+    const observaciones = parseAiJson(observacionesText, ObservacionesSchema, 'copiloto:observaciones') ?? {
+      riesgoGlobal: 'MEDIO',
+      predicciones: [],
+      resumen: observacionesText,
+    }
 
     let checklist: { items: Array<{ id?: string; item_key: string; nombre: string; articulo_normativo: string; descripcion: string; obligatorio: boolean; estado: string }> }
 
@@ -285,10 +366,8 @@ export async function POST(request: Request) {
         })),
       }
     } else if (checklistText) {
-      const checklistMatch = checklistText.match(/\{[\s\S]*\}/)
-      const parsed = checklistMatch
-        ? JSON.parse(checklistMatch[0]) as { items: Array<{ item_key: string; nombre: string; articulo_normativo: string; descripcion: string; obligatorio: boolean }> }
-        : { items: [] }
+      // M5: parseo validado con zod (antes: regex + JSON.parse + cast `as`).
+      const parsed = parseAiJson(checklistText, ChecklistSchema, 'copiloto:checklist') ?? { items: [] }
 
       if (parsed.items.length > 0) {
         const rows = parsed.items.map((item) => ({
@@ -310,8 +389,10 @@ export async function POST(request: Request) {
       checklist = { items: [] }
     }
 
-    const estMatch = estimacionText.match(/\{[\s\S]*\}/)
-    const estimacionParsed = estMatch ? JSON.parse(estMatch[0]) : {}
+    // M5: parseo validado con zod (antes: regex + JSON.parse sin validación).
+    // No se toca la lógica de clamp/derechos que sigue abajo — solo el parseo.
+    const estimacionParsed: Partial<z.infer<typeof EstimacionSchema>> =
+      parseAiJson(estimacionText, EstimacionSchema, 'copiloto:estimacion') ?? {}
 
     // A6 (auditoría 2026-07-30): plazoBase es sintético (ver
     // lib/municipios-stats.ts), así que el rango que devuelve la IA se
