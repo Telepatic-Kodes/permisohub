@@ -95,7 +95,9 @@ export default async function AdminPage() {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
 
-  if (error || !user || user.email !== process.env.ADMIN_EMAIL) {
+  // El gate real vive en el layout de (admin), que usa la lista compartida.
+  // Aquí solo se comprueba que haya sesión.
+  if (error || !user) {
     redirect('/dashboard')
   }
 

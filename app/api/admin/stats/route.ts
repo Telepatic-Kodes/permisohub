@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { PLAN_AMOUNTS, type PlanId, type BillingInterval } from '@/lib/stripe'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { esAdminPlataforma } from '@/lib/admin-plataforma'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +10,7 @@ export async function GET() {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user || user.email !== process.env.ADMIN_EMAIL) {
+    if (authError || !user || !esAdminPlataforma(user.email)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
