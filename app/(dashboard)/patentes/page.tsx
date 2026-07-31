@@ -37,7 +37,6 @@ import {
 import { cn } from "@/lib/utils"
 import type { Proyecto } from "@/types"
 import { CopilotoTrigger } from "@/components/copiloto/copiloto-trigger"
-import { CopilotoDrawer } from "@/components/copiloto/copiloto-drawer"
 import {
   Sheet,
   SheetContent,
@@ -117,7 +116,6 @@ const EMPTY_RESUMEN: ResumenPatentes = {
   sin_datos: 0,
 }
 
-type CopilotoProyecto = Pick<Proyecto, 'id' | 'nombre' | 'municipio' | 'tipo' | 'estado'>
 
 export default function PatentesPage() {
   const [año, setAño] = useState<string>("2026")
@@ -127,8 +125,6 @@ export default function PatentesPage() {
   const [loading, setLoading] = useState(true)
   const [ufValor, setUfValor] = useState<number | null>(null)
   const [ufFallback, setUfFallback] = useState(false)
-  const [copilotoProyecto, setCopilotoProyecto] = useState<CopilotoProyecto | null>(null)
-  const [copilotoOpen, setCopilotoOpen] = useState(false)
   const [historialPatente, setHistorialPatente] = useState<PatenteConVigencia | null>(null)
   const [historialOpen, setHistorialOpen] = useState(false)
 
@@ -174,11 +170,6 @@ export default function PatentesPage() {
     },
     [],
   )
-
-  function handleCopiloto(proyecto: CopilotoProyecto) {
-    setCopilotoProyecto(proyecto)
-    setCopilotoOpen(true)
-  }
 
   const handleRenovar = useCallback(async (patente: PatenteConVigencia, nuevoAño: number) => {
     try {
@@ -437,10 +428,7 @@ export default function PatentesPage() {
                           >
                             <History className="size-3.5" />
                           </Button>
-                          <CopilotoTrigger
-                            proyecto={p as unknown as CopilotoProyecto}
-                            onClick={handleCopiloto}
-                          />
+                          <CopilotoTrigger proyecto={p} />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -456,12 +444,6 @@ export default function PatentesPage() {
           tramitarse antes del 31 de marzo para evitar recargos.
         </p>
       </div>
-
-      <CopilotoDrawer
-        proyecto={copilotoProyecto}
-        open={copilotoOpen}
-        onClose={() => setCopilotoOpen(false)}
-      />
 
       <Sheet open={historialOpen} onOpenChange={setHistorialOpen}>
         <SheetContent side="right" className="w-full max-w-md">

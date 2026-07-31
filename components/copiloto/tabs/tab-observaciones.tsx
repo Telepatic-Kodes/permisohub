@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from '@/lib/utils'
-import type { ObservacionesResult } from '../copiloto-drawer'
+import type { ObservacionesResult } from '@/components/copiloto/tipos'
 
 interface TabObservacionesProps {
   data: ObservacionesResult
@@ -23,7 +23,7 @@ export function TabObservaciones({ data }: TabObservacionesProps) {
   const riesgoCfg = RIESGO_CONFIG[data.riesgoGlobal]
 
   return (
-    <div className="space-y-4 px-4">
+    <div className="space-y-4">
       <div className="flex items-center gap-3">
         <span
           className={cn(

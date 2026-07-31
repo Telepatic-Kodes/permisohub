@@ -1,7 +1,7 @@
 "use client"
 
 import { Clock, DollarSign, AlertTriangle, Lightbulb } from 'lucide-react'
-import type { EstimacionResult } from '../copiloto-drawer'
+import type { EstimacionResult } from '@/components/copiloto/tipos'
 
 const CLP = new Intl.NumberFormat('es-CL', {
   style: 'currency',
@@ -15,7 +15,7 @@ interface TabEstimacionProps {
 
 export function TabEstimacion({ data }: TabEstimacionProps) {
   return (
-    <div className="space-y-4 px-4">
+    <div className="space-y-4">
       {/* Plazo */}
       <div className="rounded-xl border border-border bg-white p-4">
         <div className="flex items-center gap-2 text-sm font-medium">

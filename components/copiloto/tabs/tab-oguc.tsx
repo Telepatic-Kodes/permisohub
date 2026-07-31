@@ -1,8 +1,7 @@
 "use client"
 
 import { CheckCircle2, XCircle, Minus } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { OgucResult } from '../copiloto-drawer'
+import type { OgucResult } from '@/components/copiloto/tipos'
 
 interface TabOgucProps {
   data: OgucResult
@@ -10,51 +9,63 @@ interface TabOgucProps {
 
 export function TabOguc({ data }: TabOgucProps) {
   return (
-    <div className="space-y-4 px-4">
+    <div className="space-y-4">
       <p className="rounded-lg bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
         {data.resumen}
       </p>
 
       <div className="space-y-3">
         {data.articulos.map((art, idx) => (
-          <div
-            key={`${art.numero}-${idx}`}
-            className="rounded-xl border border-border bg-white p-4"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-semibold text-primary">{art.numero}</span>
-                  {art.cumple === true && (
-                    <CheckCircle2 className="size-4 shrink-0 text-green-500" />
-                  )}
-                  {art.cumple === false && (
-                    <XCircle className="size-4 shrink-0 text-red-500" />
-                  )}
-                  {art.cumple === null && (
-                    <Minus className="size-4 shrink-0 text-muted-foreground" />
-                  )}
-                </div>
-                <p className="mt-0.5 text-sm font-medium">{art.titulo}</p>
+          // Cuadro de artículo: cabecera y, debajo, las tres magnitudes en
+          // celdas divididas por línea fina, como el cuadro de una lámina. En
+          // el cajón de 480 px esto se apilaba y el texto normativo se partía
+          // palabra por palabra; a ancho de página se lee como una fila.
+          <div key={`${art.numero}-${idx}`} className="rotulo overflow-hidden bg-card">
+            <div className="flex items-start gap-2.5 px-4 py-3">
+              {art.cumple === true && (
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0" style={{ color: 'var(--state-ok)' }} />
+              )}
+              {art.cumple === false && (
+                <XCircle className="mt-0.5 size-4 shrink-0" style={{ color: 'var(--state-error)' }} />
+              )}
+              {art.cumple === null && (
+                <Minus className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              )}
+              <div className="min-w-0">
+                <span className="num text-[11px] font-semibold text-muted-foreground">
+                  {art.numero}
+                </span>
+                <p className="font-technical text-sm font-semibold leading-snug">{art.titulo}</p>
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <div className="space-y-1">
-                <p className="text-muted-foreground">Fórmula</p>
-                <p className="font-mono">{art.formula}</p>
+            <div className="grid grid-cols-1 divide-y divide-line-fine border-t border-line-fine sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              <div className="min-w-0 px-4 py-2.5">
+                <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Fórmula
+                </p>
+                <p className="num text-[13px] leading-snug">{art.formula}</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">Normativa</p>
-                <p className="font-mono">{art.valor_normativo}</p>
+              <div className="min-w-0 px-4 py-2.5">
+                <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Normativa
+                </p>
+                <p className="num text-[13px] leading-snug">{art.valor_normativo}</p>
               </div>
-              <div className="col-span-2 space-y-1">
-                <p className="text-muted-foreground">Valor del proyecto</p>
+              <div className="min-w-0 px-4 py-2.5">
+                <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Valor del proyecto
+                </p>
                 <p
-                  className={cn(
-                    'font-mono font-medium',
-                    art.cumple === false ? 'text-red-600' : art.cumple === true ? 'text-green-600' : ''
-                  )}
+                  className="num text-[13px] font-semibold leading-snug"
+                  style={{
+                    color:
+                      art.cumple === false
+                        ? 'var(--state-error)'
+                        : art.cumple === true
+                          ? 'var(--state-ok)'
+                          : undefined,
+                  }}
                 >
                   {art.valor_proyecto}
                 </p>
@@ -62,7 +73,13 @@ export function TabOguc({ data }: TabOgucProps) {
             </div>
 
             {art.observacion && (
-              <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              <p
+                className="border-t border-line-fine px-4 py-2.5 text-xs leading-5"
+                style={{
+                  color: 'var(--state-warn)',
+                  background: 'color-mix(in oklch, var(--state-warn) 8%, transparent)',
+                }}
+              >
                 {art.observacion}
               </p>
             )}

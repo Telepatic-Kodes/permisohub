@@ -39,7 +39,6 @@ import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 import { Dato } from "@/components/arch/dato"
 import { esPlano } from "@/lib/planos"
 import { CopilotoTrigger } from "@/components/copiloto/copiloto-trigger"
-import { CopilotoDrawer } from "@/components/copiloto/copiloto-drawer"
 import { DocumentUpload } from "@/components/dashboard/document-upload"
 import { WhatsAppDialog } from "@/components/dashboard/whatsapp-dialog"
 import { ExpedienteScore } from "@/components/proyecto/expediente-score"
@@ -125,7 +124,6 @@ export default function ProyectoDetallePage({
   const [comunicaciones, setComunicaciones] = useState<Comunicacion[]>([])
   const [documentos, setDocumentos] = useState<Documento[]>([])
   const [observaciones, setObservaciones] = useState<Observacion[]>([])
-  const [copilotoOpen, setCopilotoOpen] = useState(false)
 
   const [ddResult, setDdResult] = useState<DueDiligenceResult | null>(null)
   const [ddLoading, setDdLoading] = useState(true)
@@ -485,7 +483,7 @@ export default function ProyectoDetallePage({
         {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
         Exportar PDF
       </Button>
-      <CopilotoTrigger proyecto={proyecto} onClick={() => setCopilotoOpen(true)} />
+      <CopilotoTrigger proyecto={proyecto} />
     </div>
   )
 
@@ -1085,11 +1083,6 @@ export default function ProyectoDetallePage({
         )}
       </div>
 
-      <CopilotoDrawer
-        proyecto={proyecto}
-        open={copilotoOpen}
-        onClose={() => setCopilotoOpen(false)}
-      />
     </div>
   )
 }
