@@ -5,6 +5,7 @@ import { NuevoProyectoSchema } from '@/lib/schemas'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { persistZonificacionParaProyecto } from '@/lib/zonificacion-server'
+import { reportError } from '@/lib/observability'
 
 export const dynamic = 'force-dynamic'
 
@@ -111,7 +112,12 @@ export async function POST(request: Request) {
       if (typeof sii.lng === 'number') siiFields.lng = sii.lng
       if (Object.keys(siiFields).length > 0) {
         const { error: siiErr } = await supabase.from('proyectos').update(siiFields).eq('id', proyecto.id)
-        if (siiErr) console.error('No se pudieron persistir datos SII del proyecto:', siiErr.message)
+        if (siiErr) {
+          reportError(siiErr, {
+            scope: 'api.proyectos.sii-fields-sync',
+            extra: { proyectoId: proyecto.id },
+          })
+        }
       }
     }
 
@@ -120,13 +126,22 @@ export async function POST(request: Request) {
       const proyectoId = proyecto.id
       const rol = body.numero_expediente
       after(async () => {
+        // Fire-and-forget: nunca debe fallar el request que ya respondió al
+        // cliente. Pero "fire-and-forget" ya no significa "silencioso" — cada
+        // rama que no persiste datos SII se reporta al funnel único (C8).
         try {
           const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
           const siiRes = await fetch(
             `${baseUrl}/api/sii/lookup?rol=${encodeURIComponent(rol)}`,
             { method: 'GET' }
           )
-          if (!siiRes.ok) return
+          if (!siiRes.ok) {
+            reportError(new Error(`SII lookup respondió HTTP ${siiRes.status}`), {
+              scope: 'api.proyectos.sii-after.lookup-not-ok',
+              extra: { proyectoId, rol, status: siiRes.status },
+            })
+            return
+          }
           const siiData = await siiRes.json() as {
             ok?: boolean
             data?: {
@@ -136,9 +151,15 @@ export async function POST(request: Request) {
               direccion_normalizada?: string
             }
           }
-          if (!siiData.ok || !siiData.data) return
+          if (!siiData.ok || !siiData.data) {
+            reportError(new Error('SII lookup respondió ok:false o sin data'), {
+              scope: 'api.proyectos.sii-after.data-not-ok',
+              extra: { proyectoId, rol, siiOk: siiData.ok },
+            })
+            return
+          }
           const supabase = createServiceClient()
-          await supabase
+          const { error: updateErr } = await supabase
             .from('proyectos')
             .update({
               superficie_terreno_m2: siiData.data.superficie_terreno_m2 ?? null,
@@ -147,8 +168,17 @@ export async function POST(request: Request) {
               updated_at: new Date().toISOString(),
             })
             .eq('id', proyectoId)
-        } catch {
-          // Fire-and-forget — silent failure intentional
+          if (updateErr) {
+            reportError(updateErr, {
+              scope: 'api.proyectos.sii-after.update-failed',
+              extra: { proyectoId, rol },
+            })
+          }
+        } catch (err) {
+          reportError(err, {
+            scope: 'api.proyectos.sii-after.unhandled',
+            extra: { proyectoId, rol },
+          })
         }
       })
     }
