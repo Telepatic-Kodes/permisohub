@@ -41,11 +41,14 @@ const ROL_ICON: Record<RolWorkspace, typeof Crown> = {
 }
 
 function RolBadge({ role }: { role: RolWorkspace }) {
-  const Icon = ROL_ICON[role]
+  // Un rol inesperado no debe tumbar la página entera: se degrada al más
+  // restrictivo. Pasó con las invitaciones, que traían la columna `rol`.
+  const Icon = ROL_ICON[role] ?? ROL_ICON.viewer
+  const etiqueta = ROL_LABELS[role] ?? role ?? "—"
   return (
     <span className="inline-flex items-center gap-1 rounded-[3px] border border-line-med px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
       <Icon className="size-2.5" />
-      {ROL_LABELS[role]}
+      {etiqueta}
     </span>
   )
 }
@@ -82,28 +85,52 @@ export default function EquipoPage() {
   const [inviteRol, setInviteRol] = useState<RolWorkspace>("arquitecto")
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [inviteSent, setInviteSent] = useState(false)
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null)
+  const [copiado, setCopiado] = useState(false)
 
+  // El envío de correo no está configurado en producción, así que la
+  // invitación se entrega copiando el enlace. Antes se descartaba la respuesta
+  // del servidor —donde viene el token real— y se mostraba uno inventado en el
+  // cliente, que no servía para entrar.
   async function handleInvite() {
-    if (!inviteEmail.trim()) return
-    const newInvite: WorkspaceInvite = {
-      id: `i${Date.now()}`,
-      workspace_id: "ws1",
-      email: inviteEmail.trim(),
-      role: inviteRol,
-      token: Math.random().toString(36).slice(2),
-      expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
-      created_at: new Date().toISOString(),
+    const email = inviteEmail.trim()
+    if (!email || inviteLoading) return
+    setInviteLoading(true)
+    setInviteError(null)
+    try {
+      const res = await fetch("/api/workspace/invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, role: inviteRol }),
+      })
+      const json = (await res.json()) as {
+        ok?: boolean
+        error?: string
+        url?: string
+        invite?: WorkspaceInvite
+      }
+      if (!res.ok || !json.ok || !json.url) {
+        setInviteError(json.error ?? "No se pudo crear la invitación")
+        return
+      }
+      if (json.invite) setInvites((prev) => [...prev, json.invite as WorkspaceInvite])
+      setInviteUrl(json.url)
+      setInviteEmail("")
+      setInviteSent(true)
+    } catch {
+      setInviteError("No se pudo conectar con el servidor")
+    } finally {
+      setInviteLoading(false)
     }
-    setInvites((prev) => [...prev, newInvite])
-    setInviteEmail("")
-    setInviteSent(true)
-    setTimeout(() => { setInviteSent(false); setShowInvite(false) }, 2000)
+  }
 
-    fetch('/api/workspace/invites', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: newInvite.email, role: inviteRol }),
-    }).catch(() => undefined)
+  async function copiarEnlace() {
+    if (!inviteUrl) return
+    await navigator.clipboard.writeText(inviteUrl)
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 2000)
   }
 
   function removeInvite(id: string) {
@@ -168,7 +195,7 @@ export default function EquipoPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {(["admin", "arquitecto", "viewer"] as RolWorkspace[]).map((r) => (
-                      <SelectItem key={r} value={r}>
+                      <SelectItem key={r} value={r} label={ROL_LABELS[r]}>
                         <div>
                           <p className="text-xs font-medium">{ROL_LABELS[r]}</p>
                           <p className="text-[10px] text-muted-foreground">{ROL_DESCRIPCION[r]}</p>
@@ -179,11 +206,44 @@ export default function EquipoPage() {
                 </Select>
               </div>
               <div className="flex items-end">
-                <Button size="sm" onClick={handleInvite} className="h-9 gap-1.5">
-                  {inviteSent ? <><Check className="size-3.5" /> Enviado</> : <><Mail className="size-3.5" /> Enviar</>}
+                <Button size="sm" onClick={handleInvite} disabled={inviteLoading} className="h-9 gap-1.5">
+                  {inviteLoading ? (
+                    <>Creando…</>
+                  ) : inviteSent ? (
+                    <><Check className="size-3.5" /> Creada</>
+                  ) : (
+                    <><Mail className="size-3.5" /> Crear invitación</>
+                  )}
                 </Button>
               </div>
             </div>
+
+            {inviteError && (
+              <p className="text-xs" style={{ color: "var(--state-error)" }}>
+                {inviteError}
+              </p>
+            )}
+
+            {/* El correo automático no está configurado: la invitación se
+                entrega copiando este enlace y mandándolo por donde sea. */}
+            {inviteUrl && (
+              <div className="rounded-[3px] border border-line-med bg-card p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Enlace de invitación — envíaselo tú
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <code className="num min-w-0 flex-1 truncate rounded-[3px] bg-muted/50 px-2 py-1.5 text-[11px]">
+                    {inviteUrl}
+                  </code>
+                  <Button size="sm" variant="outline" onClick={copiarEnlace} className="h-8 shrink-0 gap-1.5">
+                    {copiado ? <><Check className="size-3.5" /> Copiado</> : <>Copiar</>}
+                  </Button>
+                </div>
+                <p className="mt-2 text-[10.5px] leading-4 text-muted-foreground">
+                  Vence en 7 días. Solo funciona para quien inicie sesión con ese mismo correo.
+                </p>
+              </div>
+            )}
             <div className="space-y-2 border-t border-line-fine pt-3">
               {(["admin", "arquitecto", "viewer"] as RolWorkspace[]).map((r) => (
                 <div key={r} className="flex items-start gap-2">

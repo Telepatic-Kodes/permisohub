@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { asegurarWorkspace } from '@/lib/workspace'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,10 +48,13 @@ export async function POST(request: Request) {
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit
 
+    const ws = await asegurarWorkspace(supabase, user.id)
+
     const { data: cliente, error } = await supabase
       .from('clientes')
       .insert({
         user_id: user.id,
+        workspace_id: ws.id,
         nombre: body.nombre.trim(),
         rut: body.rut ?? null,
         contacto_nombre: body.contacto_nombre ?? null,

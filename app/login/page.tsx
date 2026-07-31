@@ -23,14 +23,23 @@ export default function LoginPage() {
     setErrorMessage("")
 
     const supabase = createClient()
+    // El destino se propaga al callback: sin esto, alguien que llega desde una
+    // invitación al equipo (/login?next=/invitacion/TOKEN) aterrizaba en el
+    // dashboard y la invitación quedaba sin aceptar.
+    let redirectTo: string | undefined
+    if (typeof window !== "undefined") {
+      const url = new URL("/auth/callback", window.location.origin)
+      const next = new URLSearchParams(window.location.search).get("next")
+      // Solo rutas internas: "//evil.com" es una URL absoluta disfrazada.
+      if (next && next.startsWith("/") && !next.startsWith("//")) {
+        url.searchParams.set("next", next)
+      }
+      redirectTo = url.toString()
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo:
-          typeof window !== "undefined"
-            ? `${window.location.origin}/auth/callback`
-            : undefined,
-      },
+      options: { emailRedirectTo: redirectTo },
     })
 
     if (error) {

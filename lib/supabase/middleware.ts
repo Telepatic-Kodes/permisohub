@@ -16,6 +16,9 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/politica-de-privacidad") ||
     // Portal del mandante — su gracia es funcionar SIN login (token en la URL):
     pathname.startsWith("/portal") ||
+    // Aceptar una invitación al equipo: la página se abre sin sesión y desde
+    // ahí manda a iniciarla conservando el destino.
+    pathname.startsWith("/invitacion") ||
     // Las rutas API autogestionan su auth (createClient + getUser → 401 JSON,
     // o CRON_SECRET, o son deliberadamente públicas como /api/zonificacion/*).
     // Redirigirlas con 307 a /login rompía crons, el self-fetch de

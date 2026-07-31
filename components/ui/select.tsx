@@ -24,9 +24,12 @@ type ItemDerivado = { label: React.ReactNode; value: unknown }
 function recolectarItems(node: React.ReactNode, acc: ItemDerivado[]): void {
   React.Children.forEach(node, (child) => {
     if (!React.isValidElement(child)) return
-    const props = child.props as { value?: unknown; children?: React.ReactNode }
+    const props = child.props as { value?: unknown; children?: React.ReactNode; label?: React.ReactNode }
     if (child.type === SelectItem) {
-      acc.push({ value: props.value, label: props.children })
+      // `label` gana sobre los hijos: cuando el ítem del desplegable trae
+      // contenido rico (título + descripción), mostrar todo eso en el trigger
+      // lo desborda. Con `label` se elige qué se ve una vez seleccionado.
+      acc.push({ value: props.value, label: props.label ?? props.children })
       return
     }
     if (props.children) recolectarItems(props.children, acc)

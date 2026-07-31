@@ -6,6 +6,7 @@ import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { persistZonificacionParaProyecto } from '@/lib/zonificacion-server'
 import { reportError } from '@/lib/observability'
+import { asegurarWorkspace } from '@/lib/workspace'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,10 +73,15 @@ export async function POST(request: Request) {
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit
 
+    // Sin workspace_id el proyecto nace invisible para el resto del equipo:
+    // la RLS lo dejaría ver solo a su creador por la red de seguridad.
+    const ws = await asegurarWorkspace(supabase, user.id)
+
     const { data: proyecto, error } = await supabase
       .from('proyectos')
       .insert({
         user_id: user.id,
+        workspace_id: ws.id,
         nombre: body.nombre,
         cliente_id: body.cliente_id,
         municipio: body.municipio,
