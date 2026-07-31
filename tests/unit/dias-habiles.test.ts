@@ -24,6 +24,35 @@ describe('getEstadoPlazoLey21718 — regresión 2026', () => {
   })
 })
 
+describe('getEstadoPlazoLey21718 — tramo extendido de 60 días (A10)', () => {
+  const fechaIngreso = new Date('2026-06-15T00:00:00')
+  const hoy = new Date('2026-07-15T00:00:00')
+
+  it('plazoExtendido60=true usa 60 días hábiles en vez de 30', () => {
+    const r = getEstadoPlazoLey21718(fechaIngreso, false, hoy, true)
+    expect(r.plazoTotal).toBe(60)
+    expect(r.plazoExtendido60).toBe(true)
+    expect(r.diasHabilesRestantes).toBe(40)
+    expect(r.estado).toBe('EN_PLAZO')
+  })
+
+  it('plazoExtendido60=true con revisor independiente reduce a la mitad (30, no 15)', () => {
+    const r = getEstadoPlazoLey21718(fechaIngreso, true, hoy, true)
+    expect(r.plazoTotal).toBe(30)
+    expect(r.plazoExtendido60).toBe(true)
+  })
+
+  it('es backward-compatible: llamadas sin el 4to parámetro siguen usando 30/15', () => {
+    const sinExtender = getEstadoPlazoLey21718(fechaIngreso, false, hoy)
+    expect(sinExtender.plazoTotal).toBe(30)
+    expect(sinExtender.plazoExtendido60).toBe(false)
+
+    const conRevisorSinExtender = getEstadoPlazoLey21718(fechaIngreso, true, hoy)
+    expect(conRevisorSinExtender.plazoTotal).toBe(15)
+    expect(conRevisorSinExtender.plazoExtendido60).toBe(false)
+  })
+})
+
 describe('getEstadoPlazoLey21718 — guard de feriados incompletos (A3)', () => {
   afterEach(() => {
     vi.restoreAllMocks()

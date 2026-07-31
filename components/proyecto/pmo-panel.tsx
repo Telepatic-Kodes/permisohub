@@ -748,6 +748,14 @@ function PlazoLey21718Card({
             {estado.labelEstado}
           </p>
 
+          {estado.estado === "VENCIDO" && (
+            <p className="text-xs text-muted-foreground">
+              Vencido el plazo sin pronunciamiento de la DOM, opera el silencio
+              administrativo <span className="font-medium">negativo</span> (Ley
+              21.718): puedes reclamar ante la SEREMI MINVU de tu región.
+            </p>
+          )}
+
           {estado.feriadosIncompletos && (
             <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
               Cálculo sin feriados verificados para{" "}

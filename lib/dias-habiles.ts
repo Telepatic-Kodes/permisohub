@@ -232,6 +232,13 @@ export interface EstadoPlazoLey21718 {
    * cálculo legal real. La UI debe mostrar una advertencia cuando es true.
    */
   feriadosIncompletos: boolean
+  /**
+   * true si el proyecto corresponde al tramo extendido de 60 días hábiles
+   * de Ley 21.718 (proyectos habitacionales de mayor envergadura). Ver
+   * parámetro `plazoExtendido60` de getEstadoPlazoLey21718 para el detalle
+   * de la condición gatillante y su fuente.
+   */
+  plazoExtendido60: boolean
 }
 
 /**
@@ -239,14 +246,30 @@ export interface EstadoPlazoLey21718 {
  * @param fechaIngreso - Date the permit was submitted to DOM
  * @param tieneRevisorIndependiente - Whether independent reviewer (RI) was used
  * @param hoy - Current date (defaults to now, accept parameter for testing)
+ * @param plazoExtendido60 - Whether the extended 60-business-day tier applies
+ *   instead of the standard 30. Per Ley 21.718 this tier applies to
+ *   "proyectos habitacionales de mayor envergadura" with carga de ocupación
+ *   igual o superior a 1.000 personas (confirmed via DLA Piper's summary of
+ *   the law, Dec-2024, and corroborated by portal.ijuridica.cl / arqydom.cl —
+ *   no direct BCN primary-text citation obtained in this pass; if this
+ *   trigger condition needs to be re-verified against the Diario Oficial
+ *   text, treat it as the thing to check). Defaults to false so existing
+ *   callers are unaffected. When true, this OVERRIDES the 30/15 logic: the
+ *   base plazo becomes 60 (or 30 with revisor independiente) instead of 30
+ *   (or 15). The same sources indicate the revisor-independiente discount
+ *   ("los plazos indicados se reducen a la mitad") applies uniformly to
+ *   both tiers, so the 60-day tier is halved to 30 just like 30→15 — this
+ *   was confirmed by two independent secondary sources, not primary BCN text.
  */
 export function getEstadoPlazoLey21718(
   fechaIngreso: Date,
   tieneRevisorIndependiente: boolean,
-  hoy?: Date
+  hoy?: Date,
+  plazoExtendido60 = false
 ): EstadoPlazoLey21718 {
   const today = hoy ?? new Date()
-  const plazoTotal = tieneRevisorIndependiente ? 15 : 30
+  const plazoBase = plazoExtendido60 ? 60 : 30
+  const plazoTotal = tieneRevisorIndependiente ? plazoBase / 2 : plazoBase
 
   const diasHabilesDesdeIngreso = contarDiasHabiles(fechaIngreso, today)
   const fechaVencimiento = sumarDiasHabiles(fechaIngreso, plazoTotal)
@@ -303,6 +326,7 @@ export function getEstadoPlazoLey21718(
     labelEstado,
     diasHabilesDesdeIngreso,
     feriadosIncompletos,
+    plazoExtendido60,
   }
 }
 
