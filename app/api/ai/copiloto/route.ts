@@ -66,11 +66,16 @@ function buildObservacionesPrompt(p: Proyecto): string {
   const stats = ESTADISTICAS_MUNICIPIOS.find(m => m.nombre === p.municipio)
   const intel = getInteligenciaMunicipio(p.municipio)
 
+  // A6 (auditoría 2026-07-30): estas estadísticas son sintéticas (ver
+  // lib/municipios-stats.ts), no mediciones de expedientes reales. Se
+  // etiquetan como referencia estimada para que el modelo no las trate
+  // como hechos verificados.
   const statsSection = stats
-    ? `## Estadísticas DOM ${p.municipio}
-- Tasa histórica de observaciones: ${Math.round(stats.tasaObservaciones * 100)}%
-- Observaciones frecuentes: ${stats.tiposObservacionFrequentes.join(', ')}
-- Meses más ágiles: ${stats.mesesMasAgiles.join(', ')}
+    ? `## Estadísticas DOM ${p.municipio} — Referencia histórica ESTIMADA (datos sintéticos, no medidos)
+Trata estos valores como un prior aproximado y cualitativo, NO como una medición verificada de expedientes reales.
+- Tasa histórica de observaciones (estimada): ${Math.round(stats.tasaObservaciones * 100)}%
+- Observaciones frecuentes (estimadas): ${stats.tiposObservacionFrequentes.join(', ')}
+- Meses más ágiles (estimados): ${stats.mesesMasAgiles.join(', ')}
 - Notas: ${stats.notas}`
     : ''
 
@@ -136,10 +141,12 @@ Responde SOLO con JSON válido:
 Genera entre 8 y 15 ítems específicos para el tipo "${p.tipo}" en ${p.municipio}. Usa item_key snake_case sin tildes, únicos y descriptivos (ej: "plano_arquitectura_firmado", "certificado_informaciones_previas").`
 }
 
-function buildEstimacionPrompt(p: Proyecto, derechosInfo: string): string {
-  const stats = ESTADISTICAS_MUNICIPIOS.find(m => m.nombre === p.municipio)
-  const plazoBase = stats?.tiempoPromedioHabiles ?? 45
-
+function buildEstimacionPrompt(p: Proyecto, derechosInfo: string, plazoBase: number): string {
+  // A6 (auditoría 2026-07-30): plazoBase viene de ESTADISTICAS_MUNICIPIOS,
+  // que es sintético (ver lib/municipios-stats.ts). Se etiqueta como
+  // referencia estimada, no como una medición, y el servidor además
+  // aplica un clamp numérico sobre plazoMinDias/plazoMaxDias basado en
+  // este mismo valor — ver el clamp tras el parseo del JSON en POST().
   return `Eres un experto en plazos de tramitación DOM en Chile. Estima el plazo y derechos para este proyecto.
 
 ## Proyecto
@@ -147,7 +154,10 @@ function buildEstimacionPrompt(p: Proyecto, derechosInfo: string): string {
 - Tipo: ${p.tipo}
 - Superficie construida: ${p.superficie_construida_m2 ?? 'no disponible'} m²
 - Expediente: ${p.numero_expediente ?? 'sin expediente'}
-- Plazo típico histórico DOM ${p.municipio}: ${plazoBase} días hábiles
+
+## Plazo histórico
+Referencia histórica ESTIMADA (dato sintético, no medido): plazo típico DOM ${p.municipio} ≈ ${plazoBase} días hábiles.
+Trátalo como un prior aproximado, no como una medición verificada. Tu rango plazoMinDias/plazoMaxDias debe mantenerse razonablemente cercano a este valor (no un orden de magnitud distinto) — el servidor aplicará además un límite numérico automático basado en él.
 
 ## Derechos calculados
 ${derechosInfo}
@@ -237,6 +247,11 @@ export async function POST(request: Request) {
     ...derechos.advertencias,
   ].join('\n')
 
+  // A6 (auditoría 2026-07-30): plazoBase (sintético) se calcula una sola vez
+  // aquí para que el prompt y el clamp del resultado usen el mismo valor.
+  const statsMunicipio = ESTADISTICAS_MUNICIPIOS.find(m => m.nombre === p.municipio)
+  const plazoBase = statsMunicipio?.tiempoPromedioHabiles ?? 45
+
   try {
     const hasExistingChecklist = (existingChecklist?.length ?? 0) > 0
 
@@ -246,7 +261,7 @@ export async function POST(request: Request) {
       hasExistingChecklist
         ? Promise.resolve(null)
         : aiComplete([{ role: 'user', content: buildChecklistPrompt(p) }], { max_tokens: 2000 }),
-      aiComplete([{ role: 'user', content: buildEstimacionPrompt(p, derechosInfo) }], { max_tokens: 800 }),
+      aiComplete([{ role: 'user', content: buildEstimacionPrompt(p, derechosInfo, plazoBase) }], { max_tokens: 800 }),
     ])
 
     const ogucMatch = ogucText.match(/\{[\s\S]*\}/)
@@ -297,8 +312,25 @@ export async function POST(request: Request) {
 
     const estMatch = estimacionText.match(/\{[\s\S]*\}/)
     const estimacionParsed = estMatch ? JSON.parse(estMatch[0]) : {}
-    const plazoMinDias: number = estimacionParsed.plazoMinDias ?? 30
-    const plazoMaxDias: number = estimacionParsed.plazoMaxDias ?? 90
+
+    // A6 (auditoría 2026-07-30): plazoBase es sintético (ver
+    // lib/municipios-stats.ts), así que el rango que devuelve la IA se
+    // acota a una banda razonable alrededor de él en vez de confiar en el
+    // número crudo del modelo. Los fallbacks ante fallo de parseo también
+    // se derivan de plazoBase en lugar de constantes arbitrarias (30/90).
+    const plazoFloor = Math.max(5, Math.round(plazoBase * 0.4))
+    const plazoCeil = Math.round(plazoBase * 2.5)
+    const plazoMinRaw: number = estimacionParsed.plazoMinDias ?? Math.round(plazoBase * 0.8)
+    const plazoMaxRaw: number = estimacionParsed.plazoMaxDias ?? Math.round(plazoBase * 1.5)
+
+    let plazoMinDias = Math.min(Math.max(plazoMinRaw, plazoFloor), plazoCeil)
+    let plazoMaxDias = Math.min(Math.max(plazoMaxRaw, plazoFloor), plazoCeil)
+    if (plazoMinDias > plazoMaxDias) {
+      const tmp = plazoMinDias
+      plazoMinDias = plazoMaxDias
+      plazoMaxDias = tmp
+    }
+
     const hoy = new Date()
     const estimacion = {
       plazoMinDias,
