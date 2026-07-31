@@ -51,6 +51,7 @@ export default function CalculadoraDerechosPage() {
     presupuestoObra: "",
     superficieConstruida: "",
     esDFL2: false,
+    tieneRevisorIndependiente: false,
   })
 
   function setField<K extends keyof typeof form>(
@@ -80,7 +81,8 @@ export default function CalculadoraDerechosPage() {
         Number(form.superficieConstruida),
         form.esDFL2,
         form.municipio,
-        ufActual?.valor ?? 38000
+        ufActual?.valor ?? 38000,
+        form.tieneRevisorIndependiente
       )
     )
   }
@@ -217,7 +219,17 @@ export default function CalculadoraDerechosPage() {
                   setField("esDFL2", checked === true)
                 }
               />
-              ¿Es vivienda DFL2? (descuento <Num>50%</Num> en derechos hasta <Num>140 m²</Num>)
+              ¿Es vivienda DFL2? (posible beneficio en CBR/contribuciones — no confirmado para derechos municipales)
+            </label>
+
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-primary">
+              <Checkbox
+                checked={form.tieneRevisorIndependiente}
+                onCheckedChange={(checked) =>
+                  setField("tieneRevisorIndependiente", checked === true)
+                }
+              />
+              ¿Cuenta con revisor independiente? (reducción <Num>30%</Num> en derechos, Art. 116 bis LGUC)
             </label>
 
             <Button
