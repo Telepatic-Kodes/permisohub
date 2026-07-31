@@ -21,6 +21,8 @@ export interface ZonificacionFieldMap {
   nombre: string
   uperm: string
   uproh: string
+  // Solo declarar si el servicio expone un link POR-ZONA real y vivo. No
+  // fabricar ni reusar un link genérico — ver el caso Las Condes más abajo.
   url?: string
 }
 
@@ -40,6 +42,13 @@ export const ZONIFICACION_COMUNAS: Record<string, ComunaZonificacionConfig> = {
     featureServerUrl:
       'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_Las_Condes/FeatureServer',
     layerIndex: 0,
+    // Sin `url`: el campo ArcGIS "url" existía antes, pero apuntaba a
+    // http://www.observatoriourbano.cl/Ipt/cehu_resultado_decreto.asp?r=0&c=193&i=25
+    // para las 67 zonas de Las Condes por igual (no es un link por-zona pese
+    // a presentarse como "decreto de la zona") y hoy devuelve HTTP 410 Gone.
+    // Removido en el fix C5 de la Auditoría de Fidelidad de Datos (2026-07-30);
+    // sin `url`, la UI cae al mismo tratamiento "sin link directo disponible —
+    // consulta el CIP oficial" que ya usan Providencia y Vitacura.
     fieldMap: {
       region: 'region',
       comuna: 'comuna',
@@ -48,7 +57,6 @@ export const ZONIFICACION_COMUNAS: Record<string, ComunaZonificacionConfig> = {
       nombre: 'nombre',
       uperm: 'uperm',
       uproh: 'uproh',
-      url: 'url',
     },
     usosDisponibles: true,
   },
