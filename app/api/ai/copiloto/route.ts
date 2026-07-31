@@ -12,6 +12,7 @@ import { getInteligenciaMunicipio } from '@/lib/inteligencia-dom'
 import { calcularDerechosMunicipales, type TipoObra } from '@/lib/derechos-municipales'
 import { sumarDiasHabiles } from '@/lib/dias-habiles'
 import { fixMojibakeArcGIS } from '@/lib/zonificacion-format'
+import { UF_FALLBACK_CLP } from '@/lib/uf'
 import type { Proyecto } from '@/types'
 
 interface CopilotoRequest {
@@ -196,13 +197,20 @@ export async function POST(request: Request) {
     .select('*')
     .eq('proyecto_id', body.proyectoId)
 
-  let ufValor = 38000
+  let ufValor = UF_FALLBACK_CLP
+  // A4 (auditoría 2026-07-30): la calculadora ya mostraba "UF referencial" en
+  // fallback, pero el copiloto callaba el flag — se propaga en `estimacion`
+  // para que TabEstimacion pueda mostrar el mismo aviso.
+  let ufFallback = true
   try {
     const ufRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'}/api/utils/uf`)
-    const ufData = await ufRes.json() as { valor?: number }
-    if (ufData.valor) ufValor = ufData.valor
+    const ufData = await ufRes.json() as { valor?: number; fallback?: boolean }
+    if (ufData.valor) {
+      ufValor = ufData.valor
+      ufFallback = ufData.fallback ?? false
+    }
   } catch {
-    // Use default 38000 if UF fetch fails
+    // Use UF_FALLBACK_CLP if UF fetch fails; ufFallback stays true
   }
 
   const TIPO_PERMISO_TO_OBRA: Record<string, string> = {
@@ -303,6 +311,7 @@ export async function POST(request: Request) {
       derechosUF: parseFloat((derechos.montoDerechos / ufValor).toFixed(2)),
       derechosDetalle: derechos.detalle,
       derechosAdvertencias: derechos.advertencias,
+      ufFallback,
     }
 
     recordUsage(auth.userId, 'ai_chats').catch(console.error)

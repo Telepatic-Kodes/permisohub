@@ -60,6 +60,12 @@ export function TabEstimacion({ data }: TabEstimacionProps) {
         </div>
         <p className="mt-1 text-xs text-muted-foreground">{data.derechosUF} UF al valor actual</p>
 
+        {data.ufFallback && (
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            UF referencial — mindicador.cl no disponible
+          </p>
+        )}
+
         {data.derechosDetalle.length > 0 && (
           <div className="mt-3 space-y-1">
             {data.derechosDetalle.map((d, idx) => (

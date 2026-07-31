@@ -126,6 +126,7 @@ export default function PatentesPage() {
   const [resumen, setResumen] = useState<ResumenPatentes>(EMPTY_RESUMEN)
   const [loading, setLoading] = useState(true)
   const [ufValor, setUfValor] = useState<number | null>(null)
+  const [ufFallback, setUfFallback] = useState(false)
   const [copilotoProyecto, setCopilotoProyecto] = useState<CopilotoProyecto | null>(null)
   const [copilotoOpen, setCopilotoOpen] = useState(false)
   const [historialPatente, setHistorialPatente] = useState<PatenteConVigencia | null>(null)
@@ -153,8 +154,9 @@ export default function PatentesPage() {
   useEffect(() => {
     fetch('/api/utils/uf')
       .then((r) => r.json())
-      .then((d: { valor?: number }) => {
+      .then((d: { valor?: number; fallback?: boolean }) => {
         if (d.valor) setUfValor(d.valor)
+        setUfFallback(d.fallback ?? false)
       })
       .catch(() => undefined)
   }, [])
@@ -241,6 +243,19 @@ export default function PatentesPage() {
         })()}
 
         <RenovacionAlert patentes={patentes} />
+
+        {ufFallback && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <span className="mt-0.5 text-amber-500">⚠</span>
+            <div className="text-sm">
+              <span className="font-semibold text-amber-800">UF referencial</span>
+              <span className="ml-1 text-amber-700">
+                mindicador.cl no disponible — las conversiones a UF de esta tabla usan un valor
+                referencial y pueden no reflejar la UF vigente.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* KPI cards */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

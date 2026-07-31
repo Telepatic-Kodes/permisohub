@@ -1,5 +1,7 @@
 export const dynamic = 'force-dynamic'
 
+import { UF_FALLBACK_CLP } from '@/lib/uf'
+
 let _cache: { valor: number; fecha: string; cachedAt: number } | null = null
 const TTL_MS = 24 * 60 * 60 * 1000
 
@@ -23,7 +25,7 @@ export async function GET() {
   } catch (err) {
     return Response.json({
       ok: false,
-      valor: 38000,
+      valor: UF_FALLBACK_CLP,
       fecha: null,
       error: err instanceof Error ? err.message : String(err),
       fallback: true,
