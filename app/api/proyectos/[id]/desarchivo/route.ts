@@ -29,7 +29,19 @@ export async function GET(
       .eq('id', id)
       .single()
 
-    if (error) throw error
+    // Distinguir "no existe" de "la consulta falló" — devolverlo todo como 404
+    // "Proyecto no encontrado" mandó a depurar en la dirección equivocada
+    // durante semanas: el proyecto existía y lo que faltaba era el esquema.
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return apiError('Proyecto no encontrado', 404)
+      }
+      return apiError(
+        `No se pudo leer el estado de archivo del proyecto: ${error.message}`,
+        500,
+        error,
+      )
+    }
 
     const intel = getInteligenciaMunicipio(data.municipio ?? '')
     const municipio_info = {
@@ -46,8 +58,9 @@ export async function GET(
       municipio_info,
       source: 'db',
     })
-  } catch {
-    return Response.json({ error: 'Proyecto no encontrado' }, { status: 404 })
+  } catch (err) {
+    // Cualquier otra excepción es un fallo del servidor, no un "no existe".
+    return apiError('Error al consultar el estado de archivo', 500, err)
   }
 }
 
