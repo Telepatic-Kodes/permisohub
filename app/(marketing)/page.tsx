@@ -291,6 +291,9 @@ export default async function MarketingPage({
             <a href="#precios" className="transition-colors hover:text-[#1A3328]">
               Precios
             </a>
+            <Link href="/centros" className="transition-colors hover:text-[#1A3328]">
+              Centros comerciales
+            </Link>
             <a href="#contacto" className="transition-colors hover:text-[#1A3328]">
               Contacto
             </a>
