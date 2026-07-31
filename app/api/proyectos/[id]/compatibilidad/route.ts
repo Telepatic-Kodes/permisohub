@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { verificarCompatibilidadUso } from '@/lib/zonificacion-compat'
+import { fixMojibakeArcGIS } from '@/lib/zonificacion-format'
 
 // ---------------------------------------------------------------------------
 // COMPAT-01: verificación de compatibilidad de uso de suelo para un proyecto
@@ -53,10 +54,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
+    // C6 (auditoría 2026-07-30): zona_uperm/zona_uproh vienen crudos de ArcGIS
+    // y 87-99% de los usos de Providencia/Vitacura llevan mojibake. Sin este
+    // fix la IA razona sobre texto corrupto mientras la UI muestra texto limpio.
     const result = await verificarCompatibilidadUso(
       usoPretendido,
-      proyecto.zona_uperm,
-      proyecto.zona_uproh,
+      fixMojibakeArcGIS(proyecto.zona_uperm),
+      fixMojibakeArcGIS(proyecto.zona_uproh),
       proyecto.zona_usos_disponibles ?? false,
     )
     return Response.json({ ok: true, ...result })
