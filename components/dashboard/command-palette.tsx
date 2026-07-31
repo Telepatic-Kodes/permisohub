@@ -8,6 +8,7 @@ import {
   Building2,
   Calculator,
   CalendarClock,
+  ClipboardList,
   CreditCard,
   FileSearch,
   FileText,
@@ -22,7 +23,6 @@ import {
   ShieldCheck,
   Target,
   TrendingUp,
-  Wrench,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -46,7 +46,7 @@ const NAV_ITEMS: CommandItem[] = [
   { id: "nav-municipios",   group: "Navegar",      label: "Municipios",          href: "/municipios",                   icon: MapPin,          emoji: "📍" },
   { id: "nav-oguc",         group: "IA Normativa", label: "Chat OGUC",           href: "/herramientas/oguc-chat",       icon: MessageSquare,   emoji: "💬" },
   { id: "nav-verificador",  group: "IA Normativa", label: "Verificador OGUC",    href: "/herramientas/compliance-check",icon: ShieldCheck,     emoji: "🔍" },
-  { id: "nav-checklist",    group: "IA Normativa", label: "Checklist Normativo", href: "/herramientas/checklist",       icon: Wrench,          emoji: "✅" },
+  { id: "nav-checklist",    group: "IA Normativa", label: "Formularios MINVU",   href: "/herramientas/formularios-minvu", icon: ClipboardList,   emoji: "✅" },
   { id: "nav-inteldom",     group: "IA Normativa", label: "Inteligencia DOM",    href: "/herramientas/municipios",      icon: BarChart2,       emoji: "🏛️" },
   { id: "nav-predictor",    group: "IA Normativa", label: "Predictor de Riesgo", href: "/herramientas/predictor",       icon: Target,          emoji: "🎯" },
   { id: "nav-auditor",      group: "IA Normativa", label: "Auditor de Expediente", href: "/herramientas/auditor",      icon: FileSearch,      emoji: "📁" },

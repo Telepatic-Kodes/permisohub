@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { ViaGuiada } from "@/components/proyecto/via-guiada"
+import { FamiliaFormulario } from "@/components/proyecto/familia-formulario"
 import type { Proyecto } from "@/types"
 import type { CompatEstado } from "@/lib/zonificacion-compat"
 
@@ -106,6 +107,7 @@ export function ViaDecision({ proyecto }: { proyecto: Proyecto }) {
     setR((prev) => ({ ...prev, [clave]: valor }))
 
   return (
+    <div className="space-y-4">
     <div className="rotulo overflow-hidden">
       <div className="flex items-center gap-2 border-b border-line-fine px-4 py-3">
         <GitFork className="size-4 text-[var(--blueprint)]" />
@@ -252,6 +254,9 @@ export function ViaDecision({ proyecto }: { proyecto: Proyecto }) {
           </div>
         </div>
       </div>
+    </div>
+
+    <FamiliaFormulario respuestas={r} superficieAmpliacionM2={proyecto.superficie_construida_m2} />
     </div>
   )
 }

@@ -127,11 +127,16 @@ export function ChecklistCompletitud({ proyectoId, tipo, refreshKey }: Props) {
           >
             <div className="min-w-0">
               <p className="truncate text-sm text-primary">{requisito.label}</p>
-              {!requisito.obligatorio && (
-                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">
-                  Opcional
-                </span>
-              )}
+              <div className="flex items-center gap-1.5">
+                {!requisito.obligatorio && (
+                  <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">
+                    Opcional
+                  </span>
+                )}
+                {requisito.fuente && (
+                  <span className="truncate text-[10px] text-muted-foreground/60">{requisito.fuente}</span>
+                )}
+              </div>
             </div>
             <EstadoNormativo
               estado={veredictoDe(presente, requisito.obligatorio)}

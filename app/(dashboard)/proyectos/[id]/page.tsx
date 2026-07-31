@@ -41,7 +41,7 @@ import { esPlano } from "@/lib/planos"
 import { CopilotoTrigger } from "@/components/copiloto/copiloto-trigger"
 import { DocumentUpload } from "@/components/dashboard/document-upload"
 import { WhatsAppDialog } from "@/components/dashboard/whatsapp-dialog"
-import { ExpedienteScore } from "@/components/proyecto/expediente-score"
+import { ChecklistCompletitud } from "@/components/proyecto/checklist-completitud"
 import { DesarchivoPanel } from "@/components/proyecto/desarchivo-panel"
 import { PredioMap } from "@/components/proyecto/predio-map"
 import { ZonificacionCard } from "@/components/proyecto/zonificacion-card"
@@ -610,11 +610,10 @@ export default function ProyectoDetallePage({
                 <SeccionLamina>Verificación normativa</SeccionLamina>
                 <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
                   <div className="space-y-4">
-                    <ExpedienteScore
-                      tipo={proyecto.tipo}
-                      municipio={proyecto.municipio}
-                      documentos={documentos}
+                    <ChecklistCompletitud
                       proyectoId={proyecto.id}
+                      tipo={proyecto.tipo}
+                      refreshKey={documentos.length}
                     />
 
                     {/* Herramientas IA del proyecto — lista técnica, sin emojis:

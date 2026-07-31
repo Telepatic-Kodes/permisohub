@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   Stamp,
   Target,
-  Wrench,
   type LucideIcon,
 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -83,12 +82,6 @@ const GROUPS: ToolGroup[] = [
         Icon: Compass,
       },
       {
-        label: "Checklist Expediente",
-        description: "Lista de verificación de documentos por municipio y tipo de proyecto",
-        href: "/herramientas/checklist",
-        Icon: Wrench,
-      },
-      {
         label: "Plazos DOM (Ley 21.718)",
         description: "Calcula y alerta sobre los plazos legales de respuesta de la DOM",
         href: "/herramientas/timeline",
@@ -119,7 +112,7 @@ const GROUPS: ToolGroup[] = [
       },
       {
         label: "Formularios MINVU",
-        description: "Formularios oficiales MINVU con pre-llenado desde los datos de tus proyectos",
+        description: "Explorador oficial del Mapa de Formularios: los 5 grupos, transcripción literal",
         href: "/herramientas/formularios-minvu",
         Icon: ClipboardList,
       },
