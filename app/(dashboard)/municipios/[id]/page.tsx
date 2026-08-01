@@ -19,6 +19,8 @@ import {
 
 import { COMUNAS_CHILE } from "@/lib/comunas-chile"
 import { getInteligenciaMunicipio } from "@/lib/inteligencia-dom"
+import { obtenerInstrumentosIptPorComuna } from "@/lib/instrumentos-ipt-server"
+import { InstrumentosIptSection } from "@/components/municipios/instrumentos-ipt-section"
 import { cn } from "@/lib/utils"
 
 // ──────────────────────────────────────────────────
@@ -27,6 +29,12 @@ import { cn } from "@/lib/utils"
 export function generateStaticParams() {
   return COMUNAS_CHILE.map((c) => ({ id: c.id }))
 }
+
+// Página estática (generateStaticParams) que ahora también lee
+// instrumentos_ipt (dato real, sincronizado semanalmente) — revalidate
+// acotado en vez de force-dynamic, ya que el dato propio no cambia más
+// rápido que la sincronización semanal del cron.
+export const revalidate = 3600
 
 // ──────────────────────────────────────────────────
 // Helpers
@@ -57,6 +65,7 @@ export default async function MunicipioDetallePage({
 
   const intel = getInteligenciaMunicipio(comuna.nombre)
   const badge = DOM_STATUS_BADGE[comuna.domStatus]
+  const instrumentosIpt = await obtenerInstrumentosIptPorComuna(comuna.nombre)
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -233,6 +242,9 @@ export default async function MunicipioDetallePage({
                 </ul>
               </div>
             )}
+
+            {/* Instrumentos IPT — dato real, separado del contenido de referencia de abajo */}
+            <InstrumentosIptSection instrumentos={instrumentosIpt} />
 
             {/* PRC */}
             {intel.planRegulador && (
