@@ -70,6 +70,28 @@ export async function aiCompleteWithPDF(
 // Visión: analiza una o más imágenes (láminas de plano) con gpt-4o.
 // `images` son data URLs (data:image/png;base64,...). Se pide `detail: high`
 // para no perder el detalle del dibujo — dolor explícito del arquitecto.
+// Responses API + web_search_preview — a diferencia de aiComplete() (Chat
+// Completions, sin acceso a internet), esto permite que el modelo busque en
+// vivo antes de responder. Usado solo por app/api/tasacion/route.ts: no hay
+// todavía una tabla de comparables reales para terrenos (a diferencia de
+// locales comerciales, que sí tiene mercado_locales_listings scrapeado a
+// diario — ver lib/mercado-locales-server.ts), así que la búsqueda web es la
+// única fuente de comparables disponible en esta fase. Devuelve el stream
+// crudo del SDK — cada ruta que la use decide cómo traducir sus eventos a su
+// propio framing SSE, igual que app/api/ai/chat/route.ts hace con
+// ai.chat.completions.create({stream: true}) en vez de envolverlo acá.
+export async function streamConBusquedaWeb(instructions: string, input: string) {
+  const ai = getAI()
+  if (!ai) throw new Error('OPENAI_API_KEY no configurado')
+  return ai.responses.create({
+    model: AI_MODEL,
+    instructions,
+    tools: [{ type: 'web_search_preview' }],
+    input,
+    stream: true,
+  })
+}
+
 export async function aiCompleteWithImages(
   prompt: string,
   images: string[],

@@ -1,5 +1,10 @@
 import { fetchWithTimeout } from '@/lib/scraper'
 import { type TerrenoListadoRaw, PRECIO_CLP_MINIMO_PLAUSIBLE, obtenerValorUF, nombreComuna } from './terrenos-common'
+import {
+  type MercadoLocalListadoRaw,
+  type OperacionMercadoLocal,
+  MERCADO_LOCALES_COMUNA_SLUGS,
+} from './mercado-locales-common'
 
 // ---------------------------------------------------------------------------
 // Scraper de terrenos ("sitios") en venta desde Portalinmobiliario, por
@@ -154,6 +159,156 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
     return items
   } catch (err) {
     console.warn(`[portalinmobiliario] Error al buscar terrenos en "${comunaId}":`, err instanceof Error ? err.message : err)
+    return []
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Scraper de locales comerciales (arriendo/venta) desde Portalinmobiliario —
+// fase 1 de la fusión PROPRA·BI → PermisoHub. Apunta a la faceta
+// "/comercial/" con PROPERTY_TYPE=242065 (id interno de MELI para
+// "Locales"), verificada en vivo contra un fetch real (31 jul 2026): el
+// conteo de "N resultados" de la respuesta coincidió con el propio conteo
+// que el facet advierte, confirmando que el filtro aplica server-side.
+//
+// El HTML de este listado tiene una estructura de card DISTINTA a la de
+// `buscarTerrenos` de arriba (boundary <li class="ui-search-layout__item">,
+// widget de precio "poly-price__current" con spans de fracción/centavos
+// separados) — comparten solo fetchWithTimeout, no forzar un parser único.
+// Mismo contrato de nunca lanzar: cualquier falla degrada a `[]` + warn.
+// ---------------------------------------------------------------------------
+
+const LOCALES_PROPERTY_TYPE_ID = '242065'
+
+function decodeEntitiesMercadoLocal(text: string): string {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim()
+}
+
+// A diferencia de parsePrecioClp (que lee el aria-label del widget de
+// terrenos), acá se lee el número visible en "poly-price__current" — el
+// aria-label es texto libre ("14 unidades de fomento con 20 centavos")
+// mientras las spans de fracción/centavos son números estructurados. El "."
+// en la fracción es separador de miles (formato chileno), nunca un decimal.
+function parsePrecioMercadoLocal(cardHtml: string): { monto: number; moneda: string } | null {
+  const bloqueMatch = cardHtml.match(/poly-price__current">([\s\S]*?)<\/div><\/div>/)
+  const bloque = bloqueMatch ? bloqueMatch[1] : cardHtml
+
+  const monedaMatch = bloque.match(/currency-symbol">([^<]+)</)
+  const fraccionMatch = bloque.match(/__fraction"[^>]*>([\d.,]+)</)
+  if (!monedaMatch || !fraccionMatch) return null
+
+  const centavosMatch = bloque.match(/__cents[^"]*"[^>]*>(\d+)</)
+  const parteEntera = parseInt(fraccionMatch[1].replace(/\./g, '').replace(',', ''), 10)
+  if (!Number.isFinite(parteEntera)) return null
+
+  const centavos = centavosMatch ? parseInt(centavosMatch[1], 10) / 100 : 0
+  const monedaTexto = monedaMatch[1].trim()
+  // Normalizado a 'UF' | 'CLP' al parsear — mercado_locales_listings.precio_moneda
+  // solo acepta esos dos valores (CHECK constraint), nunca el símbolo crudo del portal.
+  const moneda = monedaTexto.toUpperCase().includes('UF') ? 'UF' : monedaTexto === '$' ? 'CLP' : monedaTexto
+  return { monto: parteEntera + centavos, moneda }
+}
+
+function parseSuperficieM2MercadoLocal(cardHtml: string): number | null {
+  const items = [...cardHtml.matchAll(/poly-attributes_list__item[^"]*">([^<]+)</g)].map((m) => m[1])
+  for (const item of items) {
+    const m = item.match(/([\d.,]+)\s*m[²2]/i)
+    if (m) {
+      const valor = parseFloat(m[1].replace(/\./g, '').replace(',', '.'))
+      if (Number.isFinite(valor)) return valor
+    }
+  }
+  return null
+}
+
+function parseCardMercadoLocal(
+  cardHtml: string,
+  operacion: OperacionMercadoLocal,
+): MercadoLocalListadoRaw | null {
+  const tituloMatch = cardHtml.match(/<a href="([^"]+)"[^>]*class="poly-component__title">([^<]+)<\/a>/)
+  if (!tituloMatch) return null
+
+  const url = decodeEntitiesMercadoLocal(tituloMatch[1]).split('#')[0]
+  const titulo = decodeEntitiesMercadoLocal(tituloMatch[2])
+
+  const idMatch = url.match(/MLC-(\d+)-/)
+  if (!idMatch) return null
+  const fuenteId = `MLC-${idMatch[1]}`
+
+  const precio = parsePrecioMercadoLocal(cardHtml)
+  const superficieM2 = parseSuperficieM2MercadoLocal(cardHtml)
+  const headlineMatch = cardHtml.match(/poly-component__headline">([^<]+)</)
+  const ubicacionMatch = cardHtml.match(/poly-component__location">([^<]+)</)
+
+  return {
+    fuente: 'portalinmobiliario',
+    fuenteId,
+    url,
+    titulo,
+    operacion,
+    precioMonto: precio?.monto ?? null,
+    // precio_moneda solo se persiste si viene normalizado a UF/CLP —
+    // cualquier otra unidad (USD, u otra que MELI muestre) queda sin
+    // precio_moneda en vez de forzar un valor que la BD rechazaría.
+    precioMoneda: precio && (precio.moneda === 'UF' || precio.moneda === 'CLP') ? precio.moneda : null,
+    superficieM2,
+    atributosRaw: {
+      headline: headlineMatch ? decodeEntitiesMercadoLocal(headlineMatch[1]) : null,
+      locationText: ubicacionMatch ? decodeEntitiesMercadoLocal(ubicacionMatch[1]) : null,
+    },
+  }
+}
+
+/**
+ * Busca locales comerciales (arriendo o venta) publicados en
+ * Portalinmobiliario para una comuna cubierta por
+ * MERCADO_LOCALES_COMUNA_SLUGS. Nunca lanza — cualquier fallo degrada a `[]`
+ * + console.warn, igual que buscarTerrenos.
+ */
+export async function buscarLocalesComerciales(
+  comuna: string,
+  operacion: OperacionMercadoLocal,
+): Promise<MercadoLocalListadoRaw[]> {
+  const slug = MERCADO_LOCALES_COMUNA_SLUGS[comuna]
+  if (!slug) {
+    console.warn(`[portalinmobiliario] Comuna "${comuna}" no está en MERCADO_LOCALES_COMUNA_SLUGS — se omite`)
+    return []
+  }
+
+  try {
+    const url = `https://www.portalinmobiliario.com/${operacion}/comercial/${slug}-metropolitana?PROPERTY_TYPE=${LOCALES_PROPERTY_TYPE_ID}`
+    const res = await fetchWithTimeout(url, {}, 20_000)
+
+    if (!res.ok) {
+      console.warn(`[portalinmobiliario] HTTP ${res.status} para locales comerciales en "${comuna}" (${operacion}) — se omite esta corrida`)
+      return []
+    }
+
+    const html = await res.text()
+    const cards = html.split('<li class="ui-search-layout__item">').slice(1)
+
+    const items: MercadoLocalListadoRaw[] = []
+    const vistos = new Set<string>()
+    for (const card of cards) {
+      const parsed = parseCardMercadoLocal(card, operacion)
+      // MELI inyecta cards patrocinadas/duplicadas dentro de una misma
+      // página — deduplicar por fuenteId acá evita un falso "cambió de
+      // precio dos veces en una corrida" en el paso de diff.
+      if (parsed && !vistos.has(parsed.fuenteId)) {
+        vistos.add(parsed.fuenteId)
+        items.push(parsed)
+      }
+    }
+
+    return items
+  } catch (err) {
+    console.warn(`[portalinmobiliario] Error al buscar locales comerciales en "${comuna}" (${operacion}):`, err instanceof Error ? err.message : err)
     return []
   }
 }
