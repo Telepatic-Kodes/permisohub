@@ -273,12 +273,12 @@
   owner_files: [lib/lguc-knowledge.ts]
   trigger: none
   called_from: [lib/normativa-retrieval.ts]
-  freshness_sla_days: null
+  freshness_sla_days: 90
   last_verified: 2026-06-01
   monitoring: none
   duplicate_of: null
   status: stale-kb
-  notes: "100% curado a mano, marcador [VERIFICAR TEXTO OFICIAL] para lo no verificado. Sin fecha de 'última verificación' a nivel de archivo — se estima jun 2026 por última mención en memoria de sesión."
+  notes: "100% curado a mano, marcador [VERIFICAR TEXTO OFICIAL] para lo no verificado. Sin fecha de 'última verificación' a nivel de archivo — se estima jun 2026 por última mención en memoria de sesión. Decisión founder (1 ago 2026): cadencia fija trimestral en vez de refresh ad-hoc — check-data-sources.mjs avisará (warning, no fallo duro) cuando pasen 90 días desde last_verified sin que alguien la actualice."
 
 - id: oguc-knowledge
   name: "OGUC (D.S. N°47/1992) — base de conocimiento curada a mano"
@@ -286,12 +286,12 @@
   owner_files: [lib/oguc-knowledge.ts]
   trigger: none
   called_from: [lib/normativa-retrieval.ts]
-  freshness_sla_days: null
+  freshness_sla_days: 90
   last_verified: 2026-06-01
   monitoring: none
   duplicate_of: null
   status: stale-kb
-  notes: "Header propio dice 'actualizado 2026-06, vigencia última modificación 25.04.2026'. Requiere edición manual cuando MINVU publique cambios."
+  notes: "Header propio dice 'actualizado 2026-06, vigencia última modificación 25.04.2026'. Requiere edición manual cuando MINVU publique cambios. Decisión founder (1 ago 2026): cadencia fija trimestral — ver lguc-knowledge."
 
 - id: circulares-ddu
   name: "Circulares DDU — índice curado"
@@ -299,12 +299,12 @@
   owner_files: [lib/circulares-ddu.ts]
   trigger: none
   called_from: [lib/normativa-retrieval.ts]
-  freshness_sla_days: null
+  freshness_sla_days: 90
   last_verified: 2026-06-01
   monitoring: none
   duplicate_of: null
   status: stale-kb
-  notes: "Cada entrada con verificado: true/false explícito — la disciplina más rigurosa de las 4 bases normativas curadas."
+  notes: "Cada entrada con verificado: true/false explícito — la disciplina más rigurosa de las 4 bases normativas curadas. Decisión founder (1 ago 2026): cadencia fija trimestral — ver lguc-knowledge."
 
 - id: mapa-formularios
   name: "Mapa de Formularios MINVU"
@@ -424,7 +424,7 @@
   notes: "Descarga verificada en vivo (111MB zip, PUB_NOM_SUCURSAL.txt tab-delimited, columnas confirmadas por inspección directa) y corrida en producción contra datos reales. Actualizado mensualmente por el SII. Reemplaza dos alternativas descartadas por investigación de mercado (1 ago 2026): patente comercial municipal (fragmentada en ~345 sistemas sin API centralizada) y scraping de buscadores de tiendas (JS/mapa, frágil). Cobertura: Falabella, Cencosud Shopping, Walmart Chile (Hiper + Express, ~211 direcciones vigentes en 69/62 comunas), SMU vía Alvi + Super10 (~124 vigentes, 53/62 comunas) — 605 direcciones totales encontradas, idempotente en corridas repetidas. LIMITACIÓN REAL encontrada al correrlo: 'vigente' es un estado administrativo-tributario, no confirmación de tienda abierta — de las 91 direcciones históricas de Falabella S.A., solo 3 están 'vigente=true' hoy; la mayoría son registros superados/corregidos, no necesariamente cierres reales. Tratar como señal indicativa (útil para el feed de 'registros recientes', que sí usa la fecha real del SII), no como conteo preciso de tiendas operando. AMPLIADO (1 ago 2026): obtenerSenalesExpansionPorComuna() en cadenas-sucursales-server.ts cruza esta fuente contra /mercado-inmobiliario/oportunidades por comuna (normalizada con normalizarNombreComuna(), ya que este dato viene en MAYÚSCULAS sin tildes del SII vs. mercado_locales_listings.comuna en formato normal) — la señal de expansión ahora aparece donde se toma la decisión de invertir, no solo en su propio panel dedicado."
 
 - id: sii-nomina-sucursales-holdings-sin-tiendas
-  name: "SII nómina — RUTs de holding sin cobertura real de tiendas (Walmart, SMU) — RESUELTO PARCIALMENTE"
+  name: "SII nómina — RUTs de holding sin cobertura real de tiendas (Walmart, SMU) — RESUELTO, cobertura de SMU parcial por decisión"
   type: scraper
   owner_files: [lib/scrapers/sii-nomina-sucursales.ts]
   trigger: none
@@ -433,5 +433,5 @@
   last_verified: 2026-08-01
   monitoring: none
   duplicate_of: null
-  status: needs-decision
-  notes: "RESUELTO (1 ago 2026, misma sesión): se identificaron las razones sociales operativas reales cruzando la nómina de razones sociales del SII contra las marcas públicas de cada grupo. Walmart Chile: 'Administradora de Supermercados Hiper/Express Limitada' (76134941-4 / 76134946-5) — alta confianza, ambas registradas el mismo día (reestructuración corporativa post-compra de D&S), 211 direcciones vigentes, distribución nacional real. Ya activos en CADENAS_RUT_CONOCIDOS. SMU: 'Alvi Supermercado Mayorista S.A.' (76029743-7) y 'Super 10 S.A.' (76012833-3) — confianza media-alta (smu.cl/inversionistas confirma 'filiales Unimarc, Alvi y Super10' por nombre pero no publica RUT oficial para confirmar 1:1). PENDIENTE (sigue needs-decision): Unimarc — la marca más grande de SMU, mayoría de sus ~300 tiendas — no aparece como razón social propia en la nómina; indicios de que opera bajo RUTs regionales ('Mayorista 10 <ciudad> Limitada') en vez de uno nacional único. Cobertura de SMU queda parcial hasta resolver esto."
+  status: active
+  notes: "RESUELTO (1 ago 2026, misma sesión): se identificaron las razones sociales operativas reales cruzando la nómina de razones sociales del SII contra las marcas públicas de cada grupo. Walmart Chile: 'Administradora de Supermercados Hiper/Express Limitada' (76134941-4 / 76134946-5) — alta confianza, ambas registradas el mismo día (reestructuración corporativa post-compra de D&S), 211 direcciones vigentes, distribución nacional real. Ya activos en CADENAS_RUT_CONOCIDOS. SMU: 'Alvi Supermercado Mayorista S.A.' (76029743-7) y 'Super 10 S.A.' (76012833-3) — confianza media-alta (smu.cl/inversionistas confirma 'filiales Unimarc, Alvi y Super10' por nombre pero no publica RUT oficial para confirmar 1:1). Unimarc — la marca más grande de SMU, mayoría de sus ~300 tiendas — no aparece como razón social propia en la nómina; indicios de que opera bajo RUTs regionales ('Mayorista 10 <ciudad> Limitada') en vez de uno nacional único. **Decisión founder (1 ago 2026): NO seguir invirtiendo tiempo de agente en encontrar el RUT de Unimarc — cobertura parcial de SMU (Alvi + Super10) es aceptable por ahora.** Reabrir solo si la founder consigue el dato por otra vía (no vale la pena más búsqueda automatizada)."
