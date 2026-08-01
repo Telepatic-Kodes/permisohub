@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 import { AvaluoFiscalCard } from "@/components/mercado-inmobiliario/avaluo-fiscal-card"
+import { InformeEjecutivo } from "@/components/mercado-inmobiliario/informe-ejecutivo"
 import type { SIILookupServerData } from "@/lib/sii-lookup-server"
 
 const TIPOS_DOMINIO = ["Individual", "Sucesión", "Comunidad"]
@@ -299,11 +300,23 @@ function DueDiligencePageInner() {
             </div>
           )}
 
-          {(streamingText || result) && (
-            <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4">
-              <MarkdownRenderer content={result ?? streamingText} />
-              {loading && <span className="inline-block w-1 h-4 bg-[var(--blueprint)] animate-pulse ml-0.5 align-middle" />}
-            </div>
+          {result ? (
+            <InformeEjecutivo
+              content={result}
+              fuentes={[
+                { label: "Avalúo fiscal SII", disponible: avaluoFiscal !== null },
+                { label: "Posesión efectiva declarada", disponible: form.tienePosesionEfectiva },
+                { label: "Inscripción CBR declarada", disponible: form.tieneInscripcionCBR },
+                { label: "Búsqueda web en vivo", disponible: true },
+              ]}
+            />
+          ) : (
+            streamingText && (
+              <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4">
+                <MarkdownRenderer content={streamingText} />
+                {loading && <span className="inline-block w-1 h-4 bg-[var(--blueprint)] animate-pulse ml-0.5 align-middle" />}
+              </div>
+            )
           )}
         </div>
       </div>
