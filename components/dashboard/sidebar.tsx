@@ -75,7 +75,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/municipios",               label: "Municipios",  icon: MapPin },
       { href: "/herramientas/calculadora", label: "Calculadora", icon: Calculator },
-      { href: "/mercado-inmobiliario/pricing", label: "Mercado Inmobiliario", icon: Landmark, matchPaths: ["/mercado-inmobiliario/tasacion"] },
+      { href: "/mercado-inmobiliario/pricing", label: "Mercado Inmobiliario", icon: Landmark, matchPaths: ["/mercado-inmobiliario/tasacion", "/mercado-inmobiliario/noticias", "/mercado-inmobiliario/macro"] },
     ],
   },
   {

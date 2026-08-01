@@ -11,6 +11,10 @@
     {
       "path": "/api/scraper/mercado-locales",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/noticias-macro",
+      "schedule": "0 9 * * *"
     }
   ]
 }
