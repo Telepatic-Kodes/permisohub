@@ -267,7 +267,7 @@ export function ZonificacionCard({ proyecto, onUpdated }: ZonificacionCardProps)
               )}
             </div>
 
-            <UsoCompatibleCheck proyectoId={proyecto.id} />
+            <UsoCompatibleCheck endpoint={`/api/proyectos/${proyecto.id}/compatibilidad`} />
           </>
         )}
 

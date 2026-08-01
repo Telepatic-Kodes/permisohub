@@ -7,7 +7,14 @@ import { Button } from "@/components/ui/button"
 import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 
 interface UsoCompatibleCheckProps {
-  proyectoId: string
+  /** Ruta POST que recibe { usoPretendido, ...extraBody } y responde { estado, justificacion }. */
+  endpoint: string
+  /**
+   * Campos adicionales fusionados en el body del POST — usado por el flujo de
+   * Terreno (sin proyectoId) para enviar uperm/uproh/usosDisponibles directo,
+   * ya que ese endpoint no tiene una fila de proyecto de la cual leerlos.
+   */
+  extraBody?: Record<string, unknown>
 }
 
 type CompatEstado = "permitido" | "no_permitido" | "no_especificado"
@@ -23,7 +30,7 @@ const COMPAT_TO_VEREDICTO: Record<CompatEstado, Veredicto> = {
   no_especificado: "observa",
 }
 
-export function UsoCompatibleCheck({ proyectoId }: UsoCompatibleCheckProps) {
+export function UsoCompatibleCheck({ endpoint, extraBody }: UsoCompatibleCheckProps) {
   const [uso, setUso] = useState("")
   const [loading, setLoading] = useState(false)
   const [resultado, setResultado] = useState<{ estado: CompatEstado; justificacion: string } | null>(null)
@@ -33,10 +40,10 @@ export function UsoCompatibleCheck({ proyectoId }: UsoCompatibleCheckProps) {
     setLoading(true)
     setResultado(null)
     try {
-      const res = await fetch(`/api/proyectos/${proyectoId}/compatibilidad`, {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usoPretendido: uso.trim() }),
+        body: JSON.stringify({ usoPretendido: uso.trim(), ...extraBody }),
       })
       const data = await res.json()
       if (!res.ok || data.error) {

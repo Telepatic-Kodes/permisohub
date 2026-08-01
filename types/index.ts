@@ -135,6 +135,55 @@ export interface Proyecto {
   comunicaciones?: Comunicacion[]
 }
 
+// Terreno: evaluación de viabilidad normativa de un predio en venta, antes de
+// que exista un Cliente/Proyecto formal (ver módulo Terrenos). Reusa a
+// propósito los mismos nombres de campo SII/zonificación que Proyecto para
+// poder compartir componentes de UI (SIIEnricher, UsoCompatibleCheck, PredioMap).
+export interface Terreno {
+  id: string
+  direccion: string
+  comuna: string
+  fuente: 'manual' | 'portalinmobiliario' | 'portalterreno' | 'doomos' | 'yapo' | 'chilepropiedades'
+  url_aviso?: string
+  precio_clp?: number
+  superficie_lote_m2?: number
+  fecha_publicacion?: string
+  created_at: string
+  // Catastro SII
+  rol_sii?: string
+  avaluo_fiscal_clp?: number
+  superficie_terreno_m2?: number
+  superficie_construida_m2?: number
+  destino_sii?: string
+  lat?: number
+  lng?: number
+  // Zonificación
+  zona_status?: 'pendiente' | 'encontrado' | 'sin_cobertura' | 'error'
+  zona_cache_id?: string
+  zona_codigo?: string
+  zona_sector?: string
+  zona_nombre?: string
+  zona_uperm?: string
+  zona_uproh?: string
+  zona_usos_disponibles?: boolean
+  zona_fuente_url?: string
+  zona_consultada_el?: string
+  // Potencial de desarrollo comercial (local / strip center / power center)
+  uso_comercial_status?: 'pendiente' | 'permitido' | 'no_permitido' | 'no_especificado'
+  uso_comercial_justificacion?: string
+  uso_comercial_consultado_el?: string
+  // Historial de precio (detección de vendedor motivado)
+  precio_clp_anterior?: number
+  precio_actualizado_el?: string
+  // Señales de ubicación (OpenStreetMap Overpass)
+  ubicacion_status?: 'pendiente' | 'resuelto' | 'error'
+  cerca_avenida_principal?: boolean
+  anchors_comerciales_cercanos?: number
+  ubicacion_consultada_el?: string
+  // Ciclo de vida
+  proyecto_id?: string
+}
+
 export interface Etapa {
   id: string
   proyecto_id: string

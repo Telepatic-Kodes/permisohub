@@ -12,6 +12,8 @@ interface SIIEnricherProps {
   onEnrich: (data: SIIData) => void
   /** Whether a municipio is already selected (needed for region hint) */
   municipio?: string
+  /** Texto del botón "Aplicar" — el default asume un formulario de proyecto */
+  applyLabel?: string
 }
 
 const CLP = new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 })
@@ -34,7 +36,7 @@ interface LookupAPIResponse {
   error?: string
 }
 
-export function SIIEnricher({ onEnrich, municipio }: SIIEnricherProps) {
+export function SIIEnricher({ onEnrich, municipio, applyLabel = "Aplicar al proyecto" }: SIIEnricherProps) {
   const [rol, setRol] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -179,7 +181,7 @@ export function SIIEnricher({ onEnrich, municipio }: SIIEnricherProps) {
 
           <div className="flex gap-2 pt-1">
             <Button type="button" size="sm" onClick={handleApply} className="flex-1 text-xs">
-              Aplicar al proyecto
+              {applyLabel}
             </Button>
             <Button
               type="button"

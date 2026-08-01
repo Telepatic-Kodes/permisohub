@@ -146,6 +146,184 @@ export const ZONIFICACION_COMUNAS: Record<string, ComunaZonificacionConfig> = {
     fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
     contenidoDeclaradoHasta: '2014-12',
   },
+
+  // ── Ampliación de cobertura (31 jul 2026) ──────────────────────────────
+  // Estefanía pidió salir del "solo sector oriente". Búsqueda en el catálogo
+  // ArcGIS Online del mismo owner que ya usábamos para Las Condes/Providencia/
+  // Vitacura (isidro.puigOCUC — Observatorio de Ciudades UC) encontró 46 capas
+  // "PRC_*" en total, 20 de ellas en la Región Metropolitana. De esas 20:
+  // - 14 comparten el mismo fieldMap minúscula que Las Condes/Providencia/
+  //   Vitacura (mismo owner, mismo pipeline) — agregadas abajo como 'dedicada'.
+  // - Independencia usa el mismo fieldMap MAYÚSCULA que la capa agregada de
+  //   Ñuñoa, pero es su propia capa dedicada a esa comuna (no agregada
+  //   multi-comuna) — sí tiene uperm/uproh reales, verificado en vivo.
+  // - Santiago y La Reina quedaron FUERA: sus capas no siguen ninguno de los
+  //   dos fieldMap (Santiago: sin campo comuna/uperm/uproh, solo 'uso_suelo';
+  //   La Reina: sin comuna/zona/uperm/uproh, solo 'zonas'/'dens_b_max') — no
+  //   fabricar un mapeo que no corresponde a esos campos reales.
+  // Verificado en vivo (2026-07-31): fields de las 15 vía FeatureServer/0?f=json
+  // para confirmar casing; point-in-polygon real con uperm/uproh no vacío para
+  // Puente Alto, Independencia, San Miguel y Recoleta (muestra representativa
+  // de las dos variantes de fieldMap, no las 15 una por una).
+  'puente-alto': {
+    comunaId: 'puente-alto',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_Puente_Alto/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  'estacion-central': {
+    comunaId: 'estacion-central',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_Estación_Central/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  'la-granja': {
+    comunaId: 'la-granja',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_La_Granja/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  'lo-espejo': {
+    comunaId: 'lo-espejo',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_Lo_Espejo/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  'la-cisterna': {
+    comunaId: 'la-cisterna',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_La_Cisterna/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  conchali: {
+    comunaId: 'conchali',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_Conchalí/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  'san-miguel': {
+    comunaId: 'san-miguel',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_San_Miguel/FeatureServer',
+    layerIndex: 0,
+    // Point-in-polygon en vivo (Gran Av. José Miguel Carrera 3300): zona ZU-5,
+    // uperm "Equipamiento de salud." — confirmado real, no vacío.
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  macul: {
+    comunaId: 'macul',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_Macul/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  recoleta: {
+    comunaId: 'recoleta',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_Recoleta/FeatureServer',
+    layerIndex: 0,
+    // Point-in-polygon en vivo (Av. Recoleta 2000): zona U-E/E-A1, uperm
+    // "Residencial; equipamiento." — confirmado real, no vacío.
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  'cerro-navia': {
+    comunaId: 'cerro-navia',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_Cerro_Navia/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  'lo-prado': {
+    comunaId: 'lo-prado',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_Lo_Prado/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  'pedro-aguirre-cerda': {
+    comunaId: 'pedro-aguirre-cerda',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_Pedro_Aguirre_Cerda/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  renca: {
+    comunaId: 'renca',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_Renca/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  'san-joaquin': {
+    comunaId: 'san-joaquin',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC_San_Joaquín/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'region', comuna: 'comuna', sector: 'sector', zona: 'zona', nombre: 'nombre', uperm: 'uperm', uproh: 'uproh' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
+  independencia: {
+    comunaId: 'independencia',
+    tier: 'dedicada',
+    featureServerUrl:
+      'https://services9.arcgis.com/kKJR3Qt68ohAWuet/arcgis/rest/services/PRC__Independencia/FeatureServer',
+    layerIndex: 0,
+    // Única de las 15 nuevas con fieldMap MAYÚSCULA (mismo patrón que la capa
+    // agregada de Ñuñoa) pese a ser una capa DEDICADA a esta comuna — no es
+    // agregada, sí tiene uperm/uproh reales y no vacíos, verificado en vivo
+    // (centroide de zona real): zona "C", uperm "Residencial: vivienda,
+    // hospedaje; equipamiento: comercio, culto y cultura...".
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Observatorio de Ciudades UC (espejo de datos MINVU)',
+  },
 }
 
 /**
@@ -169,4 +347,17 @@ export function resolveComunaZonificacion(nombreOMunicipio: string): ComunaZonif
  */
 export function getComunasConCobertura(): ComunaZonificacionConfig[] {
   return Object.values(ZONIFICACION_COMUNAS)
+}
+
+/**
+ * Nombres de despliegue ("Puente Alto", no "puente-alto") de las comunas con
+ * cobertura, ordenados alfabéticamente — para mensajes de UI que antes
+ * hardcodeaban "Las Condes, Providencia, Vitacura y Ñuñoa" a mano y quedaban
+ * desactualizados cada vez que se ampliaba la cobertura (pasó exactamente
+ * eso el 31 jul 2026). Client-safe: solo lee COMUNAS_CHILE, sin service role.
+ */
+export function nombresComunasConCobertura(): string[] {
+  return getComunasConCobertura()
+    .map((c) => COMUNAS_CHILE.find((comuna) => comuna.id === c.comunaId)?.nombre ?? c.comunaId)
+    .sort((a, b) => a.localeCompare(b, 'es'))
 }

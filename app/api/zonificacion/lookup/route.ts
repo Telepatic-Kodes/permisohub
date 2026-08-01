@@ -74,6 +74,18 @@ export async function GET(request: Request): Promise<Response> {
   const direccion = searchParams.get('direccion')
   const comuna = searchParams.get('comuna')
   const force = searchParams.get('force') === 'true'
+  // lat/lng opcionales: cuando el llamador ya tiene coordenadas precisas de
+  // otra fuente (ej. terrenos scrapeados de Portalinmobiliario, que traen su
+  // propio lat/lng resuelto en la página de detalle — ver
+  // lib/scrapers/portalinmobiliario.ts), se saltan Nominatim por completo.
+  // El texto de "direccion" en ese caso suele ser un sector/título de aviso,
+  // no una dirección geocodificable — confiar en Nominatim ahí produce
+  // "Dirección no encontrada" en la mayoría de los casos.
+  const latParam = searchParams.get('lat')
+  const lngParam = searchParams.get('lng')
+  const latOverride = latParam !== null ? Number(latParam) : null
+  const lngOverride = lngParam !== null ? Number(lngParam) : null
+  const tieneOverride = latOverride !== null && Number.isFinite(latOverride) && lngOverride !== null && Number.isFinite(lngOverride)
 
   if (!direccion || !comuna) {
     return Response.json(
@@ -100,8 +112,10 @@ export async function GET(request: Request): Promise<Response> {
   const supabase = createServiceClient()
 
   try {
-    // 2. Geocode.
-    const geo = await geocodeDireccion(direccion, comuna)
+    // 2. Geocode — salvo que el llamador ya traiga coordenadas precisas (ver tieneOverride arriba).
+    const geo = tieneOverride
+      ? { ok: true as const, lat: latOverride as number, lng: lngOverride as number, comunaDetectada: undefined, displayName: undefined }
+      : await geocodeDireccion(direccion, comuna)
     if (!geo.ok || geo.lat === undefined || geo.lng === undefined) {
       return Response.json(
         { ok: false, status: 'error', error: geo.error ?? 'No se pudo geocodificar la dirección' } satisfies ZonaLookupResponse,

@@ -265,6 +265,7 @@ function NuevoProyectoPageInner() {
                 id="direccion"
                 name="direccion"
                 required
+                defaultValue={searchParams.get("direccion") ?? ""}
                 placeholder="Ej: Av. Providencia 1455, Local 3"
               />
             </div>

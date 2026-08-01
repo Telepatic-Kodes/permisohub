@@ -13,6 +13,7 @@ import {
   FolderOpen,
   LayoutDashboard,
   LogOut,
+  Map,
   MapPin,
   PanelLeftClose,
   PanelLeftOpen,
@@ -62,6 +63,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Expediente",
     items: [
+      { href: "/terrenos",     label: "Terrenos",       icon: Map, newHref: "/terrenos/nuevo" },
       { href: "/proyectos",    label: "Proyectos",      icon: FolderOpen, newHref: "/proyectos/nuevo" },
       { href: "/clientes",     label: "Clientes",       icon: Building2 },
       { href: "/herramientas", label: "Herramientas IA", icon: Sparkles },
