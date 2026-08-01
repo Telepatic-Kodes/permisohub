@@ -63,6 +63,7 @@ export function SIIEnricher({ onEnrich, municipio, applyLabel = "Aplicar al proy
       const mapped: SIIData = {
         rol: json.rol ?? trimmed,
         avaluo_fiscal_clp: json.data.avaluo_fiscal_clp ?? 0,
+        avaluo_fiscal_uf: json.data.avaluo_fiscal_uf,
         superficie_terreno_m2: json.data.superficie_terreno_m2 ?? 0,
         superficie_construida_m2: json.data.superficie_construida_m2 ?? 0,
         destino: json.data.destino,
@@ -154,6 +155,13 @@ export function SIIEnricher({ onEnrich, municipio, applyLabel = "Aplicar al proy
               <>
                 <span className="text-muted-foreground">Avalúo fiscal</span>
                 <span className="font-medium">{CLP.format(result.avaluo_fiscal_clp)}</span>
+              </>
+            )}
+
+            {result.avaluo_fiscal_uf !== null && result.avaluo_fiscal_uf > 0 && (
+              <>
+                <span className="text-muted-foreground">Avalúo fiscal (UF)</span>
+                <span className="font-medium">{result.avaluo_fiscal_uf.toLocaleString("es-CL")} UF</span>
               </>
             )}
 

@@ -194,6 +194,7 @@ export async function enriquecerTerreno(terrenoId: string, options?: { force?: b
           ok?: boolean
           data?: {
             avaluo_fiscal_clp: number | null
+            avaluo_fiscal_uf: number | null
             superficie_terreno_m2: number | null
             superficie_construida_m2: number | null
             destino: string
@@ -202,6 +203,7 @@ export async function enriquecerTerreno(terrenoId: string, options?: { force?: b
         if (siiData.ok && siiData.data) {
           await admin.from('terrenos').update({
             avaluo_fiscal_clp: siiData.data.avaluo_fiscal_clp,
+            avaluo_fiscal_uf: siiData.data.avaluo_fiscal_uf,
             superficie_terreno_m2: siiData.data.superficie_terreno_m2,
             superficie_construida_m2: siiData.data.superficie_construida_m2,
             destino_sii: siiData.data.destino || null,

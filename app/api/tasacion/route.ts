@@ -4,37 +4,10 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { recordUsage } from '@/lib/usage'
 import { obtenerValorUF } from '@/lib/scrapers/terrenos-common'
 import { buildSystemTasacionTerreno, buildUserQueryTasacion, type TasacionInput } from '@/lib/tasacion-prompts'
+import { buscarDatosSIIPorRol } from '@/lib/sii-lookup-server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
-
-interface SIILookupData {
-  avaluo_fiscal_clp: number | null
-  superficie_terreno_m2: number | null
-  superficie_construida_m2: number | null
-  destino: string
-}
-
-// Cruce SII vía el mismo endpoint /api/sii/lookup que ya usa terrenos
-// (lib/terrenos-server.ts::enriquecerTerreno) — reenviando el header Cookie
-// de la request entrante para que su propio supabase.auth.getUser() vea la
-// sesión del usuario. Limitación real a respetar: esa ruta solo resuelve por
-// rol (?rol=), no por dirección — sin rol_sii no hay cruce fiscal posible.
-async function buscarDatosSII(rolSii: string, cookieHeader: string | null): Promise<SIILookupData | null> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
-    const res = await fetch(`${baseUrl}/api/sii/lookup?rol=${encodeURIComponent(rolSii)}`, {
-      headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
-    })
-    if (!res.ok) return null
-    const json = (await res.json()) as { ok?: boolean; data?: SIILookupData }
-    if (!json.ok || !json.data) return null
-    return json.data
-  } catch (err) {
-    console.warn('[tasacion] SII lookup falló (best-effort, continúa sin cruce fiscal):', err instanceof Error ? err.message : err)
-    return null
-  }
-}
 
 export async function POST(request: Request) {
   const body = (await request.json()) as TasacionInput
@@ -59,7 +32,7 @@ export async function POST(request: Request) {
   if (rateLimit) return rateLimit
 
   const uf = await obtenerValorUF()
-  const siiData = body.rolSii ? await buscarDatosSII(body.rolSii, request.headers.get('cookie')) : null
+  const siiData = body.rolSii ? await buscarDatosSIIPorRol(body.rolSii, request.headers.get('cookie')) : null
 
   const instructions = buildSystemTasacionTerreno({ tieneDatosSII: siiData !== null })
   const userQuery = buildUserQueryTasacion(body, uf, siiData)
@@ -69,6 +42,11 @@ export async function POST(request: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        // Evento estructurado antes del texto — mismo patrón ya probado en
+        // /api/pricing (Fase 5) para las bandas de precio. Un consumidor
+        // viejo que solo lee text/status/[DONE] lo ignora sin romperse.
+        if (siiData) controller.enqueue(encoder.encode(`data: ${JSON.stringify({ avaluoFiscal: siiData })}\n\n`))
+
         const responseStream = await streamConBusquedaWeb(instructions, userQuery)
 
         let emitidoStatusBusqueda = false

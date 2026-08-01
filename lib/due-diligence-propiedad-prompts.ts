@@ -43,6 +43,7 @@ OBSERVADO: riesgos significativos o bloqueos que pueden impedir la venta o encar
 - Deuda municipalidad / contribuciones: estado
 - Hipotecas/prohibiciones: detalle
 - Impuesto de herencia: estado (exento, pagado, pendiente, no aplica)
+- Si se entrega un avalúo fiscal SII verificado, úsalo únicamente como contexto de contribuciones/impuesto territorial en esta sección — nunca lo presentes como precio de mercado ni lo uses para justificar "Precio de oferta" o negociación
 - Resumen: LIBRE DE CARGAS / CON CARGAS SUBSANABLES / CON CARGAS SIGNIFICATIVAS
 
 ## 🏗️ Normativa Urbanística
@@ -105,11 +106,21 @@ export interface DueDiligencePropiedadInput {
   observaciones?: string
 }
 
+interface DueDiligenciaSIIData {
+  avaluo_fiscal_clp: number | null
+  avaluo_fiscal_uf: number | null
+  destino: string
+}
+
 function clip(value: string | undefined, max: number): string {
   return typeof value === 'string' ? value.slice(0, max) : ''
 }
 
-export function buildUserQueryDueDiligencePropiedad(input: DueDiligencePropiedadInput, uf: number): string {
+export function buildUserQueryDueDiligencePropiedad(
+  input: DueDiligencePropiedadInput,
+  uf: number,
+  siiData: DueDiligenciaSIIData | null = null,
+): string {
   const lines: string[] = [
     'Realiza un análisis de due diligence legal y urbanístico para la siguiente propiedad en Chile.',
     '',
@@ -128,6 +139,14 @@ export function buildUserQueryDueDiligencePropiedad(input: DueDiligencePropiedad
   if (input.numHerederos) lines.push(`Número de herederos: ${clip(input.numHerederos, 10)}`)
   lines.push(`Posesión Efectiva: ${input.tienePosesionEfectiva ? 'Sí' : 'No indicado'}`)
   lines.push(`Inscripción CBR: ${input.tieneInscripcionCBR ? 'Sí' : 'No indicado'}`)
+
+  if (siiData) {
+    lines.push('', '[DATOS FISCALES SII]')
+    lines.push(`Avalúo fiscal: ${siiData.avaluo_fiscal_clp !== null ? `$${siiData.avaluo_fiscal_clp.toLocaleString('es-CL')} CLP` : 'no disponible'}.`)
+    lines.push(`Avalúo fiscal (UF): ${siiData.avaluo_fiscal_uf !== null ? `${siiData.avaluo_fiscal_uf.toLocaleString('es-CL')} UF` : 'no disponible'}.`)
+    lines.push(`Destino (SII): ${siiData.destino}.`)
+    lines.push('Nota: este avalúo es un valor tasado para contribuciones, no un precio de mercado — úsalo solo en "Gravámenes y Cargas".')
+  }
 
   lines.push('', '[GRAVÁMENES Y DEUDAS]')
   if (input.deudaTGR) lines.push(`Deuda TGR: ${clip(input.deudaTGR, 100)}`)

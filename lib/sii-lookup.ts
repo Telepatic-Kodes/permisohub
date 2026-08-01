@@ -1,6 +1,7 @@
 export interface SIIData {
   rol: string
   avaluo_fiscal_clp: number
+  avaluo_fiscal_uf: number | null
   superficie_terreno_m2: number
   superficie_construida_m2: number
   destino: string

@@ -8,6 +8,7 @@ import {
   buildUserQueryDueDiligencePropiedad,
   type DueDiligencePropiedadInput,
 } from '@/lib/due-diligence-propiedad-prompts'
+import { buscarDatosSIIPorRol } from '@/lib/sii-lookup-server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -26,13 +27,17 @@ export async function POST(request: Request) {
   if (rateLimit) return rateLimit
 
   const uf = await obtenerValorUF()
-  const userQuery = buildUserQueryDueDiligencePropiedad(body, uf)
+  const siiData = body.rol ? await buscarDatosSIIPorRol(body.rol, request.headers.get('cookie')) : null
+  const userQuery = buildUserQueryDueDiligencePropiedad(body, uf, siiData)
 
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        // Mismo patrón que /api/tasacion: evento estructurado antes del texto.
+        if (siiData) controller.enqueue(encoder.encode(`data: ${JSON.stringify({ avaluoFiscal: siiData })}\n\n`))
+
         const responseStream = await streamConBusquedaWeb(SYSTEM_DUE_DILIGENCE_PROPIEDAD, userQuery)
 
         let emitidoStatusBusqueda = false

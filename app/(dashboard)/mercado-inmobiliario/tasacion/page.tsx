@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
+import { AvaluoFiscalCard } from "@/components/mercado-inmobiliario/avaluo-fiscal-card"
+import type { SIILookupServerData } from "@/lib/sii-lookup-server"
 
 const TIPOS_TERRENO = [
   "Sitio urbano", "Sitio eriazo", "Parcela", "Terreno agrícola", "Terreno con construcción a demoler",
@@ -22,6 +24,7 @@ function TasacionPageInner() {
   const [status, setStatus] = useState<string | null>(null)
   const [streamingText, setStreamingText] = useState("")
   const [result, setResult] = useState<string | null>(null)
+  const [avaluoFiscal, setAvaluoFiscal] = useState<SIILookupServerData | null>(null)
 
   const [form, setForm] = useState({
     direccion: searchParams.get("direccion") ?? "",
@@ -51,6 +54,7 @@ function TasacionPageInner() {
     setResult(null)
     setStreamingText("")
     setStatus(null)
+    setAvaluoFiscal(null)
 
     try {
       const response = await fetch("/api/tasacion", {
@@ -81,8 +85,9 @@ function TasacionPageInner() {
           const data = line.slice(6)
           if (data === "[DONE]") continue
           try {
-            const parsed = JSON.parse(data) as { text?: string; status?: string; error?: string }
+            const parsed = JSON.parse(data) as { text?: string; status?: string; error?: string; avaluoFiscal?: SIILookupServerData }
             if (parsed.error) throw new Error(parsed.error)
+            if (parsed.avaluoFiscal) setAvaluoFiscal(parsed.avaluoFiscal)
             if (parsed.status) setStatus(parsed.status)
             if (parsed.text) {
               accumulated += parsed.text
@@ -204,6 +209,8 @@ function TasacionPageInner() {
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
+
+          {avaluoFiscal && <AvaluoFiscalCard data={avaluoFiscal} />}
 
           {status && !streamingText && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">

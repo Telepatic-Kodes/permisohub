@@ -112,6 +112,7 @@ export async function POST(request: Request) {
       if (typeof sii.rol_sii === 'string') siiFields.rol_sii = sii.rol_sii
       if (typeof sii.destino_sii === 'string') siiFields.destino_sii = sii.destino_sii
       if (typeof sii.avaluo_fiscal_clp === 'number') siiFields.avaluo_fiscal_clp = sii.avaluo_fiscal_clp
+      if (typeof sii.avaluo_fiscal_uf === 'number') siiFields.avaluo_fiscal_uf = sii.avaluo_fiscal_uf
       if (typeof sii.superficie_terreno_m2 === 'number') siiFields.superficie_terreno_m2 = sii.superficie_terreno_m2
       if (typeof sii.superficie_construida_m2 === 'number') siiFields.superficie_construida_m2 = sii.superficie_construida_m2
       if (typeof sii.lat === 'number') siiFields.lat = sii.lat
