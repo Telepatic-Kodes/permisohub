@@ -189,7 +189,7 @@ function PricingPageInner() {
         emoji="📊"
         title="Pricing de Locales"
         subtitle="Bandas de precio reales, calculadas a diario desde locales comerciales activos"
-        breadcrumbs={[{ label: "Mercado Inmobiliario" }, { label: "Pricing" }]}
+        breadcrumbs={[{ label: "Pricing" }]}
       />
 
       <div className="flex-1 p-8">

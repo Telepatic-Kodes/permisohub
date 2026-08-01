@@ -116,7 +116,7 @@ function TasacionPageInner() {
         emoji="🏛️"
         title="Tasación de Terreno"
         subtitle="Valor comercial + cruce de avalúo fiscal SII, con comparables verificados en vivo"
-        breadcrumbs={[{ label: "Mercado Inmobiliario" }, { label: "Tasación" }]}
+        breadcrumbs={[{ label: "Tasación" }]}
       />
 
       <div className="flex-1 p-8">

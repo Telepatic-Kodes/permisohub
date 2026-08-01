@@ -1,12 +1,16 @@
 import Link from "next/link"
 import {
   AlertTriangle,
+  Bot,
   BookText,
   ChevronRight,
+  ExternalLink,
   MessageSquare,
   Plus,
   ShieldCheck,
+  Tag,
   Target,
+  TrendingDown,
 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { EstadoNormativo, colorDeVeredicto, type Veredicto } from "@/components/arch/estado"
@@ -14,6 +18,9 @@ import { cn } from "@/lib/utils"
 import type { EstadoExpediente, Proyecto } from "@/types"
 import { createClient } from "@/lib/supabase/server"
 import { getEstadoPlazoLey21718 } from "@/lib/dias-habiles"
+import { obtenerBandasMercadoLocales, obtenerOportunidadesMercadoLocales } from "@/lib/mercado-locales-server"
+import { obtenerResumenInstrumentosIptPorComunaId } from "@/lib/instrumentos-ipt-server"
+import { fetchMacroData } from "@/lib/indicadores-macro"
 
 // Mapea el estado del expediente al veredicto normativo (único color saturado).
 function veredictoDeEstado(estado: EstadoExpediente): Veredicto {
@@ -298,6 +305,108 @@ function TimelineSection({
 }
 
 // ---------------------------------------------------------------------------
+// Panel de Mercado Inmobiliario — mitad derecha del hub compartido.
+// Reusa exclusivamente funciones server ya construidas y verificadas en
+// fases anteriores (Fase 1, 7, 8, Portal IPT) — no inventa ninguna query
+// nueva. Cada llamada es independiente (Promise.allSettled): un problema en
+// los datos de Mercado nunca debe romper la mitad de Permisos del hub.
+// ---------------------------------------------------------------------------
+
+interface MercadoResumenData {
+  uf: number | null
+  ufFecha: string | null
+  medianaUfArriendo: number | null
+  statsDate: string | null
+  comunasConIpt: number
+  oportunidadesActivas: number
+}
+
+async function obtenerResumenMercado(): Promise<MercadoResumenData> {
+  const [macroR, iptR, oportArriendoR, oportVentaR, bandasR] = await Promise.allSettled([
+    fetchMacroData(),
+    obtenerResumenInstrumentosIptPorComunaId(),
+    obtenerOportunidadesMercadoLocales('arriendo', { limit: 5 }),
+    obtenerOportunidadesMercadoLocales('venta', { limit: 5 }),
+    obtenerBandasMercadoLocales('__TODAS__', 'arriendo'),
+  ])
+
+  return {
+    uf: macroR.status === 'fulfilled' ? macroR.value.uf : null,
+    ufFecha: macroR.status === 'fulfilled' ? macroR.value.ufFecha : null,
+    comunasConIpt: iptR.status === 'fulfilled' ? Object.keys(iptR.value).length : 0,
+    oportunidadesActivas:
+      (oportArriendoR.status === 'fulfilled' ? oportArriendoR.value.length : 0) +
+      (oportVentaR.status === 'fulfilled' ? oportVentaR.value.length : 0),
+    medianaUfArriendo: bandasR.status === 'fulfilled' ? (bandasR.value?.medianaUf ?? null) : null,
+    statsDate: bandasR.status === 'fulfilled' ? (bandasR.value?.statsDate ?? null) : null,
+  }
+}
+
+const MERCADO_QUICK_LINKS = [
+  { label: "Pricing", href: "/mercado-inmobiliario/pricing", Icon: Tag },
+  { label: "Oportunidades", href: "/mercado-inmobiliario/oportunidades", Icon: TrendingDown },
+  { label: "Copiloto", href: "/mercado-inmobiliario/copiloto", Icon: Bot },
+]
+
+function formatFechaCorta(iso: string | null): string | null {
+  if (!iso) return null
+  return new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "short", timeZone: "America/Santiago" }).format(new Date(`${iso}T00:00:00`))
+}
+
+async function MercadoInmobiliarioPanel() {
+  const data = await obtenerResumenMercado()
+  const fecha = formatFechaCorta(data.statsDate)
+
+  return (
+    <div className="rounded-lg border border-line-fine bg-white overflow-hidden">
+      <div className="flex items-center justify-between gap-3 border-b border-line-fine bg-modulo-mercado-subtle px-4 py-3">
+        <p className="font-technical text-[10px] font-semibold uppercase tracking-[0.18em] text-modulo-mercado">
+          Mercado Inmobiliario
+        </p>
+        {fecha && <span className="num text-[10px] text-muted-foreground/60">Datos al {fecha}</span>}
+      </div>
+
+      <div className="grid grid-cols-2 divide-x divide-line-fine border-b border-line-fine sm:grid-cols-4">
+        <div className="px-3 py-3">
+          <p className="num text-lg font-semibold leading-none text-primary">
+            {data.uf !== null ? data.uf.toLocaleString("es-CL", { maximumFractionDigits: 0 }) : "—"}
+          </p>
+          <p className="mt-1 text-[9px] uppercase tracking-wide text-muted-foreground">UF hoy</p>
+        </div>
+        <div className="px-3 py-3">
+          <p className="num text-lg font-semibold leading-none text-primary">{data.comunasConIpt || "—"}</p>
+          <p className="mt-1 text-[9px] uppercase tracking-wide text-muted-foreground">Comunas c/ IPT</p>
+        </div>
+        <div className="px-3 py-3">
+          <p className="num text-lg font-semibold leading-none text-primary">{data.oportunidadesActivas}</p>
+          <p className="mt-1 text-[9px] uppercase tracking-wide text-muted-foreground">Oportunidades</p>
+        </div>
+        <div className="px-3 py-3">
+          <p className="num text-lg font-semibold leading-none text-primary">
+            {data.medianaUfArriendo !== null ? data.medianaUfArriendo.toLocaleString("es-CL", { maximumFractionDigits: 0 }) : "—"}
+          </p>
+          <p className="mt-1 text-[9px] uppercase tracking-wide text-muted-foreground">Mediana UF (arr.)</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 p-4">
+        {MERCADO_QUICK_LINKS.map(({ label, href, Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="inline-flex items-center gap-1.5 rounded-full border border-modulo-mercado/20 bg-modulo-mercado-subtle px-3 py-1.5 text-[12px] font-medium text-modulo-mercado transition-colors hover:bg-modulo-mercado/20"
+          >
+            <Icon className="size-3.5" />
+            {label}
+            <ExternalLink className="size-3 opacity-50" />
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -353,6 +462,7 @@ export default async function DashboardPage() {
       <PageHeader
         title={`${saludo}, ${nombreUsuario}`}
         subtitle={fechaCorta}
+        moduloOverride={null}
         action={
           <Link
             href="/proyectos/nuevo"
@@ -365,7 +475,9 @@ export default async function DashboardPage() {
       />
 
       <div className="flex-1 bg-blueprint-grid">
-      <div className="px-6 py-5 space-y-6 max-w-3xl">
+      <div className="mx-auto max-w-7xl px-6 py-5">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <div className="space-y-6">
 
         {/* ── Hero Stats ── */}
         <div className="flex items-end gap-8 px-4">
@@ -460,6 +572,14 @@ export default async function DashboardPage() {
           )}
         </div>
 
+      </div>
+
+      {/* ── Mercado Inmobiliario (columna derecha) ── */}
+      <div className="space-y-6">
+        <MercadoInmobiliarioPanel />
+      </div>
+
+      </div>
       </div>
       </div>
     </div>

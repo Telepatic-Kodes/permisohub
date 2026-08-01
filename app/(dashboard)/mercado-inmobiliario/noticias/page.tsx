@@ -64,7 +64,7 @@ export default async function NoticiasPage({ searchParams }: NoticiasPageProps) 
         emoji="📰"
         title="Noticias de Mercado"
         subtitle="Hechos esenciales CMF, prensa de Parque Arauco y señales de retail — actualizado a diario"
-        breadcrumbs={[{ label: "Mercado Inmobiliario" }, { label: "Noticias" }]}
+        breadcrumbs={[{ label: "Noticias" }]}
       />
 
       <div className="flex-1 p-8">

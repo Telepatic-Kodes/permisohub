@@ -163,7 +163,7 @@ function DueDiligencePageInner() {
         emoji="🛡️"
         title="Due Diligence de Propiedad"
         subtitle="Riesgo legal de dominio, sucesión y gravámenes antes de comprar — con checklist de documentos"
-        breadcrumbs={[{ label: "Mercado Inmobiliario" }, { label: "Due Diligence" }]}
+        breadcrumbs={[{ label: "Due Diligence" }]}
       />
 
       <div className="flex-1 p-8">

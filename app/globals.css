@@ -17,6 +17,13 @@
   --color-cumple: var(--state-ok);
   --color-observa: var(--state-warn);
   --color-rechaza: var(--state-error);
+  /* Identidad de módulo (Permisos vs. Mercado Inmobiliario) — distinto del
+     idioma normativo de arriba: esto es "en qué área del producto estoy",
+     no un estado de cumplimiento. */
+  --color-modulo-permisos: var(--modulo-permisos);
+  --color-modulo-permisos-subtle: var(--modulo-permisos-subtle);
+  --color-modulo-mercado: var(--modulo-mercado);
+  --color-modulo-mercado-subtle: var(--modulo-mercado-subtle);
   /* Jerarquía de grosores de línea (ISO 128 → bordes de UI). */
   --color-line-strong: var(--line-strong);
   --color-line-med: var(--line-med);
@@ -95,6 +102,12 @@
   --state-ok: oklch(0.55 0.12 155);
   --state-warn: oklch(0.66 0.15 68);
   --state-error: oklch(0.55 0.20 27);
+  /* Identidad de módulo — Permisos = el mismo verde que --primary en claro
+     (módulo por defecto, sin disrupción visual); Mercado = --color-gold. */
+  --modulo-permisos: oklch(0.28 0.055 158);
+  --modulo-permisos-subtle: oklch(0.28 0.055 158 / 0.10);
+  --modulo-mercado: oklch(0.78 0.16 78);
+  --modulo-mercado-subtle: oklch(0.96 0.04 85);
   /* Jerarquía de grosores de línea (muro / tabique / cota). */
   --line-strong: oklch(0.28 0.055 158);
   --line-med: oklch(0.80 0.012 85);
@@ -147,6 +160,13 @@
   --state-ok: oklch(0.68 0.13 155);
   --state-warn: oklch(0.75 0.15 68);
   --state-error: oklch(0.70 0.19 22);
+  /* OJO: --primary se vuelve dorado en modo oscuro (línea 124 arriba) — por
+     eso NO se alía --modulo-permisos a var(--primary) acá, chocaría con
+     --modulo-mercado. Se re-afina un verde propio, igual que --state-ok. */
+  --modulo-permisos: oklch(0.68 0.09 155);
+  --modulo-permisos-subtle: oklch(0.68 0.09 155 / 0.16);
+  --modulo-mercado: oklch(0.78 0.16 78);
+  --modulo-mercado-subtle: oklch(0.78 0.16 78 / 0.16);
   --line-strong: oklch(1 0 0 / 0.30);
   --line-med: oklch(1 0 0 / 0.14);
   --line-fine: oklch(1 0 0 / 0.08);

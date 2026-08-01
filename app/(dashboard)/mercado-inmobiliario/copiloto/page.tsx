@@ -127,7 +127,7 @@ function CopilotoMercadoPageInner() {
         emoji="💬"
         title="Copiloto de Mercado"
         subtitle="Pregunta en lenguaje natural — responde solo con datos reales ya calculados por el sistema"
-        breadcrumbs={[{ label: "Mercado Inmobiliario" }, { label: "Copiloto" }]}
+        breadcrumbs={[{ label: "Copiloto" }]}
         action={
           usage && usage.limit !== null ? (
             <div

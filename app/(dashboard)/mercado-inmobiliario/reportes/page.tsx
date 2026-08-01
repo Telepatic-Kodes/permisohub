@@ -78,7 +78,7 @@ function ReportesPageInner() {
         emoji="📊"
         title="Reportes de Mercado"
         subtitle="Inteligencia de zona y rubro — precio anclado en datos reales cuando la comuna está cubierta"
-        breadcrumbs={[{ label: "Mercado Inmobiliario" }, { label: "Reportes" }]}
+        breadcrumbs={[{ label: "Reportes" }]}
       />
 
       <div className="flex-1 p-8">

@@ -46,7 +46,7 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
         emoji="🎯"
         title="Oportunidades de Mercado"
         subtitle="Locales comerciales bajo el P25 de su cohorte, o con baja de precio reciente — datos reales, no estimados"
-        breadcrumbs={[{ label: "Mercado Inmobiliario" }, { label: "Oportunidades" }]}
+        breadcrumbs={[{ label: "Oportunidades" }]}
       />
 
       <div className="flex-1 p-8">

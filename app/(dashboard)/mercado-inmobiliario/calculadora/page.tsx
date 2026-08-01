@@ -220,7 +220,7 @@ export default function CalculadoraInversionPage() {
         emoji="🧮"
         title="Calculadora de Inversión"
         subtitle="UF/CLP, Cap Rate y ROI para locales comerciales — sin IA, resultado instantáneo"
-        breadcrumbs={[{ label: "Mercado Inmobiliario" }, { label: "Calculadora" }]}
+        breadcrumbs={[{ label: "Calculadora" }]}
       />
 
       <div className="flex-1 p-8">

@@ -4,27 +4,34 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
+  Activity,
   BarChart2,
+  Bot,
   BookMarked,
   Building2,
   Calculator,
   ChevronDown,
+  FileBarChart,
   FileText,
   FolderOpen,
-  Landmark,
   LayoutDashboard,
   LogOut,
   Map,
   MapPin,
+  Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
   Receipt,
+  Ruler,
   Search,
   Settings,
   Shield,
+  ShieldCheck,
   Sparkles,
   Store,
+  Tag,
+  TrendingDown,
   TrendingUp,
   Users,
   Zap,
@@ -33,6 +40,8 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/dashboard/theme-toggle"
+import { ModuleSwitcher } from "@/components/dashboard/module-switcher"
+import { inferirModuloDesdeRuta, type Modulo } from "@/lib/modulo"
 
 interface NavItem {
   href: string
@@ -46,57 +55,90 @@ interface NavGroup {
   label: string | null
   items: NavItem[]
   collapsible?: boolean
-  defaultCollapsed?: boolean
 }
 
-// Enfoque en un solo usuario (Estefanía): oculta del menú los módulos
-// escalables/multi-tenant (Clientes/CRM + el grupo "Más"). Reversible: pon
-// false para restaurar todo. Las rutas ocultas siguen accesibles por URL.
-const NUCLEO_ONLY = true
+// Grupos pinneados — no los cambia el switcher de módulo: Dashboard (hub
+// compartido) arriba, Sistema (transversal) abajo.
+const GRUPO_DASHBOARD: NavGroup = {
+  label: null,
+  items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+}
 
-const NAV_GROUPS: NavGroup[] = [
-  {
-    label: null,
-    items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    ],
-  },
+const GRUPO_SISTEMA: NavGroup = {
+  label: "Sistema",
+  items: [
+    { href: "/configuracion/equipo", label: "Equipo", icon: Users },
+    { href: "/configuracion", label: "Configuración", icon: Settings, matchPaths: ["/configuracion/billing", "/configuracion/whatsapp"] },
+  ],
+}
+
+const PERMISOS_GROUPS: NavGroup[] = [
   {
     label: "Expediente",
     items: [
-      { href: "/terrenos",     label: "Terrenos",       icon: Map, newHref: "/terrenos/nuevo" },
-      { href: "/proyectos",    label: "Proyectos",      icon: FolderOpen, newHref: "/proyectos/nuevo" },
-      { href: "/clientes",     label: "Clientes",       icon: Building2 },
+      { href: "/terrenos", label: "Terrenos", icon: Map, newHref: "/terrenos/nuevo" },
+      { href: "/proyectos", label: "Proyectos", icon: FolderOpen, newHref: "/proyectos/nuevo" },
       { href: "/herramientas", label: "Herramientas IA", icon: Sparkles },
+    ],
+  },
+  {
+    label: "Trámites y Registro",
+    collapsible: true,
+    items: [
+      { href: "/permisos", label: "Permisos", icon: Shield },
+      { href: "/patentes", label: "Patentes", icon: Receipt },
+      { href: "/documentos", label: "Documentos", icon: FileText },
+    ],
+  },
+  {
+    label: "Clientes y Negocio",
+    collapsible: true,
+    items: [
+      { href: "/clientes", label: "Clientes", icon: Building2 },
+      { href: "/prospectos", label: "Prospectos", icon: TrendingUp },
+      { href: "/cartera", label: "Cartera", icon: BookMarked },
+    ],
+  },
+  {
+    label: "Cadenas Comerciales",
+    collapsible: true,
+    items: [
+      { href: "/cadenas-comerciales", label: "Cadenas Comerciales", icon: Store, matchPaths: ["/cadenas"] },
+      { href: "/boletas", label: "Boletas", icon: Zap },
     ],
   },
   {
     label: "Referencia",
     items: [
-      { href: "/municipios",               label: "Municipios",  icon: MapPin },
+      { href: "/municipios", label: "Municipios", icon: MapPin },
       { href: "/herramientas/calculadora", label: "Calculadora", icon: Calculator },
-      { href: "/mercado-inmobiliario/pricing", label: "Mercado Inmobiliario", icon: Landmark, matchPaths: ["/mercado-inmobiliario/tasacion", "/mercado-inmobiliario/noticias", "/mercado-inmobiliario/macro", "/mercado-inmobiliario/calculadora", "/mercado-inmobiliario/due-diligence", "/mercado-inmobiliario/reportes", "/mercado-inmobiliario/oportunidades", "/mercado-inmobiliario/copiloto"] },
+    ],
+  },
+]
+
+const MERCADO_GROUPS: NavGroup[] = [
+  {
+    label: "Análisis",
+    items: [
+      { href: "/mercado-inmobiliario/pricing", label: "Pricing", icon: Tag },
+      { href: "/mercado-inmobiliario/oportunidades", label: "Oportunidades", icon: TrendingDown },
+      { href: "/mercado-inmobiliario/calculadora", label: "Calculadora de Inversión", icon: Calculator },
     ],
   },
   {
-    label: "Más",
-    collapsible: true,
-    defaultCollapsed: true,
+    label: "Evaluación de Propiedad",
     items: [
-      { href: "/permisos",            label: "Permisos",  icon: Shield },
-      { href: "/patentes",            label: "Patentes",  icon: Receipt },
-      { href: "/cartera",             label: "Cartera",   icon: BookMarked },
-      { href: "/cadenas-comerciales", label: "Cadenas",   icon: Store, matchPaths: ["/cadenas"] },
-      { href: "/boletas",             label: "Boletas",   icon: Zap },
-      { href: "/prospectos",          label: "Prospectos", icon: TrendingUp },
-      { href: "/documentos",          label: "Documentos", icon: FileText },
+      { href: "/mercado-inmobiliario/tasacion", label: "Tasación", icon: Ruler },
+      { href: "/mercado-inmobiliario/due-diligence", label: "Due Diligence", icon: ShieldCheck },
     ],
   },
   {
-    label: "Sistema",
+    label: "Contexto de Mercado",
     items: [
-      { href: "/configuracion/equipo", label: "Equipo",        icon: Users },
-      { href: "/configuracion",        label: "Configuración", icon: Settings, matchPaths: ["/configuracion/billing", "/configuracion/whatsapp"] },
+      { href: "/mercado-inmobiliario/reportes", label: "Reportes", icon: FileBarChart },
+      { href: "/mercado-inmobiliario/macro", label: "Indicadores Macro", icon: Activity },
+      { href: "/mercado-inmobiliario/noticias", label: "Noticias", icon: Newspaper },
+      { href: "/mercado-inmobiliario/copiloto", label: "Copiloto", icon: Bot },
     ],
   },
 ]
@@ -121,13 +163,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
 
-  // En modo enfoque: quita el grupo "Más" y el item "Clientes" del expediente.
-  const navGroups = NUCLEO_ONLY
-    ? NAV_GROUPS.filter((g) => g.label !== "Más").map((g) => ({
-        ...g,
-        items: g.items.filter((it) => it.href !== "/clientes"),
-      }))
-    : NAV_GROUPS
+  const moduloActivo: Modulo = inferirModuloDesdeRuta(pathname)
+  const gruposModulo = moduloActivo === "permisos" ? PERMISOS_GROUPS : MERCADO_GROUPS
+  const navGroups: NavGroup[] = [GRUPO_DASHBOARD, ...gruposModulo, GRUPO_SISTEMA]
 
   useEffect(() => {
     fetch('/api/configuracion/perfil')
@@ -182,6 +220,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </button>
       </div>
 
+      <ModuleSwitcher collapsed={collapsed} />
+
       {/* Search chip */}
       <button
         type="button"
@@ -205,11 +245,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1">
         {navGroups.map((group, groupIndex) => {
           const isCollapsible = !!group.collapsible && !!group.label
+          const contieneActiva = group.items.some((it) => isActive(pathname, it))
           const groupOpen = isCollapsible
-            ? (openGroups[group.label as string] ?? !group.defaultCollapsed)
+            ? (openGroups[group.label as string] ?? contieneActiva ?? true)
             : true
           // En modo rail (colapsado) siempre se muestran los íconos; en modo
-          // expandido, un grupo colapsable oculta sus items hasta desplegarlo.
+          // expandido, un grupo colapsable oculta sus items hasta desplegarlo
+          // (salvo que contenga la ruta activa, para no esconderla sola).
           const showItems = collapsed || !isCollapsible || groupOpen
           return (
           <div key={group.label ?? `group-${groupIndex}`} className="mb-1">
@@ -250,7 +292,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     )}
                   >
                     {active && !collapsed && (
-                      <span className="absolute inset-y-1.5 left-0 w-[2.5px] rounded-r-full bg-[oklch(0.78_0.16_78)]" />
+                      <span
+                        className={cn(
+                          "absolute inset-y-1.5 left-0 w-[2.5px] rounded-r-full",
+                          moduloActivo === "permisos" ? "bg-[oklch(0.72_0.09_155)]" : "bg-[oklch(0.78_0.16_78)]"
+                        )}
+                      />
                     )}
                     <Icon className={cn("size-4 shrink-0", active ? "text-white" : "text-white/50", collapsed && "mx-auto")} />
                     {!collapsed && (
@@ -276,8 +323,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {isAdmin && (
           <div className="mt-1">
-            {!collapsed && <div className="my-1.5 mx-2 h-px bg-white/10" />}
-            {collapsed && <div className="my-1.5 mx-2 h-px bg-white/10" />}
+            <div className="my-1.5 mx-2 h-px bg-white/10" />
             <Link
               href="/admin"
               title={collapsed ? "Admin" : undefined}

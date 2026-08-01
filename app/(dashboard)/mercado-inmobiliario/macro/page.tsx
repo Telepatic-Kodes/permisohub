@@ -52,7 +52,7 @@ export default async function MacroPage() {
         emoji="📈"
         title="Indicadores Macro"
         subtitle="UF, IPC, TPM y dólar — historial diario"
-        breadcrumbs={[{ label: "Mercado Inmobiliario" }, { label: "Macro" }]}
+        breadcrumbs={[{ label: "Macro" }]}
       />
 
       <div className="flex-1 p-8">
