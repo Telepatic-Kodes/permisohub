@@ -312,6 +312,14 @@ function TimelineSection({
 // los datos de Mercado nunca debe romper la mitad de Permisos del hub.
 // ---------------------------------------------------------------------------
 
+interface OportunidadResumen {
+  id: string
+  titulo: string
+  url: string
+  comuna: string
+  precioUf: number
+}
+
 interface MercadoResumenData {
   uf: number | null
   ufFecha: string | null
@@ -319,6 +327,7 @@ interface MercadoResumenData {
   statsDate: string | null
   comunasConIpt: number
   oportunidadesActivas: number
+  topOportunidades: OportunidadResumen[]
 }
 
 async function obtenerResumenMercado(): Promise<MercadoResumenData> {
@@ -330,15 +339,20 @@ async function obtenerResumenMercado(): Promise<MercadoResumenData> {
     obtenerBandasMercadoLocales('__TODAS__', 'arriendo'),
   ])
 
+  const oportArriendo = oportArriendoR.status === 'fulfilled' ? oportArriendoR.value : []
+  const oportVenta = oportVentaR.status === 'fulfilled' ? oportVentaR.value : []
+
   return {
     uf: macroR.status === 'fulfilled' ? macroR.value.uf : null,
     ufFecha: macroR.status === 'fulfilled' ? macroR.value.ufFecha : null,
     comunasConIpt: iptR.status === 'fulfilled' ? Object.keys(iptR.value).length : 0,
-    oportunidadesActivas:
-      (oportArriendoR.status === 'fulfilled' ? oportArriendoR.value.length : 0) +
-      (oportVentaR.status === 'fulfilled' ? oportVentaR.value.length : 0),
+    oportunidadesActivas: oportArriendo.length + oportVenta.length,
     medianaUfArriendo: bandasR.status === 'fulfilled' ? (bandasR.value?.medianaUf ?? null) : null,
     statsDate: bandasR.status === 'fulfilled' ? (bandasR.value?.statsDate ?? null) : null,
+    topOportunidades: [...oportArriendo, ...oportVenta]
+      .sort((a, b) => (a.precioUfM2Normalizado ?? a.precioUfNormalizado) - (b.precioUfM2Normalizado ?? b.precioUfNormalizado))
+      .slice(0, 3)
+      .map((o) => ({ id: o.id, titulo: o.titulo, url: o.url, comuna: o.comuna, precioUf: o.precioUfNormalizado })),
   }
 }
 
@@ -353,12 +367,16 @@ function formatFechaCorta(iso: string | null): string | null {
   return new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "short", timeZone: "America/Santiago" }).format(new Date(`${iso}T00:00:00`))
 }
 
+function formatUf(n: number): string {
+  return n.toLocaleString("es-CL", { maximumFractionDigits: 1 })
+}
+
 async function MercadoInmobiliarioPanel() {
   const data = await obtenerResumenMercado()
   const fecha = formatFechaCorta(data.statsDate)
 
   return (
-    <div className="rounded-lg border border-line-fine bg-white overflow-hidden">
+    <div className="flex h-full flex-col rounded-lg border border-line-fine bg-card overflow-hidden">
       <div className="flex items-center justify-between gap-3 border-b border-line-fine bg-modulo-mercado-subtle px-4 py-3">
         <p className="font-technical text-[10px] font-semibold uppercase tracking-[0.18em] text-modulo-mercado">
           Mercado Inmobiliario
@@ -389,7 +407,38 @@ async function MercadoInmobiliarioPanel() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 p-4">
+      <section className="flex-1 border-b border-line-fine py-4">
+        <h2 className="mb-1.5 flex items-center gap-1.5 px-4 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <span
+            className="inline-block h-2 w-2 border border-modulo-mercado"
+            style={{ borderRightWidth: 0, borderBottomWidth: 0 }}
+          />
+          Mejores oportunidades
+        </h2>
+        {data.topOportunidades.length === 0 ? (
+          <p className="px-10 py-2 text-[12px] text-muted-foreground/40 italic">Sin oportunidades activas hoy</p>
+        ) : (
+          <div>
+            {data.topOportunidades.map((o) => (
+              <a
+                key={o.id}
+                href={o.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-3 px-4 py-2 transition-colors hover:bg-modulo-mercado-subtle"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-medium text-foreground">{o.titulo}</p>
+                  <p className="text-[11px] text-muted-foreground">{o.comuna}</p>
+                </div>
+                <span className="num shrink-0 text-[13px] font-semibold text-modulo-mercado">{formatUf(o.precioUf)} UF</span>
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <div className="flex flex-wrap gap-2 p-4 mt-auto">
         {MERCADO_QUICK_LINKS.map(({ label, href, Icon }) => (
           <Link
             key={href}
@@ -480,47 +529,49 @@ export default async function DashboardPage() {
       <div className="space-y-6">
 
         {/* ── Hero Stats ── */}
-        <div className="flex items-end gap-8 px-4">
-          <div>
-            <p className={cn(
-              "num text-[3rem] font-light leading-none",
-              stats.urgentes > 0 ? "text-[var(--state-error)]" : "text-muted-foreground/30"
-            )}>
-              {stats.urgentes}
-            </p>
-            <p className={cn(
-              "mt-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
-              stats.urgentes > 0 ? "text-[var(--state-error)]" : "text-muted-foreground/40"
-            )}>
-              Urgentes
-            </p>
+        <div className="rounded-lg border border-line-fine bg-card px-4 py-5">
+          <div className="flex items-end gap-8">
+            <div>
+              <p className={cn(
+                "num text-[3rem] font-light leading-none",
+                stats.urgentes > 0 ? "text-[var(--state-error)]" : "text-muted-foreground/30"
+              )}>
+                {stats.urgentes}
+              </p>
+              <p className={cn(
+                "mt-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                stats.urgentes > 0 ? "text-[var(--state-error)]" : "text-muted-foreground/40"
+              )}>
+                Urgentes
+              </p>
+            </div>
+            <div>
+              <p className="num text-[3rem] font-light leading-none text-primary">{stats.activos}</p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50">Activos</p>
+            </div>
+            <div>
+              <p className="num text-[3rem] font-light leading-none text-primary/50">{stats.diasPromedio}</p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/40">Días prom.</p>
+            </div>
           </div>
-          <div>
-            <p className="num text-[3rem] font-light leading-none text-primary">{stats.activos}</p>
-            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50">Activos</p>
-          </div>
-          <div>
-            <p className="num text-[3rem] font-light leading-none text-primary/50">{stats.diasPromedio}</p>
-            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/40">Días prom.</p>
-          </div>
-        </div>
 
-        {/* ── Quick Action Pills ── */}
-        <div className="flex flex-wrap items-center gap-2 px-4">
-          {QUICK_ACTIONS.map(({ label, href, Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/6 px-3 py-1.5 text-[12px] font-medium text-primary/70 transition-colors hover:bg-primary/14 hover:text-primary"
-            >
-              <Icon className="size-3.5" />
-              {label}
-            </Link>
-          ))}
+          {/* ── Quick Action Pills ── */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {QUICK_ACTIONS.map(({ label, href, Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/10 bg-primary/6 px-3 py-1.5 text-[12px] font-medium text-primary/70 transition-colors hover:bg-primary/14 hover:text-primary"
+              >
+                <Icon className="size-3.5" />
+                {label}
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* ── Timeline ── */}
-        <div className="rounded-lg border border-line-fine bg-white py-4 space-y-4">
+        <div className="rounded-lg border border-line-fine bg-card py-4 space-y-4">
 
           {proyectos.length === 0 && (
             <p className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -575,7 +626,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Mercado Inmobiliario (columna derecha) ── */}
-      <div className="space-y-6">
+      <div className="space-y-6 h-full">
         <MercadoInmobiliarioPanel />
       </div>
 

@@ -47,7 +47,7 @@ export function PageHeader({
 
   return (
     <div className={cn(
-      "shrink-0 border-b border-border bg-white px-8 py-5 relative",
+      "shrink-0 border-b border-border bg-card px-8 py-5 relative",
       className
     )}>
       {/* Top accent line */}
