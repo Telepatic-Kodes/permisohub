@@ -2,7 +2,7 @@
 
 ## Commits sin procesar
 
-_(Sección alimentada automáticamente por `.githooks/post-commit` — cada commit agrega una línea acá. Un comando/sesión futura la digiere hacia una narrativa real en "Current Position"/"Accumulated Context" y la limpia. Ver Key Decisions en PROJECT.md: "captura automática, curación cuando se pueda".)_
+_(`89a8444` digerido inline — ya narrado arriba en "Current Position" y en "Accumulated Context" [torre-control], escrito en el mismo commit. Sección alimentada automáticamente por `.githooks/post-commit` — cada commit agrega una línea acá. Un comando/sesión futura la digiere hacia una narrativa real en "Current Position"/"Accumulated Context" y la limpia. Ver Key Decisions en PROJECT.md: "captura automática, curación cuando se pueda".)_
 
 ## Current Position
 

@@ -85,9 +85,26 @@ Ejemplo: comparable de 5.000 m² a 3 UF/m² → sujeto de 1.200 m² → ajuste +
 
 Aplica siempre que corresponda. Muestra el valor bruto y el valor neto con descuento.
 
-## FORMATO DE RESPUESTA — 9 SECCIONES OBLIGATORIAS
+## FORMATO DE RESPUESTA — 10 SECCIONES OBLIGATORIAS
 
-Produce exactamente estas secciones con los encabezados ## exactos:
+Produce exactamente estas secciones con los encabezados ## exactos, EN ESTE ORDEN — el Resumen Ejecutivo va SIEMPRE primero, es lo único que un lector con poco tiempo debería necesitar leer:
+
+## 🎯 Resumen Ejecutivo
+
+| Ítem | Valor |
+|------|-------|
+| Precio neto recomendado | X UF / $XX.XXX.XXX CLP |
+| Rango de mercado | X – X UF |
+| Uso óptimo recomendado | uno de los 3 evaluados en "Usos Óptimos del Terreno" |
+| Confianza del análisis | Alta / Media / Baja |
+| Fuentes consultadas | N búsquedas web + [SII verificado / SII no disponible] |
+
+Justifica "Confianza del análisis" en 1 línea, basada en criterios verificables — no en una sensación:
+- Alta: 4+ comparables directos (sin ajuste de tamaño) Y avalúo SII verificado.
+- Media: comparables de zona similar o con ajuste de tamaño, O sin avalúo SII.
+- Baja: menos de 3 comparables encontrados, O condición de dominio no verificable (litigio, sucesión sin acuerdo).
+
+Nunca declares "Alta" solo porque el análisis se ve completo — declárala según los criterios de arriba, explícitamente.
 
 ## 💰 Valor Comercial Estimado
 
