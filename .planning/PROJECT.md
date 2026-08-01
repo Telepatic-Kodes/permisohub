@@ -58,15 +58,16 @@ El copiloto IA del arquitecto chileno — reduce el tiempo de tramitación DOM d
 - ✓ Cobertura inicial: Las Condes, Providencia, Vitacura, Ñuñoa — v1.4
 - ✓ Integración aditiva de la zona en vía de tramitación (alerta citada), due diligence (cita PRC), y copiloto IA (contexto en diagnóstico OGUC + checklist) — sin alterar la lógica determinista de `recomendarVia()` — v1.4
 
-### Active (en curso — rama `feature/torre-de-control`, no fusionado a main)
+### Requirements (Torre de Control — shipped 2026-08-01, mergeado a main)
 
 **Torre de Control** — gobernanza de datos y decisiones (ver `.planning/data-sources.yaml`), motivada porque el milestone v1.5 (fusión PROPRA·BI) se ejecutó en sesiones ad-hoc sin actualizar `.planning/`, dejando 17 commits invisibles a este sistema hasta esta puesta al día.
 
 - ✓ Registro de fuentes de datos (`data-sources.yaml`, 32 fuentes) + validador determinista (`scripts/check-data-sources.mjs`) + `reportError`/`reportWarning` en los 7 scrapers que solo hacían `console.warn`
-- ✓ Tabla `data_source_runs` + `recordSourceRun()` + página `/admin/salud-datos` (migración pendiente de aplicar en Supabase)
-- [ ] Git hook de captura automática de commits + puesta al día de `.planning/` (en curso)
-- [ ] Comando `/torre-control` project-local
-- [ ] Piloto de componente `InformeEjecutivo` en Tasación (formato de informe estilo consultora — resumen ejecutivo + trazabilidad de fuente)
+- ✓ Tabla `data_source_runs` + `recordSourceRun()` + página `/admin/salud-datos` — migración `20260807_data_source_runs.sql` aplicada en Supabase (confirmado en vivo: tabla con datos reales de mercado-locales/instrumentos-ipt/terrenos/cadenas-sucursales)
+- ✓ Git hook de captura automática de commits (`.githooks/post-commit`) + puesta al día de `.planning/`
+- ✓ Comando `/torre-control` project-local
+- ✓ `InformeEjecutivo` piloteado en Tasación y extendido a Due Diligence — decisión explícita de NO extender a Predictor/Auditor/Compliance-check/Reportes de Mercado/Memoria Descriptiva (ya tienen UI a medida equivalente o el género no aplica, ver Key Decisions)
+- ✓ 3 decisiones de founder resueltas (TocToc pendiente sin bloquear, Unimarc sin más inversión, refresh legal en cadencia fija trimestral)
 
 ### Requirements (v1.5 — Fusión PROPRA·BI, shipped 2026-08-01, ver `.planning/MILESTONES.md`)
 
