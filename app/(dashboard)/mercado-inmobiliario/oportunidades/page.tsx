@@ -1,9 +1,10 @@
-import { TrendingDown } from "lucide-react"
+import { TrendingDown, Radar } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { obtenerOportunidadesMercadoLocales } from "@/lib/mercado-locales-server"
+import { obtenerSenalesExpansionPorComuna } from "@/lib/cadenas-sucursales-server"
 import { TIPO_PROPIEDAD_LABEL, type OperacionMercadoLocal, type TipoPropiedadComercial } from "@/lib/scrapers/mercado-locales-common"
 
 const TIPOS_PROPIEDAD_VALIDOS: TipoPropiedadComercial[] = ["local_comercial", "oficina", "bodega", "industrial"]
@@ -18,6 +19,13 @@ const REASON_LABEL: Record<string, string> = {
 
 function formatUf(n: number): string {
   return n.toLocaleString("es-CL", { maximumFractionDigits: 2 })
+}
+
+function formatFechaCorta(iso: string | null): string | null {
+  if (!iso) return null
+  return new Intl.DateTimeFormat("es-CL", { month: "short", year: "numeric", timeZone: "America/Santiago" }).format(
+    new Date(`${iso}T00:00:00`)
+  )
 }
 
 interface OportunidadesPageProps {
@@ -39,6 +47,13 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
   } catch {
     errorMsg = "No se pudieron cargar las oportunidades — intenta de nuevo en unos minutos."
   }
+
+  // Cruce con expansión de cadenas (Torre de Control) — la señal vive en su
+  // propio panel (/mercado-inmobiliario/cadenas), pero un dato correcto que
+  // nadie ve en el momento de decidir no cambia ninguna decisión. Best-effort:
+  // si esto falla, las oportunidades se siguen mostrando igual, solo sin badge.
+  const comunasPresentes = Array.from(new Set(oportunidades.map((o) => o.comuna)))
+  const senalesExpansion = await obtenerSenalesExpansionPorComuna(comunasPresentes).catch(() => new Map())
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -119,6 +134,15 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
                       {REASON_LABEL[code] ?? code}
                     </span>
                   ))}
+                  {senalesExpansion.get(o.comuna) && (
+                    <span className="inline-flex items-center gap-1 rounded-[3px] border border-modulo-mercado/20 bg-modulo-mercado-subtle px-2 py-0.5 text-[10px] text-modulo-mercado">
+                      <Radar className="size-2.5" />
+                      {senalesExpansion.get(o.comuna)!.cadena} tiene sucursal en la comuna
+                      {formatFechaCorta(senalesExpansion.get(o.comuna)!.fechaRegistro)
+                        ? ` (registrada ${formatFechaCorta(senalesExpansion.get(o.comuna)!.fechaRegistro)})`
+                        : ""}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { recordSourceRun } from '@/lib/observability'
 import { descargarSucursalesCadenas, CADENAS_RUT_CONOCIDOS } from '@/lib/scrapers/sii-nomina-sucursales'
+import { normalizarNombreComuna } from '@/lib/scrapers/instrumentos-ipt'
 
 export interface ResultadoIngestaCadenas {
   totalEncontradas: number
@@ -171,4 +172,54 @@ export async function obtenerSucursalesRecientes(limit = 10): Promise<SucursalRe
     region: f.region,
     fechaRegistro: f.fecha_registro,
   }))
+}
+
+export interface SenalExpansionComuna {
+  cadena: string
+  fechaRegistro: string | null
+}
+
+/**
+ * Cruza un conjunto de comunas (ej. las de una lista de oportunidades) contra
+ * las sucursales de cadenas vigentes, para mostrar la señal directamente
+ * donde se toma la decisión (Oportunidades), no solo en el panel dedicado
+ * /mercado-inmobiliario/cadenas — un dato correcto que nadie ve en el
+ * momento de decidir no cambia ninguna decisión.
+ *
+ * `mercado_locales_listings.comuna` viene con mayúscula/minúscula y tildes
+ * ("Las Condes", "Peñalolén"); `cadenas_sucursales.comuna` viene tal cual el
+ * SII lo entrega, en mayúsculas y sin tildes ("LAS CONDES", "PENALOLEN") —
+ * normalizamos ambos lados con normalizarNombreComuna() (ya usado para el
+ * mismo problema en instrumentos-ipt.ts) antes de cruzar, o el match nunca
+ * ocurriría en silencio.
+ *
+ * Devuelve como máximo 1 señal por comuna (la más reciente) — el objetivo es
+ * un indicio de demanda, no un listado exhaustivo de sucursales.
+ */
+export async function obtenerSenalesExpansionPorComuna(
+  comunas: string[]
+): Promise<Map<string, SenalExpansionComuna>> {
+  const resultado = new Map<string, SenalExpansionComuna>()
+  if (comunas.length === 0) return resultado
+
+  const supabase = createServiceClient()
+  const cadenasActivas = CADENAS_RUT_CONOCIDOS.filter((c) => c.estado === 'activo').map((c) => c.cadena)
+  const comunasNormalizadas = new Map(comunas.map((c) => [normalizarNombreComuna(c), c]))
+
+  const { data, error } = await supabase
+    .from('cadenas_sucursales')
+    .select('cadena, comuna, fecha_registro')
+    .eq('vigente', true)
+    .in('cadena', cadenasActivas)
+    .order('fecha_registro', { ascending: false })
+
+  if (error || !data) return resultado
+
+  for (const fila of data) {
+    const comunaOriginal = comunasNormalizadas.get(normalizarNombreComuna(fila.comuna))
+    if (!comunaOriginal || resultado.has(comunaOriginal)) continue // ya tiene su señal más reciente
+    resultado.set(comunaOriginal, { cadena: fila.cadena, fechaRegistro: fila.fecha_registro })
+  }
+
+  return resultado
 }
