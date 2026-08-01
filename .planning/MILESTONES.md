@@ -98,3 +98,26 @@ Determinar automáticamente la zona PRC y usos permitidos/prohibidos de un proye
 
 ---
 
+## v1.5 — Fusión PROPRA·BI (Shipped: 2026-08-01)
+
+**Commits:** `7d84126`..`c6f567e` (17 commits, 2026-07-31 → 2026-08-01, directo a `main` sin feature branch)
+
+### Goal:
+Absorber PROPRA·BI (suite de inteligencia de mercado inmobiliario, hasta entonces un proyecto standalone) dentro de PermisoHub como un segundo módulo de primer nivel, y separar con claridad la identidad de "Permisos" vs. "Mercado Inmobiliario" en la UI — sin fragmentar la app en dos productos.
+
+### What shipped:
+- **Fusión del app enterprise** (`7d84126`): `permisohub-enterprise` (antes standalone) plegado dentro de esta misma app — una sola app, tres vistas (cliente/admin/enterprise). El repo standalone queda archivado (`ARCHIVADO.md`).
+- **Checklist dinámico** (`9ffd266`): checklist de requisitos DOM con fuente real (9 formularios MINVU transcritos a mano), reemplazando 2 sistemas hardcodeados previos (`expediente-score.tsx`, checklist con requisitos inventados por comuna).
+- **Módulo Terrenos** (`622b7c3`): descubrimiento y evaluación de terrenos — 5 scrapers (Portalinmobiliario/Yapo/Doomos/Chilepropiedades/PortalTerreno) + enriquecimiento (zonificación ArcGIS, señales OSM, SII). Construido completo pero **sin ingesta programada** (huérfano de cron) — ver `.planning/data-sources.yaml`, corregido parcialmente en Torre de Control.
+- **PROPRA·BI, 8 fases** (`4e37cc8`..`a92a926`): tasación con avalúo fiscal SII, pricing y oportunidades de locales comerciales, noticias de mercado + indicadores macro (UF/IPC/TPM/Dólar), calculadora de inversión, due diligence de propiedad, reportes de mercado, cobertura ampliada a 36 comunas y tipos de propiedad adicionales (oficina/bodega/industrial).
+- **Instrumentos IPT** (`a05039f`, `d6b7d43`): estado legal real de instrumentos de planificación territorial vía Portal IPT (MINVU) — badge de cobertura en el listado de municipios.
+- **Copiloto conversacional** (`f77b482`): primer patrón de function/tool-calling del codebase (OpenAI `tools`/`tool_calls`), anclado en las funciones ya verificadas de Mercado Inmobiliario en vez de generar respuestas libres.
+- **Rediseño UX/IA** (`3abea2c`, `e6cc0d2`, `c6f567e`): separación explícita de "Permisos" vs. "Mercado Inmobiliario" como módulos con switcher, sidebar contextual, badge de módulo auto-inferido, hub `/dashboard` compartido con panel real de ambos módulos; corrección de un bug de contraste en modo oscuro de alcance transversal (`bg-white` hardcodeado en ~35 archivos, no invertía con el tema).
+
+### Deuda conocida (heredada a Torre de Control, ver `.planning/data-sources.yaml`):
+2 implementaciones duplicadas del scraper SII, 4 puntos de entrada distintos para el dato de UF, 3 listas de comunas deliberadamente no sincronizadas, un pipeline RAG completo construido pero nunca cableado al runtime, 5 scrapers de terrenos sin ingesta programada.
+
+**Last phase number:** N/A (este milestone no siguió la disciplina de fases GSD — trabajo ejecutado en sesiones ad-hoc, ver Key Decisions en PROJECT.md).
+
+---
+

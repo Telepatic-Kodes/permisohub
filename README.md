@@ -20,6 +20,16 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Torre de Control (gobernanza de datos y decisiones)
+
+Una vez por clon, activa el git hook que captura automáticamente cada commit hacia `.planning/STATE.md` (y, opcionalmente, decisiones arquitectónicas hacia la tabla de Key Decisions en `.planning/PROJECT.md` vía un trailer `Decision: ...` en el mensaje de commit):
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Ver `.planning/data-sources.yaml` para el registro de fuentes de datos externas (validar con `npm run check:data-sources`).
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

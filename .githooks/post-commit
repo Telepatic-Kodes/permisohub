@@ -1,0 +1,56 @@
+#!/bin/sh
+# Torre de Control — captura automática de commits, sin ritual de fin de sesión.
+#
+# Activar una vez por clon: git config core.hooksPath .githooks
+#
+# Qué hace, en cada commit:
+#   1. Agrega una línea `<fecha> <hash> <asunto>` a la sección
+#      "## Commits sin procesar" de .planning/STATE.md — captura cruda,
+#      nunca se pierde aunque nadie la digiera por semanas.
+#   2. Si el cuerpo del commit trae una línea "Decision: ...", la agrega
+#      como fila nueva a la tabla de Key Decisions de .planning/PROJECT.md.
+#
+# Nunca bloquea el commit (siempre exit 0) ni lo modifica — solo dedica
+# escritura a archivos de .planning/, que quedan como cambios sin stagear
+# para el próximo commit del usuario (no se auto-commitea nada acá).
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+STATE_FILE="$REPO_ROOT/.planning/STATE.md"
+PROJECT_FILE="$REPO_ROOT/.planning/PROJECT.md"
+
+[ -f "$STATE_FILE" ] || exit 0
+
+HASH=$(git rev-parse --short HEAD)
+FECHA=$(git log -1 --format=%ad --date=short)
+ASUNTO=$(git log -1 --format=%s)
+BODY=$(git log -1 --format=%b)
+
+# --- 1. Captura cruda en STATE.md -------------------------------------------
+MARKER="## Commits sin procesar"
+if grep -qF "$MARKER" "$STATE_FILE"; then
+  LINEA="- \`$FECHA\` \`$HASH\` $ASUNTO"
+  # Ya capturado (idempotente ante re-runs del hook sobre el mismo HEAD)
+  if ! grep -qF "\`$HASH\`" "$STATE_FILE"; then
+    awk -v marker="$MARKER" -v linea="$LINEA" '
+      { print }
+      index($0, marker) > 0 && !done { print linea; done=1 }
+    ' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+  fi
+fi
+
+# --- 2. Trailer opcional "Decision: ..." → tabla de Key Decisions -----------
+DECISION_LINE=$(printf '%s\n' "$BODY" | grep -m1 '^Decision:')
+if [ -n "$DECISION_LINE" ] && [ -f "$PROJECT_FILE" ]; then
+  DECISION_TEXTO=$(printf '%s\n' "$DECISION_LINE" | sed 's/^Decision: *//')
+  FILA="| $DECISION_TEXTO | (commit \`$HASH\`, ver mensaje completo) | — Pending review |"
+  TABLE_HEADER="| Decision | Rationale | Outcome |"
+  if grep -qF "$TABLE_HEADER" "$PROJECT_FILE" && ! grep -qF "$HASH" "$PROJECT_FILE"; then
+    awk -v header="$TABLE_HEADER" -v fila="$FILA" '
+      { print }
+      index($0, header) > 0 && !seen_header { seen_header=1; next }
+      seen_header==1 { print fila; seen_header=2; next }
+    ' "$PROJECT_FILE" > "$PROJECT_FILE.tmp" && mv "$PROJECT_FILE.tmp" "$PROJECT_FILE"
+  fi
+fi
+
+exit 0

@@ -58,9 +58,29 @@ El copiloto IA del arquitecto chileno — reduce el tiempo de tramitación DOM d
 - ✓ Cobertura inicial: Las Condes, Providencia, Vitacura, Ñuñoa — v1.4
 - ✓ Integración aditiva de la zona en vía de tramitación (alerta citada), due diligence (cita PRC), y copiloto IA (contexto en diagnóstico OGUC + checklist) — sin alterar la lógica determinista de `recomendarVia()` — v1.4
 
-### Active (próximo milestone — sin definir todavía)
+### Active (en curso — rama `feature/torre-de-control`, no fusionado a main)
 
-Ninguno todavía — correr `/gsd:new-milestone` para definir el próximo ciclo de requirements. Candidatos surgidos durante v1.4 (no comprometidos, solo semillas para la próxima sesión de discovery):
+**Torre de Control** — gobernanza de datos y decisiones (ver `.planning/data-sources.yaml`), motivada porque el milestone v1.5 (fusión PROPRA·BI) se ejecutó en sesiones ad-hoc sin actualizar `.planning/`, dejando 17 commits invisibles a este sistema hasta esta puesta al día.
+
+- ✓ Registro de fuentes de datos (`data-sources.yaml`, 32 fuentes) + validador determinista (`scripts/check-data-sources.mjs`) + `reportError`/`reportWarning` en los 7 scrapers que solo hacían `console.warn`
+- ✓ Tabla `data_source_runs` + `recordSourceRun()` + página `/admin/salud-datos` (migración pendiente de aplicar en Supabase)
+- [ ] Git hook de captura automática de commits + puesta al día de `.planning/` (en curso)
+- [ ] Comando `/torre-control` project-local
+- [ ] Piloto de componente `InformeEjecutivo` en Tasación (formato de informe estilo consultora — resumen ejecutivo + trazabilidad de fuente)
+
+### Requirements (v1.5 — Fusión PROPRA·BI, shipped 2026-08-01, ver `.planning/MILESTONES.md`)
+
+- ✓ Módulo Terrenos (descubrimiento + evaluación) — v1.5
+- ✓ Mercado Inmobiliario (tasación, pricing, oportunidades, due diligence, calculadora de inversión, reportes, indicadores macro, noticias) — v1.5
+- ✓ Copiloto conversacional de Mercado Inmobiliario (function/tool-calling) — v1.5
+- ✓ Instrumentos IPT por comuna — v1.5
+- ✓ Checklist dinámico de requisitos DOM (fuente real, 9 formularios MINVU) — v1.5
+- ✓ Separación de módulos Permisos/Mercado Inmobiliario en la UI (switcher, sidebar contextual, badge) — v1.5
+- ✓ Fusión de permisohub-enterprise en una sola app — v1.5
+
+### Próximo milestone formal — sin definir todavía
+
+Correr `/gsd:new-milestone` para definir el próximo ciclo de requirements una vez cierre Torre de Control. Candidatos surgidos durante v1.4 (no comprometidos, solo semillas para la próxima sesión de discovery):
 
 - [ ] Dashboard de zonificación a nivel portafolio (todos los proyectos activos)
 - [ ] Exportar PDF/anexo del hallazgo de zonificación para el expediente
@@ -116,17 +136,23 @@ Ninguno todavía — correr `/gsd:new-milestone` para definir el próximo ciclo 
 | Señal de compatibilidad de uso (IA, no determinista) mantenida estrictamente fuera de `recomendarVia()` | El motor de vía de tramitación es puro y tiene tests de determinismo (`toEqual` en llamadas repetidas) — mezclar una señal de IA ahí habría roto esa garantía | ✓ Good |
 | Guard compuesto `zona_status==='encontrado' && zona_usos_disponibles===true` en toda la superficie de zonificación (nunca solo `zona_status`) | Ñuñoa tiene `encontrado` pero usos estructuralmente vacíos — tratar solo `zona_status` como suficiente citaría/compararía contra texto vacío | ✓ Good |
 | Verificación de checkpoints humanos con browser real (Playwright) + `mcp__supabase__execute_sql` para armar escenarios de prueba, en vez de solo tsc/eslint | Cada fase de v1.4 tuvo al menos un checkpoint bloqueante; verificar en vivo encontró bugs reales que tsc/eslint no habrían atrapado (migración SII nunca aplicada, mapa no se refrescaba tras Actualizar, mojibake residual, etiqueta de comuna incorrecta) | ✓ Good |
+| Absorber PROPRA·BI como módulo nativo "Mercado Inmobiliario" (no un producto separado ni un submenú del copiloto de permisos) | El founder describió la tesis "arquitectura es dibujo" como diferenciador — el mercado inmobiliario necesitaba su propia identidad de módulo con switcher, no quedar enterrado; evita scope creep del copiloto de permisos | ✓ Good |
+| Copiloto de Mercado Inmobiliario usa function/tool-calling (OpenAI `tools`) en vez de generar respuestas libres o RAG | Ancla cada respuesta en las funciones ya verificadas de `mercado-locales-server.ts`/`instrumentos-ipt-server.ts` en vez de dejar que el modelo invente cifras — primer uso de este patrón en el codebase | ✓ Good |
+| Bautizar la función de gobernanza de datos/decisiones "Torre de Control", no "PMO" | El producto ya usa "PMO" para `components/proyecto/pmo-panel.tsx` (panel de sugerencias por proyecto) — mismo término para ambas cosas habría generado confusión real en conversaciones de equipo | ✓ Good |
+| `data-sources.yaml` vive en `.planning/` (no en la raíz del repo) y se valida con un script determinista sin LLM, no con un agente | Co-ubicado con el resto del sistema de operaciones ya existente; un diff estructural (registro vs. filesystem vs. vercel.json) no necesita juicio de un modelo — más rápido, determinista, sin costo de tokens | ✓ Good |
+| Captura de decisiones vía git hook (automática) en vez de un ritual de fin de sesión | El milestone v1.5 completo (17 commits) quedó invisible a `.planning/` precisamente porque dependía de que alguien se acordara de actualizarlo bajo presión de tiempo — un hook no se puede olvidar, es un efecto secundario de commitear | ✓ Good |
 
 ## Previous Milestones
 
 - **v1.3 Army of Skills** (shipped 2026-06-26) — Copiloto IA drawer (Permisos/Desarchivo/Patentes), verificación DOM diaria automática, enriquecimiento SII automático, resumen semanal con tip de IA.
 - **v1.4 Zonificación** (shipped 2026-07-30) — Zonificación automática por dirección (ArcGIS MINVU/OCUC), mapa con confirmación visual, compatibilidad de uso IA de 3 estados, fallback manual, integración aditiva en vía de tramitación/due diligence/copiloto. Full detail: `.planning/milestones/1.4-ROADMAP.md`.
+- **v1.5 Fusión PROPRA·BI** (shipped 2026-08-01) — Absorción completa de la suite de inteligencia de mercado inmobiliario PROPRA·BI como módulo nativo "Mercado Inmobiliario", módulo Terrenos, instrumentos IPT, checklist dinámico, fusión de permisohub-enterprise, rediseño UX/IA de separación de módulos. Full detail: `.planning/MILESTONES.md`.
 
 ---
 
 ## Current Milestone
 
-Ninguno definido todavía. Correr `/gsd:new-milestone` para iniciar el próximo ciclo (questioning → research → requirements → roadmap). Ver "Active" arriba para candidatos surgidos durante v1.4.
+Ninguno formal definido todavía — correr `/gsd:new-milestone` para iniciar el próximo ciclo (questioning → research → requirements → roadmap) una vez cierre el trabajo en curso. Ver "Active" arriba: rama `feature/torre-de-control` (gobernanza de datos/decisiones, en curso, no fusionada a main).
 
 ---
-*Last updated: 2026-07-30 — después del milestone v1.4*
+*Last updated: 2026-08-01 — puesta al día tras el milestone v1.5 (fusión PROPRA·BI) y durante la construcción de Torre de Control*
