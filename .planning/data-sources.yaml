@@ -186,21 +186,8 @@
   last_verified: 2026-08-01
   monitoring: none
   duplicate_of: null
-  status: needs-decision
-  notes: "Scrape en vivo de zeus.sii.cl, sin caché. Ver sii-enrich-post — misma lógica reimplementada dos veces."
-
-- id: sii-enrich-post
-  name: "SII avalúo fiscal — /api/enrich/sii (POST)"
-  type: scraper
-  owner_files: ["app/api/enrich/sii/route.ts"]
-  trigger: manual
-  called_from: []
-  freshness_sla_days: null
-  last_verified: 2026-08-01
-  monitoring: none
-  duplicate_of: sii-lookup-get
-  status: duplicate
-  notes: "Mismo scrape a zeus.sii.cl, mismo parseo, ruta distinta (POST). Candidato directo a eliminar y consolidar en sii-lookup-get."
+  status: active
+  notes: "Scrape en vivo de zeus.sii.cl, sin caché. Era duplicado con sii-enrich-post (POST /api/enrich/sii) — RESUELTO 1 ago 2026: se confirmó cero callers reales del duplicado (la única referencia era texto en app/(marketing)/docs/page.tsx, una página de documentación estática, no código funcional), se eliminó la ruta y se actualizó la doc. Esta es ahora la única implementación."
 
 - id: rut-enrich
   name: "Enriquecimiento RUT — /api/enrich/rut"

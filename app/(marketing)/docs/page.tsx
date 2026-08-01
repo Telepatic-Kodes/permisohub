@@ -687,7 +687,6 @@ export default function DocsPage() {
         module={MODULES[7]}
         api={[
           'POST /api/enrich/rut',
-          'POST /api/enrich/sii',
           'GET /api/sii/lookup',
         ]}
       >

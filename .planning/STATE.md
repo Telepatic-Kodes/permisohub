@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-01` `4f80753` feat(mercado-inmobiliario): resolver RUTs operativos reales de Walmart y SMU
 
 _(`3268b20` digerido inline — ver bullet [expansion-cadenas] en "Accumulated Context". `6125fff` digerido inline — ver bullet [torre-control] en "Accumulated Context": piloto InformeEjecutivo completo, verificado en vivo. `89a8444` digerido inline — ya narrado arriba en "Current Position" y en "Accumulated Context" [torre-control], escrito en el mismo commit. Sección alimentada automáticamente por `.githooks/post-commit` — cada commit agrega una línea acá. Un comando/sesión futura la digiere hacia una narrativa real en "Current Position"/"Accumulated Context" y la limpia. Ver Key Decisions en PROJECT.md: "captura automática, curación cuando se pueda".)_
 
