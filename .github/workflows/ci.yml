@@ -21,5 +21,8 @@ jobs:
         run: npm run lint
       - name: Unit tests
         run: npm test
+      - name: Registro de fuentes de datos (Torre de Control)
+        run: npm run check:data-sources
+        continue-on-error: true # no bloqueante mientras el registro madura — ver .planning/data-sources.yaml
       # El smoke E2E (npm run test:e2e) necesita Supabase + OPENAI_API_KEY
       # reales; se corre localmente, no en CI.

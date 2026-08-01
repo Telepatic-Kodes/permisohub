@@ -1,0 +1,437 @@
+# Registro de fuentes de datos externas de PermisoHub — Torre de Control.
+#
+# Fuente única de verdad de qué alimenta la app desde afuera: scrapers, APIs,
+# bases de conocimiento curadas a mano. Poblado desde una auditoría completa
+# del repo (1 ago 2026) — no es un scaffold vacío, ya trae los hallazgos.
+#
+# Validar con: node scripts/check-data-sources.mjs
+#
+# Campos:
+#   id               identificador único, kebab-case
+#   name             nombre humano
+#   type             scraper | cron | api-endpoint | static-kb | db-table
+#   owner_files      archivos que implementan la fuente (deben existir)
+#   trigger          "cron:<path en vercel.json>" | "manual" | "none"
+#   called_from      archivos/rutas que invocan la fuente (para detectar huérfanos reales)
+#   freshness_sla_days  null = sin SLA definido aún (no adivinar)
+#   last_verified    última vez que alguien confirmó que el dato/código es correcto
+#   monitoring       sentry | console-only | none
+#   duplicate_of     id de otra entrada si esto es una reimplementación del mismo dato
+#   status           active | orphaned | duplicate | stale-kb | needs-decision
+#   notes            contexto libre
+
+- id: mercado-locales-portalinmobiliario
+  name: "Portalinmobiliario — locales comerciales (arriendo/venta)"
+  type: scraper
+  owner_files: [lib/scrapers/portalinmobiliario.ts, lib/mercado-locales-server.ts]
+  trigger: "cron:/api/scraper/mercado-locales"
+  called_from: [app/api/scraper/mercado-locales/route.ts, app/api/scraper/mercado-locales-tipos-adicionales/route.ts]
+  freshness_sla_days: 1
+  last_verified: 2026-08-01
+  monitoring: console-only
+  duplicate_of: null
+  status: active
+  notes: "Único pipeline de terceros que corre en producción a diario. Ahora reporta a Sentry vía reportWarning/reportError (checkpoint A de Torre de Control)."
+
+- id: terrenos-portalinmobiliario
+  name: "Portalinmobiliario — terrenos/sitios en venta"
+  type: scraper
+  owner_files: [lib/scrapers/portalinmobiliario.ts, lib/terrenos-server.ts]
+  trigger: manual
+  called_from: [app/api/scraper/portalinmobiliario/route.ts, lib/terrenos-server.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: console-only
+  duplicate_of: null
+  status: needs-decision
+  notes: "Reachable vía ruta, NO está en vercel.json crons — a diferencia de mercado-locales, Terrenos no tiene ingesta programada. Decidir: ¿agregar cron semanal, o es correcto que sea bajo demanda?"
+
+- id: terrenos-yapo
+  name: "Yapo.cl — terrenos en venta"
+  type: scraper
+  owner_files: [lib/scrapers/yapo.ts]
+  trigger: manual
+  called_from: [app/api/scraper/yapo/route.ts, lib/terrenos-server.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: console-only
+  duplicate_of: null
+  status: needs-decision
+  notes: "Mismo universo de 19 comunas que terrenos-portalinmobiliario/doomos/chilepropiedades/portalterreno — 5 fuentes redundantes por diseño (máxima cobertura), pero sin ingesta programada ninguna."
+
+- id: terrenos-doomos
+  name: "Doomos.cl — terrenos en venta"
+  type: scraper
+  owner_files: [lib/scrapers/doomos.ts]
+  trigger: manual
+  called_from: [app/api/scraper/doomos/route.ts, lib/terrenos-server.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: console-only
+  duplicate_of: null
+  status: needs-decision
+  notes: "Ver terrenos-yapo — mismo patrón de 5 fuentes sin cron."
+
+- id: terrenos-chilepropiedades
+  name: "Chilepropiedades.cl — terrenos en venta"
+  type: scraper
+  owner_files: [lib/scrapers/chilepropiedades.ts]
+  trigger: manual
+  called_from: [app/api/scraper/chilepropiedades/route.ts, lib/terrenos-server.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: console-only
+  duplicate_of: null
+  status: needs-decision
+  notes: "Ver terrenos-yapo. Además: sin lat/lng en página de detalle (limitación real de la fuente, no bug)."
+
+- id: terrenos-portalterreno
+  name: "PortalTerreno.cl — terrenos en venta"
+  type: scraper
+  owner_files: [lib/scrapers/portalterreno.ts]
+  trigger: manual
+  called_from: [app/api/scraper/portalterreno/route.ts, lib/terrenos-server.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: console-only
+  duplicate_of: null
+  status: needs-decision
+  notes: "Ver terrenos-yapo. Única de las 5 que trae lat/lng ya resuelto en el listado (vía __NEXT_DATA__)."
+
+- id: noticias-rss-america-retail
+  name: "RSS América Retail"
+  type: scraper
+  owner_files: [lib/scrapers/noticias-rss.ts]
+  trigger: "cron:/api/cron/noticias-macro"
+  called_from: [lib/noticias-server.ts, app/api/cron/noticias-macro/route.ts]
+  freshness_sla_days: 1
+  last_verified: 2026-08-01
+  monitoring: sentry
+  duplicate_of: null
+  status: active
+  notes: "Único feed RSS activo tras descartar ~12 candidatos (bloqueados/rotos/ToS)."
+
+- id: noticias-cmf
+  name: "CMF Hechos Esenciales"
+  type: scraper
+  owner_files: [lib/scrapers/noticias-cmf.ts]
+  trigger: "cron:/api/cron/noticias-macro"
+  called_from: [lib/noticias-server.ts, app/api/cron/noticias-macro/route.ts]
+  freshness_sla_days: 1
+  last_verified: 2026-08-01
+  monitoring: sentry
+  duplicate_of: null
+  status: active
+  notes: "Filtra 8 emisores retail hardcodeados (RELEVANT_ENTITIES)."
+
+- id: noticias-parque-arauco
+  name: "Parque Arauco — comunicados de inversionistas"
+  type: scraper
+  owner_files: [lib/scrapers/noticias-parque-arauco.ts]
+  trigger: "cron:/api/cron/noticias-macro"
+  called_from: [lib/noticias-server.ts, app/api/cron/noticias-macro/route.ts]
+  freshness_sla_days: 1
+  last_verified: 2026-08-01
+  monitoring: sentry
+  duplicate_of: null
+  status: active
+  notes: "API JSON limpia (Modyo CMS) — la única de las 3 fuentes de noticias sin scraping HTML."
+
+- id: instrumentos-ipt
+  name: "Portal IPT (MINVU) — instrumentos de planificación territorial"
+  type: scraper
+  owner_files: [lib/scrapers/instrumentos-ipt.ts, lib/instrumentos-ipt-server.ts]
+  trigger: "cron:/api/scraper/instrumentos-ipt"
+  called_from: [app/api/scraper/instrumentos-ipt/route.ts]
+  freshness_sla_days: 7
+  last_verified: 2026-08-01
+  monitoring: console-only
+  duplicate_of: null
+  status: active
+  notes: "API no documentada, extraída del bundle JS oficial. ~3.256 filas, sync completa cada lunes. Ahora reporta a Sentry (checkpoint A)."
+
+- id: plan-reguladores-datos-gob-cl
+  name: "Planes reguladores — datos.gob.cl (CKAN)"
+  type: scraper
+  owner_files: [lib/scrapers/plan-reguladores.ts]
+  trigger: manual
+  called_from: [app/api/scraper/plan-reguladores/route.ts, app/api/cron/daily-check/route.ts]
+  freshness_sla_days: 7
+  last_verified: 2026-08-01
+  monitoring: console-only
+  duplicate_of: null
+  status: active
+  notes: "Se dispara indirectamente dentro de daily-check los lunes (fetch interno, if today.getDay()===1) — no tiene entrada propia en vercel.json crons."
+
+- id: plan-reguladores-portal-transparencia
+  name: "Planes reguladores — portaltransparencia.cl"
+  type: scraper
+  owner_files: [lib/scrapers/plan-reguladores.ts]
+  trigger: manual
+  called_from: [app/api/scraper/plan-reguladores/route.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: console-only
+  duplicate_of: null
+  status: needs-decision
+  notes: "Bloqueado por 403 anti-bot, siempre devuelve []. Parseo HTML nunca escrito (TODO explícito en el código). Decidir: ¿invertir en headless browser, o eliminar esta fuente y quedarnos solo con datos.gob.cl?"
+
+- id: sii-lookup-get
+  name: "SII avalúo fiscal — /api/sii/lookup (GET)"
+  type: scraper
+  owner_files: ["app/api/sii/lookup/route.ts"]
+  trigger: manual
+  called_from: [lib/sii-lookup.ts, lib/sii-lookup-server.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: none
+  duplicate_of: null
+  status: needs-decision
+  notes: "Scrape en vivo de zeus.sii.cl, sin caché. Ver sii-enrich-post — misma lógica reimplementada dos veces."
+
+- id: sii-enrich-post
+  name: "SII avalúo fiscal — /api/enrich/sii (POST)"
+  type: scraper
+  owner_files: ["app/api/enrich/sii/route.ts"]
+  trigger: manual
+  called_from: []
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: none
+  duplicate_of: sii-lookup-get
+  status: duplicate
+  notes: "Mismo scrape a zeus.sii.cl, mismo parseo, ruta distinta (POST). Candidato directo a eliminar y consolidar en sii-lookup-get."
+
+- id: rut-enrich
+  name: "Enriquecimiento RUT — /api/enrich/rut"
+  type: api-endpoint
+  owner_files: ["app/api/enrich/rut/route.ts"]
+  trigger: manual
+  called_from: []
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: none
+  duplicate_of: null
+  status: needs-decision
+  notes: "No es un scraper real — valida dígito verificador y busca en un diccionario hardcodeado de 5 RUTs conocidos (KNOWN_COMPANIES). Cualquier otro RUT → 502. Placeholder, no fuente real todavía."
+
+- id: macro-uf-fallback-constant
+  name: "UF — constante de respaldo (lib/uf.ts)"
+  type: static-kb
+  owner_files: [lib/uf.ts]
+  trigger: none
+  called_from: [lib/derechos-municipales.ts, lib/indicadores-macro.ts]
+  freshness_sla_days: 30
+  last_verified: 2026-07-30
+  monitoring: none
+  duplicate_of: null
+  status: needs-decision
+  notes: "UF_FALLBACK_CLP requiere actualización manual periódica. 1 de 4 puntos de entrada al mismo dato de UF — ver macro-uf-endpoint-legacy, macro-indicadores-endpoint, macro-indicadores-cron."
+
+- id: macro-uf-endpoint-legacy
+  name: "UF — /api/utils/uf (endpoint legacy)"
+  type: api-endpoint
+  owner_files: ["app/api/utils/uf/route.ts"]
+  trigger: manual
+  called_from: [lib/scrapers/terrenos-common.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: none
+  duplicate_of: macro-indicadores-cron
+  status: duplicate
+  notes: "Caché en memoria 24h. 5 llamadores dependen de su forma exacta (comentario explícito en el código) — no eliminar sin auditar callers primero."
+
+- id: macro-indicadores-endpoint
+  name: "UF/IPC/TPM/Dólar — /api/utils/indicadores (endpoint nuevo)"
+  type: api-endpoint
+  owner_files: ["app/api/utils/indicadores/route.ts"]
+  trigger: manual
+  called_from: []
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: none
+  duplicate_of: macro-indicadores-cron
+  status: duplicate
+  notes: "Overlap funcional casi total con lib/indicadores-macro.ts, escrito aparte deliberadamente para no tocar el contrato del endpoint viejo."
+
+- id: macro-indicadores-cron
+  name: "mindicador.cl — UF/IPC/TPM/Dólar (cron + persistencia)"
+  type: cron
+  owner_files: [lib/indicadores-macro.ts]
+  trigger: "cron:/api/cron/noticias-macro"
+  called_from: [lib/noticias-server.ts, app/api/cron/noticias-macro/route.ts, "app/(dashboard)/dashboard/page.tsx", "app/(dashboard)/mercado-inmobiliario/macro/page.tsx"]
+  freshness_sla_days: 1
+  last_verified: 2026-08-01
+  monitoring: sentry
+  duplicate_of: null
+  status: needs-decision
+  notes: "Candidato a fuente canónica de UF/macro — las otras 3 entradas (macro-uf-fallback-constant, macro-uf-endpoint-legacy, macro-indicadores-endpoint) deberían consolidarse hacia esta. No hacerlo de un día para otro: auditar callers primero."
+
+- id: normativa-retrieval-keywords
+  name: "Recuperación normativa — motor por keywords (activo)"
+  type: static-kb
+  owner_files: [lib/normativa-retrieval.ts]
+  trigger: none
+  called_from: [lib/ai.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: none
+  duplicate_of: null
+  status: active
+  notes: "Motor de recuperación en producción hoy. Ver rag-embeddings — mismo contenido fuente, mecanismo alternativo sin usar."
+
+- id: rag-embeddings
+  name: "RAG semántico normativa (pgvector + embeddings OpenAI)"
+  type: static-kb
+  owner_files: [lib/rag.ts]
+  trigger: none
+  called_from: []
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: none
+  duplicate_of: null
+  status: needs-decision
+  notes: "Migración pgvector y backfill completos, pero NO cableado al runtime (comentario propio en el código). Decidir: ¿terminar de conectarlo y retirar normativa-retrieval-keywords, o eliminar este pipeline muerto?"
+
+- id: lguc-knowledge
+  name: "LGUC — base de conocimiento curada a mano"
+  type: static-kb
+  owner_files: [lib/lguc-knowledge.ts]
+  trigger: none
+  called_from: [lib/normativa-retrieval.ts]
+  freshness_sla_days: null
+  last_verified: 2026-06-01
+  monitoring: none
+  duplicate_of: null
+  status: stale-kb
+  notes: "100% curado a mano, marcador [VERIFICAR TEXTO OFICIAL] para lo no verificado. Sin fecha de 'última verificación' a nivel de archivo — se estima jun 2026 por última mención en memoria de sesión."
+
+- id: oguc-knowledge
+  name: "OGUC (D.S. N°47/1992) — base de conocimiento curada a mano"
+  type: static-kb
+  owner_files: [lib/oguc-knowledge.ts]
+  trigger: none
+  called_from: [lib/normativa-retrieval.ts]
+  freshness_sla_days: null
+  last_verified: 2026-06-01
+  monitoring: none
+  duplicate_of: null
+  status: stale-kb
+  notes: "Header propio dice 'actualizado 2026-06, vigencia última modificación 25.04.2026'. Requiere edición manual cuando MINVU publique cambios."
+
+- id: circulares-ddu
+  name: "Circulares DDU — índice curado"
+  type: static-kb
+  owner_files: [lib/circulares-ddu.ts]
+  trigger: none
+  called_from: [lib/normativa-retrieval.ts]
+  freshness_sla_days: null
+  last_verified: 2026-06-01
+  monitoring: none
+  duplicate_of: null
+  status: stale-kb
+  notes: "Cada entrada con verificado: true/false explícito — la disciplina más rigurosa de las 4 bases normativas curadas."
+
+- id: mapa-formularios
+  name: "Mapa de Formularios MINVU"
+  type: static-kb
+  owner_files: [lib/mapa-formularios.ts]
+  trigger: none
+  called_from: []
+  freshness_sla_days: null
+  last_verified: 2026-07-31
+  monitoring: none
+  duplicate_of: null
+  status: stale-kb
+  notes: "Transcripción literal de 5 PDF oficiales pasados a mano. Depende de retranscripción manual si MINVU actualiza los PDF."
+
+- id: zonificacion-comunas-registry
+  name: "Zonificación PRC — registro de endpoints ArcGIS por comuna"
+  type: static-kb
+  owner_files: [lib/zonificacion-comunas.ts]
+  trigger: none
+  called_from: ["app/api/zonificacion/lookup/route.ts"]
+  freshness_sla_days: null
+  last_verified: 2026-07-31
+  monitoring: none
+  duplicate_of: null
+  status: active
+  notes: "Consulta en vivo (cacheada por lat/lng en zonificacion_cache), pero el REGISTRO de qué comunas/capas existen es estático — agregar una comuna nueva es trabajo manual de investigación. Universo de comunas #2 de 3 — ver comunas-chile-base."
+
+- id: comunas-chile-base
+  name: "Comunas de Chile + estado DOM en Línea — base"
+  type: static-kb
+  owner_files: [lib/comunas-chile.ts]
+  trigger: none
+  called_from: []
+  freshness_sla_days: null
+  last_verified: 2023-09-01
+  monitoring: none
+  duplicate_of: null
+  status: needs-decision
+  notes: "Fuente citada: 'investigación pública + datos MINVU (Sep 2023)' — ~2 años de antigüedad sin proceso de refresco. Universo de comunas #1 de 3, deliberadamente no sincronizado con zonificacion-comunas-registry ni con MERCADO_LOCALES_COMUNA_SLUGS."
+
+- id: dias-habiles-feriados
+  name: "Días hábiles / feriados — tabla estática"
+  type: static-kb
+  owner_files: [lib/dias-habiles.ts]
+  trigger: none
+  called_from: []
+  freshness_sla_days: 365
+  last_verified: 2026-01-01
+  monitoring: none
+  duplicate_of: null
+  status: needs-decision
+  notes: "TODO explícito en el propio archivo: evaluar reemplazar por API de boostr.cl o equivalente. Requiere refresco manual anual."
+
+- id: dom-en-linea
+  name: "DOM en Línea (MINVU) — consulta de expediente"
+  type: scraper
+  owner_files: [lib/scraper.ts]
+  trigger: manual
+  called_from: [app/api/scraper/dom-en-linea/route.ts, app/api/cron/daily-check/route.ts]
+  freshness_sla_days: 1
+  last_verified: 2026-08-01
+  monitoring: sentry
+  duplicate_of: null
+  status: active
+  notes: "Único scraper 'operacional' del lado de trámites — corre dentro del loop de daily-check para cada proyecto activo con expediente."
+
+- id: dom-digital
+  name: "DOM Digital (municipal)"
+  type: api-endpoint
+  owner_files: ["app/api/dom-digital/consulta/route.ts"]
+  trigger: manual
+  called_from: []
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: none
+  duplicate_of: null
+  status: needs-decision
+  notes: "No es una integración real — producción devuelve 503 siempre; dev devuelve mock determinista. Placeholder honesto, no fuente de datos real todavía."
+
+- id: geocoding-nominatim
+  name: "Nominatim (OpenStreetMap) — geocoding"
+  type: api-endpoint
+  owner_files: [lib/geocoding.ts]
+  trigger: manual
+  called_from: ["app/api/zonificacion/lookup/route.ts", lib/terrenos-server.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: none
+  duplicate_of: null
+  status: active
+  notes: "Recurso público compartido sin SLA. Throttle 1.1s propio. Mismo proveedor (familia OSM) que terrenos-ubicacion-overpass, sin circuit breaker compartido."
+
+- id: terrenos-ubicacion-overpass
+  name: "Overpass API (OSM) — señales de ubicación"
+  type: api-endpoint
+  owner_files: [lib/terrenos-ubicacion.ts]
+  trigger: manual
+  called_from: [lib/terrenos-server.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: none
+  duplicate_of: null
+  status: active
+  notes: "Rate-limit agresivo documentado (2 slots/IP), OverpassUnavailableError distingue 'servicio caído' de error real — el manejo de fallos más maduro de todos los scrapers."

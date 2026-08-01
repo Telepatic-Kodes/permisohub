@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from '@/lib/scraper'
+import { reportError, reportWarning } from '@/lib/observability'
 import { type TerrenoListadoRaw, PRECIO_CLP_MINIMO_PLAUSIBLE, obtenerValorUF, nombreComuna } from './terrenos-common'
 
 // ---------------------------------------------------------------------------
@@ -58,7 +59,7 @@ function comunaDelListado(parteHtml: string): string | null {
 export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRaw[]> {
   const comuna = nombreComuna(comunaId)
   if (!comuna) {
-    console.warn(`[yapo] Comuna "${comunaId}" no está en la lista soportada — se omite`)
+    reportWarning(`Comuna "${comunaId}" no está en la lista soportada — se omite`, { scope: 'scraper.yapo', extra: { comunaId } })
     return []
   }
 
@@ -66,7 +67,7 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
     const url = `https://www.yapo.cl/bienes-raices-venta-de-propiedades-lotes-y-terrenos/region-metropolitana-${comunaId}`
     const res = await fetchWithTimeout(url, {}, 20_000)
     if (!res.ok) {
-      console.warn(`[yapo] HTTP ${res.status} para "${comunaId}" — se omite esta corrida`)
+      reportWarning(`HTTP ${res.status} para "${comunaId}" — se omite esta corrida`, { scope: 'scraper.yapo', extra: { comunaId, status: res.status } })
       return []
     }
 
@@ -94,7 +95,7 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
 
     return items
   } catch (err) {
-    console.warn(`[yapo] Error al buscar terrenos en "${comunaId}":`, err instanceof Error ? err.message : err)
+    reportError(err, { scope: 'scraper.yapo', extra: { comunaId } })
     return []
   }
 }
@@ -120,12 +121,12 @@ export async function obtenerLatLngDetalle(urlAviso: string): Promise<{ lat: num
 
     const dentroDeChile = lat >= -56 && lat <= -17 && lng >= -76 && lng <= -66
     if (!dentroDeChile) {
-      console.warn(`[yapo] lat/lng fuera de Chile (${lat}, ${lng}) para "${urlAviso}" — se descarta`)
+      reportWarning(`lat/lng fuera de Chile (${lat}, ${lng}) para "${urlAviso}" — se descarta`, { scope: 'scraper.yapo', extra: { urlAviso, lat, lng } })
       return null
     }
     return { lat, lng }
   } catch (err) {
-    console.warn(`[yapo] No se pudo extraer lat/lng del detalle de "${urlAviso}":`, err instanceof Error ? err.message : err)
+    reportError(err, { scope: 'scraper.yapo', extra: { urlAviso } })
     return null
   }
 }

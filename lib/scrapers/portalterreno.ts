@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from '@/lib/scraper'
+import { reportError, reportWarning } from '@/lib/observability'
 import { type TerrenoListadoRaw, PRECIO_CLP_MINIMO_PLAUSIBLE, obtenerValorUF, nombreComuna } from './terrenos-common'
 
 // ---------------------------------------------------------------------------
@@ -95,7 +96,7 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
   const slug = COMUNA_SLUG[comunaId]
   const comuna = nombreComuna(comunaId)
   if (!slug || !comuna) {
-    console.warn(`[portalterreno] Comuna "${comunaId}" no está en la lista soportada — se omite`)
+    reportWarning(`Comuna "${comunaId}" no está en la lista soportada — se omite`, { scope: 'scraper.portalterreno', extra: { comunaId } })
     return []
   }
 
@@ -103,14 +104,14 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
     const url = `https://portalterreno.cl/terrenos-en-venta-en-${slug}`
     const res = await fetchWithTimeout(url, {}, 15_000)
     if (!res.ok) {
-      console.warn(`[portalterreno] HTTP ${res.status} para "${comunaId}" — se omite esta corrida`)
+      reportWarning(`HTTP ${res.status} para "${comunaId}" — se omite esta corrida`, { scope: 'scraper.portalterreno', extra: { comunaId, status: res.status } })
       return []
     }
 
     const html = await res.text()
     const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)
     if (!m) {
-      console.warn(`[portalterreno] No se encontró __NEXT_DATA__ para "${comunaId}" — posible cambio de sitio, se omite`)
+      reportWarning(`No se encontró __NEXT_DATA__ para "${comunaId}" — posible cambio de sitio, se omite`, { scope: 'scraper.portalterreno', extra: { comunaId } })
       return []
     }
 
@@ -118,7 +119,7 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
     try {
       json = JSON.parse(m[1])
     } catch {
-      console.warn(`[portalterreno] __NEXT_DATA__ con JSON inválido para "${comunaId}" — se omite`)
+      reportWarning(`__NEXT_DATA__ con JSON inválido para "${comunaId}" — se omite`, { scope: 'scraper.portalterreno', extra: { comunaId } })
       return []
     }
 
@@ -127,7 +128,7 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
     }
     const properties = props.props?.pageProps?.initialState?.search?.list?.properties
     if (!Array.isArray(properties)) {
-      console.warn(`[portalterreno] Forma inesperada de __NEXT_DATA__ para "${comunaId}" — se omite`)
+      reportWarning(`Forma inesperada de __NEXT_DATA__ para "${comunaId}" — se omite`, { scope: 'scraper.portalterreno', extra: { comunaId } })
       return []
     }
 
@@ -159,7 +160,7 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
 
     return items
   } catch (err) {
-    console.warn(`[portalterreno] Error al buscar terrenos en "${comunaId}":`, err instanceof Error ? err.message : err)
+    reportError(err, { scope: 'scraper.portalterreno', extra: { comunaId } })
     return []
   }
 }

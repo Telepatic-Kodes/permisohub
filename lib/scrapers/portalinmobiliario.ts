@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from '@/lib/scraper'
+import { reportError, reportWarning } from '@/lib/observability'
 import { type TerrenoListadoRaw, PRECIO_CLP_MINIMO_PLAUSIBLE, obtenerValorUF, nombreComuna } from './terrenos-common'
 import {
   type MercadoLocalListadoRaw,
@@ -103,13 +104,13 @@ export async function obtenerLatLngDetalle(urlAviso: string): Promise<{ lat: num
     // lookup de zonificación que de todas formas no le va a encontrar zona.
     const dentroDeChile = lat >= -56 && lat <= -17 && lng >= -76 && lng <= -66
     if (!dentroDeChile) {
-      console.warn(`[portalinmobiliario] lat/lng fuera de Chile (${lat}, ${lng}) para "${urlAviso}" — probable aviso no chileno, se descarta`)
+      reportWarning(`lat/lng fuera de Chile (${lat}, ${lng}) para "${urlAviso}" — probable aviso no chileno, se descarta`, { scope: 'scraper.portalinmobiliario', extra: { urlAviso, lat, lng } })
       return null
     }
 
     return { lat, lng }
   } catch (err) {
-    console.warn(`[portalinmobiliario] No se pudo extraer lat/lng del detalle de "${urlAviso}":`, err instanceof Error ? err.message : err)
+    reportError(err, { scope: 'scraper.portalinmobiliario', extra: { urlAviso } })
     return null
   }
 }
@@ -118,12 +119,12 @@ export async function obtenerLatLngDetalle(urlAviso: string): Promise<{ lat: num
  * Busca sitios/terrenos en venta publicados en Portalinmobiliario para una
  * comuna cubierta por el motor de zonificación. Nunca lanza — cualquier
  * fallo (HTTP no-200, bloqueo anti-bot, cambio de HTML) se registra con
- * console.warn y resuelve a un array vacío.
+ * reportWarning y resuelve a un array vacío.
  */
 export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRaw[]> {
   const comuna = nombreComuna(comunaId)
   if (!comuna) {
-    console.warn(`[portalinmobiliario] Comuna "${comunaId}" no está en la lista soportada — se omite`)
+    reportWarning(`Comuna "${comunaId}" no está en la lista soportada — se omite`, { scope: 'scraper.portalinmobiliario', extra: { comunaId } })
     return []
   }
 
@@ -133,7 +134,7 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
     const res = await fetchWithTimeout(url, {}, 15_000)
 
     if (!res.ok) {
-      console.warn(`[portalinmobiliario] HTTP ${res.status} para "${comunaId}" — se omite esta corrida`)
+      reportWarning(`HTTP ${res.status} para "${comunaId}" — se omite esta corrida`, { scope: 'scraper.portalinmobiliario', extra: { comunaId, status: res.status } })
       return []
     }
 
@@ -162,7 +163,7 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
 
     return items
   } catch (err) {
-    console.warn(`[portalinmobiliario] Error al buscar terrenos en "${comunaId}":`, err instanceof Error ? err.message : err)
+    reportError(err, { scope: 'scraper.portalinmobiliario', extra: { comunaId } })
     return []
   }
 }
@@ -281,7 +282,7 @@ function parseCardMercadoLocal(
  * MERCADO_LOCALES_COMUNA_SLUGS, para el tipo de propiedad indicado (default
  * local_comercial, preservando el comportamiento original de esta función
  * para el cron diario existente). Nunca lanza — cualquier fallo degrada a
- * `[]` + console.warn, igual que buscarTerrenos.
+ * `[]` + reportWarning, igual que buscarTerrenos.
  *
  * Fase 8: el segmento de URL cambia según tipoPropiedad
  * (TIPO_PROPIEDAD_PORTAL_PATH) — verificado en vivo que oficina/bodega/
@@ -297,7 +298,7 @@ export async function buscarLocalesComerciales(
 ): Promise<MercadoLocalListadoRaw[]> {
   const slug = MERCADO_LOCALES_COMUNA_SLUGS[comuna]
   if (!slug) {
-    console.warn(`[portalinmobiliario] Comuna "${comuna}" no está en MERCADO_LOCALES_COMUNA_SLUGS — se omite`)
+    reportWarning(`Comuna "${comuna}" no está en MERCADO_LOCALES_COMUNA_SLUGS — se omite`, { scope: 'scraper.portalinmobiliario', extra: { comuna } })
     return []
   }
 
@@ -308,7 +309,7 @@ export async function buscarLocalesComerciales(
     const res = await fetchWithTimeout(url, {}, 20_000)
 
     if (!res.ok) {
-      console.warn(`[portalinmobiliario] HTTP ${res.status} para ${tipoPropiedad} en "${comuna}" (${operacion}) — se omite esta corrida`)
+      reportWarning(`HTTP ${res.status} para ${tipoPropiedad} en "${comuna}" (${operacion}) — se omite esta corrida`, { scope: 'scraper.portalinmobiliario', extra: { comuna, tipoPropiedad, operacion, status: res.status } })
       return []
     }
 
@@ -330,7 +331,7 @@ export async function buscarLocalesComerciales(
 
     return items
   } catch (err) {
-    console.warn(`[portalinmobiliario] Error al buscar ${tipoPropiedad} en "${comuna}" (${operacion}):`, err instanceof Error ? err.message : err)
+    reportError(err, { scope: 'scraper.portalinmobiliario', extra: { comuna, tipoPropiedad, operacion } })
     return []
   }
 }

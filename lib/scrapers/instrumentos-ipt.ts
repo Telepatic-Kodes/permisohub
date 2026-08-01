@@ -5,6 +5,8 @@
 // `paginated=true&page=&perPage=` cae en un query no paginado que hace
 // timeout (504) — la paginación NO es opcional pese a no estar documentada.
 
+import { reportError, reportWarning } from '@/lib/observability'
+
 const PORTAL_IPT_API_BASE = 'https://portalipt-api.minvu.cl'
 
 export interface InstrumentoIptDocumento {
@@ -47,12 +49,12 @@ export async function buscarPaginaInstrumentosIPT(
     const res = await fetch(url, { signal: controller.signal })
     clearTimeout(timeout)
     if (!res.ok) {
-      console.warn(`[instrumentos-ipt] HTTP ${res.status} en página ${page}`)
+      reportWarning(`HTTP ${res.status} en página ${page}`, { scope: 'scraper.instrumentos-ipt', extra: { page, status: res.status } })
       return null
     }
     return (await res.json()) as InstrumentosIptResponse
   } catch (err) {
-    console.warn(`[instrumentos-ipt] Error al buscar página ${page}:`, err instanceof Error ? err.message : err)
+    reportError(err, { scope: 'scraper.instrumentos-ipt', extra: { page } })
     return null
   }
 }
@@ -80,7 +82,7 @@ export async function obtenerCatalogoComunasIPT(): Promise<ComunaIptRaw[]> {
     if (!res.ok) return []
     return (await res.json()) as ComunaIptRaw[]
   } catch (err) {
-    console.warn('[instrumentos-ipt] No se pudo obtener el catálogo de comunas:', err instanceof Error ? err.message : err)
+    reportError(err, { scope: 'scraper.instrumentos-ipt' })
     return []
   }
 }

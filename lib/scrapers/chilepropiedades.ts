@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from '@/lib/scraper'
+import { reportError, reportWarning } from '@/lib/observability'
 import { type TerrenoListadoRaw, PRECIO_CLP_MINIMO_PLAUSIBLE, obtenerValorUF, nombreComuna } from './terrenos-common'
 
 // ---------------------------------------------------------------------------
@@ -64,7 +65,7 @@ function normalizarTexto(s: string): string {
 export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRaw[]> {
   const comuna = nombreComuna(comunaId)
   if (!comuna) {
-    console.warn(`[chilepropiedades] Comuna "${comunaId}" no está en la lista soportada — se omite`)
+    reportWarning(`Comuna "${comunaId}" no está en la lista soportada — se omite`, { scope: 'scraper.chilepropiedades', extra: { comunaId } })
     return []
   }
 
@@ -72,7 +73,7 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
     const url = `https://www.chilepropiedades.cl/propiedades/venta/terreno/${comunaId}/0`
     const res = await fetchWithTimeout(url, {}, 15_000)
     if (!res.ok) {
-      console.warn(`[chilepropiedades] HTTP ${res.status} para "${comunaId}" — se omite esta corrida`)
+      reportWarning(`HTTP ${res.status} para "${comunaId}" — se omite esta corrida`, { scope: 'scraper.chilepropiedades', extra: { comunaId, status: res.status } })
       return []
     }
 
@@ -100,7 +101,7 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
 
     return items
   } catch (err) {
-    console.warn(`[chilepropiedades] Error al buscar terrenos en "${comunaId}":`, err instanceof Error ? err.message : err)
+    reportError(err, { scope: 'scraper.chilepropiedades', extra: { comunaId } })
     return []
   }
 }

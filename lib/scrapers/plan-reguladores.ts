@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service'
+import { reportWarning } from '@/lib/observability'
 
 export interface PlanReguladorRaw {
   municipio_nombre: string
@@ -123,9 +124,10 @@ export async function fetchFromPortalTransparencia(): Promise<PlanReguladorRaw[]
     )
 
     if (!response.ok) {
-      console.warn(
-        `[plan-reguladores] portaltransparencia.cl returned ${response.status} — skipping`
-      )
+      reportWarning(`portaltransparencia.cl returned ${response.status} — skipping (known 403 anti-bot, see needs-decision in data-sources.yaml)`, {
+        scope: 'scraper.plan-reguladores',
+        extra: { status: response.status },
+      })
       return []
     }
 
