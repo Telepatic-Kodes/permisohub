@@ -39,6 +39,74 @@ export async function aiComplete(
   return response.choices[0].message.content ?? ''
 }
 
+export type ToolMessage = OpenAI.Chat.ChatCompletionMessageParam
+
+export interface ToolDefinition {
+  type: 'function'
+  function: {
+    name: string
+    description: string
+    parameters: Record<string, unknown>
+  }
+}
+
+export interface ToolCallResult {
+  id: string
+  name: string
+  args: unknown
+}
+
+export interface AICompleteWithToolsResult {
+  content: string | null
+  toolCalls: ToolCallResult[]
+  // Mensaje crudo del SDK — se reenvía tal cual como próximo turno del
+  // historial cuando hay tool_calls (OpenAI exige el shape exacto de
+  // `tool_calls` para poder aceptar los `role: 'tool'` que le siguen).
+  rawAssistantMessage: OpenAI.Chat.ChatCompletionMessage
+}
+
+// Function/tool-calling — no usado en ningún otro lado del proyecto hasta
+// ahora (streamConBusquedaWeb usa el tool nativo `web_search_preview` de la
+// Responses API, mecanismo distinto). Sin streaming a propósito: se usa para
+// las rondas de "qué herramienta llamar", donde la latencia real la domina
+// la ronda de ida y vuelta con OpenAI, no la generación de texto — el
+// caller decide cómo entregar la respuesta final al usuario.
+export async function aiCompleteWithTools(
+  messages: ToolMessage[],
+  tools: ToolDefinition[],
+  options?: { max_tokens?: number },
+): Promise<AICompleteWithToolsResult> {
+  const ai = getAI()
+  if (!ai) throw new Error('OPENAI_API_KEY no configurado')
+
+  const response = await ai.chat.completions.create({
+    model: AI_MODEL,
+    max_tokens: options?.max_tokens ?? 2000,
+    messages,
+    tools,
+    tool_choice: 'auto',
+  })
+
+  const choice = response.choices[0].message
+
+  const toolCalls: ToolCallResult[] = (choice.tool_calls ?? [])
+    .filter((tc): tc is OpenAI.Chat.ChatCompletionMessageToolCall & { type: 'function' } => tc.type === 'function')
+    .map((tc) => {
+      let args: unknown = {}
+      try {
+        args = JSON.parse(tc.function.arguments)
+      } catch {
+        // Argumentos mal formados del modelo — se ejecuta la herramienta
+        // con {} en vez de lanzar; cada implementación de herramienta ya
+        // valida sus propios campos requeridos y responde con un error
+        // legible que el modelo puede leer y corregir en la ronda siguiente.
+      }
+      return { id: tc.id, name: tc.function.name, args }
+    })
+
+  return { content: choice.content, toolCalls, rawAssistantMessage: choice }
+}
+
 interface FileContentPart {
   type: 'file'
   file: { filename: string; file_data: string }
