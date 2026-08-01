@@ -12,9 +12,13 @@
 // emite un console.warn — no falla silenciosamente, pero tampoco calcula
 // bien los días hábiles de ese año hasta que se agregue.
 //
-// TODO: evaluar reemplazar esta tabla estática por una fuente externa
-// (p. ej. API de boostr.cl/feriados o equivalente oficial) para no depender
-// de actualizaciones manuales anuales. Fuera de alcance de este sprint.
+// DECISIÓN (1 ago 2026, ver .planning/data-sources.yaml): no reemplazar por
+// una API externa. La API oficial (apis.digital.gob.cl/fl) está deprecada;
+// Boostr.cl requiere cuenta/posible costo; las alternativas gratuitas no
+// oficiales no son más confiables que esta tabla para un cálculo de plazo
+// legal (Ley 21.718) — acá cada feriado cita la ley exacta que lo crea, algo
+// que una API de terceros no garantiza. Cobertura actual: 2024-2029. Revisar
+// de nuevo cuando falten <12 meses de cobertura.
 
 const FERIADOS_CHILE: Record<number, string[]> = {
   2024: [
@@ -173,12 +177,6 @@ function isWeekend(date: Date): boolean {
 
 function isBusinessDay(date: Date): boolean {
   return !isWeekend(date) && !isFeriado(date)
-}
-
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date)
-  result.setDate(result.getDate() + days)
-  return result
 }
 
 /**

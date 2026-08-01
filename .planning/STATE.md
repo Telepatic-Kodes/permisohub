@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-01` `5d72911` feat(torre-control): cron de Terrenos + consolidar UF/macro + fix real de dedup
 - `2026-08-01` `0f18e7c` fix(api): eliminar duplicado del scraper SII (/api/enrich/sii)
 - `2026-08-01` `4f80753` feat(mercado-inmobiliario): resolver RUTs operativos reales de Walmart y SMU
 

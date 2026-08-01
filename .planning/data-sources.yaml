@@ -337,26 +337,26 @@
   type: static-kb
   owner_files: [lib/comunas-chile.ts]
   trigger: none
-  called_from: []
+  called_from: ["app/api/zonificacion/lookup/route.ts", "app/(dashboard)/proyectos/page.tsx", "app/(dashboard)/proyectos/nuevo/page.tsx", "app/(dashboard)/municipios/page.tsx", "app/(dashboard)/municipios/[id]/page.tsx", "app/(dashboard)/herramientas/compliance-check/page.tsx", "app/(dashboard)/herramientas/calculadora/page.tsx", "app/(dashboard)/terrenos/nuevo/page.tsx", "app/(dashboard)/onboarding/page.tsx", lib/instrumentos-ipt-server.ts, lib/zonificacion-comunas.ts, lib/scrapers/noticias-common.ts, lib/scrapers/terrenos-common.ts]
   freshness_sla_days: null
   last_verified: 2023-09-01
   monitoring: none
   duplicate_of: null
   status: needs-decision
-  notes: "Fuente citada: 'investigación pública + datos MINVU (Sep 2023)' — ~2 años de antigüedad sin proceso de refresco. Universo de comunas #1 de 3, deliberadamente no sincronizado con zonificacion-comunas-registry ni con MERCADO_LOCALES_COMUNA_SLUGS."
+  notes: "INVESTIGADO (1 ago 2026), sigue needs-decision — no hay forma confiable de refrescar esto hoy: domenlinea.minvu.cl no publica ningún listado ni checker de qué comunas participan actualmente (verificado en vivo — la página solo dice que está 'a disposición de todas las comunas del país', sin directorio). Confirmar el estado real de las 346 comunas requeriría contactar a MINVU directamente o revisar cada municipio individualmente — fuera de alcance de una sesión. A diferencia de los demás needs-decision resueltos hoy, este no tiene una fuente automatizable esperando ser conectada; es investigación manual genuina. 13 callers reales confirmados (el registro tenía 0 documentados). Universo de comunas #1 de 3, deliberadamente no sincronizado con zonificacion-comunas-registry ni con MERCADO_LOCALES_COMUNA_SLUGS. Recomendación: spot-check manual de una muestra (ej. las 20 comunas más grandes) en vez de intentar las 346, la próxima vez que alguien tenga tiempo de investigación dedicado."
 
 - id: dias-habiles-feriados
   name: "Días hábiles / feriados — tabla estática"
   type: static-kb
   owner_files: [lib/dias-habiles.ts]
   trigger: none
-  called_from: []
+  called_from: ["app/api/proyectos/[id]/desarchivo/route.ts", app/api/ai/copiloto/route.ts, "app/(dashboard)/dashboard/page.tsx", components/proyecto/pmo-panel.tsx, components/proyecto/desarchivo-panel.tsx]
   freshness_sla_days: 365
-  last_verified: 2026-01-01
+  last_verified: 2026-08-01
   monitoring: none
   duplicate_of: null
-  status: needs-decision
-  notes: "TODO explícito en el propio archivo: evaluar reemplazar por API de boostr.cl o equivalente. Requiere refresco manual anual."
+  status: active
+  notes: "DECISIÓN (1 ago 2026): NO reemplazar por una API externa por ahora. Investigado: la API oficial del gobierno (apis.digital.gob.cl/fl) está DEPRECADA; Boostr.cl tiene una API de feriados pero requiere cuenta/posible costo (decisión de negocio aparte); las alternativas gratuitas no oficiales (FeriadosApp y similares) no son más confiables que esta tabla para un cálculo de plazo legal (Ley 21.718) — la tabla actual cita las leyes exactas (N°2.977, 19.973/20.983, 20.299, 21.357) en el código, algo que una API de terceros no garantiza. Además, la tabla YA cubre 2024-2029 (6 años, verificado 1 ago 2026) — no hay urgencia real. Revisar de nuevo cuando falten <12 meses de cobertura (2028 aprox.), no antes."
 
 - id: dom-en-linea
   name: "DOM en Línea (MINVU) — consulta de expediente"

@@ -42,7 +42,7 @@ export async function checkRateLimit(identifier: string): Promise<Response | nul
   const limiter = getLimiter()
   if (!limiter) return null  // Upstash not configured — pass through
 
-  const { success, limit, remaining, reset } = await limiter.limit(identifier)
+  const { success, limit, reset } = await limiter.limit(identifier)
 
   if (!success) {
     return Response.json(
