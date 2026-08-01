@@ -435,3 +435,29 @@
   duplicate_of: null
   status: active
   notes: "Rate-limit agresivo documentado (2 slots/IP), OverpassUnavailableError distingue 'servicio caído' de error real — el manejo de fallos más maduro de todos los scrapers."
+
+- id: sii-nomina-sucursales
+  name: "SII — nómina nacional de direcciones (expansión de cadenas)"
+  type: scraper
+  owner_files: [lib/scrapers/sii-nomina-sucursales.ts, lib/cadenas-sucursales-server.ts]
+  trigger: "cron:/api/scraper/sii-nomina-sucursales"
+  called_from: ["app/api/scraper/sii-nomina-sucursales/route.ts", "app/(dashboard)/mercado-inmobiliario/cadenas/page.tsx"]
+  freshness_sla_days: 45
+  last_verified: 2026-08-01
+  monitoring: sentry
+  duplicate_of: null
+  status: active
+  notes: "Descarga verificada en vivo (111MB zip, PUB_NOM_SUCURSAL.txt tab-delimited, columnas confirmadas por inspección directa) y corrida en producción contra datos reales (144 direcciones encontradas, 111 únicas tras dedup, idempotente en la segunda corrida). Actualizado mensualmente por el SII. Reemplaza dos alternativas descartadas por investigación de mercado (1 ago 2026): patente comercial municipal (fragmentada en ~345 sistemas sin API centralizada) y scraping de buscadores de tiendas (JS/mapa, frágil). Cobertura inicial: Falabella y Cencosud Shopping (RUTs verificados, con historial rico). Walmart Chile y SMU marcados needs-decision — ver sii-nomina-sucursales-holdings-sin-tiendas. LIMITACIÓN REAL encontrada al correrlo: 'vigente' es un estado administrativo-tributario, no confirmación de tienda abierta — de las 91 direcciones históricas de Falabella S.A., solo 3 están 'vigente=true' hoy; la mayoría son registros superados/corregidos, no necesariamente cierres reales. Tratar como señal indicativa (útil para el feed de 'registros recientes', que sí usa la fecha real del SII), no como conteo preciso de tiendas operando."
+
+- id: sii-nomina-sucursales-holdings-sin-tiendas
+  name: "SII nómina — RUTs de holding sin cobertura real de tiendas (Walmart, SMU)"
+  type: scraper
+  owner_files: [lib/scrapers/sii-nomina-sucursales.ts]
+  trigger: none
+  called_from: []
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: none
+  duplicate_of: null
+  status: needs-decision
+  notes: "CADENAS_RUT_CONOCIDOS marca Walmart Chile S.A. (76042014-K, 13 direcciones — oficinas corporativas Huechuraba) y SMU S.A. (76012676-4, 2 direcciones — oficinas corporativas) como 'needs-decision': el RUT público del holding no registra las ~370/~300 tiendas reales (Líder/Ekono/Cuenta, Unimarc/Alvi/Mayorista 10), que operan bajo RUTs de subsidiarias operativas aún no identificados. Deliberadamente NO se ingieren estos RUTs para no tratar un puñado de oficinas como señal de expansión. Decisión pendiente: investigar la razón social operativa real de cada cadena."
