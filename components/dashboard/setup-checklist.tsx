@@ -39,7 +39,7 @@ export function SetupChecklist() {
   const total = CHECKLIST_ITEMS.length
 
   return (
-    <div className="mb-8 rounded-lg border border-line-fine border-l-2 border-l-[var(--blueprint)] bg-white p-5">
+    <div className="mb-8 rounded-lg border border-line-fine border-l-2 border-l-[var(--blueprint)] bg-card p-5">
       <div className="flex items-center justify-between">
         <h2 className="font-technical text-sm font-semibold text-foreground">
           Completa tu configuración

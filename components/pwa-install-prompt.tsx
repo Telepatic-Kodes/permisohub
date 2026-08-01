@@ -35,7 +35,7 @@ export function PwaInstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm rounded-xl border border-border bg-white p-4 shadow-lg md:left-auto md:right-4 md:max-w-xs">
+    <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm rounded-xl border border-border bg-card p-4 shadow-lg md:left-auto md:right-4 md:max-w-xs">
       <div className="flex items-start gap-3">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#1A3328] text-sm font-bold text-white">
           P

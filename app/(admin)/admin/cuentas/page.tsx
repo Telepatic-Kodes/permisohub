@@ -196,7 +196,7 @@ export default async function AdminCuentasPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-border bg-white px-8 py-6">
+      <header className="border-b border-border bg-card px-8 py-6">
         <h1 className="text-2xl font-semibold text-primary">Cuentas</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Cadenas comerciales bajo gestión outsourcing
@@ -247,7 +247,7 @@ export default async function AdminCuentasPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border bg-white">
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">

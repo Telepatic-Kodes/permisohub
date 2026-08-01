@@ -80,7 +80,7 @@ export default function AdminSlaPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-border bg-white px-8 py-6">
+      <header className="border-b border-border bg-card px-8 py-6">
         <h1 className="flex items-center gap-2 text-2xl font-semibold text-primary">
           <Gauge className="size-6" />
           SLA Board — Compromisos de Servicio
@@ -137,7 +137,7 @@ export default function AdminSlaPage() {
         </div>
 
         {/* Table */}
-        <div className="overflow-hidden rounded-xl border border-border bg-white">
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">

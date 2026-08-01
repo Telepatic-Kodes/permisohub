@@ -133,7 +133,7 @@ export default function CarteraPage() {
         action={
           <Link
             href="/portal"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-primary hover:border-primary/30 hover:shadow-sm transition-all"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-primary hover:border-primary/30 hover:shadow-sm transition-all"
           >
             <ExternalLink className="size-3.5" />
             Portal de cliente
@@ -151,7 +151,7 @@ export default function CarteraPage() {
             { label: "Con alertas",     value: stats.urgentes, color: "text-rose-600" },
             { label: "Aprobados",       value: stats.aprobados, color: "text-green-600" },
           ].map(({ label, value, color }) => (
-            <div key={label} className="rounded-xl border border-border bg-white p-4 text-center">
+            <div key={label} className="rounded-xl border border-border bg-card p-4 text-center">
               <p className={cn("text-3xl font-semibold tabular-nums", color)}>{value}</p>
               <p className="mt-1 text-[11px] text-muted-foreground">{label}</p>
             </div>
@@ -159,7 +159,7 @@ export default function CarteraPage() {
         </div>
 
         {/* Distribución por estado */}
-        <div className="rounded-xl border border-border bg-white p-4">
+        <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="size-3.5 text-muted-foreground" />
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Distribución por estado</p>
@@ -201,7 +201,7 @@ export default function CarteraPage() {
                   "rounded-lg px-2.5 py-1 capitalize transition-colors",
                   groupBy === opt
                     ? "bg-primary text-white"
-                    : "bg-white border border-border hover:border-primary/30"
+                    : "bg-card border border-border hover:border-primary/30"
                 )}
               >
                 {opt}
@@ -216,7 +216,7 @@ export default function CarteraPage() {
             const isOpen = expanded.includes(clienteNombre)
             const alertas = pList.filter((p) => p.estado === "con_observaciones").length
             return (
-              <div key={clienteNombre} className="rounded-xl border border-border bg-white overflow-hidden">
+              <div key={clienteNombre} className="rounded-xl border border-border bg-card overflow-hidden">
                 {/* Group header */}
                 <button
                   onClick={() => toggleGroup(clienteNombre)}
@@ -267,7 +267,7 @@ export default function CarteraPage() {
             )
           })}
           {!loading && filteredProyectos.length === 0 && (
-            <div className="rounded-xl border border-border bg-white py-12 text-center">
+            <div className="rounded-xl border border-border bg-card py-12 text-center">
               <p className="text-sm text-muted-foreground">
                 {search
                   ? <>No se encontraron proyectos para &ldquo;{search}&rdquo;</>

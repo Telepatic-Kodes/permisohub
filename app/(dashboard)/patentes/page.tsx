@@ -253,7 +253,7 @@ export default function PatentesPage() {
           {KPI_CONFIG.map(({ key, label, icon: Icon, tone }) => (
             <div
               key={key}
-              className="flex items-center gap-3 rounded-xl border border-border bg-white p-4"
+              className="flex items-center gap-3 rounded-xl border border-border bg-card p-4"
             >
               <div className={cn("flex size-10 items-center justify-center rounded-lg border", tone)}>
                 <Icon className="size-5" />
@@ -268,7 +268,7 @@ export default function PatentesPage() {
 
         {/* Filtros: año + vigencia */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="inline-flex rounded-lg border border-border bg-white p-0.5">
+          <div className="inline-flex rounded-lg border border-border bg-card p-0.5">
             {AÑOS.map((a) => (
               <button
                 key={a.value}
@@ -306,7 +306,7 @@ export default function PatentesPage() {
         </div>
 
         {/* Tabla */}
-        <div className="rounded-xl border border-border bg-white">
+        <div className="rounded-xl border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>

@@ -193,7 +193,7 @@ export default async function AdminCadenaDetailPage({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-border bg-white px-8 py-6">
+      <header className="border-b border-border bg-card px-8 py-6">
         <Link
           href="/admin/cuentas"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -258,7 +258,7 @@ export default async function AdminCadenaDetailPage({
           <button
             type="button"
             disabled
-            className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-muted-foreground"
+            className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground"
             title="Próximamente"
           >
             <FileText className="size-4" />
@@ -279,7 +279,7 @@ export default async function AdminCadenaDetailPage({
               </CardContent>
             </Card>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-border bg-white">
+            <div className="overflow-hidden rounded-xl border border-border bg-card">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30">

@@ -211,7 +211,7 @@ export default function OnboardingPage({
                 "flex size-8 items-center justify-center rounded-full border text-sm font-medium transition-colors",
                 n <= step
                   ? "border-[#1A3328] bg-[#1A3328] text-[#F9F7F3]"
-                  : "border-border bg-white text-muted-foreground",
+                  : "border-border bg-card text-muted-foreground",
               )}
             >
               {n < step ? <CheckCircle2 className="size-4" /> : n}

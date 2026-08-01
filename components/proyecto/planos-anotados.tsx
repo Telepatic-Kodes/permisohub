@@ -468,7 +468,7 @@ export default function PlanosAnotados({ proyectoId, result }: Props) {
 // Card wrapper local (evita importar Card genérico dos veces con estilos duplicados).
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-white" style={{ boxShadow: "var(--shadow-card)" }}>
+    <div className="overflow-hidden rounded-xl border border-border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
       {children}
     </div>
   )
@@ -631,7 +631,7 @@ function CardBody({ loading, rehidratando, error, done, active, hoverId, setHove
           aria-label={`Lámina ampliada: ${active.nombre}`}
         >
           <div
-            className="max-h-[94vh] max-w-[96vw] overflow-auto rounded-lg bg-white p-2 shadow-2xl"
+            className="max-h-[94vh] max-w-[96vw] overflow-auto rounded-lg bg-card p-2 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-1 flex items-center justify-between gap-3 px-1">
@@ -1044,7 +1044,7 @@ function LaminaOverlay({
       )}
       {reglaActiva && puntoA && puntoB && (
         <div
-          className="absolute z-10 w-52 rounded-lg border border-primary/30 bg-white p-2 text-[11px] shadow-lg"
+          className="absolute z-10 w-52 rounded-lg border border-primary/30 bg-popover p-2 text-[11px] shadow-lg"
           style={{
             left: `${Math.min(95, Math.max(2, ((puntoA.x + puntoB.x) / 2) * 100))}%`,
             top: `${Math.min(90, Math.max(2, ((puntoA.y + puntoB.y) / 2) * 100))}%`,
@@ -1192,7 +1192,7 @@ function CuadroVineta({ cuadro }: { cuadro: CuadroResultado }) {
     Distanciamiento: "Distanc.",
   }
   return (
-    <div className="absolute bottom-1.5 right-1.5 w-[22%] min-w-[110px] max-w-[170px] rounded border border-black/25 bg-white/95 p-1.5 text-[9px] leading-tight shadow-md">
+    <div className="absolute bottom-1.5 right-1.5 w-[22%] min-w-[110px] max-w-[170px] rounded border border-black/25 bg-card/95 p-1.5 text-[9px] leading-tight shadow-md">
       <p className="mb-0.5 text-[8px] font-bold uppercase tracking-wide text-primary">
         Cuadro de cálculo
       </p>

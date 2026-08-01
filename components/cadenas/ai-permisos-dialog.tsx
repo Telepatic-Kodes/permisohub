@@ -96,7 +96,7 @@ export function AiPermisosDialog({ cadenaId, cadenaNombre }: AiPermisosDialogPro
           </Button>
 
           {respuesta && (
-            <div className="rounded-xl border bg-white p-4 space-y-3">
+            <div className="rounded-xl border bg-card p-4 space-y-3">
               <p className="text-sm whitespace-pre-wrap leading-relaxed">
                 {respuesta}
               </p>

@@ -268,7 +268,7 @@ export function DocumentUpload({
 
       {/* Upload queue */}
       {queue.length > 0 && (
-        <div className="rounded-xl border border-border bg-white p-4">
+        <div className="rounded-xl border border-border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-primary">
               Archivos en cola
@@ -368,7 +368,7 @@ export function DocumentUpload({
 
       {/* Completed uploads */}
       {uploaded.length > 0 && (
-        <div className="rounded-xl border border-border bg-white p-4">
+        <div className="rounded-xl border border-border bg-card p-4">
           <h3 className="mb-3 text-sm font-semibold text-primary">
             Archivos subidos
           </h3>

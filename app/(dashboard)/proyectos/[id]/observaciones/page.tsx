@@ -418,7 +418,7 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
                   {obs.expandida && (
                     <CardContent className="space-y-3 pt-0">
                       {/* Original observation text */}
-                      <div className="rounded-lg bg-white/70 border border-current/10 p-3">
+                      <div className="rounded-lg bg-card/70 border border-current/10 p-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Texto de la observación</p>
                         <p className="text-sm text-gray-800" style={{ whiteSpace: 'pre-wrap' }}>{obs.texto}</p>
                       </div>
@@ -447,13 +447,13 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
                           {(obs.queTePide || obs.comoSubsana) && (
                             <div className="grid gap-2 sm:grid-cols-2">
                               {obs.queTePide && (
-                                <div className="rounded-lg border border-[#1A3328]/10 bg-white/80 p-3">
+                                <div className="rounded-lg border border-[#1A3328]/10 bg-card/80 p-3">
                                   <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Qué te pide</p>
                                   <p className="text-sm leading-relaxed text-gray-800">{obs.queTePide}</p>
                                 </div>
                               )}
                               {obs.comoSubsana && (
-                                <div className="rounded-lg border border-[#1A3328]/10 bg-white/80 p-3">
+                                <div className="rounded-lg border border-[#1A3328]/10 bg-card/80 p-3">
                                   <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cómo se subsana</p>
                                   <p className="text-sm leading-relaxed text-gray-800">
                                     <TextoConCitas>{obs.comoSubsana}</TextoConCitas>
@@ -483,7 +483,7 @@ export default function ObservacionesPage({ params }: { params: Promise<{ id: st
                               )}
                             </Button>
                           </div>
-                          <div className="rounded-lg bg-white border border-[#1A3328]/10 p-3">
+                          <div className="rounded-lg bg-card border border-[#1A3328]/10 p-3">
                             <p className="text-sm text-gray-800 leading-relaxed" style={{ whiteSpace: 'pre-wrap' }}>
                               <TextoConCitas>{obs.respuestaGenerada}</TextoConCitas>
                             </p>

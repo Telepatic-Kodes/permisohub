@@ -207,7 +207,7 @@ export default function OnboardingPage() {
                   n === step &&
                     "border-[#1A3328] bg-[#1A3328] text-[#F9F7F3]",
                   n > step &&
-                    "border-border bg-white text-muted-foreground",
+                    "border-border bg-card text-muted-foreground",
                 )}
               >
                 {n < step ? <Check className="size-4" /> : n}
@@ -225,7 +225,7 @@ export default function OnboardingPage() {
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-border bg-white p-8 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
           {/* ----------------------------------------------------------------- */}
           {/* Paso 1 — Bienvenida */}
           {/* ----------------------------------------------------------------- */}

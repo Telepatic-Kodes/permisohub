@@ -88,7 +88,7 @@ export function ExpedienteWizard({ proyectoId, documentosIniciales, tipo, onComp
       </div>
 
       {step === 1 && (
-        <div className="space-y-4 rounded-xl border border-border bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+        <div className="space-y-4 rounded-xl border border-border bg-card p-5" style={{ boxShadow: "var(--shadow-card)" }}>
           <div>
             <p className="text-sm font-semibold text-primary">Paso 1 · Sube los documentos del expediente</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
@@ -113,7 +113,7 @@ export function ExpedienteWizard({ proyectoId, documentosIniciales, tipo, onComp
 
       {step === 2 && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-border bg-white p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+          <div className="rounded-xl border border-border bg-card p-5" style={{ boxShadow: "var(--shadow-card)" }}>
             <p className="text-sm font-semibold text-primary">Paso 2 · Genera y verifica el Due Diligence</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               La IA lee todos los documentos, detecta riesgos e inconsistencias y funda cada hallazgo en un

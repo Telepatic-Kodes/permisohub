@@ -54,7 +54,7 @@ export function StatsCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border bg-white pl-5 pr-5 py-5",
+        "relative overflow-hidden rounded-xl border bg-card pl-5 pr-5 py-5",
         s.border
       )}
       style={{ boxShadow: "var(--shadow-card)" }}

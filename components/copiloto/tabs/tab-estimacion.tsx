@@ -17,7 +17,7 @@ export function TabEstimacion({ data }: TabEstimacionProps) {
   return (
     <div className="space-y-4">
       {/* Plazo */}
-      <div className="rounded-xl border border-border bg-white p-4">
+      <div className="rounded-xl border border-border bg-card p-4">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Clock className="size-4 text-primary" />
           Plazo estimado
@@ -51,7 +51,7 @@ export function TabEstimacion({ data }: TabEstimacionProps) {
       </div>
 
       {/* Derechos */}
-      <div className="rounded-xl border border-border bg-white p-4">
+      <div className="rounded-xl border border-border bg-card p-4">
         <div className="flex items-center gap-2 text-sm font-medium">
           <DollarSign className="size-4 text-primary" />
           Derechos municipales

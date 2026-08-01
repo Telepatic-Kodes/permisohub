@@ -401,7 +401,7 @@ export default function PermisosPage() {
   return (
     <div className="flex min-h-screen flex-col">
       {/* Header */}
-      <header className="border-b border-border bg-white px-8 py-6">
+      <header className="border-b border-border bg-card px-8 py-6">
         <h1 className="text-xl font-semibold text-foreground">
           Permisos Municipales
         </h1>
@@ -416,7 +416,7 @@ export default function PermisosPage() {
           {KPIS.map(({ key, label, Icon, numberClass, iconClass }) => (
             <div
               key={key}
-              className="rounded-xl border border-border bg-white p-4"
+              className="rounded-xl border border-border bg-card p-4"
               style={{ boxShadow: "var(--shadow-card)" }}
             >
               <div className="flex items-center justify-between">
@@ -442,7 +442,7 @@ export default function PermisosPage() {
               className={cn(
                 "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                 filtro === value
-                  ? "bg-white text-primary shadow-sm"
+                  ? "bg-card text-primary shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -452,7 +452,7 @@ export default function PermisosPage() {
         </div>
 
         {/* Tabla */}
-        <div className="overflow-hidden rounded-xl border border-border bg-white">
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">

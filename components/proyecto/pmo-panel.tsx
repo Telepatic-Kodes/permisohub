@@ -218,10 +218,10 @@ export function PmoPanel({
                         className={cn(
                           "flex size-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors hover:opacity-80",
                           completed && "border-primary bg-primary text-white",
-                          current && "border-primary bg-white text-primary",
+                          current && "border-primary bg-card text-primary",
                           !completed &&
                             !current &&
-                            "border-border bg-white text-muted-foreground",
+                            "border-border bg-card text-muted-foreground",
                         )}
                       >
                         {completed ? (

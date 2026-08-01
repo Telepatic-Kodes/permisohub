@@ -173,7 +173,7 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
                   {result.ajustesProyecto.map((a, idx) => (
                     <li
                       key={`${a.elemento}-${idx}`}
-                      className="rounded-lg border border-amber-200 bg-white p-3"
+                      className="rounded-lg border border-amber-200 bg-card p-3"
                     >
                       <p className="text-sm font-semibold text-amber-900">{a.elemento}</p>
                       <p className="mt-1 flex items-start gap-1.5 text-sm text-foreground/80">
@@ -223,7 +223,7 @@ export function AsesorVia({ proyectoId }: { proyectoId: string }) {
                         >
                           Costo {via.costoRelativo}
                         </span>
-                        <span className="rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                        <span className="rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                           {via.tiempoEstimado}
                         </span>
                       </div>

@@ -45,7 +45,7 @@ export function TabObservaciones({ data }: TabObservacionesProps) {
 
       <div className="space-y-3">
         {data.predicciones.map((pred, idx) => (
-          <div key={idx} className="rounded-xl border border-border bg-white p-4">
+          <div key={idx} className="rounded-xl border border-border bg-card p-4">
             <div className="flex items-start justify-between gap-2">
               <p className="text-sm font-medium">{pred.categoria}</p>
               <div className="flex shrink-0 items-center gap-1.5">

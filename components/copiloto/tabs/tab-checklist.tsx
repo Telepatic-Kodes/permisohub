@@ -67,7 +67,7 @@ export function TabChecklist({ data, onToggle }: TabChecklistProps) {
               disabled={toggling === item.item_key}
               className={cn(
                 'flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-muted/30',
-                isDone ? 'border-green-200 bg-green-50/50' : 'border-border bg-white',
+                isDone ? 'border-green-200 bg-green-50/50' : 'border-border bg-card',
                 toggling === item.item_key && 'opacity-60',
               )}
             >

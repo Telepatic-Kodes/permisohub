@@ -130,7 +130,7 @@ export default function ProspectoDetallePage({
           <ArrowLeft className="size-4" />
           Prospectos
         </Link>
-        <div className="rounded-xl border border-gray-100 bg-white p-10 text-center text-sm text-muted-foreground shadow-sm">
+        <div className="rounded-xl border border-gray-100 bg-card p-10 text-center text-sm text-muted-foreground shadow-sm">
           No se encontró el prospecto.
         </div>
       </div>

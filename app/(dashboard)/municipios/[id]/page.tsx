@@ -70,7 +70,7 @@ export default async function MunicipioDetallePage({
   return (
     <div className="flex min-h-screen flex-col">
       {/* Header */}
-      <div className="border-b border-border bg-white px-6 py-5">
+      <div className="border-b border-border bg-card px-6 py-5">
         <div className="flex items-center gap-2 mb-3">
           <Link href="/municipios" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
             <ArrowLeft className="size-3.5" />
@@ -100,7 +100,7 @@ export default async function MunicipioDetallePage({
                 href={comuna.urlDom}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-primary hover:border-primary/30 hover:shadow-sm transition-all"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-primary hover:border-primary/30 hover:shadow-sm transition-all"
               >
                 <Globe className="size-3.5" />
                 Abrir DOM en Línea
@@ -109,7 +109,7 @@ export default async function MunicipioDetallePage({
             )}
             <Link
               href={`/herramientas/calculadora?municipio=${encodeURIComponent(comuna.nombre)}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-primary hover:border-primary/30 hover:shadow-sm transition-all"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-primary hover:border-primary/30 hover:shadow-sm transition-all"
             >
               <Calculator className="size-3.5" />
               Calcular derechos
@@ -131,7 +131,7 @@ export default async function MunicipioDetallePage({
             <Link
               key={label}
               href={href}
-              className="flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-3 text-[11.5px] font-medium text-primary hover:border-primary/20 hover:bg-[#F9F7F3] transition-all group"
+              className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-3 text-[11.5px] font-medium text-primary hover:border-primary/20 hover:bg-[#F9F7F3] transition-all group"
             >
               <Icon className="size-3.5 text-primary/50 group-hover:text-primary transition-colors shrink-0" />
               {label}
@@ -170,7 +170,7 @@ export default async function MunicipioDetallePage({
                   { label: "Primera respuesta",    value: `${intel.tiempoRespuestaPromedio}d`, color: "text-blue-600" },
                   { label: "Tiempo aprobación",    value: `${intel.tiempoAprobacionPromedio}d`, color: "text-primary" },
                 ].map(({ label, value, color }) => (
-                  <div key={label} className="rounded-xl border border-border bg-white p-4 text-center">
+                  <div key={label} className="rounded-xl border border-border bg-card p-4 text-center">
                     <p className={cn("text-2xl font-semibold tabular-nums", color)}>{value}</p>
                     <p className="mt-1 text-[10px] text-muted-foreground leading-tight">{label}</p>
                   </div>
@@ -179,7 +179,7 @@ export default async function MunicipioDetallePage({
             </div>
 
             {/* Observaciones frecuentes */}
-            <div className="rounded-xl border border-border bg-white p-5">
+            <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="size-3.5 text-primary/60" />
                 <p className="text-xs font-semibold text-primary">Observaciones más frecuentes</p>
@@ -225,7 +225,7 @@ export default async function MunicipioDetallePage({
 
             {/* Consejos */}
             {intel.consejos.length > 0 && (
-              <div className="rounded-xl border border-border bg-white p-5">
+              <div className="rounded-xl border border-border bg-card p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Lightbulb className="size-3.5 text-amber-500" />
                   <p className="text-xs font-semibold text-primary">Consejos prácticos para {comuna.nombre}</p>
@@ -295,7 +295,7 @@ export default async function MunicipioDetallePage({
                     </p>
                     <div className="space-y-2">
                       {intel.planRegulador.seccionales.map((sec) => (
-                        <div key={sec.codigo} className="rounded-lg border border-indigo-100 bg-white p-3.5 space-y-1.5">
+                        <div key={sec.codigo} className="rounded-lg border border-indigo-100 bg-card p-3.5 space-y-1.5">
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-[9px] font-bold text-indigo-700 mr-1.5">
@@ -332,7 +332,7 @@ export default async function MunicipioDetallePage({
           </>
         ) : (
           /* No intel — placeholder */
-          <div className="rounded-xl border border-border bg-white p-8 text-center">
+          <div className="rounded-xl border border-border bg-card p-8 text-center">
             <BarChart3 className="mx-auto size-8 text-muted-foreground/20 mb-3" />
             <p className="text-sm font-medium text-primary">Sin datos de inteligencia DOM aún</p>
             <p className="mt-1 text-xs text-muted-foreground/70 max-w-sm mx-auto leading-relaxed">

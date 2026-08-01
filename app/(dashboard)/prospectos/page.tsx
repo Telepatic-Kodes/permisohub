@@ -100,7 +100,7 @@ function proximoColor(value?: string) {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-gray-100 bg-card p-4 shadow-sm">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-semibold tracking-tight text-[#1A3328]">
         {value}
@@ -114,7 +114,7 @@ function ProspectoCard({ prospecto }: { prospecto: Prospecto }) {
   return (
     <Link
       href={`/prospectos/${prospecto.id}`}
-      className="block rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition-colors hover:bg-[#F0EBE1]"
+      className="block rounded-xl border border-gray-100 bg-card p-3 shadow-sm transition-colors hover:bg-[#F0EBE1]"
     >
       <p className="text-sm font-semibold text-[#1A3328]">{prospecto.empresa}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">
@@ -346,7 +346,7 @@ export default function ProspectosPage() {
         subtitle="Seguimiento de oportunidades y prospectos"
         action={
           <div className="flex items-center gap-2">
-            <div className="flex rounded-lg border border-gray-100 bg-white p-0.5 shadow-sm">
+            <div className="flex rounded-lg border border-gray-100 bg-card p-0.5 shadow-sm">
               <button
                 type="button"
                 onClick={() => setView("pipeline")}
@@ -500,7 +500,7 @@ export default function ProspectosPage() {
                   <Link
                     key={p.id}
                     href={`/prospectos/${p.id}`}
-                    className="flex items-center justify-between rounded-lg bg-white px-3 py-2 shadow-sm transition-colors hover:bg-[#F0EBE1]"
+                    className="flex items-center justify-between rounded-lg bg-card px-3 py-2 shadow-sm transition-colors hover:bg-[#F0EBE1]"
                   >
                     <div>
                       <p className="text-sm font-medium text-primary">
@@ -535,7 +535,7 @@ export default function ProspectosPage() {
                   <Link
                     key={p.id}
                     href={`/prospectos/${p.id}`}
-                    className="flex items-center justify-between rounded-lg bg-white px-3 py-2 shadow-sm transition-colors hover:bg-[#F0EBE1]"
+                    className="flex items-center justify-between rounded-lg bg-card px-3 py-2 shadow-sm transition-colors hover:bg-[#F0EBE1]"
                   >
                     <div>
                       <p className="text-sm font-medium text-primary">
@@ -557,7 +557,7 @@ export default function ProspectosPage() {
           ) : (
             <div className="space-y-4">
               {/* Tabla */}
-              <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+              <div className="rounded-xl border border-gray-100 bg-card shadow-sm">
                 <Table>
                   <TableHeader>
                     <TableRow>

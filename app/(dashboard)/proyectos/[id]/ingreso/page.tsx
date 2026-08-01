@@ -246,7 +246,7 @@ export default function IngresoPage({
                       className={`w-full flex items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
                         checked
                           ? 'border-[#1A3328]/30 bg-[#1A3328]/5'
-                          : 'border-border bg-white hover:border-[#1A3328]/20'
+                          : 'border-border bg-card hover:border-[#1A3328]/20'
                       }`}
                     >
                       {checked ? (

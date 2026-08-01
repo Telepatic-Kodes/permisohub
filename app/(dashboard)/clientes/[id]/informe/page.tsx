@@ -135,7 +135,7 @@ export default function InformeClientePage({
       `}</style>
 
       {/* Screen-only top bar */}
-      <div className="no-print sticky top-0 z-10 -mx-6 -mt-6 mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-white/90 px-6 py-3 backdrop-blur">
+      <div className="no-print sticky top-0 z-10 -mx-6 -mt-6 mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card/90 px-6 py-3 backdrop-blur">
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-[#1A3328]">
             EP Gestión Arquitectónica — Informe cliente

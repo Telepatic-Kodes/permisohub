@@ -170,7 +170,7 @@ export default function ClientesPage() {
       />
 
       <div className="flex-1 overflow-auto p-8">
-        <div className="rounded-xl border border-border bg-white">
+        <div className="rounded-xl border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>

@@ -225,7 +225,7 @@ export function CommandPalette() {
 
       {/* Panel */}
       <div
-        className="relative w-full max-w-[560px] mx-4 rounded-xl border border-border bg-white overflow-hidden"
+        className="relative w-full max-w-[560px] mx-4 rounded-xl border border-border bg-card overflow-hidden"
         style={{ boxShadow: "var(--shadow-elevated)" }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}

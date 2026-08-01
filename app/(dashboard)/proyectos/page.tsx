@@ -329,7 +329,7 @@ export default function ProyectosPage() {
                   className={cn(
                     "flex items-center justify-center rounded-md p-1.5 transition-colors",
                     view === mode
-                      ? "bg-white text-primary shadow-sm"
+                      ? "bg-card text-primary shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >

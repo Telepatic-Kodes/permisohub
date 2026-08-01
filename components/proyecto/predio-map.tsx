@@ -41,7 +41,7 @@ export function PredioMap({ direccion, municipio, lat, lng, className }: PredioM
           href={mapsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-foreground shadow-sm hover:bg-white transition-colors"
+          className="absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-card/90 px-2 py-1 text-xs font-medium text-foreground shadow-sm hover:bg-card transition-colors"
         >
           <ExternalLink className="size-3" />
           Ver en Google Maps
