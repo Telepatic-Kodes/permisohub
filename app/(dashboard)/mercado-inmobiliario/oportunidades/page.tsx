@@ -4,7 +4,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { obtenerOportunidadesMercadoLocales } from "@/lib/mercado-locales-server"
-import type { OperacionMercadoLocal } from "@/lib/scrapers/mercado-locales-common"
+import { TIPO_PROPIEDAD_LABEL, type OperacionMercadoLocal, type TipoPropiedadComercial } from "@/lib/scrapers/mercado-locales-common"
+
+const TIPOS_PROPIEDAD_VALIDOS: TipoPropiedadComercial[] = ["local_comercial", "oficina", "bodega", "industrial"]
 
 export const dynamic = "force-dynamic"
 
@@ -19,18 +21,21 @@ function formatUf(n: number): string {
 }
 
 interface OportunidadesPageProps {
-  searchParams: Promise<{ comuna?: string; operacion?: string }>
+  searchParams: Promise<{ comuna?: string; operacion?: string; tipoPropiedad?: string }>
 }
 
 export default async function OportunidadesPage({ searchParams }: OportunidadesPageProps) {
-  const { comuna, operacion: operacionRaw } = await searchParams
+  const { comuna, operacion: operacionRaw, tipoPropiedad: tipoPropiedadRaw } = await searchParams
   const operacion: OperacionMercadoLocal = operacionRaw === "venta" ? "venta" : "arriendo"
+  const tipoPropiedad: TipoPropiedadComercial = TIPOS_PROPIEDAD_VALIDOS.includes(tipoPropiedadRaw as TipoPropiedadComercial)
+    ? (tipoPropiedadRaw as TipoPropiedadComercial)
+    : "local_comercial"
 
   let oportunidades: Awaited<ReturnType<typeof obtenerOportunidadesMercadoLocales>> = []
   let errorMsg: string | null = null
 
   try {
-    oportunidades = await obtenerOportunidadesMercadoLocales(operacion, { comuna: comuna || undefined, limit: 30 })
+    oportunidades = await obtenerOportunidadesMercadoLocales(operacion, { comuna: comuna || undefined, limit: 30, tipoPropiedad })
   } catch {
     errorMsg = "No se pudieron cargar las oportunidades — intenta de nuevo en unos minutos."
   }
@@ -52,6 +57,18 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
                 <div className="flex-1 min-w-[160px] space-y-1.5">
                   <label className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">Comuna</label>
                   <Input name="comuna" placeholder="opcional — ej: Providencia" defaultValue={comuna ?? ""} />
+                </div>
+                <div className="flex-1 min-w-[160px] space-y-1.5">
+                  <label className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">Tipo de propiedad</label>
+                  <select
+                    name="tipoPropiedad"
+                    defaultValue={tipoPropiedad}
+                    className="flex h-9 w-full rounded-[4px] border border-line-fine bg-card px-3 py-1 text-sm"
+                  >
+                    {TIPOS_PROPIEDAD_VALIDOS.map((t) => (
+                      <option key={t} value={t}>{TIPO_PROPIEDAD_LABEL[t].singular}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex-1 min-w-[160px] space-y-1.5">
                   <label className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">Operación</label>

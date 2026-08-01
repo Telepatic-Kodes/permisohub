@@ -3,8 +3,10 @@ import { obtenerValorUF } from '@/lib/scrapers/terrenos-common'
 import {
   MERCADO_LOCALES_COMUNA_SLUGS,
   upsertMercadoLocalesDesdeListado,
+  TIPO_PROPIEDAD_DEFAULT,
   type OperacionMercadoLocal,
   type MercadoLocalListadoRaw,
+  type TipoPropiedadComercial,
 } from '@/lib/scrapers/mercado-locales-common'
 
 // ---------------------------------------------------------------------------
@@ -15,8 +17,26 @@ import {
 // a diferencia de correrDescubrimientoTerrenos.
 // ---------------------------------------------------------------------------
 
-const TIPO_PROPIEDAD = 'local_comercial'
 const OPERACIONES: OperacionMercadoLocal[] = ['arriendo', 'venta']
+
+// Fase 7 (ago. 2026): la cobertura de comunas pasó de 16 a 36 (ver
+// MERCADO_LOCALES_COMUNA_SLUGS) — con el loop secuencial original, el peor
+// caso (varias comunas lentas agotando el timeout de 20s del fetch) podía
+// superar el maxDuration=180s de la función serverless del cron. CONCURRENCIA
+// acota el paralelismo real de comuna×operación por tanda, para mantener el
+// tiempo total dentro del presupuesto sin lanzar todas las requests a la vez
+// (que se vería como ráfaga ante Portalinmobiliario, sin rate-limiting propio
+// documentado — ver hallazgo del benchmark de Fase 7).
+const CONCURRENCIA = 10
+
+async function enTandas<T, R>(items: T[], tamanoTanda: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const resultados: R[] = []
+  for (let i = 0; i < items.length; i += tamanoTanda) {
+    const tanda = items.slice(i, i + tamanoTanda)
+    resultados.push(...(await Promise.all(tanda.map(fn))))
+  }
+  return resultados
+}
 
 // Bajo este tamaño de muestra, los percentiles de la comuna son demasiado
 // ruidosos para confiar en ellos — el path de lectura cae al rollup
@@ -45,6 +65,7 @@ export async function correrDescubrimientoMercadoLocales(
   buscarLocalesComerciales: (comuna: string, operacion: OperacionMercadoLocal) => Promise<MercadoLocalListadoRaw[]>,
 ): Promise<ResultadoDescubrimientoMercadoLocales> {
   const comunas = Object.keys(MERCADO_LOCALES_COMUNA_SLUGS)
+  const pares = comunas.flatMap((comuna) => OPERACIONES.map((operacion) => ({ comuna, operacion })))
   const resultado: ResultadoDescubrimientoMercadoLocales = {
     comunasBuscadas: 0,
     encontrados: 0,
@@ -53,22 +74,20 @@ export async function correrDescubrimientoMercadoLocales(
     errors: [],
   }
 
-  for (const comuna of comunas) {
-    for (const operacion of OPERACIONES) {
-      resultado.comunasBuscadas++
-      try {
-        const items = await buscarLocalesComerciales(comuna, operacion)
-        resultado.encontrados += items.length
-        if (items.length === 0) continue
+  await enTandas(pares, CONCURRENCIA, async ({ comuna, operacion }) => {
+    resultado.comunasBuscadas++
+    try {
+      const items = await buscarLocalesComerciales(comuna, operacion)
+      resultado.encontrados += items.length
+      if (items.length === 0) return
 
-        const summary = await upsertMercadoLocalesDesdeListado(comuna, operacion, items)
-        resultado.guardados += summary.nuevos + summary.actualizados
-        resultado.dadosDeBaja += summary.dadosDeBaja
-      } catch (err) {
-        resultado.errors.push(`${comuna}/${operacion}: ${err instanceof Error ? err.message : String(err)}`)
-      }
+      const summary = await upsertMercadoLocalesDesdeListado(comuna, operacion, items)
+      resultado.guardados += summary.nuevos + summary.actualizados
+      resultado.dadosDeBaja += summary.dadosDeBaja
+    } catch (err) {
+      resultado.errors.push(`${comuna}/${operacion}: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }
+  })
 
   return resultado
 }
@@ -78,50 +97,105 @@ export async function correrDescubrimientoMercadoLocales(
  * comuna×operación cubierta, más un rollup citywide '__TODAS__' por
  * operación — llama a la función SQL calcular_bandas_mercado_locales() vía
  * RPC (percentile_cont no tiene equivalente directo en supabase-js).
+ *
+ * Fase 8: acepta tipoPropiedad/comunas opcionales para reusar esta misma
+ * función desde el cron de tipos adicionales (oficina/bodega/industrial) sin
+ * duplicar la lógica — el cron diario original la sigue llamando sin opts,
+ * comportamiento idéntico (local_comercial, las 36 comunas).
  */
-export async function computarYPersistirBandasMercadoLocales(ufHoy: number): Promise<{ filasEscritas: number }> {
+export async function computarYPersistirBandasMercadoLocales(
+  ufHoy: number,
+  opts: { tipoPropiedad?: TipoPropiedadComercial; comunas?: string[] } = {},
+): Promise<{ filasEscritas: number }> {
   const supabase = createServiceClient()
   const statsDate = hoyIso()
-  const comunas = Object.keys(MERCADO_LOCALES_COMUNA_SLUGS)
+  const tipoPropiedad = opts.tipoPropiedad ?? TIPO_PROPIEDAD_DEFAULT
+  const comunas = opts.comunas ?? Object.keys(MERCADO_LOCALES_COMUNA_SLUGS)
 
-  let filasEscritas = 0
-  for (const operacion of OPERACIONES) {
-    const targets: (string | null)[] = [...comunas, null] // null → rollup '__TODAS__'
-    for (const comuna of targets) {
-      const { data, error } = await supabase.rpc('calcular_bandas_mercado_locales', {
-        p_comuna: comuna,
-        p_operacion: operacion,
-        p_uf_valor: ufHoy,
-      })
-      if (error) throw new Error(`calcular_bandas_mercado_locales falló para ${comuna ?? '__TODAS__'}/${operacion}: ${error.message}`)
+  const targets = OPERACIONES.flatMap((operacion) =>
+    [...comunas, null].map((comuna) => ({ comuna, operacion })), // null → rollup '__TODAS__'
+  )
 
-      const raw = Array.isArray(data) ? data[0] : data
+  const resultados = await enTandas(targets, CONCURRENCIA, async ({ comuna, operacion }) => {
+    const { data, error } = await supabase.rpc('calcular_bandas_mercado_locales', {
+      p_comuna: comuna,
+      p_operacion: operacion,
+      p_uf_valor: ufHoy,
+      p_tipo_propiedad: tipoPropiedad,
+    })
+    if (error) throw new Error(`calcular_bandas_mercado_locales falló para ${comuna ?? '__TODAS__'}/${operacion}/${tipoPropiedad}: ${error.message}`)
 
-      const { error: upsertError } = await supabase.from('mercado_locales_stats_diarias').upsert(
-        {
-          stats_date: statsDate,
-          comuna: comuna ?? '__TODAS__',
-          tipo_propiedad: TIPO_PROPIEDAD,
-          operacion,
-          muestra_n: raw?.muestra_n ?? 0,
-          mediana_uf: raw?.mediana_uf ?? null,
-          p25_uf: raw?.p25_uf ?? null,
-          p75_uf: raw?.p75_uf ?? null,
-          muestra_area_n: raw?.muestra_area_n ?? 0,
-          mediana_uf_m2: raw?.mediana_uf_m2 ?? null,
-          p25_uf_m2: raw?.p25_uf_m2 ?? null,
-          p75_uf_m2: raw?.p75_uf_m2 ?? null,
-          uf_valor_usado: ufHoy,
-          capturado_el: new Date().toISOString(),
-        },
-        { onConflict: 'stats_date,comuna,tipo_propiedad,operacion', ignoreDuplicates: false },
-      )
-      if (upsertError) throw new Error(`upsert de mercado_locales_stats_diarias falló: ${upsertError.message}`)
-      filasEscritas++
-    }
+    const raw = Array.isArray(data) ? data[0] : data
+
+    const { error: upsertError } = await supabase.from('mercado_locales_stats_diarias').upsert(
+      {
+        stats_date: statsDate,
+        comuna: comuna ?? '__TODAS__',
+        tipo_propiedad: tipoPropiedad,
+        operacion,
+        muestra_n: raw?.muestra_n ?? 0,
+        mediana_uf: raw?.mediana_uf ?? null,
+        p25_uf: raw?.p25_uf ?? null,
+        p75_uf: raw?.p75_uf ?? null,
+        muestra_area_n: raw?.muestra_area_n ?? 0,
+        mediana_uf_m2: raw?.mediana_uf_m2 ?? null,
+        p25_uf_m2: raw?.p25_uf_m2 ?? null,
+        p75_uf_m2: raw?.p75_uf_m2 ?? null,
+        uf_valor_usado: ufHoy,
+        capturado_el: new Date().toISOString(),
+      },
+      { onConflict: 'stats_date,comuna,tipo_propiedad,operacion', ignoreDuplicates: false },
+    )
+    if (upsertError) throw new Error(`upsert de mercado_locales_stats_diarias falló: ${upsertError.message}`)
+    return 1
+  })
+
+  return { filasEscritas: resultados.reduce((a, b) => a + b, 0) }
+}
+
+/**
+ * Fase 8: busca oficina/bodega/industrial para las comunas indicadas ×
+ * ambas operaciones, y hace upsert — mismo patrón de tandas concurrentes que
+ * correrDescubrimientoMercadoLocales, corre desde un cron/ruta separado para
+ * no sumar su presupuesto de tiempo/requests al del cron original de
+ * local_comercial.
+ */
+export async function correrDescubrimientoTiposComercialesAdicionales(
+  comunas: string[],
+  tipos: TipoPropiedadComercial[],
+  buscarPropiedadComercial: (
+    comuna: string,
+    operacion: OperacionMercadoLocal,
+    tipoPropiedad: TipoPropiedadComercial,
+  ) => Promise<MercadoLocalListadoRaw[]>,
+): Promise<ResultadoDescubrimientoMercadoLocales> {
+  const pares = tipos.flatMap((tipoPropiedad) =>
+    comunas.flatMap((comuna) => OPERACIONES.map((operacion) => ({ comuna, operacion, tipoPropiedad }))),
+  )
+  const resultado: ResultadoDescubrimientoMercadoLocales = {
+    comunasBuscadas: 0,
+    encontrados: 0,
+    guardados: 0,
+    dadosDeBaja: 0,
+    errors: [],
   }
 
-  return { filasEscritas }
+  await enTandas(pares, CONCURRENCIA, async ({ comuna, operacion, tipoPropiedad }) => {
+    resultado.comunasBuscadas++
+    try {
+      const items = await buscarPropiedadComercial(comuna, operacion, tipoPropiedad)
+      resultado.encontrados += items.length
+      if (items.length === 0) return
+
+      const summary = await upsertMercadoLocalesDesdeListado(comuna, operacion, items, tipoPropiedad)
+      resultado.guardados += summary.nuevos + summary.actualizados
+      resultado.dadosDeBaja += summary.dadosDeBaja
+    } catch (err) {
+      resultado.errors.push(`${comuna}/${operacion}/${tipoPropiedad}: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  })
+
+  return resultado
 }
 
 export interface BandasMercadoLocal {
@@ -183,6 +257,7 @@ function aBandas(fila: FilaStats, usoFallback: boolean, muestraNComuna: number):
 export async function obtenerBandasMercadoLocales(
   comuna: string,
   operacion: OperacionMercadoLocal,
+  tipoPropiedad: TipoPropiedadComercial = TIPO_PROPIEDAD_DEFAULT,
 ): Promise<BandasMercadoLocal | null> {
   const supabase = createServiceClient()
 
@@ -191,7 +266,7 @@ export async function obtenerBandasMercadoLocales(
     .select('*')
     .eq('comuna', comuna)
     .eq('operacion', operacion)
-    .eq('tipo_propiedad', TIPO_PROPIEDAD)
+    .eq('tipo_propiedad', tipoPropiedad)
     .order('stats_date', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -205,7 +280,7 @@ export async function obtenerBandasMercadoLocales(
     .select('*')
     .eq('comuna', '__TODAS__')
     .eq('operacion', operacion)
-    .eq('tipo_propiedad', TIPO_PROPIEDAD)
+    .eq('tipo_propiedad', tipoPropiedad)
     .order('stats_date', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -236,16 +311,17 @@ export interface OportunidadMercadoLocal {
  */
 export async function obtenerOportunidadesMercadoLocales(
   operacion: OperacionMercadoLocal,
-  opts: { comuna?: string; limit?: number } = {},
+  opts: { comuna?: string; limit?: number; tipoPropiedad?: TipoPropiedadComercial } = {},
 ): Promise<OportunidadMercadoLocal[]> {
   const limit = opts.limit ?? 30
+  const tipoPropiedad = opts.tipoPropiedad ?? TIPO_PROPIEDAD_DEFAULT
   const supabase = createServiceClient()
 
   const { data: cohortRows } = await supabase
     .from('mercado_locales_stats_diarias')
     .select('*')
     .eq('operacion', operacion)
-    .eq('tipo_propiedad', TIPO_PROPIEDAD)
+    .eq('tipo_propiedad', tipoPropiedad)
 
   const latestByComuna = new Map<string, FilaStats>()
   for (const row of (cohortRows ?? []) as FilaStats[]) {
@@ -259,7 +335,7 @@ export async function obtenerOportunidadesMercadoLocales(
     .select('id, titulo, url, comuna, precio_monto, precio_moneda, superficie_m2')
     .eq('status', 'activo')
     .eq('operacion', operacion)
-    .eq('tipo_propiedad', TIPO_PROPIEDAD)
+    .eq('tipo_propiedad', tipoPropiedad)
   if (opts.comuna) listingsQuery = listingsQuery.eq('comuna', opts.comuna)
 
   const { data: activeListings } = await listingsQuery

@@ -3,7 +3,11 @@ import { type TerrenoListadoRaw, PRECIO_CLP_MINIMO_PLAUSIBLE, obtenerValorUF, no
 import {
   type MercadoLocalListadoRaw,
   type OperacionMercadoLocal,
+  type TipoPropiedadComercial,
   MERCADO_LOCALES_COMUNA_SLUGS,
+  TIPO_PROPIEDAD_PORTAL_PATH,
+  TIPO_PROPIEDAD_DEFAULT,
+  precioMercadoLocalEsPlausible,
 } from './mercado-locales-common'
 
 // ---------------------------------------------------------------------------
@@ -246,17 +250,23 @@ function parseCardMercadoLocal(
   const headlineMatch = cardHtml.match(/poly-component__headline">([^<]+)</)
   const ubicacionMatch = cardHtml.match(/poly-component__location">([^<]+)</)
 
+  // precio_moneda solo se persiste si viene normalizado a UF/CLP — cualquier
+  // otra unidad (USD, u otra que MELI muestre) queda sin precio_moneda en
+  // vez de forzar un valor que la BD rechazaría. Además, un precio
+  // normalizado que no pasa el piso de plausibilidad (ver
+  // precioMercadoLocalEsPlausible) también queda en null — mismo criterio:
+  // sin dato verificable, no un número inventado.
+  const monedaNormalizada = precio && (precio.moneda === 'UF' || precio.moneda === 'CLP') ? precio.moneda : null
+  const precioPlausible = precio && monedaNormalizada && precioMercadoLocalEsPlausible(precio.monto, monedaNormalizada, operacion)
+
   return {
     fuente: 'portalinmobiliario',
     fuenteId,
     url,
     titulo,
     operacion,
-    precioMonto: precio?.monto ?? null,
-    // precio_moneda solo se persiste si viene normalizado a UF/CLP —
-    // cualquier otra unidad (USD, u otra que MELI muestre) queda sin
-    // precio_moneda en vez de forzar un valor que la BD rechazaría.
-    precioMoneda: precio && (precio.moneda === 'UF' || precio.moneda === 'CLP') ? precio.moneda : null,
+    precioMonto: precioPlausible ? precio!.monto : null,
+    precioMoneda: precioPlausible ? monedaNormalizada : null,
     superficieM2,
     atributosRaw: {
       headline: headlineMatch ? decodeEntitiesMercadoLocal(headlineMatch[1]) : null,
@@ -266,14 +276,24 @@ function parseCardMercadoLocal(
 }
 
 /**
- * Busca locales comerciales (arriendo o venta) publicados en
+ * Busca propiedades comerciales (arriendo o venta) publicadas en
  * Portalinmobiliario para una comuna cubierta por
- * MERCADO_LOCALES_COMUNA_SLUGS. Nunca lanza — cualquier fallo degrada a `[]`
- * + console.warn, igual que buscarTerrenos.
+ * MERCADO_LOCALES_COMUNA_SLUGS, para el tipo de propiedad indicado (default
+ * local_comercial, preservando el comportamiento original de esta función
+ * para el cron diario existente). Nunca lanza — cualquier fallo degrada a
+ * `[]` + console.warn, igual que buscarTerrenos.
+ *
+ * Fase 8: el segmento de URL cambia según tipoPropiedad
+ * (TIPO_PROPIEDAD_PORTAL_PATH) — verificado en vivo que oficina/bodega/
+ * industrial son sub-categorías con su propio segmento (`/oficina/`, etc.),
+ * a diferencia de local_comercial que vive bajo el segmento genérico
+ * `/comercial/` y necesita el query param ?PROPERTY_TYPE= explícito para no
+ * traer las demás sub-categorías mezcladas.
  */
 export async function buscarLocalesComerciales(
   comuna: string,
   operacion: OperacionMercadoLocal,
+  tipoPropiedad: TipoPropiedadComercial = TIPO_PROPIEDAD_DEFAULT,
 ): Promise<MercadoLocalListadoRaw[]> {
   const slug = MERCADO_LOCALES_COMUNA_SLUGS[comuna]
   if (!slug) {
@@ -282,11 +302,13 @@ export async function buscarLocalesComerciales(
   }
 
   try {
-    const url = `https://www.portalinmobiliario.com/${operacion}/comercial/${slug}-metropolitana?PROPERTY_TYPE=${LOCALES_PROPERTY_TYPE_ID}`
+    const pathSegment = TIPO_PROPIEDAD_PORTAL_PATH[tipoPropiedad]
+    const queryParam = tipoPropiedad === 'local_comercial' ? `?PROPERTY_TYPE=${LOCALES_PROPERTY_TYPE_ID}` : ''
+    const url = `https://www.portalinmobiliario.com/${operacion}/${pathSegment}/${slug}-metropolitana${queryParam}`
     const res = await fetchWithTimeout(url, {}, 20_000)
 
     if (!res.ok) {
-      console.warn(`[portalinmobiliario] HTTP ${res.status} para locales comerciales en "${comuna}" (${operacion}) — se omite esta corrida`)
+      console.warn(`[portalinmobiliario] HTTP ${res.status} para ${tipoPropiedad} en "${comuna}" (${operacion}) — se omite esta corrida`)
       return []
     }
 
@@ -308,7 +330,7 @@ export async function buscarLocalesComerciales(
 
     return items
   } catch (err) {
-    console.warn(`[portalinmobiliario] Error al buscar locales comerciales en "${comuna}" (${operacion}):`, err instanceof Error ? err.message : err)
+    console.warn(`[portalinmobiliario] Error al buscar ${tipoPropiedad} en "${comuna}" (${operacion}):`, err instanceof Error ? err.message : err)
     return []
   }
 }

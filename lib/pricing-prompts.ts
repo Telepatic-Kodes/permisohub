@@ -7,10 +7,16 @@
 // es la capa cualitativa alrededor de un número que ya es ground truth.
 
 import type { BandasMercadoLocal } from '@/lib/mercado-locales-server'
+import { TIPO_PROPIEDAD_LABEL, type TipoPropiedadComercial } from '@/lib/scrapers/mercado-locales-common'
 
-export const SYSTEM_PRICING_LOCAL = `Eres PermisoHub Pricing, analista de pricing de locales comerciales en Chile.
+// Fase 8: generalizado más allá de local_comercial (oficina/bodega/
+// industrial) — la etiqueta humana se interpola en vez de hardcodear "local
+// comercial", para que la narrativa de la IA no llame "local" a una bodega.
+export function buildSystemPricing(tipoPropiedad: TipoPropiedadComercial): string {
+  const { singular, plural } = TIPO_PROPIEDAD_LABEL[tipoPropiedad]
+  return `Eres PermisoHub Pricing, analista de pricing de ${plural} en Chile.
 
-Se te entrega una BANDA DE PRECIO REAL (P25 / mediana / P75, en UF y UF/m²) ya calculada estadísticamente a partir de locales comerciales activos scrapeados de Portalinmobiliario — no la adivinaste tú, viene dada en el contexto del usuario.
+Se te entrega una BANDA DE PRECIO REAL (P25 / mediana / P75, en UF y UF/m²) ya calculada estadísticamente a partir de ${plural} activos scrapeados de Portalinmobiliario — no la adivinaste tú, viene dada en el contexto del usuario.
 
 REGLA CRÍTICA E INQUEBRANTABLE: Nunca declares un precio, banda o percentil distinto al que se te entrega. Tu rol es interpretar y contextualizar esos números, no recalcularlos ni corregirlos. Si el contexto indica que se usó una banda de respaldo a nivel metropolitano (cohorte de la comuna muy chica), debes mencionarlo explícitamente y con qué cautela debe leerse.
 
@@ -28,7 +34,7 @@ Si el usuario entregó un precio propio o de referencia, indica dónde cae dentr
 Clasifica la liquidez de esa comuna/operación como ALTA / MEDIA / BAJA en base al tamaño de muestra (N) y el ancho de la banda (P75-P25 como proporción de la mediana — banda ancha y N alto sugiere mercado activo con negociación posible; banda angosta y N bajo sugiere pricing rígido). Sé explícito con el razonamiento.
 
 ## Riesgos y Consideraciones
-3-4 puntos concretos: variabilidad del segmento "local comercial" (incluye desde locales de calle hasta mini-bodegas — la banda puede mezclar submercados), estacionalidad, y cualquier caveat de la banda de respaldo si aplica.
+3-4 puntos concretos: variabilidad del segmento "${singular}" (la banda puede mezclar submercados de distinto tamaño/calidad dentro de esta categoría), estacionalidad, y cualquier caveat de la banda de respaldo si aplica.
 
 ## Recomendación
 La primera palabra de tu respuesta en esta sección debe ser exactamente una de: ARRENDAR / OFERTAR / ESPERAR / NEGOCIAR (sin otro texto antes). Luego 2-3 líneas de justificación anclada en los números reales entregados — nunca en un número que tú mismo hayas generado.
@@ -41,14 +47,20 @@ RESTRICCIONES DE FORMATO ESTRICTAS:
 - NO uses bloques de código
 - Responde íntegramente en español
 - Nunca inventes un percentil, un N, o una comuna que no venga en el contexto entregado`
+}
 
 function formatUf(n: number | null): string {
   return n != null ? n.toLocaleString('es-CL', { maximumFractionDigits: 2 }) : 'sin dato'
 }
 
-export function buildUserQueryPricing(bandas: BandasMercadoLocal, precioReferenciaUf: number | null): string {
+export function buildUserQueryPricing(
+  bandas: BandasMercadoLocal,
+  precioReferenciaUf: number | null,
+  tipoPropiedad: TipoPropiedadComercial,
+): string {
+  const { plural } = TIPO_PROPIEDAD_LABEL[tipoPropiedad]
   const parts = [
-    `BANDA DE PRECIO REAL (calculada estadísticamente, no adivinada) para locales comerciales en ${
+    `BANDA DE PRECIO REAL (calculada estadísticamente, no adivinada) para ${plural} en ${
       bandas.usoFallback
         ? `Región Metropolitana (banda de respaldo — cohorte de la comuna con solo ${bandas.muestraNComuna} comparables)`
         : bandas.comuna

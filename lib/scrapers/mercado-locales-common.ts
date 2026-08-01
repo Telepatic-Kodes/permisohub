@@ -18,13 +18,49 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 export type OperacionMercadoLocal = 'arriendo' | 'venta'
 
+// Fase 8 (ago. 2026): tipos adicionales al local comercial original —
+// verificados en vivo como sub-categorías propias dentro de "Comercial" en
+// Portalinmobiliario (facet ids distintos: 242065 locales, 242067 oficina,
+// 245003 bodega, 245009 industrial), cada una con su propio segmento de URL
+// (`/oficina/`, `/bodega/`, `/industrial/` — el segmento por sí solo aplica
+// el filtro correcto, confirmado contra `applied_filters` de una respuesta
+// en vivo; a diferencia de locales, no requieren el query param
+// ?PROPERTY_TYPE= explícito).
+export type TipoPropiedadComercial = 'local_comercial' | 'oficina' | 'bodega' | 'industrial'
+
+export const TIPO_PROPIEDAD_PORTAL_PATH: Record<TipoPropiedadComercial, string> = {
+  local_comercial: 'comercial',
+  oficina: 'oficina',
+  bodega: 'bodega',
+  industrial: 'industrial',
+}
+
+// Etiquetas humanas para prompts de IA y UI — evita que la narrativa de
+// pricing llame "local comercial" a una oficina o bodega cuando se generaliza
+// más allá de local_comercial (Fase 8).
+export const TIPO_PROPIEDAD_LABEL: Record<TipoPropiedadComercial, { singular: string; plural: string }> = {
+  local_comercial: { singular: 'local comercial', plural: 'locales comerciales' },
+  oficina: { singular: 'oficina', plural: 'oficinas' },
+  bodega: { singular: 'bodega', plural: 'bodegas' },
+  industrial: { singular: 'nave industrial', plural: 'naves industriales' },
+}
+
 // Verificado a mano contra un fetch en vivo de
 // /{operacion}/comercial/{slug}-metropolitana?PROPERTY_TYPE=242065 (242065 =
 // facet id interno de MELI para "Locales") — igual que en el repo origen,
 // el slug NO es una transliteración mecánica del nombre ("Santiago Centro" es
 // "santiago", no "santiago-centro", que cae silenciosamente al resultado
 // nacional sin filtrar). Agregar comunas nuevas leyendo el facet `city` de
-// una búsqueda sin filtrar, no adivinando el slug.
+// una búsqueda sin filtrar, no adivinando el slug — en la práctica: fetch
+// `/comercial/{slug}-metropolitana?PROPERTY_TYPE=242065` y confirmar que
+// `applied_filters` incluye `{"key":"city",...}`; si no aparece, el slug cae
+// silenciosamente al resultado nacional sin filtrar y no sirve.
+//
+// Fase 7 (ago. 2026): +20 comunas RM verificadas en vivo con el mismo método
+// (todas confirmaron `city` aplicado) — dobla la cobertura original de 16,
+// aprovechando la ventana de first-mover encontrada en el benchmark
+// competitivo (la cobertura "nacional" de GPS Property/Inciti resultó más
+// débil de lo que declaran).
 export const MERCADO_LOCALES_COMUNA_SLUGS: Record<string, string> = {
   'Santiago Centro': 'santiago',
   Providencia: 'providencia',
@@ -42,6 +78,26 @@ export const MERCADO_LOCALES_COMUNA_SLUGS: Record<string, string> = {
   Huechuraba: 'huechuraba',
   Quilicura: 'quilicura',
   Recoleta: 'recoleta',
+  'San Bernardo': 'san-bernardo',
+  'Puente Alto': 'puente-alto',
+  'La Cisterna': 'la-cisterna',
+  'San Joaquín': 'san-joaquin',
+  'El Bosque': 'el-bosque',
+  'Pedro Aguirre Cerda': 'pedro-aguirre-cerda',
+  Cerrillos: 'cerrillos',
+  Independencia: 'independencia',
+  Conchalí: 'conchali',
+  Renca: 'renca',
+  Pudahuel: 'pudahuel',
+  'Quinta Normal': 'quinta-normal',
+  'Lo Prado': 'lo-prado',
+  'Cerro Navia': 'cerro-navia',
+  'San Ramón': 'san-ramon',
+  'La Granja': 'la-granja',
+  Colina: 'colina',
+  Lampa: 'lampa',
+  Buin: 'buin',
+  'Padre Hurtado': 'padre-hurtado',
 }
 
 export interface MercadoLocalListadoRaw {
@@ -54,6 +110,36 @@ export interface MercadoLocalListadoRaw {
   precioMoneda: 'UF' | 'CLP' | null
   superficieM2: number | null
   atributosRaw: Record<string, unknown>
+}
+
+export const TIPO_PROPIEDAD_DEFAULT: TipoPropiedadComercial = 'local_comercial'
+
+// Descubierto en vivo en Fase 8 (ago. 2026) al revisar bandas de oficina que
+// salían implausiblemente bajas: igual que el bug ya documentado en
+// terrenos-common.ts::PRECIO_CLP_MINIMO_PLAUSIBLE, algunos avisos de
+// propiedades grandes/premium (torres de oficinas, bodegas de gran
+// superficie) muestran en el MISMO widget de precio total el valor UF/m²
+// que el corredor quiso ingresar como tarifa, sin ningún marcador
+// distinguible en el HTML (verificado contra la página en vivo: aria-label
+// "0 unidades de fomento con 61 centavos" para una oficina de 311 m² en
+// Las Condes — imposible que sea el arriendo mensual real). Afecta las 4
+// categorías, no solo las nuevas de Fase 8 (confirmado con datos reales ya
+// scrapeados: ~5-20% de los avisos según categoría/operación). Sin forma de
+// distinguir estructuralmente cuál es cuál, se descarta el precio del aviso
+// (no el aviso completo) antes que inventar o adivinar cuál de los dos
+// números es el real.
+export const PRECIO_MINIMO_PLAUSIBLE_MERCADO_LOCALES: Record<OperacionMercadoLocal, { uf: number; clp: number }> = {
+  arriendo: { uf: 5, clp: 1_000_000 },
+  venta: { uf: 50, clp: 10_000_000 },
+}
+
+export function precioMercadoLocalEsPlausible(
+  monto: number,
+  moneda: 'UF' | 'CLP',
+  operacion: OperacionMercadoLocal,
+): boolean {
+  const piso = PRECIO_MINIMO_PLAUSIBLE_MERCADO_LOCALES[operacion]
+  return moneda === 'UF' ? monto >= piso.uf : monto >= piso.clp
 }
 
 export interface UpsertMercadoLocalesSummary {
@@ -69,10 +155,16 @@ export interface UpsertMercadoLocalesSummary {
 /**
  * Upsert de resultados del scraper de locales comerciales en
  * mercado_locales_listings, con detección de bajas (delisting) — scoped
- * estrictamente a (fuente, comuna, operación) para que un aviso solo se
- * marque "dado_de_baja" cuando ESTA corrida efectivamente re-chequeó esa
- * combinación (mismo razonamiento que diffAndUpsertBatch en el repo origen:
- * nunca dar de baja comunas que el cron de hoy no tocó).
+ * estrictamente a (fuente, comuna, operación, tipo_propiedad) para que un
+ * aviso solo se marque "dado_de_baja" cuando ESTA corrida efectivamente
+ * re-chequeó esa combinación (mismo razonamiento que diffAndUpsertBatch en
+ * el repo origen: nunca dar de baja comunas que el cron de hoy no tocó).
+ *
+ * IMPORTANTE (Fase 8): tipo_propiedad debe ir en el filtro "before" y en el
+ * de la baja — sin esto, correr un scrape de "oficina" en una comuna que ya
+ * tiene locales comerciales activos marcaría esos locales como
+ * "dado_de_baja" (su fuente_id nunca aparece en un scrape de oficinas),
+ * mezclando dos datasets que deben permanecer independientes.
  *
  * El historial de precio NO se inserta acá — lo hace el trigger
  * registrar_historial_precio_mercado_local() en cada INSERT/UPDATE real de
@@ -82,6 +174,7 @@ export async function upsertMercadoLocalesDesdeListado(
   comuna: string,
   operacion: OperacionMercadoLocal,
   items: MercadoLocalListadoRaw[],
+  tipoPropiedad: TipoPropiedadComercial = TIPO_PROPIEDAD_DEFAULT,
 ): Promise<UpsertMercadoLocalesSummary> {
   const summary: UpsertMercadoLocalesSummary = {
     comuna,
@@ -103,6 +196,7 @@ export async function upsertMercadoLocalesDesdeListado(
     .eq('fuente', 'portalinmobiliario')
     .eq('comuna', comuna)
     .eq('operacion', operacion)
+    .eq('tipo_propiedad', tipoPropiedad)
 
   if (beforeError) throw new Error(`lectura previa de mercado_locales_listings falló: ${beforeError.message}`)
 
@@ -115,6 +209,7 @@ export async function upsertMercadoLocalesDesdeListado(
     titulo: item.titulo,
     operacion: item.operacion,
     comuna,
+    tipo_propiedad: tipoPropiedad,
     precio_monto: item.precioMonto,
     precio_moneda: item.precioMoneda,
     superficie_m2: item.superficieM2,
@@ -151,6 +246,7 @@ export async function upsertMercadoLocalesDesdeListado(
       .eq('fuente', 'portalinmobiliario')
       .eq('comuna', comuna)
       .eq('operacion', operacion)
+      .eq('tipo_propiedad', tipoPropiedad)
       .in('fuente_id', goneIds)
 
     if (delistError) throw new Error(`baja de mercado_locales_listings falló: ${delistError.message}`)

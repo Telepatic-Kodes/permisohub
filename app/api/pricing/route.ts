@@ -3,16 +3,19 @@ import { aiAuthGuard } from '@/lib/ai-guard'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { recordUsage } from '@/lib/usage'
 import { obtenerBandasMercadoLocales } from '@/lib/mercado-locales-server'
-import type { OperacionMercadoLocal } from '@/lib/scrapers/mercado-locales-common'
-import { SYSTEM_PRICING_LOCAL, buildUserQueryPricing } from '@/lib/pricing-prompts'
+import { TIPO_PROPIEDAD_DEFAULT, type OperacionMercadoLocal, type TipoPropiedadComercial } from '@/lib/scrapers/mercado-locales-common'
+import { buildSystemPricing, buildUserQueryPricing } from '@/lib/pricing-prompts'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
+
+const TIPOS_VALIDOS: TipoPropiedadComercial[] = ['local_comercial', 'oficina', 'bodega', 'industrial']
 
 interface PricingInput {
   comuna: string
   operacion: OperacionMercadoLocal
   precioReferenciaUf?: string
+  tipoPropiedad?: TipoPropiedadComercial
 }
 
 export async function POST(request: Request) {
@@ -30,6 +33,9 @@ export async function POST(request: Request) {
 
   const precioRefRaw = body.precioReferenciaUf ? Number(String(body.precioReferenciaUf).replace(',', '.').trim()) : null
   const precioReferenciaUf = precioRefRaw !== null && Number.isFinite(precioRefRaw) && precioRefRaw > 0 ? precioRefRaw : null
+  const tipoPropiedad = TIPOS_VALIDOS.includes(body.tipoPropiedad as TipoPropiedadComercial)
+    ? (body.tipoPropiedad as TipoPropiedadComercial)
+    : TIPO_PROPIEDAD_DEFAULT
 
   const auth = await aiAuthGuard()
   if (auth instanceof Response) return auth
@@ -37,7 +43,7 @@ export async function POST(request: Request) {
   const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
   if (rateLimit) return rateLimit
 
-  const bandas = await obtenerBandasMercadoLocales(comuna, operacion)
+  const bandas = await obtenerBandasMercadoLocales(comuna, operacion, tipoPropiedad)
   if (!bandas) {
     return Response.json(
       {
@@ -48,7 +54,7 @@ export async function POST(request: Request) {
   }
 
   const ai = getAI()!
-  const userQuery = buildUserQueryPricing(bandas, precioReferenciaUf)
+  const userQuery = buildUserQueryPricing(bandas, precioReferenciaUf, tipoPropiedad)
 
   const encoder = new TextEncoder()
 
@@ -67,7 +73,7 @@ export async function POST(request: Request) {
           max_tokens: 2048,
           stream: true,
           messages: [
-            { role: 'system', content: SYSTEM_PRICING_LOCAL },
+            { role: 'system', content: buildSystemPricing(tipoPropiedad) },
             { role: 'user', content: userQuery },
           ],
         })

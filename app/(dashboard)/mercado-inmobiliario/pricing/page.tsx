@@ -25,17 +25,38 @@ interface BandasPricing {
   p75UfM2: number | null
 }
 
+type TipoPropiedadComercial = "local_comercial" | "oficina" | "bodega" | "industrial"
+
+const TIPOS_PROPIEDAD: { value: TipoPropiedadComercial; label: string }[] = [
+  { value: "local_comercial", label: "Local comercial" },
+  { value: "oficina", label: "Oficina" },
+  { value: "bodega", label: "Bodega" },
+  { value: "industrial", label: "Nave industrial" },
+]
+
 // Mismo universo de comunas que lib/scrapers/mercado-locales-common.ts
 // (MERCADO_LOCALES_COMUNA_SLUGS) — duplicado acá como lista simple para no
 // importar código server-only (createServiceClient) al bundle del cliente.
-// Mantener en sync si se agregan comunas nuevas.
+// Mantener en sync si se agregan comunas nuevas (última sync: Fase 8, 36 comunas).
 const COMUNAS_MERCADO_LOCALES = [
   "Santiago Centro", "Providencia", "Las Condes", "Vitacura", "Lo Barnechea",
   "Ñuñoa", "La Reina", "Macul", "Peñalolén", "La Florida", "Maipú",
   "San Miguel", "Estación Central", "Huechuraba", "Quilicura", "Recoleta",
+  "San Bernardo", "Puente Alto", "La Cisterna", "San Joaquín", "El Bosque",
+  "Pedro Aguirre Cerda", "Cerrillos", "Independencia", "Conchalí", "Renca",
+  "Pudahuel", "Quinta Normal", "Lo Prado", "Cerro Navia", "San Ramón",
+  "La Granja", "Colina", "Lampa", "Buin", "Padre Hurtado",
 ]
 
-function BandaPrecioChart({ bandas, precioReferenciaUf }: { bandas: BandasPricing; precioReferenciaUf: number | null }) {
+function BandaPrecioChart({
+  bandas,
+  precioReferenciaUf,
+  tipoPropiedadLabel,
+}: {
+  bandas: BandasPricing
+  precioReferenciaUf: number | null
+  tipoPropiedadLabel: string
+}) {
   if (bandas.p25Uf === null || bandas.medianaUf === null || bandas.p75Uf === null) return null
 
   const data = [
@@ -49,7 +70,7 @@ function BandaPrecioChart({ bandas, precioReferenciaUf }: { bandas: BandasPricin
       <CardContent className="p-5">
         <div className="mb-3 flex items-center justify-between">
           <p className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Banda de precio real · {bandas.usoFallback ? "Región Metropolitana (respaldo)" : bandas.comuna}
+            Banda de precio real · {tipoPropiedadLabel} · {bandas.usoFallback ? "Región Metropolitana (respaldo)" : bandas.comuna}
           </p>
           <span className="text-[11px] text-muted-foreground/70">N={bandas.muestraN}</span>
         </div>
@@ -90,6 +111,7 @@ function PricingPageInner() {
   const [form, setForm] = useState({
     comuna: searchParams.get("comuna") ?? "",
     operacion: (searchParams.get("operacion") as "arriendo" | "venta") ?? "arriendo",
+    tipoPropiedad: (searchParams.get("tipoPropiedad") as TipoPropiedadComercial) ?? "local_comercial",
     precioReferenciaUf: "",
   })
 
@@ -180,7 +202,7 @@ function PricingPageInner() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-1.5">
                     <Label>Comuna *</Label>
                     <Select value={form.comuna} onValueChange={(v) => v && setField("comuna", v)}>
@@ -190,6 +212,20 @@ function PricingPageInner() {
                       <SelectContent>
                         {COMUNAS_MERCADO_LOCALES.map((c) => (
                           <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Tipo de propiedad</Label>
+                    <Select value={form.tipoPropiedad} onValueChange={(v) => v && setField("tipoPropiedad", v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIPOS_PROPIEDAD.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -237,7 +273,13 @@ function PricingPageInner() {
             </div>
           )}
 
-          {bandas && <BandaPrecioChart bandas={bandas} precioReferenciaUf={Number(form.precioReferenciaUf) || null} />}
+          {bandas && (
+            <BandaPrecioChart
+              bandas={bandas}
+              precioReferenciaUf={Number(form.precioReferenciaUf) || null}
+              tipoPropiedadLabel={TIPOS_PROPIEDAD.find((t) => t.value === form.tipoPropiedad)?.label ?? "Local comercial"}
+            />
+          )}
 
           {(streamingText || result) && (
             <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4">
