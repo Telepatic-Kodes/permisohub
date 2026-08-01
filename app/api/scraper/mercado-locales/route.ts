@@ -5,6 +5,7 @@ import {
   computarYPersistirBandasMercadoLocales,
   obtenerValorUF,
 } from '@/lib/mercado-locales-server'
+import { recordSourceRun } from '@/lib/observability'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 180
@@ -18,14 +19,29 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const descubrimiento = await correrDescubrimientoMercadoLocales(buscarLocalesComerciales)
-  const uf = await obtenerValorUF()
-  const stats = await computarYPersistirBandasMercadoLocales(uf)
+  try {
+    const descubrimiento = await correrDescubrimientoMercadoLocales(buscarLocalesComerciales)
+    const uf = await obtenerValorUF()
+    const stats = await computarYPersistirBandasMercadoLocales(uf)
 
-  return Response.json({
-    ok: true,
-    timestamp: new Date().toISOString(),
-    ...descubrimiento,
-    stats,
-  })
+    await recordSourceRun({
+      sourceId: 'mercado-locales-portalinmobiliario',
+      status: 'ok',
+      rowCount: descubrimiento.encontrados,
+    })
+
+    return Response.json({
+      ok: true,
+      timestamp: new Date().toISOString(),
+      ...descubrimiento,
+      stats,
+    })
+  } catch (err) {
+    await recordSourceRun({
+      sourceId: 'mercado-locales-portalinmobiliario',
+      status: 'error',
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
+    throw err
+  }
 }

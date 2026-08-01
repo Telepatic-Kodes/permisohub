@@ -1,5 +1,6 @@
 import { validateCronSecret } from '@/lib/scraper'
 import { sincronizarInstrumentosIPT } from '@/lib/instrumentos-ipt-server'
+import { recordSourceRun } from '@/lib/observability'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -13,6 +14,13 @@ export async function GET(request: Request) {
   }
 
   const resultado = await sincronizarInstrumentosIPT()
+
+  await recordSourceRun({
+    sourceId: 'instrumentos-ipt',
+    status: resultado.errors.length === 0 ? 'ok' : 'error',
+    rowCount: resultado.instrumentosSincronizados,
+    errorMessage: resultado.errors.length > 0 ? resultado.errors.join('; ') : undefined,
+  })
 
   return Response.json({
     ok: resultado.errors.length === 0,

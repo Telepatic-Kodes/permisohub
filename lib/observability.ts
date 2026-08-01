@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
+import { createServiceClient } from '@/lib/supabase/service'
 
 /**
  * Contexto opcional para reportError/reportWarning.
@@ -57,6 +58,37 @@ export function reportWarning(message: string, context?: ErrorContext): void {
     })
   } catch {
     // La observabilidad nunca debe romper al llamador.
+  }
+}
+
+export interface SourceRunResult {
+  /** Coincide con el `id` de la fuente en .planning/data-sources.yaml. */
+  sourceId: string
+  status: 'ok' | 'error'
+  rowCount?: number
+  errorMessage?: string
+}
+
+/**
+ * Registra una corrida de scraper/cron en `data_source_runs` (Torre de
+ * Control — checkpoint B), para poder ver "¿qué fuente falló hoy?" sin tener
+ * que ir a buscar en logs de Vercel uno por uno.
+ *
+ * Nunca lanza — si falla el registro de salud, el scraper/cron que la llamó
+ * debe seguir su curso igual (la observabilidad nunca rompe al llamador).
+ */
+export async function recordSourceRun(result: SourceRunResult): Promise<void> {
+  try {
+    const supabase = createServiceClient()
+    const { error } = await supabase.from('data_source_runs').insert({
+      source_id: result.sourceId,
+      status: result.status,
+      row_count: result.rowCount ?? null,
+      error_message: result.errorMessage ?? null,
+    })
+    if (error) throw error
+  } catch (err) {
+    reportError(err, { scope: 'observability.recordSourceRun', extra: { sourceId: result.sourceId } })
   }
 }
 

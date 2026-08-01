@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { BarChart2, Building2, Gauge, Receipt, ShieldCheck } from "lucide-react"
+import { Activity, BarChart2, Building2, Gauge, Receipt, ShieldCheck } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/server"
 import { esAdminPlataforma } from "@/lib/admin-plataforma"
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Métricas", Icon: BarChart2 },
   { href: "/admin/cuentas", label: "Cuentas", Icon: Building2 },
   { href: "/admin/sla", label: "SLA", Icon: Gauge },
+  { href: "/admin/salud-datos", label: "Salud de Datos", Icon: Activity },
   { href: "/admin/billing", label: "Facturación", Icon: Receipt },
 ] as const
 
