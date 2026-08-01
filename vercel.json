@@ -27,6 +27,26 @@
     {
       "path": "/api/scraper/sii-nomina-sucursales",
       "schedule": "0 7 2 * *"
+    },
+    {
+      "path": "/api/cron/terrenos-portalinmobiliario",
+      "schedule": "0 6 * * 2"
+    },
+    {
+      "path": "/api/cron/terrenos-yapo",
+      "schedule": "40 6 * * 2"
+    },
+    {
+      "path": "/api/cron/terrenos-doomos",
+      "schedule": "20 7 * * 2"
+    },
+    {
+      "path": "/api/cron/terrenos-chilepropiedades",
+      "schedule": "0 8 * * 2"
+    },
+    {
+      "path": "/api/cron/terrenos-portalterreno",
+      "schedule": "40 8 * * 2"
     }
   ]
 }

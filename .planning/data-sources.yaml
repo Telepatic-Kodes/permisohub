@@ -37,66 +37,66 @@
   name: "Portalinmobiliario — terrenos/sitios en venta"
   type: scraper
   owner_files: [lib/scrapers/portalinmobiliario.ts, lib/terrenos-server.ts]
-  trigger: manual
-  called_from: [app/api/scraper/portalinmobiliario/route.ts, lib/terrenos-server.ts]
-  freshness_sla_days: null
+  trigger: "cron:/api/cron/terrenos-portalinmobiliario"
+  called_from: [app/api/scraper/portalinmobiliario/route.ts, lib/terrenos-server.ts, app/api/cron/terrenos-portalinmobiliario/route.ts]
+  freshness_sla_days: 8
   last_verified: 2026-08-01
-  monitoring: console-only
+  monitoring: sentry
   duplicate_of: null
-  status: needs-decision
-  notes: "Reachable vía ruta, NO está en vercel.json crons — a diferencia de mercado-locales, Terrenos no tiene ingesta programada. Decidir: ¿agregar cron semanal, o es correcto que sea bajo demanda?"
+  status: active
+  notes: "RESUELTO (1 ago 2026): agregado cron semanal (martes) vía correrDescubrimientoTerrenosFuente(), una ruta/cron por fuente (no las 5 juntas — un primer intento combinado excedió 280s con 1 solo workspace, porque cada terreno nuevo dispara enriquecerTerreno() con Overpass/IA/SII, no es solo el scrape). Horarios escalonados en vercel.json para no golpear el rate-limit de Overpass (2 slots/IP) con las 5 fuentes a la vez."
 
 - id: terrenos-yapo
   name: "Yapo.cl — terrenos en venta"
   type: scraper
   owner_files: [lib/scrapers/yapo.ts]
-  trigger: manual
-  called_from: [app/api/scraper/yapo/route.ts, lib/terrenos-server.ts]
-  freshness_sla_days: null
+  trigger: "cron:/api/cron/terrenos-yapo"
+  called_from: [app/api/scraper/yapo/route.ts, lib/terrenos-server.ts, app/api/cron/terrenos-yapo/route.ts]
+  freshness_sla_days: 8
   last_verified: 2026-08-01
-  monitoring: console-only
+  monitoring: sentry
   duplicate_of: null
-  status: needs-decision
-  notes: "Mismo universo de 19 comunas que terrenos-portalinmobiliario/doomos/chilepropiedades/portalterreno — 5 fuentes redundantes por diseño (máxima cobertura), pero sin ingesta programada ninguna."
+  status: active
+  notes: "Ver terrenos-portalinmobiliario — mismo cron nuevo cubre las 5 fuentes."
 
 - id: terrenos-doomos
   name: "Doomos.cl — terrenos en venta"
   type: scraper
   owner_files: [lib/scrapers/doomos.ts]
-  trigger: manual
-  called_from: [app/api/scraper/doomos/route.ts, lib/terrenos-server.ts]
-  freshness_sla_days: null
+  trigger: "cron:/api/cron/terrenos-doomos"
+  called_from: [app/api/scraper/doomos/route.ts, lib/terrenos-server.ts, app/api/cron/terrenos-doomos/route.ts]
+  freshness_sla_days: 8
   last_verified: 2026-08-01
-  monitoring: console-only
+  monitoring: sentry
   duplicate_of: null
-  status: needs-decision
-  notes: "Ver terrenos-yapo — mismo patrón de 5 fuentes sin cron."
+  status: active
+  notes: "Ver terrenos-portalinmobiliario."
 
 - id: terrenos-chilepropiedades
   name: "Chilepropiedades.cl — terrenos en venta"
   type: scraper
   owner_files: [lib/scrapers/chilepropiedades.ts]
-  trigger: manual
-  called_from: [app/api/scraper/chilepropiedades/route.ts, lib/terrenos-server.ts]
-  freshness_sla_days: null
+  trigger: "cron:/api/cron/terrenos-chilepropiedades"
+  called_from: [app/api/scraper/chilepropiedades/route.ts, lib/terrenos-server.ts, app/api/cron/terrenos-chilepropiedades/route.ts]
+  freshness_sla_days: 8
   last_verified: 2026-08-01
-  monitoring: console-only
+  monitoring: sentry
   duplicate_of: null
-  status: needs-decision
-  notes: "Ver terrenos-yapo. Además: sin lat/lng en página de detalle (limitación real de la fuente, no bug)."
+  status: active
+  notes: "Ver terrenos-portalinmobiliario. Además: sin lat/lng en página de detalle (limitación real de la fuente, no bug)."
 
 - id: terrenos-portalterreno
   name: "PortalTerreno.cl — terrenos en venta"
   type: scraper
   owner_files: [lib/scrapers/portalterreno.ts]
-  trigger: manual
-  called_from: [app/api/scraper/portalterreno/route.ts, lib/terrenos-server.ts]
-  freshness_sla_days: null
+  trigger: "cron:/api/cron/terrenos-portalterreno"
+  called_from: [app/api/scraper/portalterreno/route.ts, lib/terrenos-server.ts, app/api/cron/terrenos-portalterreno/route.ts]
+  freshness_sla_days: 8
   last_verified: 2026-08-01
-  monitoring: console-only
+  monitoring: sentry
   duplicate_of: null
-  status: needs-decision
-  notes: "Ver terrenos-yapo. Única de las 5 que trae lat/lng ya resuelto en el listado (vía __NEXT_DATA__)."
+  status: active
+  notes: "Ver terrenos-portalinmobiliario. Única de las 5 que trae lat/lng ya resuelto en el listado (vía __NEXT_DATA__)."
 
 - id: noticias-rss-america-retail
   name: "RSS América Retail"
@@ -161,7 +161,7 @@
   monitoring: console-only
   duplicate_of: null
   status: active
-  notes: "Se dispara indirectamente dentro de daily-check los lunes (fetch interno, if today.getDay()===1) — no tiene entrada propia en vercel.json crons."
+  notes: "Se dispara indirectamente dentro de daily-check los lunes (fetch interno, if today.getDay()===1) — no tiene entrada propia en vercel.json crons. BUG REAL encontrado y corregido (1 ago 2026): el índice único de dedup era parcial (WHERE dataset_id IS NOT NULL), lo que rompía el ON CONFLICT del cliente JS de Supabase — el scraper encontraba 67 registros reales y no insertaba ninguno, en silencio, desde que se construyó (20260630_plan_reguladores.sql). Corregido en supabase/migrations/20260808_fix_plan_reguladores_dedup_index.sql, verificado en producción: 67 filas insertadas, 0 errores, idempotente en corrida repetida."
 
 - id: plan-reguladores-portal-transparencia
   name: "Planes reguladores — portaltransparencia.cl"
@@ -174,7 +174,7 @@
   monitoring: console-only
   duplicate_of: null
   status: needs-decision
-  notes: "Bloqueado por 403 anti-bot, siempre devuelve []. Parseo HTML nunca escrito (TODO explícito en el código). Decidir: ¿invertir en headless browser, o eliminar esta fuente y quedarnos solo con datos.gob.cl?"
+  notes: "DECISIÓN (1 ago 2026): no invertir en bypass de anti-bot (headless browser evasivo — fráil, cuestionable, y muchos sistemas anti-bot detectan headless igual). datos_gob_cl (ver arriba) ahora funciona de verdad (bug de dedup corregido, 67 registros reales) y es la fuente pública oficial equivalente — no hay gap real de datos que justifique el esfuerzo. Se mantiene el código (degrada a [] con gracia, no rompe nada), pero sin plan de invertir más acá. Revisar solo si datos_gob_cl deja de cubrir algún municipio específico que el founder necesite."
 
 - id: sii-lookup-get
   name: "SII avalúo fiscal — /api/sii/lookup (GET)"
@@ -213,33 +213,20 @@
   monitoring: none
   duplicate_of: null
   status: needs-decision
-  notes: "UF_FALLBACK_CLP requiere actualización manual periódica. 1 de 4 puntos de entrada al mismo dato de UF — ver macro-uf-endpoint-legacy, macro-indicadores-endpoint, macro-indicadores-cron."
+  notes: "UF_FALLBACK_CLP requiere actualización manual periódica. Sigue pendiente — no se tocó en la resolución de deuda del 1 ago 2026 (ver macro-uf-endpoint-legacy/macro-indicadores-cron abajo, ya resueltos)."
 
 - id: macro-uf-endpoint-legacy
   name: "UF — /api/utils/uf (endpoint legacy)"
   type: api-endpoint
   owner_files: ["app/api/utils/uf/route.ts"]
   trigger: manual
-  called_from: [lib/scrapers/terrenos-common.ts]
+  called_from: [lib/scrapers/terrenos-common.ts, app/api/ai/copiloto/route.ts, "app/(dashboard)/patentes/page.tsx", "app/(dashboard)/mercado-inmobiliario/calculadora/page.tsx", "app/(dashboard)/herramientas/calculadora/page.tsx"]
   freshness_sla_days: null
   last_verified: 2026-08-01
   monitoring: none
-  duplicate_of: macro-indicadores-cron
-  status: duplicate
-  notes: "Caché en memoria 24h. 5 llamadores dependen de su forma exacta (comentario explícito en el código) — no eliminar sin auditar callers primero."
-
-- id: macro-indicadores-endpoint
-  name: "UF/IPC/TPM/Dólar — /api/utils/indicadores (endpoint nuevo)"
-  type: api-endpoint
-  owner_files: ["app/api/utils/indicadores/route.ts"]
-  trigger: manual
-  called_from: []
-  freshness_sla_days: null
-  last_verified: 2026-08-01
-  monitoring: none
-  duplicate_of: macro-indicadores-cron
-  status: duplicate
-  notes: "Overlap funcional casi total con lib/indicadores-macro.ts, escrito aparte deliberadamente para no tocar el contrato del endpoint viejo."
+  duplicate_of: null
+  status: active
+  notes: "RESUELTO (1 ago 2026): auditados los 5 callers reales (el registro solo tenía documentado 1 de 5 antes de esta auditoría). Decisión: NO consolidar hacia macro-indicadores-cron — los 5 dependen de esta forma de respuesta exacta ({ok,valor,fecha,cached/fallback}), y el caso de uso (lookup simple de un solo valor, client-side) es genuinely distinto del cron de macro completo (server-side, UF+IPC+TPM+Dólar, con persistencia histórica). Migrar 5 call sites por una consolidación cosmética no vale el riesgo de regresión. Se mantiene como fuente activa y legítima, no un duplicado a eliminar."
 
 - id: macro-indicadores-cron
   name: "mindicador.cl — UF/IPC/TPM/Dólar (cron + persistencia)"
@@ -251,8 +238,8 @@
   last_verified: 2026-08-01
   monitoring: sentry
   duplicate_of: null
-  status: needs-decision
-  notes: "Candidato a fuente canónica de UF/macro — las otras 3 entradas (macro-uf-fallback-constant, macro-uf-endpoint-legacy, macro-indicadores-endpoint) deberían consolidarse hacia esta. No hacerlo de un día para otro: auditar callers primero."
+  status: active
+  notes: "Fuente canónica para contexto de macro completo server-side (UF+IPC+TPM+Dólar con persistencia histórica) — no para lookups simples de UF client-side, ese caso de uso se mantiene en macro-uf-endpoint-legacy (ver nota ahí, decisión de no consolidar). /api/utils/indicadores (duplicado sin callers) fue eliminado el 1 ago 2026."
 
 - id: normativa-retrieval-keywords
   name: "Recuperación normativa — motor por keywords (activo)"

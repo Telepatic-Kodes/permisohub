@@ -1,9 +1,12 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import type { ZonaLookupResponse } from '@/lib/zonificacion'
-import { obtenerLatLngDetalle as obtenerLatLngDetallePortalinmobiliario } from '@/lib/scrapers/portalinmobiliario'
-import { obtenerLatLngDetalle as obtenerLatLngDetalleDoomos } from '@/lib/scrapers/doomos'
-import { obtenerLatLngDetalle as obtenerLatLngDetalleYapo } from '@/lib/scrapers/yapo'
-import { upsertTerrenosDesdeListado, type TerrenoListadoRaw, type FuenteTerreno } from '@/lib/scrapers/terrenos-common'
+import { obtenerLatLngDetalle as obtenerLatLngDetallePortalinmobiliario, buscarTerrenos as buscarPortalinmobiliario } from '@/lib/scrapers/portalinmobiliario'
+import { obtenerLatLngDetalle as obtenerLatLngDetalleDoomos, buscarTerrenos as buscarDoomos } from '@/lib/scrapers/doomos'
+import { obtenerLatLngDetalle as obtenerLatLngDetalleYapo, buscarTerrenos as buscarYapo } from '@/lib/scrapers/yapo'
+import { buscarTerrenos as buscarChilepropiedades } from '@/lib/scrapers/chilepropiedades'
+import { buscarTerrenos as buscarPortalterreno } from '@/lib/scrapers/portalterreno'
+import { upsertTerrenosDesdeListado, COMUNAS_CON_ZONIFICACION, type TerrenoListadoRaw, type FuenteTerreno } from '@/lib/scrapers/terrenos-common'
+import { recordSourceRun } from '@/lib/observability'
 import { verificarCompatibilidadUso } from '@/lib/zonificacion-compat'
 import { fixMojibakeArcGIS } from '@/lib/zonificacion-format'
 import { USO_COMERCIAL_PROMPT } from '@/lib/terrenos-comercial'
@@ -233,13 +236,23 @@ export interface ResultadoDescubrimiento {
 // y se recogen en la corrida siguiente — nunca se pierden, solo se difieren.
 const MAX_ENRIQUECER_POR_COMUNA = 5
 
+// Tope GLOBAL por corrida, además del tope por comuna — encontrado por un
+// fallo real en vivo (1 ago 2026): con el tope solo por comuna, una corrida
+// con muchas comunas nuevas simultáneamente (ej. la primera corrida real de
+// un cron nuevo) puede acumular decenas de enriquecimientos (cada uno con
+// zonificación + IA + Overpass, rate-limited a 2 slots/IP con backoff hasta
+// 20s + SII) y superar los ~5 minutos sin siquiera terminar. El tope global
+// para la corrida entera, no solo por comuna, y difiere el resto a la
+// próxima corrida vía el mismo mecanismo `diferidos` ya existente.
+const MAX_ENRIQUECER_POR_CORRIDA = 20
+
 /**
  * Orquestación común a cualquier cron de descubrimiento de terrenos (ver
  * app/api/scraper/portalinmobiliario y .../portalterreno): busca por comuna,
  * upsert deduplicado, y enriquece solo los que quedaron 'pendiente' (nunca
- * re-enriquece uno ya resuelto en una corrida previa), con el mismo tope por
- * comuna. Un solo lugar para esta lógica evita que cada fuente nueva la
- * reimplemente ligeramente distinto.
+ * re-enriquece uno ya resuelto en una corrida previa), con tope por comuna
+ * Y tope global por corrida. Un solo lugar para esta lógica evita que cada
+ * fuente nueva la reimplemente ligeramente distinto.
  */
 export async function correrDescubrimientoTerrenos(
   comunas: string[],
@@ -265,10 +278,12 @@ export async function correrDescubrimientoTerrenos(
         .in('id', ids)
         .eq('zona_status', 'pendiente')
 
-      const aEnriquecer = (pendientes ?? []).slice(0, MAX_ENRIQUECER_POR_COMUNA)
+      const cupoRestante = Math.max(0, MAX_ENRIQUECER_POR_CORRIDA - results.enriquecidos)
+      const tope = Math.min(MAX_ENRIQUECER_POR_COMUNA, cupoRestante)
+      const aEnriquecer = (pendientes ?? []).slice(0, tope)
       const diferidos = (pendientes?.length ?? 0) - aEnriquecer.length
       if (diferidos > 0) {
-        console.warn(`[${fuenteLabel}] ${diferidos} terreno(s) nuevos de "${comunaId}" quedan pendientes para la próxima corrida (límite ${MAX_ENRIQUECER_POR_COMUNA}/comuna)`)
+        console.warn(`[${fuenteLabel}] ${diferidos} terreno(s) nuevo(s) de "${comunaId}" quedan pendientes para la próxima corrida (tope comuna ${MAX_ENRIQUECER_POR_COMUNA}, tope corrida ${MAX_ENRIQUECER_POR_CORRIDA})`)
         results.diferidos += diferidos
       }
 
@@ -282,4 +297,55 @@ export async function correrDescubrimientoTerrenos(
   }
 
   return results
+}
+
+export type FuenteTerrenoCron = 'portalinmobiliario' | 'yapo' | 'doomos' | 'chilepropiedades' | 'portalterreno'
+
+const FUENTES_TERRENOS: Record<FuenteTerrenoCron, { buscar: (comunaId: string) => ReturnType<typeof buscarPortalinmobiliario>; sourceId: string }> = {
+  portalinmobiliario: { buscar: buscarPortalinmobiliario, sourceId: 'terrenos-portalinmobiliario' },
+  yapo: { buscar: buscarYapo, sourceId: 'terrenos-yapo' },
+  doomos: { buscar: buscarDoomos, sourceId: 'terrenos-doomos' },
+  chilepropiedades: { buscar: buscarChilepropiedades, sourceId: 'terrenos-chilepropiedades' },
+  portalterreno: { buscar: buscarPortalterreno, sourceId: 'terrenos-portalterreno' },
+}
+
+export interface ResultadoDescubrimientoTerrenosGlobal {
+  workspaceId: string
+  resultado: ResultadoDescubrimiento
+}
+
+/**
+ * Corre el descubrimiento de terrenos para UNA fuente, para TODOS los
+ * workspaces existentes — cierra el hueco encontrado en la auditoría de
+ * datos (1 ago 2026): las 5 rutas de scraper/* existen y funcionan, pero
+ * ninguna tenía disparador programado, a diferencia de mercado-locales.
+ *
+ * Deliberadamente UNA fuente por invocación, no las 5 juntas: un primer
+ * intento con las 5 en un solo request (ver git history) tardó más de 280s
+ * incluso con 1 solo workspace — cada terreno nuevo dispara enriquecerTerreno()
+ * (zonificación + IA + Overpass rate-limited a 2 slots/IP + SII), no es solo
+ * el scrape del listado. Dividir en 5 rutas/cron (una por fuente, mismo
+ * patrón que mercado-locales/mercado-locales-tipos-adicionales) mantiene
+ * cada invocación dentro de un maxDuration razonable.
+ *
+ * Nunca lanza por workspace individual — un fallo en un workspace no debe
+ * tumbar el resto de la corrida.
+ */
+export async function correrDescubrimientoTerrenosFuente(fuente: FuenteTerrenoCron): Promise<ResultadoDescubrimientoTerrenosGlobal[]> {
+  const admin = createServiceClient()
+  const { data: workspaces } = await admin.from('workspaces').select('id')
+  const resultados: ResultadoDescubrimientoTerrenosGlobal[] = []
+  const { buscar, sourceId } = FUENTES_TERRENOS[fuente]
+
+  for (const ws of workspaces ?? []) {
+    try {
+      const resultado = await correrDescubrimientoTerrenos(COMUNAS_CON_ZONIFICACION, buscar, ws.id, fuente)
+      resultados.push({ workspaceId: ws.id, resultado })
+      await recordSourceRun({ sourceId, status: 'ok', rowCount: resultado.guardados })
+    } catch (err) {
+      await recordSourceRun({ sourceId, status: 'error', errorMessage: err instanceof Error ? err.message : String(err) })
+    }
+  }
+
+  return resultados
 }
