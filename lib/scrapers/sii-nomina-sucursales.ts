@@ -21,9 +21,28 @@ import { reportError, reportWarning } from '@/lib/observability'
 // operativas distintos del holding listado en bolsa. Walmart Chile S.A.
 // (76042014-K) y SMU S.A. (76012676-4) solo traen 13 y 2 direcciones
 // respectivamente — oficinas corporativas, no las ~370/~300 tiendas reales.
-// Por eso CADENAS_RUT_CONOCIDOS marca esos casos 'needs-decision': se
-// documentan pero NO se ingieren, para no tratar un puñado de oficinas como
-// si fuera señal real de expansión de tiendas.
+//
+// Investigación de seguimiento (1 ago 2026, mismo día): se identificaron las
+// razones sociales operativas reales cruzando PUB_NOMBRES_PJ.zip (nómina de
+// razones sociales) contra los nombres de marca públicos de cada grupo:
+//   - Walmart Chile: "ADMINISTRADORA DE SUPERMERCADOS HIPER LIMITADA"
+//     (Hipermercado Líder) y "...EXPRESS LIMITADA" (Líder Express) — ambas
+//     registradas el mismo día (02-03-2011, la reestructuración corporativa
+//     de Walmart tras la compra de D&S), 122/142 direcciones, distribución
+//     nacional real (Arica a Puerto Montt), 108/104 vigentes. Alta confianza.
+//   - SMU: smu.cl/inversionistas confirma "filiales Unimarc, Alvi y Super10"
+//     pero no publica RUTs — se encontraron candidatos por coincidencia
+//     exacta de nombre de marca: "ALVI SUPERMERCADO MAYORISTA S.A." (86
+//     direcciones, 53 comunas) y "SUPER 10 S.A." (111 direcciones, 62
+//     comunas). Confianza media-alta (nombre de marca coincide exactamente
+//     con lo que SMU declara públicamente, pero sin RUT oficial publicado
+//     para confirmar 1:1). Unimarc —la marca más grande de SMU, mayoría de
+//     sus ~300 tiendas— NO se encontró como razón social propia; puede
+//     operar bajo un nombre no obvio, o estar repartido en RUTs regionales
+//     (se encontraron indicios de eso: "MAYORISTA 10 VINA DEL MAR LIMITADA",
+//     "...TEMUCO LIMITADA", "...CENTRAL LIMITADA" — subsidiarias por región,
+//     no una nacional única). Queda needs-decision: cobertura de SMU es
+//     parcial (Alvi + Super10), no incluye Unimarc.
 // ---------------------------------------------------------------------------
 
 const SII_DIRECCIONES_URL = 'https://www.sii.cl/estadisticas/nominas/PUB_NOM_DIRECCIONES.zip'
@@ -45,19 +64,21 @@ export interface CadenaRutConocido {
 export const CADENAS_RUT_CONOCIDOS: CadenaRutConocido[] = [
   { rut: '90749000', dv: '9', cadena: 'Falabella', estado: 'activo' },
   { rut: '76433310', dv: '1', cadena: 'Cencosud Shopping', estado: 'activo' },
-  {
-    rut: '76042014',
-    dv: 'K',
-    cadena: 'Walmart Chile',
-    estado: 'needs-decision',
-    nota: 'RUT del holding — 13 direcciones son oficinas corporativas en Huechuraba, no las ~370 tiendas Líder/Ekono/Cuenta. Falta identificar el RUT de la razón social operativa real.',
-  },
+  { rut: '76134941', dv: '4', cadena: 'Walmart Chile (Hipermercado Líder)', estado: 'activo' },
+  { rut: '76134946', dv: '5', cadena: 'Walmart Chile (Líder Express)', estado: 'activo' },
+  { rut: '76029743', dv: '7', cadena: 'SMU (Alvi)', estado: 'activo' },
+  { rut: '76012833', dv: '3', cadena: 'SMU (Super10)', estado: 'activo' },
+  // Nota: el RUT holding de Walmart Chile S.A. (76042014-K) ya NO aparece acá
+  // — fue investigado y resuelto (1 ago 2026, ver comentario arriba): las
+  // tiendas reales están bajo 76134941-4/76134946-5, ya activas. Se excluye
+  // del array (no solo needs-decision) porque mostrarlo confundiría el panel
+  // de "cadenas pendientes" con algo que ya no está pendiente.
   {
     rut: '76012676',
     dv: '4',
-    cadena: 'SMU',
+    cadena: 'SMU (RUT holding — parcialmente resuelto, ver Alvi/Super10 arriba)',
     estado: 'needs-decision',
-    nota: 'RUT del holding — 2 direcciones son oficinas corporativas, no las ~300 tiendas Unimarc/Alvi/Mayorista 10. Falta identificar el RUT operativo real.',
+    nota: 'RUT del holding — 2 direcciones son oficinas corporativas. PARCIALMENTE RESUELTO (1 ago 2026): Alvi (76029743-7) y Super10 (76012833-3) ya activos arriba. Unimarc —la marca más grande de SMU— sigue sin identificar: no aparece como razón social propia en la nómina del SII; indicios de que opera bajo RUTs regionales ("Mayorista 10 <ciudad> Limitada") en vez de uno nacional único. Cobertura de SMU queda parcial hasta resolver esto.',
   },
 ]
 
