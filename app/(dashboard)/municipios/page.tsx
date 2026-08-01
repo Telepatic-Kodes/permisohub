@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
   AlertTriangle,
@@ -17,6 +17,7 @@ import {
   MapPin,
   Phone,
   Search,
+  ShieldCheck,
   TrendingUp,
 } from "lucide-react"
 
@@ -249,11 +250,27 @@ function findMockInfo(comuna: ComunaChile): MunicipioInfo | undefined {
   )
 }
 
+interface ResumenIptComuna {
+  vigentes: number
+  total: number
+}
+
 export default function MunicipiosPage() {
   const [search, setSearch] = useState("")
   const [region, setRegion] = useState("")
   const [status, setStatus] = useState<StatusFilter>("todas")
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [resumenIpt, setResumenIpt] = useState<Record<string, ResumenIptComuna>>({})
+
+  // Dato real (Portal IPT, MINVU) — badge de cobertura por comuna en el
+  // listado. Fetch único al montar: la agregación completa (345 comunas) se
+  // resuelve server-side en /api/instrumentos-ipt/resumen, no acá.
+  useEffect(() => {
+    fetch("/api/instrumentos-ipt/resumen")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => { if (json?.ok) setResumenIpt(json.resumen) })
+      .catch(() => {}) // best-effort: sin esto, el listado sigue funcionando igual
+  }, [])
 
   const stats = useMemo(() => getCoverageStats(), [])
 
@@ -402,6 +419,16 @@ export default function MunicipiosPage() {
                   <span className="size-1.5 rounded-full" style={{ background: STATE_DOT[badge.state] }} />
                   {badge.label}
                 </span>
+
+                {resumenIpt[comuna.id] && (
+                  <span
+                    className="num inline-flex shrink-0 items-center gap-1 rounded-[3px] border border-line-med px-2 py-0.5 text-[10px] text-muted-foreground"
+                    title="Instrumentos de Planificación Territorial vigentes — dato real, Portal IPT MINVU"
+                  >
+                    <ShieldCheck className="size-3 text-primary" />
+                    {resumenIpt[comuna.id].vigentes} vigentes
+                  </span>
+                )}
 
                 {comuna.urlDom && (
                   <a

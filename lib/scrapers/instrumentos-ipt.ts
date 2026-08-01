@@ -57,7 +57,7 @@ export async function buscarPaginaInstrumentosIPT(
   }
 }
 
-interface ComunaIptRaw {
+export interface ComunaIptRaw {
   idComuna: number
   idProvincia: number
   nombre: string
@@ -65,12 +65,24 @@ interface ComunaIptRaw {
   activo: boolean
 }
 
-function normalizarNombreComuna(nombre: string): string {
+export function normalizarNombreComuna(nombre: string): string {
   return nombre
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '') // quita tildes (diacríticos combinantes tras NFD)
     .trim()
     .toUpperCase()
+}
+
+// Catálogo completo (~346 comunas). Best-effort — nunca lanza, [] en falla.
+export async function obtenerCatalogoComunasIPT(): Promise<ComunaIptRaw[]> {
+  try {
+    const res = await fetch(`${PORTAL_IPT_API_BASE}/comunas`)
+    if (!res.ok) return []
+    return (await res.json()) as ComunaIptRaw[]
+  } catch (err) {
+    console.warn('[instrumentos-ipt] No se pudo obtener el catálogo de comunas:', err instanceof Error ? err.message : err)
+    return []
+  }
 }
 
 // Resuelve nombre de comuna (ej. "Las Condes", "Ñuñoa") al código INE que
@@ -79,15 +91,8 @@ function normalizarNombreComuna(nombre: string): string {
 // que el resto del proyecto: no adivinar/duplicar un dato que una fuente
 // viva ya resuelve de forma confiable.
 export async function resolverCodigoIneComuna(nombreComuna: string): Promise<string | null> {
-  try {
-    const res = await fetch(`${PORTAL_IPT_API_BASE}/comunas`)
-    if (!res.ok) return null
-    const comunas = (await res.json()) as ComunaIptRaw[]
-    const objetivo = normalizarNombreComuna(nombreComuna)
-    const match = comunas.find((c) => normalizarNombreComuna(c.nombre) === objetivo)
-    return match?.codigoCompuestoComunaINE ?? null
-  } catch (err) {
-    console.warn(`[instrumentos-ipt] No se pudo resolver código INE para "${nombreComuna}":`, err instanceof Error ? err.message : err)
-    return null
-  }
+  const comunas = await obtenerCatalogoComunasIPT()
+  const objetivo = normalizarNombreComuna(nombreComuna)
+  const match = comunas.find((c) => normalizarNombreComuna(c.nombre) === objetivo)
+  return match?.codigoCompuestoComunaINE ?? null
 }
