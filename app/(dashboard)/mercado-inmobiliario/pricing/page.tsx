@@ -9,6 +9,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
+import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts"
+
+interface BandasPricing {
+  comuna: string
+  usoFallback: boolean
+  muestraN: number
+  p25Uf: number | null
+  medianaUf: number | null
+  p75Uf: number | null
+  muestraAreaN: number
+  p25UfM2: number | null
+  medianaUfM2: number | null
+  p75UfM2: number | null
+}
 
 // Mismo universo de comunas que lib/scrapers/mercado-locales-common.ts
 // (MERCADO_LOCALES_COMUNA_SLUGS) — duplicado acá como lista simple para no
@@ -20,12 +35,57 @@ const COMUNAS_MERCADO_LOCALES = [
   "San Miguel", "Estación Central", "Huechuraba", "Quilicura", "Recoleta",
 ]
 
+function BandaPrecioChart({ bandas, precioReferenciaUf }: { bandas: BandasPricing; precioReferenciaUf: number | null }) {
+  if (bandas.p25Uf === null || bandas.medianaUf === null || bandas.p75Uf === null) return null
+
+  const data = [
+    { name: "P25", valor: bandas.p25Uf },
+    { name: "Mediana", valor: bandas.medianaUf },
+    { name: "P75", valor: bandas.p75Uf },
+  ]
+
+  return (
+    <Card className="rounded-[4px] border-line-fine">
+      <CardContent className="p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Banda de precio real · {bandas.usoFallback ? "Región Metropolitana (respaldo)" : bandas.comuna}
+          </p>
+          <span className="text-[11px] text-muted-foreground/70">N={bandas.muestraN}</span>
+        </div>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={data} layout="vertical" margin={{ left: 8, right: 24 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--line-fine)" />
+            <XAxis type="number" tick={{ fontSize: 11 }} unit=" UF" stroke="var(--line-fine)" />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={60} stroke="var(--line-fine)" />
+            <Bar dataKey="valor" fill="var(--blueprint)" radius={[0, 3, 3, 0]} />
+            {precioReferenciaUf && precioReferenciaUf > 0 && (
+              <ReferenceLine
+                x={precioReferenciaUf}
+                stroke="var(--primary)"
+                strokeDasharray="4 4"
+                label={{ value: "Tu referencia", position: "top", fontSize: 11, fill: "var(--primary)" }}
+              />
+            )}
+          </BarChart>
+        </ResponsiveContainer>
+        {bandas.muestraAreaN > 0 && bandas.p25UfM2 !== null && (
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            UF/m² (N={bandas.muestraAreaN}): P25 {bandas.p25UfM2?.toFixed(2)} · Mediana {bandas.medianaUfM2?.toFixed(2)} · P75 {bandas.p75UfM2?.toFixed(2)}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 function PricingPageInner() {
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [streamingText, setStreamingText] = useState("")
   const [result, setResult] = useState<string | null>(null)
+  const [bandas, setBandas] = useState<BandasPricing | null>(null)
 
   const [form, setForm] = useState({
     comuna: searchParams.get("comuna") ?? "",
@@ -48,6 +108,7 @@ function PricingPageInner() {
     setError(null)
     setResult(null)
     setStreamingText("")
+    setBandas(null)
 
     try {
       const response = await fetch("/api/pricing", {
@@ -78,8 +139,9 @@ function PricingPageInner() {
           const data = line.slice(6)
           if (data === "[DONE]") continue
           try {
-            const parsed = JSON.parse(data) as { text?: string; error?: string }
+            const parsed = JSON.parse(data) as { text?: string; error?: string; bandas?: BandasPricing }
             if (parsed.error) throw new Error(parsed.error)
+            if (parsed.bandas) setBandas(parsed.bandas)
             if (parsed.text) {
               accumulated += parsed.text
               setStreamingText(accumulated)
@@ -175,9 +237,11 @@ function PricingPageInner() {
             </div>
           )}
 
+          {bandas && <BandaPrecioChart bandas={bandas} precioReferenciaUf={Number(form.precioReferenciaUf) || null} />}
+
           {(streamingText || result) && (
-            <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4 text-sm leading-relaxed text-foreground/80" style={{ whiteSpace: "pre-wrap" }}>
-              {result ?? streamingText}
+            <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4">
+              <MarkdownRenderer content={result ?? streamingText} />
               {loading && <span className="inline-block w-1 h-4 bg-[var(--blueprint)] animate-pulse ml-0.5 align-middle" />}
             </div>
           )}

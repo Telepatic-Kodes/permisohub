@@ -1,6 +1,7 @@
 import { LineChart } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { createClient } from "@/lib/supabase/server"
+import { IndicadorMacroChart, type PuntoMacro } from "@/components/mercado-inmobiliario/indicador-macro-chart"
 
 export const dynamic = "force-dynamic"
 
@@ -19,6 +20,12 @@ function formatFecha(iso: string): string {
 function formatNum(n: number | null, opts?: Intl.NumberFormatOptions): string {
   if (n === null) return "—"
   return n.toLocaleString("es-CL", opts)
+}
+
+// `filas` viene ordenado descendente (más reciente primero, para la tabla) —
+// los charts necesitan orden cronológico ascendente.
+function puntosDesde(filas: IndicadorRow[], campo: "uf" | "ipc" | "tpm" | "dolar"): PuntoMacro[] {
+  return [...filas].reverse().map((f) => ({ fecha: f.fecha_captura, valor: f[campo] }))
 }
 
 export default async function MacroPage() {
@@ -61,6 +68,33 @@ export default async function MacroPage() {
                 Aún no hay historial — la ingesta corre a diario vía{" "}
                 <code className="text-xs">/api/cron/noticias-macro</code>.
               </p>
+            </div>
+          )}
+
+          {!errorMsg && filas.length > 0 && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <IndicadorMacroChart
+                titulo="UF"
+                data={puntosDesde(filas, "uf")}
+                formato="clp"
+              />
+              <IndicadorMacroChart
+                titulo="Dólar"
+                data={puntosDesde(filas, "dolar")}
+                formato="clp"
+                color="var(--primary)"
+              />
+              <IndicadorMacroChart
+                titulo="IPC"
+                data={puntosDesde(filas, "ipc")}
+                formato="porcentaje"
+              />
+              <IndicadorMacroChart
+                titulo="TPM"
+                data={puntosDesde(filas, "tpm")}
+                formato="porcentaje"
+                color="var(--primary)"
+              />
             </div>
           )}
 

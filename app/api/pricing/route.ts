@@ -55,6 +55,13 @@ export async function POST(request: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        // Evento estructurado, ANTES del stream de texto — extensión no
+        // disruptiva del contrato SSE (fase 5): un consumidor viejo que solo
+        // lee "text"/"status"/"[DONE]" simplemente lo ignora. La página usa
+        // esto para graficar la banda real (P25/mediana/P75) en vez de que
+        // el usuario tenga que leerla dentro de la prosa de la IA.
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ bandas })}\n\n`))
+
         const openaiStream = await ai.chat.completions.create({
           model: AI_MODEL,
           max_tokens: 2048,

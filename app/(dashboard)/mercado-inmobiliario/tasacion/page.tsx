@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 
 const TIPOS_TERRENO = [
   "Sitio urbano", "Sitio eriazo", "Parcela", "Terreno agrícola", "Terreno con construcción a demoler",
@@ -211,8 +212,8 @@ function TasacionPageInner() {
           )}
 
           {(streamingText || result) && (
-            <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4 text-sm leading-relaxed text-foreground/80" style={{ whiteSpace: "pre-wrap" }}>
-              {result ?? streamingText}
+            <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4">
+              <MarkdownRenderer content={result ?? streamingText} />
               {loading && <span className="inline-block w-1 h-4 bg-[var(--blueprint)] animate-pulse ml-0.5 align-middle" />}
             </div>
           )}
