@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { AlertTriangle, ArrowRight, Landmark, Loader2, MapPinned, RefreshCw, TrendingDown } from "lucide-react"
+import { AlertTriangle, ArrowRight, Landmark, Loader2, MapPinned, RefreshCw, ShieldCheck, TrendingDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -128,6 +128,13 @@ export default function TerrenoDetailPage() {
             >
               <Button variant="outline" size="sm" className="gap-1.5">
                 <Landmark className="size-3.5" /> Ver tasación
+              </Button>
+            </Link>
+            <Link
+              href={`/mercado-inmobiliario/due-diligence?direccion=${encodeURIComponent(terreno.direccion)}&comuna=${encodeURIComponent(terreno.comuna)}${terreno.rol_sii ? `&rolSii=${encodeURIComponent(terreno.rol_sii)}` : ""}`}
+            >
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <ShieldCheck className="size-3.5" /> Due diligence
               </Button>
             </Link>
             <Link href={`/proyectos/nuevo?municipio=${encodeURIComponent(terreno.comuna)}&direccion=${encodeURIComponent(terreno.direccion)}`}>
