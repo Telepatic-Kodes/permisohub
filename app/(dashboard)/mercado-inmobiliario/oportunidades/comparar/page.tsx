@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Printer } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { TablaComparacion } from "@/components/mercado-inmobiliario/comparacion/tabla-comparacion"
 import { obtenerOportunidadesPorIds, obtenerBandasMercadoLocales } from "@/lib/mercado-locales-server"
@@ -137,6 +138,14 @@ export default async function CompararPage({ searchParams }: Props) {
           restantes.
         </div>
       )}
+      <div className="flex justify-end">
+        <Link
+          href={`/mercado-inmobiliario/oportunidades/comparar/informe?ids=${oportunidades.map((o) => o.id).join(",")}`}
+          className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+        >
+          <Printer className="size-3.5" /> Exportar informe
+        </Link>
+      </div>
       <TablaComparacion oportunidades={oportunidades} rentabilidadPorComuna={rentabilidadPorComuna} />
     </Layout>
   )
