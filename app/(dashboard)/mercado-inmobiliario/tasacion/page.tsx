@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 import { AvaluoFiscalCard } from "@/components/mercado-inmobiliario/avaluo-fiscal-card"
 import { InformeEjecutivo } from "@/components/mercado-inmobiliario/informe-ejecutivo"
+import { RankingBarChart } from "@/components/mercado-inmobiliario/charts/ranking-bar-chart"
+import { extraerScoreLiquidez, extraerComparables } from "@/lib/informe-charts"
 import type { SIILookupServerData } from "@/lib/sii-lookup-server"
 
 const TIPOS_TERRENO = [
@@ -220,13 +222,39 @@ function TasacionPageInner() {
           )}
 
           {result ? (
-            <InformeEjecutivo
-              content={result}
-              fuentes={[
-                { label: "Avalúo fiscal SII", disponible: avaluoFiscal !== null },
-                { label: "Búsqueda web en vivo", disponible: true },
-              ]}
-            />
+            (() => {
+              const scoreLiquidez = extraerScoreLiquidez(result)
+              const comparables = extraerComparables(result)
+              return (
+                <>
+                  {(scoreLiquidez || comparables) && (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      {scoreLiquidez && (
+                        <RankingBarChart
+                          titulo="Score de liquidez por dimensión (1–5)"
+                          items={scoreLiquidez.map((d) => ({ label: d.dimension, valor: d.score }))}
+                          formatValor={(n) => `${n}/5`}
+                        />
+                      )}
+                      {comparables && (
+                        <RankingBarChart
+                          titulo="Comparables — UF/m² ajustado"
+                          items={comparables.map((c) => ({ label: c.label, valor: c.ufM2Ajustado }))}
+                          formatValor={(n) => n.toFixed(2)}
+                        />
+                      )}
+                    </div>
+                  )}
+                  <InformeEjecutivo
+                    content={result}
+                    fuentes={[
+                      { label: "Avalúo fiscal SII", disponible: avaluoFiscal !== null },
+                      { label: "Búsqueda web en vivo", disponible: true },
+                    ]}
+                  />
+                </>
+              )
+            })()
           ) : (
             streamingText && (
               <div className="rounded-lg border border-line-fine bg-card px-5 py-4">

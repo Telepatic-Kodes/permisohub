@@ -13,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 import { AvaluoFiscalCard } from "@/components/mercado-inmobiliario/avaluo-fiscal-card"
 import { InformeEjecutivo } from "@/components/mercado-inmobiliario/informe-ejecutivo"
+import { DistribucionDonut } from "@/components/mercado-inmobiliario/charts/distribucion-donut"
+import { extraerRiesgosPorNivel } from "@/lib/informe-charts"
 import type { SIILookupServerData } from "@/lib/sii-lookup-server"
 
 const TIPOS_DOMINIO = ["Individual", "Sucesión", "Comunidad"]
@@ -301,15 +303,32 @@ function DueDiligencePageInner() {
           )}
 
           {result ? (
-            <InformeEjecutivo
-              content={result}
-              fuentes={[
-                { label: "Avalúo fiscal SII", disponible: avaluoFiscal !== null },
-                { label: "Posesión efectiva declarada", disponible: form.tienePosesionEfectiva },
-                { label: "Inscripción CBR declarada", disponible: form.tieneInscripcionCBR },
-                { label: "Búsqueda web en vivo", disponible: true },
-              ]}
-            />
+            (() => {
+              const riesgos = extraerRiesgosPorNivel(result)
+              return (
+                <>
+                  {riesgos && (
+                    <DistribucionDonut
+                      titulo="Riesgos identificados por nivel"
+                      segmentos={[
+                        { label: "Alto", valor: riesgos.alto, color: "var(--state-error, #dc2626)" },
+                        { label: "Medio", valor: riesgos.medio, color: "var(--state-warn, #d97706)" },
+                        { label: "Bajo", valor: riesgos.bajo, color: "var(--state-ok, #16a34a)" },
+                      ]}
+                    />
+                  )}
+                  <InformeEjecutivo
+                    content={result}
+                    fuentes={[
+                      { label: "Avalúo fiscal SII", disponible: avaluoFiscal !== null },
+                      { label: "Posesión efectiva declarada", disponible: form.tienePosesionEfectiva },
+                      { label: "Inscripción CBR declarada", disponible: form.tieneInscripcionCBR },
+                      { label: "Búsqueda web en vivo", disponible: true },
+                    ]}
+                  />
+                </>
+              )
+            })()
           ) : (
             streamingText && (
               <div className="rounded-lg border border-line-fine bg-card px-5 py-4">
