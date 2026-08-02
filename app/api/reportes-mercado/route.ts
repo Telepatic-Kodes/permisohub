@@ -22,10 +22,39 @@ function formatUf(n: number | null): string {
   return n != null ? n.toLocaleString('es-CL', { maximumFractionDigits: 2 }) : 'sin dato'
 }
 
+async function obtenerNoticiasTexto(comuna: string): Promise<string | null> {
+  try {
+    const supabase = await createClient()
+    const { data: noticias } = await supabase
+      .from('noticias_mercado')
+      .select('titulo, fuente, url')
+      .contains('comunas', [comuna])
+      .order('publicado_el', { ascending: false, nullsFirst: false })
+      .limit(3)
+
+    if (!noticias || noticias.length === 0) return null
+    return noticias.map((n) => `- "${n.titulo as string}" (${n.fuente as string})`).join('\n')
+  } catch {
+    // best-effort — sin noticias reales, el modelo cae a fuentes genéricas
+    return null
+  }
+}
+
 async function construirContextoReal(input: ReporteMercadoInput): Promise<ContextoRealReporte> {
   const operacion = 'arriendo' as const
 
-  const bandas = await obtenerBandasMercadoLocales(input.comuna, operacion)
+  // Las 5 llamadas son independientes entre sí (todas solo dependen de
+  // `input`) — corrían en serie dentro de un maxDuration=30, incluyendo la
+  // más cara (oportunidades, que escanea listings activos). Promise.all es
+  // una ganancia gratis, no un rediseño.
+  const [bandas, oportunidades, noticiasTexto, macro, tendenciaConstruccion] = await Promise.all([
+    obtenerBandasMercadoLocales(input.comuna, operacion),
+    obtenerOportunidadesMercadoLocales(operacion, { comuna: input.comuna, limit: 2 }),
+    obtenerNoticiasTexto(input.comuna),
+    fetchMacroData(),
+    obtenerTendenciaConstruccionComuna(input.comuna).catch(() => null),
+  ])
+
   const bandaPrecioTexto = bandas
     ? [
         `Banda de precio real (calculada estadísticamente, no adivinada) para locales comerciales en ${
@@ -33,11 +62,12 @@ async function construirContextoReal(input: ReporteMercadoInput): Promise<Contex
         }, arriendo, fecha de cálculo ${bandas.statsDate}.`,
         `Tamaño de muestra: N=${bandas.muestraN}.`,
         `UF/m² — P25: ${formatUf(bandas.p25UfM2)} · Mediana: ${formatUf(bandas.medianaUfM2)} · P75: ${formatUf(bandas.p75UfM2)}.`,
-        `El KPI de precio DEBE ser la mediana UF/m² de esta banda, con "verificado": true.`,
+        bandas.usoFallback
+          ? `El KPI de precio DEBE ser la mediana UF/m² de esta banda, con "verificado": false — es una banda de RESPALDO (Región Metropolitana), no de la comuna consultada; dilo explícitamente en el contexto del KPI, nunca la presentes como el dato propio de "${input.comuna}".`
+          : `El KPI de precio DEBE ser la mediana UF/m² de esta banda, con "verificado": true.`,
       ].join(' ')
     : null
 
-  const oportunidades = await obtenerOportunidadesMercadoLocales(operacion, { comuna: input.comuna, limit: 2 })
   const oportunidadesTexto =
     oportunidades.length > 0
       ? oportunidades
@@ -45,27 +75,11 @@ async function construirContextoReal(input: ReporteMercadoInput): Promise<Contex
           .join('\n')
       : null
 
-  let noticiasTexto: string | null = null
-  try {
-    const supabase = await createClient()
-    const { data: noticias } = await supabase
-      .from('noticias_mercado')
-      .select('titulo, fuente, url')
-      .contains('comunas', [input.comuna])
-      .order('publicado_el', { ascending: false, nullsFirst: false })
-      .limit(3)
-
-    if (noticias && noticias.length > 0) {
-      noticiasTexto = noticias.map((n) => `- "${n.titulo as string}" (${n.fuente as string})`).join('\n')
-    }
-  } catch {
-    // best-effort — sin noticias reales, el modelo cae a fuentes genéricas
-  }
-
-  const macro = await fetchMacroData()
   const macroTexto = [
     `CONTEXTO MACROECONÓMICO CHILE (dato real, hoy):`,
-    `- UF: $${macro.uf.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CLP`,
+    `- UF: $${macro.uf.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CLP${
+      macro.ufFuente === 'fallback' ? ' — RESPALDO: mindicador.cl no respondió ahora, este NO es el valor de hoy, no lo presentes como tal' : ''
+    }`,
     macro.ipc !== null ? `- IPC: ${macro.ipc.toFixed(1)}%` : null,
     macro.dolar !== null ? `- USD/CLP: $${Math.round(macro.dolar).toLocaleString('es-CL')}` : null,
     macro.tpm !== null ? `- TPM: ${macro.tpm.toFixed(2)}%` : null,
@@ -73,7 +87,6 @@ async function construirContextoReal(input: ReporteMercadoInput): Promise<Contex
     .filter(Boolean)
     .join('\n')
 
-  const tendenciaConstruccion = await obtenerTendenciaConstruccionComuna(input.comuna).catch(() => null)
   const construccionTexto = tendenciaConstruccion
     ? [
         `Superficie construida NO habitacional + mixta (proxy de actividad comercial/industrial) en ${input.comuna}, dato histórico del INE (fuente oficial, licencia CC BY-SA — cita "INE" en fuentes).`,
@@ -90,17 +103,23 @@ async function construirContextoReal(input: ReporteMercadoInput): Promise<Contex
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as ReporteMercadoInput
-
-  if (!body.comuna || typeof body.comuna !== 'string' || body.comuna.trim().length === 0) {
-    return Response.json({ error: 'Comuna requerida' }, { status: 400 })
-  }
-
   const auth = await aiAuthGuard()
   if (auth instanceof Response) return auth
 
   const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
   if (rateLimit) return rateLimit
+
+  const body = (await request.json().catch(() => ({}))) as ReporteMercadoInput
+
+  if (!body.comuna || typeof body.comuna !== 'string' || body.comuna.trim().length === 0) {
+    return Response.json({ error: 'Comuna requerida' }, { status: 400 })
+  }
+  // max_tokens acota la salida del modelo, no la entrada — un valor de
+  // comuna arbitrariamente largo se embebe directo en el prompt (abajo, en
+  // el texto de la banda de precio) sin ningún tope.
+  if (body.comuna.length > 100) {
+    return Response.json({ error: 'Comuna inválida' }, { status: 400 })
+  }
 
   try {
     const contexto = await construirContextoReal(body)

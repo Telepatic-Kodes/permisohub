@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts"
+import { leerEventosSSE } from "@/lib/sse-client"
 
 interface BandasPricing {
   comuna: string
@@ -107,11 +108,17 @@ function PricingPageInner() {
   const [streamingText, setStreamingText] = useState("")
   const [result, setResult] = useState<string | null>(null)
   const [bandas, setBandas] = useState<BandasPricing | null>(null)
+  // Snapshot de lo REALMENTE consultado, no del estado en vivo del form —
+  // sin esto, cambiar el Tipo de propiedad después de consultar reetiquetaba
+  // el gráfico ya renderizado con un tipo distinto al de los datos mostrados.
+  const [consulta, setConsulta] = useState<{ precioReferenciaUf: number | null; tipoPropiedadLabel: string } | null>(null)
 
+  const operacionParam = searchParams.get("operacion")
+  const tipoPropiedadParam = searchParams.get("tipoPropiedad")
   const [form, setForm] = useState({
     comuna: searchParams.get("comuna") ?? "",
-    operacion: (searchParams.get("operacion") as "arriendo" | "venta") ?? "arriendo",
-    tipoPropiedad: (searchParams.get("tipoPropiedad") as TipoPropiedadComercial) ?? "local_comercial",
+    operacion: (operacionParam === "venta" ? "venta" : "arriendo") as "arriendo" | "venta",
+    tipoPropiedad: (TIPOS_PROPIEDAD.some((t) => t.value === tipoPropiedadParam) ? tipoPropiedadParam : "local_comercial") as TipoPropiedadComercial,
     precioReferenciaUf: "",
   })
 
@@ -131,6 +138,10 @@ function PricingPageInner() {
     setResult(null)
     setStreamingText("")
     setBandas(null)
+    setConsulta({
+      precioReferenciaUf: Number(form.precioReferenciaUf) || null,
+      tipoPropiedadLabel: TIPOS_PROPIEDAD.find((t) => t.value === form.tipoPropiedad)?.label ?? "Local comercial",
+    })
 
     try {
       const response = await fetch("/api/pricing", {
@@ -144,33 +155,15 @@ function PricingPageInner() {
         throw new Error(err.error ?? "Error del servidor")
       }
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error("No stream")
-
-      const decoder = new TextDecoder()
       let accumulated = ""
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split("\n").filter((l) => l.startsWith("data: "))
-
-        for (const line of lines) {
-          const data = line.slice(6)
-          if (data === "[DONE]") continue
-          try {
-            const parsed = JSON.parse(data) as { text?: string; error?: string; bandas?: BandasPricing }
-            if (parsed.error) throw new Error(parsed.error)
-            if (parsed.bandas) setBandas(parsed.bandas)
-            if (parsed.text) {
-              accumulated += parsed.text
-              setStreamingText(accumulated)
-            }
-          } catch (parseErr) {
-            if (parseErr instanceof Error && parseErr.message !== data) throw parseErr
-          }
+      for await (const data of leerEventosSSE(response)) {
+        const parsed = JSON.parse(data) as { text?: string; error?: string; bandas?: BandasPricing }
+        if (parsed.error) throw new Error(parsed.error)
+        if (parsed.bandas) setBandas(parsed.bandas)
+        if (parsed.text) {
+          accumulated += parsed.text
+          setStreamingText(accumulated)
         }
       }
 
@@ -273,11 +266,11 @@ function PricingPageInner() {
             </div>
           )}
 
-          {bandas && (
+          {bandas && consulta && (
             <BandaPrecioChart
               bandas={bandas}
-              precioReferenciaUf={Number(form.precioReferenciaUf) || null}
-              tipoPropiedadLabel={TIPOS_PROPIEDAD.find((t) => t.value === form.tipoPropiedad)?.label ?? "Local comercial"}
+              precioReferenciaUf={consulta.precioReferenciaUf}
+              tipoPropiedadLabel={consulta.tipoPropiedadLabel}
             />
           )}
 

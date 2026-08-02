@@ -23,7 +23,13 @@ export async function POST(request: Request) {
     return Response.json({ error: 'OPENAI_API_KEY no configurado' }, { status: 503 })
   }
 
-  const body = (await request.json()) as PricingInput
+  const auth = await aiAuthGuard()
+  if (auth instanceof Response) return auth
+
+  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
+  if (rateLimit) return rateLimit
+
+  const body = (await request.json().catch(() => ({}))) as PricingInput
   const comuna = typeof body.comuna === 'string' ? body.comuna.trim() : ''
   const operacion = body.operacion === 'arriendo' || body.operacion === 'venta' ? body.operacion : null
 
@@ -37,12 +43,6 @@ export async function POST(request: Request) {
     ? (body.tipoPropiedad as TipoPropiedadComercial)
     : TIPO_PROPIEDAD_DEFAULT
 
-  const auth = await aiAuthGuard()
-  if (auth instanceof Response) return auth
-
-  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
-  if (rateLimit) return rateLimit
-
   const bandas = await obtenerBandasMercadoLocales(comuna, operacion, tipoPropiedad)
   if (!bandas) {
     return Response.json(
@@ -55,6 +55,12 @@ export async function POST(request: Request) {
 
   const ai = getAI()!
   const userQuery = buildUserQueryPricing(bandas, precioReferenciaUf, tipoPropiedad)
+
+  // Antes del stream, no después de que drene — si el cliente aborta el
+  // fetch justo antes del [DONE], el enqueue final tira y recordUsage nunca
+  // corría, dejando la respuesta ya generada (y ya pagada a OpenAI) sin
+  // contar contra el cupo del plan.
+  await recordUsage(auth.userId, 'ai_chats')
 
   const encoder = new TextEncoder()
 
@@ -84,12 +90,15 @@ export async function POST(request: Request) {
         }
 
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-        await recordUsage(auth.userId, 'ai_chats')
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Error desconocido'
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
-        controller.close()
+        try {
+          const msg = err instanceof Error ? err.message : 'Error desconocido'
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+          controller.close()
+        } catch {
+          // cliente desconectado — nada que hacer
+        }
       }
     },
   })

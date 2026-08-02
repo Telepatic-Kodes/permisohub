@@ -10,7 +10,20 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as TasacionInput
+  const auth = await aiAuthGuard()
+  if (auth instanceof Response) return auth
+
+  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
+  if (rateLimit) return rateLimit
+
+  // Antes del stream, no después de que drene — si el cliente aborta el
+  // fetch mientras el informe (12.000 tokens, varias búsquedas web) sigue
+  // generándose, el enqueue del catch tira de nuevo y recordUsage nunca
+  // corría, dejando un informe ya generado (y ya pagado a OpenAI) sin
+  // contar contra el cupo del plan.
+  await recordUsage(auth.userId, 'ai_chats')
+
+  const body = (await request.json().catch(() => ({}))) as TasacionInput
 
   if (!body.direccion || typeof body.direccion !== 'string' || body.direccion.trim().length === 0) {
     return Response.json({ error: 'Dirección requerida' }, { status: 400 })
@@ -24,12 +37,13 @@ export async function POST(request: Request) {
   if (!body.tipo || typeof body.tipo !== 'string') {
     return Response.json({ error: 'Tipo de terreno requerido' }, { status: 400 })
   }
-
-  const auth = await aiAuthGuard()
-  if (auth instanceof Response) return auth
-
-  const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
-  if (rateLimit) return rateLimit
+  // superficieM2 puede llegar como number desde JSON.parse (el tipo `string`
+  // de TasacionInput es solo el cast, no una garantía runtime) —
+  // buildUserQueryTasacion pasa cada campo por clip(), que devuelve '' si
+  // typeof !== 'string' (para no fabricar una superficie inventada al
+  // truncar); sin coercer acá, un superficieM2 numérico ya validado arriba
+  // se perdía en el prompt como "Superficie:  m²." en blanco.
+  body.superficieM2 = String(body.superficieM2)
 
   const uf = await obtenerValorUF()
   const siiData = body.rolSii ? await buscarDatosSIIPorRol(body.rolSii, request.headers.get('cookie')) : null
@@ -69,12 +83,15 @@ export async function POST(request: Request) {
           }
         }
 
-        await recordUsage(auth.userId, 'ai_chats')
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Error desconocido'
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
-        controller.close()
+        try {
+          const msg = err instanceof Error ? err.message : 'Error desconocido'
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+          controller.close()
+        } catch {
+          // cliente desconectado — nada que hacer
+        }
       }
     },
   })

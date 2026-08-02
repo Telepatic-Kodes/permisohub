@@ -1,5 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { obtenerValorUF } from '@/lib/scrapers/terrenos-common'
+import { normalizarNombreComuna } from '@/lib/scrapers/instrumentos-ipt'
+import { reportWarning } from '@/lib/observability'
 import {
   MERCADO_LOCALES_COMUNA_SLUGS,
   upsertMercadoLocalesDesdeListado,
@@ -8,6 +10,21 @@ import {
   type MercadoLocalListadoRaw,
   type TipoPropiedadComercial,
 } from '@/lib/scrapers/mercado-locales-common'
+
+// Reportes de Mercado recibe la comuna como texto libre (a diferencia de
+// Pricing, que usa un <Select> sobre este mismo universo) — un typo o
+// diferencia de mayúsculas/tildes ("providencia", "Las condes") no calzaba
+// con el .eq('comuna', ...) exacto de abajo y caía en silencio a la banda
+// citywide de respaldo. Resuelve cualquier variante normalizada al nombre
+// canónico real antes de consultar; si no hay match conocido, se deja tal
+// cual (mismo comportamiento que antes para nombres ya canónicos).
+const COMUNA_CANONICA_POR_NORMALIZADA = new Map(
+  Object.keys(MERCADO_LOCALES_COMUNA_SLUGS).map((nombre) => [normalizarNombreComuna(nombre), nombre]),
+)
+
+function resolverComunaCanonica(comuna: string): string {
+  return COMUNA_CANONICA_POR_NORMALIZADA.get(normalizarNombreComuna(comuna)) ?? comuna
+}
 
 // ---------------------------------------------------------------------------
 // Orquestación del pipeline de mercado de locales comerciales — fase 1 de la
@@ -255,10 +272,11 @@ function aBandas(fila: FilaStats, usoFallback: boolean, muestraNComuna: number):
  * MIN_COHORT_SIZE (o cuando aún no hay ninguna fila para esa comuna).
  */
 export async function obtenerBandasMercadoLocales(
-  comuna: string,
+  comunaEntrada: string,
   operacion: OperacionMercadoLocal,
   tipoPropiedad: TipoPropiedadComercial = TIPO_PROPIEDAD_DEFAULT,
 ): Promise<BandasMercadoLocal | null> {
+  const comuna = resolverComunaCanonica(comunaEntrada)
   const supabase = createServiceClient()
 
   const { data: filaComuna } = await supabase
@@ -298,24 +316,33 @@ export async function obtenerBandasMercadoLocales(
  * menos de 2 puntos.
  */
 export async function obtenerHistorialMedianaUfM2(
-  comuna: string,
+  comunaEntrada: string,
   operacion: OperacionMercadoLocal,
   tipoPropiedad: TipoPropiedadComercial = TIPO_PROPIEDAD_DEFAULT,
   dias = 30,
 ): Promise<number[]> {
+  const comuna = resolverComunaCanonica(comunaEntrada)
   const supabase = createServiceClient()
 
+  // order ascending + limit traía los `dias` MÁS ANTIGUOS (Postgres aplica
+  // ORDER BY antes de LIMIT) — una vez que el historial supera `dias` filas,
+  // el sparkline queda congelado para siempre en esa ventana inicial en vez
+  // de reflejar movimiento reciente. Se pide descendente (más nuevo primero)
+  // y se revierte en memoria para mantener el orden cronológico esperado.
   const { data } = await supabase
     .from('mercado_locales_stats_diarias')
     .select('mediana_uf_m2, stats_date')
     .eq('comuna', comuna)
     .eq('operacion', operacion)
     .eq('tipo_propiedad', tipoPropiedad)
-    .order('stats_date', { ascending: true })
+    .order('stats_date', { ascending: false })
     .limit(dias)
 
   if (!data) return []
-  return data.map((f) => f.mediana_uf_m2).filter((v): v is number => v !== null)
+  return data
+    .reverse()
+    .map((f) => f.mediana_uf_m2)
+    .filter((v): v is number => v !== null)
 }
 
 export interface OportunidadMercadoLocal {
@@ -338,6 +365,10 @@ export interface OportunidadMercadoLocal {
  * mercado_locales_historial_precio. Port directo de getOpportunities del
  * repo origen (lib/market-stats.ts).
  */
+const PAGE_SIZE = 1000
+const MAX_PAGINAS_LISTINGS = 5 // tope de seguridad: 5.000 listings activos como mucho por corrida
+const CHUNK_IN_LISTING_IDS = 200 // .in() con miles de uuids arma una URL GET demasiado larga
+
 export async function obtenerOportunidadesMercadoLocales(
   operacion: OperacionMercadoLocal,
   opts: { comuna?: string; limit?: number; tipoPropiedad?: TipoPropiedadComercial } = {},
@@ -346,11 +377,27 @@ export async function obtenerOportunidadesMercadoLocales(
   const tipoPropiedad = opts.tipoPropiedad ?? TIPO_PROPIEDAD_DEFAULT
   const supabase = createServiceClient()
 
-  const { data: cohortRows } = await supabase
+  // Acotado a los últimos 10 días (el cron escribe ~37 filas/día — 1 por
+  // comuna+'__TODAS__' — así que 10 días cubre de sobra "la más reciente por
+  // comuna" incluso si el cron se saltó un día) en vez de traer TODO el
+  // historial acumulado sin filtro: sin este corte, una vez que el historial
+  // supera 1000 filas (~27 días), el cap por defecto de PostgREST empezaba a
+  // truncar en un orden no garantizado y algunas comunas podían quedar sin
+  // su fila más reciente en `latestByComuna`.
+  const diezDiasAtras = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const { data: cohortRows, error: cohortError } = await supabase
     .from('mercado_locales_stats_diarias')
     .select('*')
     .eq('operacion', operacion)
     .eq('tipo_propiedad', tipoPropiedad)
+    .gte('stats_date', diezDiasAtras)
+
+  if (cohortError) {
+    reportWarning('obtenerOportunidadesMercadoLocales: fallo leyendo cohortes — se continúa sin bandas', {
+      scope: 'mercado-locales.oportunidades',
+      extra: { operacion, tipoPropiedad, error: cohortError.message },
+    })
+  }
 
   const latestByComuna = new Map<string, FilaStats>()
   for (const row of (cohortRows ?? []) as FilaStats[]) {
@@ -359,35 +406,70 @@ export async function obtenerOportunidadesMercadoLocales(
   }
   const cityCohort = latestByComuna.get('__TODAS__')
 
-  let listingsQuery = supabase
-    .from('mercado_locales_listings')
-    .select('id, titulo, url, comuna, precio_monto, precio_moneda, superficie_m2')
-    .eq('status', 'activo')
-    .eq('operacion', operacion)
-    .eq('tipo_propiedad', tipoPropiedad)
-  if (opts.comuna) listingsQuery = listingsQuery.eq('comuna', opts.comuna)
+  // Paginado explícito en vez de una sola query sin límite: PostgREST corta
+  // en 1000 filas por defecto, en un orden no garantizado — sin esto, la
+  // llamada sin `comuna` (dashboard) perdía ~18% de los 1223 listings
+  // activos reales al momento de esta corrección, de forma distinta en cada
+  // llamada. Tope de MAX_PAGINAS_LISTINGS como backstop de seguridad, no un
+  // corte silencioso: si se alcanza, queda una advertencia real en Sentry.
+  const listings: { id: string; titulo: string; url: string; comuna: string; precio_monto: number | null; precio_moneda: string | null; superficie_m2: number | null }[] = []
+  for (let pagina = 0; pagina < MAX_PAGINAS_LISTINGS; pagina++) {
+    let listingsQuery = supabase
+      .from('mercado_locales_listings')
+      .select('id, titulo, url, comuna, precio_monto, precio_moneda, superficie_m2')
+      .eq('status', 'activo')
+      .eq('operacion', operacion)
+      .eq('tipo_propiedad', tipoPropiedad)
+      .order('id', { ascending: true })
+      .range(pagina * PAGE_SIZE, pagina * PAGE_SIZE + PAGE_SIZE - 1)
+    if (opts.comuna) listingsQuery = listingsQuery.eq('comuna', opts.comuna)
 
-  const { data: activeListings } = await listingsQuery
-  const listings = activeListings ?? []
+    const { data: pageData, error: listingsError } = await listingsQuery
+    if (listingsError) {
+      reportWarning('obtenerOportunidadesMercadoLocales: fallo leyendo listings activos', {
+        scope: 'mercado-locales.oportunidades',
+        extra: { operacion, tipoPropiedad, comuna: opts.comuna, pagina, error: listingsError.message },
+      })
+      break
+    }
+    listings.push(...(pageData ?? []))
+    if (!pageData || pageData.length < PAGE_SIZE) break
+    if (pagina === MAX_PAGINAS_LISTINGS - 1) {
+      reportWarning('obtenerOportunidadesMercadoLocales: tope de paginación alcanzado — pueden quedar listings activos sin evaluar', {
+        scope: 'mercado-locales.oportunidades',
+        extra: { operacion, tipoPropiedad, comuna: opts.comuna, listingsLeidos: listings.length },
+      })
+    }
+  }
 
   const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  const listingIds = listings.map((l) => l.id as string)
+  const listingIds = listings.map((l) => l.id)
 
-  const { data: recentHistory } =
-    listingIds.length === 0
-      ? { data: [] as { listing_id: string; precio_monto: number; capturado_el: string }[] }
-      : await supabase
-          .from('mercado_locales_historial_precio')
-          .select('listing_id, precio_monto, capturado_el')
-          .in('listing_id', listingIds)
-          .gte('capturado_el', sevenDaysAgoIso)
-          .order('capturado_el', { ascending: true })
-
+  // .in() con hasta miles de uuids arma una URL GET que puede exceder el
+  // límite del request-line y fallar entero — se trocea en tandas chicas.
   const historyByListing = new Map<string, { precio_monto: number; capturado_el: string }[]>()
-  for (const row of recentHistory ?? []) {
-    const arr = historyByListing.get(row.listing_id) ?? []
-    arr.push(row)
-    historyByListing.set(row.listing_id, arr)
+  for (let i = 0; i < listingIds.length; i += CHUNK_IN_LISTING_IDS) {
+    const lote = listingIds.slice(i, i + CHUNK_IN_LISTING_IDS)
+    const { data: loteHistory, error: historyError } = await supabase
+      .from('mercado_locales_historial_precio')
+      .select('listing_id, precio_monto, capturado_el')
+      .in('listing_id', lote)
+      .gte('capturado_el', sevenDaysAgoIso)
+      .order('capturado_el', { ascending: true })
+
+    if (historyError) {
+      reportWarning('obtenerOportunidadesMercadoLocales: fallo leyendo historial de precio — price_drop_7d no se detecta en este lote', {
+        scope: 'mercado-locales.oportunidades',
+        extra: { operacion, tipoPropiedad, loteDesde: i, error: historyError.message },
+      })
+      continue
+    }
+
+    for (const row of loteHistory ?? []) {
+      const arr = historyByListing.get(row.listing_id) ?? []
+      arr.push(row)
+      historyByListing.set(row.listing_id, arr)
+    }
   }
 
   const results: OportunidadMercadoLocal[] = []

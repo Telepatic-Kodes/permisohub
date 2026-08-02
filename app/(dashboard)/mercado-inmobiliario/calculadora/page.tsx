@@ -237,7 +237,16 @@ export default function CalculadoraInversionPage() {
 
             <div className="mt-4">
               <TabsContent value="uf">
-                <ConversorUfPage ufValor={ufActual.valor} />
+                {/*
+                  key=ufActual.valor: ConversorUfPage siembra su estado `clp`
+                  desde el prop SOLO al montar — sin esto, el tab por defecto
+                  mostraba la UF de respaldo (UF_FALLBACK_CLP) hasta que el
+                  usuario tocaba algo, aunque el valor real ya había llegado
+                  (fetch en el useEffect de arriba) y el texto justo debajo
+                  ya mostraba el valor correcto. La key fuerza un remount con
+                  el valor real una vez que llega.
+                */}
+                <ConversorUfPage key={ufActual.valor} ufValor={ufActual.valor} />
               </TabsContent>
               <TabsContent value="caprate">
                 <CapRatePanel />

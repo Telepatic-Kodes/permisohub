@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
+import { leerEventosSSE } from "@/lib/sse-client"
 
 interface Message {
   role: "user" | "assistant"
@@ -35,6 +36,10 @@ function CopilotoMercadoPageInner() {
   const [streamingText, setStreamingText] = useState("")
   const [usage, setUsage] = useState<UsageInfo | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  // Guarda síncrona además de `loading` (estado, no se refleja hasta el
+  // próximo render) — sin esto, dos clicks en el mismo tick sobre una
+  // pregunta sugerida (que no tiene `disabled` propio) disparaban 2 envíos.
+  const enviandoRef = useRef(false)
 
   useEffect(() => {
     fetch("/api/usage?metric=ai_chats")
@@ -49,7 +54,8 @@ function CopilotoMercadoPageInner() {
 
   async function sendMessage(text?: string) {
     const content = text ?? input.trim()
-    if (!content || loading) return
+    if (!content || loading || enviandoRef.current) return
+    enviandoRef.current = true
 
     const newMessages: Message[] = [...messages, { role: "user", content }]
     setMessages(newMessages)
@@ -70,34 +76,16 @@ function CopilotoMercadoPageInner() {
         throw new Error(err.error ?? "Error del servidor")
       }
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error("No stream")
-
-      const decoder = new TextDecoder()
       let accumulated = ""
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split("\n").filter((l) => l.startsWith("data: "))
-
-        for (const line of lines) {
-          const data = line.slice(6)
-          if (data === "[DONE]") continue
-          try {
-            const parsed = JSON.parse(data) as { text?: string; status?: string; error?: string }
-            if (parsed.error) throw new Error(parsed.error)
-            if (parsed.status) setStatus(parsed.status)
-            if (parsed.text) {
-              accumulated += parsed.text
-              setStreamingText(accumulated)
-              setStatus(null)
-            }
-          } catch (parseErr) {
-            if (parseErr instanceof Error && parseErr.message !== data) throw parseErr
-          }
+      for await (const data of leerEventosSSE(response)) {
+        const parsed = JSON.parse(data) as { text?: string; status?: string; error?: string }
+        if (parsed.error) throw new Error(parsed.error)
+        if (parsed.status) setStatus(parsed.status)
+        if (parsed.text) {
+          accumulated += parsed.text
+          setStreamingText(accumulated)
+          setStatus(null)
         }
       }
 
@@ -111,6 +99,7 @@ function CopilotoMercadoPageInner() {
     } finally {
       setLoading(false)
       setStatus(null)
+      enviandoRef.current = false
     }
   }
 

@@ -8,13 +8,20 @@ export const dynamic = "force-dynamic"
 interface IndicadorRow {
   fecha_captura: string
   uf: number
+  uf_fuente: "live" | "fallback" | null
   ipc: number | null
   tpm: number | null
   dolar: number | null
 }
 
+// fecha_captura es un `date` de Postgres ("2026-08-01") sin hora — parsearlo
+// con `new Date(iso)` lo trata como medianoche UTC, y en America/Santiago
+// (UTC-3/-4) eso renderiza el día ANTERIOR. Mismo fix ya aplicado en
+// cadenas/page.tsx: forzar medianoche LOCAL antes de formatear.
 function formatFecha(iso: string): string {
-  return new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso))
+  return new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Santiago" }).format(
+    new Date(`${iso}T00:00:00`),
+  )
 }
 
 function formatNum(n: number | null, opts?: Intl.NumberFormatOptions): string {
@@ -36,7 +43,7 @@ export default async function MacroPage() {
     const supabase = await createClient()
     const { data, error } = await supabase
       .from("indicadores_macro_historial")
-      .select("fecha_captura, uf, ipc, tpm, dolar")
+      .select("fecha_captura, uf, uf_fuente, ipc, tpm, dolar")
       .order("fecha_captura", { ascending: false })
       .limit(30)
 
@@ -116,6 +123,11 @@ export default async function MacroPage() {
                       <td className="px-4 py-2.5 text-muted-foreground">{formatFecha(f.fecha_captura)}</td>
                       <td className="num px-4 py-2.5 text-right font-medium text-primary">
                         ${formatNum(f.uf, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {f.uf_fuente === "fallback" && (
+                          <span className="ml-1.5 rounded-[3px] border border-amber-200 bg-amber-50 px-1 text-[9px] font-medium normal-case text-amber-700" title="mindicador.cl no respondió ese día — valor de respaldo, no la UF real de la fecha">
+                            respaldo
+                          </span>
+                        )}
                       </td>
                       <td className="num px-4 py-2.5 text-right text-muted-foreground">{formatNum(f.ipc, { maximumFractionDigits: 1 })}%</td>
                       <td className="num px-4 py-2.5 text-right text-muted-foreground">{formatNum(f.tpm, { maximumFractionDigits: 2 })}%</td>

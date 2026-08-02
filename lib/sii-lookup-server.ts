@@ -23,8 +23,13 @@ export async function buscarDatosSIIPorRol(
 ): Promise<SIILookupServerData | null> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+    // La ruta interna ya acota el fetch al SII (fetchWithTimeout, 15s), pero
+    // nada acotaba este salto propio — un self-request colgado se comía el
+    // maxDuration completo de Tasación/Due Diligence (120s) antes de que
+    // saliera un solo token del stream.
     const res = await fetch(`${baseUrl}/api/sii/lookup?rol=${encodeURIComponent(rol)}`, {
       headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
+      signal: AbortSignal.timeout(12_000),
     })
     if (!res.ok) return null
     const json = (await res.json()) as { ok?: boolean; rol?: string; data?: Omit<SIILookupServerData, 'rol'> }

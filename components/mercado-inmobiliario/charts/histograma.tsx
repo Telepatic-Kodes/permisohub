@@ -13,15 +13,41 @@ interface HistogramaProps {
   titulo?: string
   valores: number[]
   numTramos?: number
-  formatTramo?: (n: number) => string
   className?: string
 }
 
+// Sin prop de formateo custom a propósito: un `formatTramo?: (n) => string`
+// es una función que un Server Component no puede pasar a este Client
+// Component (rompe la frontera de serialización de RSC — bug ya visto dos
+// veces en este proyecto, en Cadenas y Oportunidades). Nada lo necesita hoy;
+// si aparece un caso real, un discriminador serializable ("uf" | "m2") es
+// la forma segura de extenderlo, no una función.
 function formatDefault(n: number): string {
   return n.toLocaleString("es-CL", { maximumFractionDigits: 0 })
 }
 
-export function Histograma({ titulo, valores, numTramos = 8, formatTramo = formatDefault, className }: HistogramaProps) {
+// Extraído como función pura (sin JSX) para poder testearlo sin infra de
+// render de componentes, que este proyecto no tiene configurada. Antes se
+// recalculaba desde/hasta por tramo (min + i*ancho) y se filtraba cada valor
+// contra ese rango — la acumulación de error de punto flotante hacía que el
+// ÚLTIMO tramo a veces terminara justo bajo `max` real, y ese valor (el más
+// caro, casi siempre el más interesante) desaparecía del gráfico sin avisar.
+// Indexar directamente por posición del bin es exacto por construcción:
+// cada valor cae en un solo índice, sin comparación de límites de por medio.
+export function binarValores(valores: number[], numTramos: number): number[] {
+  const min = Math.min(...valores)
+  const max = Math.max(...valores)
+  const ancho = (max - min) / numTramos || 1
+
+  const conteos = new Array(numTramos).fill(0) as number[]
+  for (const v of valores) {
+    const idx = Math.min(numTramos - 1, Math.max(0, Math.floor((v - min) / ancho)))
+    conteos[idx]++
+  }
+  return conteos
+}
+
+export function Histograma({ titulo, valores, numTramos = 8, className }: HistogramaProps) {
   if (valores.length < 2) {
     return (
       <div className={cn("rounded-lg border border-line-fine bg-card p-4", className)}>
@@ -34,12 +60,12 @@ export function Histograma({ titulo, valores, numTramos = 8, formatTramo = forma
   const min = Math.min(...valores)
   const max = Math.max(...valores)
   const ancho = (max - min) / numTramos || 1
+  const conteos = binarValores(valores, numTramos)
 
-  const tramos = Array.from({ length: numTramos }, (_, i) => {
+  const tramos = conteos.map((cantidad, i) => {
     const desde = min + i * ancho
     const hasta = desde + ancho
-    const cantidad = valores.filter((v) => (i === numTramos - 1 ? v >= desde && v <= hasta : v >= desde && v < hasta)).length
-    return { rango: `${formatTramo(desde)}–${formatTramo(hasta)}`, cantidad }
+    return { rango: `${formatDefault(desde)}–${formatDefault(hasta)}`, cantidad }
   })
 
   return (

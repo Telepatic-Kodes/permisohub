@@ -20,18 +20,38 @@ export async function POST(request: Request) {
     return Response.json({ error: 'OPENAI_API_KEY no configurado' }, { status: 503 })
   }
 
-  const body = (await request.json()) as { messages?: { role: string; content: string }[] }
-  const historial = body.messages ?? []
-
   const auth = await aiAuthGuard()
   if (auth instanceof Response) return auth
 
   const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
   if (rateLimit) return rateLimit
 
+  const body = (await request.json().catch(() => ({}))) as { messages?: { role: string; content: string }[] }
+  const historialCrudo = body.messages ?? []
+
+  // El rol y el contenido de cada mensaje vienen del cliente — antes se
+  // castea con `as` sin validar, así que un body {"role":"system","content":
+  // "..."} podía colarse DESPUÉS del system prompt real, y un mensaje
+  // posterior con el mismo rol tiene prioridad sobre el original ante el
+  // modelo. Se filtra a user/assistant con content string, y se acota
+  // historial + largo para no dejar pasar un prompt arbitrariamente grande
+  // (max_tokens solo acota la salida, no la entrada).
+  const MAX_MENSAJES_HISTORIAL = 20
+  const MAX_LARGO_MENSAJE = 4000
+  const historial = historialCrudo
+    .filter((m): m is { role: 'user' | 'assistant'; content: string } => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+    .slice(-MAX_MENSAJES_HISTORIAL)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_LARGO_MENSAJE) }))
+
+  // Se registra el uso ANTES de abrir el stream, no después de que drene —
+  // si el cliente aborta el fetch justo antes del [DONE], el enqueue final
+  // tira y recordUsage nunca corría, dejando la respuesta ya generada
+  // (y ya pagada a OpenAI) sin contar contra el cupo del plan.
+  await recordUsage(auth.userId, 'ai_chats')
+
   const conversacion: ToolMessage[] = [
     { role: 'system', content: SYSTEM_PROMPT_COPILOTO_MERCADO },
-    ...historial.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+    ...historial,
   ]
 
   const encoder = new TextEncoder()
@@ -66,7 +86,20 @@ export async function POST(request: Request) {
           }
         }
 
-        if (contenidoFinal === null) {
+        // Si se agotaron las MAX_RONDAS y la última ronda todavía volvió con
+        // tool_calls (en vez de terminar por `contenidoFinal` seteado arriba),
+        // los resultados de esas herramientas ya están en `conversacion` pero
+        // nunca se le pidió al modelo que los use — antes esto se descartaba
+        // en silencio y el usuario recibía el mensaje genérico de "no pude
+        // resolver" pese a que las herramientas sí respondieron datos reales.
+        // Una ronda final con tool_choice:'none' fuerza una respuesta de
+        // texto a partir de lo ya reunido, sin abrir una ronda más de tools.
+        if (!contenidoFinal) {
+          const final = await aiCompleteWithTools(conversacion, HERRAMIENTAS_COPILOTO_MERCADO, { toolChoice: 'none' })
+          contenidoFinal = final.content
+        }
+
+        if (!contenidoFinal) {
           contenidoFinal =
             'No pude resolver esta consulta con las herramientas disponibles — intenta reformular la pregunta o sé más específico con la comuna y el tipo de propiedad.'
         }
@@ -83,12 +116,19 @@ export async function POST(request: Request) {
         }
 
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-        await recordUsage(auth.userId, 'ai_chats')
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Error desconocido'
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
-        controller.close()
+        // Si el cliente ya se desconectó, controller.enqueue/close acá
+        // arriba puede lanzar de nuevo (stream ya cerrado) — sin este
+        // try/catch interno, ese segundo error escapaba de start() sin que
+        // nada lo capturara.
+        try {
+          const msg = err instanceof Error ? err.message : 'Error desconocido'
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+          controller.close()
+        } catch {
+          // cliente desconectado — nada que hacer
+        }
       }
     },
   })

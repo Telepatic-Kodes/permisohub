@@ -74,7 +74,7 @@ export interface AICompleteWithToolsResult {
 export async function aiCompleteWithTools(
   messages: ToolMessage[],
   tools: ToolDefinition[],
-  options?: { max_tokens?: number },
+  options?: { max_tokens?: number; toolChoice?: 'auto' | 'none' },
 ): Promise<AICompleteWithToolsResult> {
   const ai = getAI()
   if (!ai) throw new Error('OPENAI_API_KEY no configurado')
@@ -84,7 +84,7 @@ export async function aiCompleteWithTools(
     max_tokens: options?.max_tokens ?? 2000,
     messages,
     tools,
-    tool_choice: 'auto',
+    tool_choice: options?.toolChoice ?? 'auto',
   })
 
   const choice = response.choices[0].message

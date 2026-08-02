@@ -82,6 +82,7 @@ export async function persistirSnapshotMacro(data: MacroData): Promise<void> {
       fecha_captura: fechaCaptura,
       uf: data.uf,
       uf_fecha: data.ufFecha,
+      uf_fuente: data.ufFuente,
       ipc: data.ipc,
       tpm: data.tpm,
       dolar: data.dolar,

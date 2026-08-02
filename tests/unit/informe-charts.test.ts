@@ -79,6 +79,17 @@ describe('extraerScoreLiquidez', () => {
   it('degrada a null si la sección no existe (el modelo cortó antes de llegar, visto en vivo)', () => {
     expect(extraerScoreLiquidez('## 🎯 Resumen Ejecutivo\n\nsolo esto')).toBeNull()
   })
+
+  it('acepta score con coma decimal (4,5/5), no solo punto', () => {
+    const conComa = `
+## 📊 Score de Liquidez
+
+| Dimensión | Score (1–5) | Detalle |
+|-----------|-------------|---------|
+| Demanda de zona | 4,5/5 | activo |
+`
+    expect(extraerScoreLiquidez(conComa)).toEqual([{ dimension: 'Demanda de zona', score: 4.5 }])
+  })
 })
 
 describe('extraerComparables', () => {
@@ -94,6 +105,28 @@ describe('extraerComparables', () => {
   it('degrada a null si la sección no existe', () => {
     expect(extraerComparables('## Otra sección\n\nsin tabla')).toBeNull()
   })
+
+  it('resuelve la columna por encabezado — no se confunde si el modelo omite la columna "#"', () => {
+    const sinNumeracion = `
+## 📊 Comparables de Mercado
+
+| Dirección / Referencia | m² | UF/m² publicado | UF/m² ajustado | Precio total (UF) | Fuente |
+|------------------------|-----|-----------------|----------------|-------------------|--------|
+| Quinchamalí, El Monte | 1700 | 10,78 | 10,78 | 18.337 | fuente |
+`
+    expect(extraerComparables(sinNumeracion)).toEqual([{ label: 'Quinchamalí, El Monte', ufM2Ajustado: 10.78 }])
+  })
+
+  it('parsea separador de miles chileno correctamente (1.250 = mil doscientos cincuenta, no 1.25)', () => {
+    const conMiles = `
+## 📊 Comparables de Mercado
+
+| # | Dirección / Referencia | m² | UF/m² publicado | UF/m² ajustado | Precio total (UF) | Fuente |
+|---|------------------------|-----|-----------------|----------------|-------------------|--------|
+| 1 | Depto premium Vitacura | 200 | 1.250 | 1.250 | 250.000 | fuente |
+`
+    expect(extraerComparables(conMiles)).toEqual([{ label: 'Depto premium Vitacura', ufM2Ajustado: 1250 }])
+  })
 })
 
 describe('extraerRiesgosPorNivel', () => {
@@ -103,5 +136,17 @@ describe('extraerRiesgosPorNivel', () => {
 
   it('degrada a null si no hay riesgos con nivel marcado', () => {
     expect(extraerRiesgosPorNivel('## ⚠️ Riesgos Identificados\n\nSin riesgos.')).toBeNull()
+  })
+
+  it('no cuenta menciones de nivel dentro de un bullet de descripción, solo el encabezado del riesgo', () => {
+    const conMencionInline = `
+## ⚠️ Riesgos Identificados
+
+**[ALTO]** Litigio activo
+- Descripción concreta
+- Impacto en la operación: podría escalar a [MEDIO] si no se resuelve pronto
+- Cómo mitigarlo
+`
+    expect(extraerRiesgosPorNivel(conMencionInline)).toEqual({ alto: 1, medio: 0, bajo: 0 })
   })
 })

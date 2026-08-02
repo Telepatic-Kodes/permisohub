@@ -14,17 +14,22 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as DueDiligencePropiedadInput
-
-  if (!body.direccion || typeof body.direccion !== 'string' || body.direccion.trim().length === 0) {
-    return Response.json({ error: 'Dirección requerida' }, { status: 400 })
-  }
-
   const auth = await aiAuthGuard()
   if (auth instanceof Response) return auth
 
   const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
   if (rateLimit) return rateLimit
+
+  const body = (await request.json().catch(() => ({}))) as DueDiligencePropiedadInput
+
+  if (!body.direccion || typeof body.direccion !== 'string' || body.direccion.trim().length === 0) {
+    return Response.json({ error: 'Dirección requerida' }, { status: 400 })
+  }
+
+  // Antes del stream, no después de que drene — mismo criterio que
+  // /api/tasacion: si el cliente aborta mientras el informe (12.000 tokens,
+  // varias búsquedas web) sigue generándose, recordUsage nunca corría.
+  await recordUsage(auth.userId, 'ai_chats')
 
   const uf = await obtenerValorUF()
   const siiData = body.rol ? await buscarDatosSIIPorRol(body.rol, request.headers.get('cookie')) : null
@@ -60,12 +65,15 @@ export async function POST(request: Request) {
           }
         }
 
-        await recordUsage(auth.userId, 'ai_chats')
         controller.close()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Error desconocido'
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
-        controller.close()
+        try {
+          const msg = err instanceof Error ? err.message : 'Error desconocido'
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
+          controller.close()
+        } catch {
+          // cliente desconectado — nada que hacer
+        }
       }
     },
   })

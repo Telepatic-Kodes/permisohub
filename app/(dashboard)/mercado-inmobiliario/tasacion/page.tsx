@@ -15,6 +15,7 @@ import { InformeEjecutivo } from "@/components/mercado-inmobiliario/informe-ejec
 import { RankingBarChart } from "@/components/mercado-inmobiliario/charts/ranking-bar-chart"
 import { extraerScoreLiquidez, extraerComparables } from "@/lib/informe-charts"
 import type { SIILookupServerData } from "@/lib/sii-lookup-server"
+import { leerEventosSSE } from "@/lib/sse-client"
 
 const TIPOS_TERRENO = [
   "Sitio urbano", "Sitio eriazo", "Parcela", "Terreno agrícola", "Terreno con construcción a demoler",
@@ -71,35 +72,17 @@ function TasacionPageInner() {
         throw new Error(err.error ?? "Error del servidor")
       }
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error("No stream")
-
-      const decoder = new TextDecoder()
       let accumulated = ""
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split("\n").filter((l) => l.startsWith("data: "))
-
-        for (const line of lines) {
-          const data = line.slice(6)
-          if (data === "[DONE]") continue
-          try {
-            const parsed = JSON.parse(data) as { text?: string; status?: string; error?: string; avaluoFiscal?: SIILookupServerData }
-            if (parsed.error) throw new Error(parsed.error)
-            if (parsed.avaluoFiscal) setAvaluoFiscal(parsed.avaluoFiscal)
-            if (parsed.status) setStatus(parsed.status)
-            if (parsed.text) {
-              accumulated += parsed.text
-              setStreamingText(accumulated)
-              setStatus(null)
-            }
-          } catch (parseErr) {
-            if (parseErr instanceof Error && parseErr.message !== data) throw parseErr
-          }
+      for await (const data of leerEventosSSE(response)) {
+        const parsed = JSON.parse(data) as { text?: string; status?: string; error?: string; avaluoFiscal?: SIILookupServerData }
+        if (parsed.error) throw new Error(parsed.error)
+        if (parsed.avaluoFiscal) setAvaluoFiscal(parsed.avaluoFiscal)
+        if (parsed.status) setStatus(parsed.status)
+        if (parsed.text) {
+          accumulated += parsed.text
+          setStreamingText(accumulated)
+          setStatus(null)
         }
       }
 
