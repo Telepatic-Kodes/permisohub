@@ -5,6 +5,7 @@
 - ✅ **v1.4 Zonificación** — Phases 10-12 (shipped 2026-07-30) — [full detail](milestones/1.4-ROADMAP.md)
 - ✅ **v1.5 Fusión PROPRA·BI** — ad-hoc, sin fases GSD (shipped 2026-08-01) — ver `.planning/MILESTONES.md`
 - ✅ **v1.6 Reportes Profesionales de Oportunidades** — Phases 13-15 (shipped 2026-08-02) — [full detail](milestones/v1.6-ROADMAP.md)
+- 🚧 **v1.7 Cabida Comercial** — Phases 16-19 (in progress)
 
 <details>
 <summary>✅ v1.4 Zonificación (Phases 10-12) — SHIPPED 2026-07-30</summary>
@@ -27,6 +28,72 @@ Full details archived: `.planning/milestones/1.4-ROADMAP.md`
 Full details archived: `.planning/milestones/v1.6-ROADMAP.md`
 
 </details>
+
+### 🚧 v1.7 Cabida Comercial (In Progress)
+
+**Milestone Goal:** Determinar si hay demanda real ("cabida") para un nuevo supermercado, minimarket, strip center o power center en una oportunidad, cruzando demografía/consumo público chileno y competencia existente dentro de un área de influencia (isócrona) — nunca con veredictos binarios ni datos fabricados.
+
+#### Phases
+
+- [ ] **Phase 16: Ubicación e Isócrona (Motor Desacoplado)** - Resuelve punto geolocalizado + área de influencia con degradación explícita; arquitectura de motor puro día 1
+- [ ] **Phase 17: Demografía y Consumo** - Población censal + capacidad de gasto estimada dentro del área de influencia, con fuente/vintage citados
+- [ ] **Phase 18: Competencia por Formato** - Conteo y roster de competidores por formato (supermercado/minimarket/strip/power center) con confianza degradada ante cobertura incompleta
+- [ ] **Phase 19: Veredicto, Metodología, Mapa y Tab** - Síntesis de 3 estados + confianza + metodología + mapa Leaflet, integrados como 5ª pestaña de la ficha de oportunidad
+
+#### Phase Details
+
+#### Phase 16: Ubicación e Isócrona (Motor Desacoplado)
+**Goal**: Toda oportunidad tiene un punto geolocalizado y un área de influencia calculados por un motor desacoplado `(lat,lng,formato) → resultado`, con precisión y método de cálculo siempre explícitos — nunca presentados como más exactos de lo que son.
+**Depends on**: Nothing (primera fase del milestone)
+**Requirements**: UBIC-01, UBIC-02, UBIC-03, UBIC-04, UBIC-05, CABI-01
+**Success Criteria** (what must be TRUE):
+  1. Al abrir el tab "Cabida Comercial" de una oportunidad, el sistema muestra su ubicación resuelta (lat/lng) junto con la precisión real obtenida (ej. "dirección aproximada" vs. "centroide de comuna") — nunca presentada como ubicación exacta si no lo es
+  2. El área de influencia se muestra como isócrona real (caminata/auto) cuando el servicio de ruteo responde correctamente, o como radio equivalente con el método señalado explícitamente (`red_vial` vs. `círculo_equivalente`) cuando el cálculo de isócrona falla — nunca de forma silenciosa
+  3. El usuario puede forzar un recálculo explícito con un botón "Actualizar", sin refresco silencioso en background — mismo patrón que zonificación
+  4. El análisis de cabida comercial es invocable como función pura `(lat, lng, formato) → resultado`, sin requerir `oportunidadId`, verificable de forma independiente (unit test o llamada directa)
+**Plans**: TBD
+
+#### Phase 17: Demografía y Consumo
+**Goal**: Dentro del área de influencia resuelta en la Fase 16, el usuario ve población y capacidad de gasto estimadas, cada cifra con su fuente y vintage visibles, sin mezclar escalas geográficas distintas sin declararlo.
+**Depends on**: Phase 16 (requiere ubicación + área de influencia resuelta)
+**Requirements**: DEMO-01, DEMO-02, DEMO-03
+**Success Criteria** (what must be TRUE):
+  1. El tab muestra población estimada dentro del área de influencia, calculada por intersección geoespacial con manzanas del Censo 2017, con disclaimer de antigüedad del dato
+  2. El tab muestra capacidad de gasto estimada por categoría de consumo (ingreso/pobreza comunal vía CASEN + share de categoría vía EPF), etiquetada explícitamente como "estimado agregado a nivel macro-zona, no medido en el área específica"
+  3. Cada cifra demográfica/de consumo muestra su fuente y año/vintage de forma visible, sin mezclar vintages censales (2017 vs. 2024) sin declararlo
+**Plans**: TBD
+
+#### Phase 18: Competencia por Formato
+**Goal**: Dentro del área de influencia, el usuario ve cuántos y cuáles competidores existen por formato objetivo, con nombre de cadena real cuando es identificable, y con el nivel de confianza degradado explícitamente cuando la cobertura de la fuente es conocida como incompleta.
+**Depends on**: Phase 16 (requiere área de influencia resuelta; independiente de Phase 17)
+**Requirements**: COMPE-01, COMPE-02, COMPE-03, COMPE-04, COMPE-05, COMPE-06
+**Success Criteria** (what must be TRUE):
+  1. El usuario puede seleccionar uno de los 4 formatos objetivo (supermercado, minimarket, strip center, power center) para el análisis
+  2. El tab muestra el conteo de competidores existentes por formato dentro del área de influencia, con nombre/tag y distancia — usando tags OSM estándar para supermercado/minimarket y la lista curada a mano para strip/power center
+  3. El usuario puede ver el nombre real de cadena de cada competidor detectado (ej. "Líder Express"), cruzando OSM con la nómina SII geocodificada on-demand por comuna
+  4. Un conteo de 0 competidores nunca se muestra como "confirmado: no hay competencia" cuando la cobertura de la fuente es conocida como incompleta (ej. roster SII sin Unimarc) — el nivel de confianza se degrada explícitamente en ese caso
+**Plans**: TBD
+
+#### Phase 19: Veredicto, Metodología, Mapa y Tab
+**Goal**: El usuario ve, en una 5ª pestaña de la ficha de oportunidad cargada bajo demanda, un veredicto honesto de 3 estados por formato con su confianza, la metodología/fuentes usadas, y un mapa visual del área de influencia con los competidores — cerrando el ciclo de síntesis de las Fases 17 y 18.
+**Depends on**: Phase 17, Phase 18 (síntesis de demografía + competencia; requiere ambas)
+**Requirements**: VERE-01, VERE-02, VERE-03, VERE-04, MAPA-01, CABI-02
+**Success Criteria** (what must be TRUE):
+  1. El tab presenta un veredicto de 3 estados por formato (ej. "evidencia de espacio" / "mercado parece cubierto" / "evidencia insuficiente para concluir") siempre junto a su nivel de confianza — nunca uno sin el otro, nunca binario
+  2. El tab incluye una sección de metodología/fuentes citando fecha del censo, fecha de scraping de competidores, radio/isócrona usado, y qué no se pudo verificar
+  3. El gap score se presenta explícitamente como proxy de densidad de oferta vs. demanda estimada — nunca como índice de fuga de ventas (leakage/surplus) real
+  4. El tab muestra un mapa Leaflet con el polígono del área de influencia (isócrona o radio) y pines de los competidores detectados
+  5. El tab "Cabida Comercial" aparece como 5ª pestaña en la ficha de detalle de oportunidad, junto a posicionamiento/historial/comparables/resumen, con carga bajo demanda (no eager) siguiendo el patrón de `ResumenTab`
+**Plans**: TBD
+
+#### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 16. Ubicación e Isócrona (Motor Desacoplado) | 0/TBD | Not started | - |
+| 17. Demografía y Consumo | 0/TBD | Not started | - |
+| 18. Competencia por Formato | 0/TBD | Not started | - |
+| 19. Veredicto, Metodología, Mapa y Tab | 0/TBD | Not started | - |
 
 ---
 

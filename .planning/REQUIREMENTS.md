@@ -74,33 +74,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UBIC-01 | TBD | Pending |
-| UBIC-02 | TBD | Pending |
-| UBIC-03 | TBD | Pending |
-| UBIC-04 | TBD | Pending |
-| UBIC-05 | TBD | Pending |
-| DEMO-01 | TBD | Pending |
-| DEMO-02 | TBD | Pending |
-| DEMO-03 | TBD | Pending |
-| COMPE-01 | TBD | Pending |
-| COMPE-02 | TBD | Pending |
-| COMPE-03 | TBD | Pending |
-| COMPE-04 | TBD | Pending |
-| COMPE-05 | TBD | Pending |
-| COMPE-06 | TBD | Pending |
-| VERE-01 | TBD | Pending |
-| VERE-02 | TBD | Pending |
-| VERE-03 | TBD | Pending |
-| VERE-04 | TBD | Pending |
-| MAPA-01 | TBD | Pending |
-| CABI-01 | TBD | Pending |
-| CABI-02 | TBD | Pending |
+| UBIC-01 | Phase 16 | Pending |
+| UBIC-02 | Phase 16 | Pending |
+| UBIC-03 | Phase 16 | Pending |
+| UBIC-04 | Phase 16 | Pending |
+| UBIC-05 | Phase 16 | Pending |
+| CABI-01 | Phase 16 | Pending |
+| DEMO-01 | Phase 17 | Pending |
+| DEMO-02 | Phase 17 | Pending |
+| DEMO-03 | Phase 17 | Pending |
+| COMPE-01 | Phase 18 | Pending |
+| COMPE-02 | Phase 18 | Pending |
+| COMPE-03 | Phase 18 | Pending |
+| COMPE-04 | Phase 18 | Pending |
+| COMPE-05 | Phase 18 | Pending |
+| COMPE-06 | Phase 18 | Pending |
+| VERE-01 | Phase 19 | Pending |
+| VERE-02 | Phase 19 | Pending |
+| VERE-03 | Phase 19 | Pending |
+| VERE-04 | Phase 19 | Pending |
+| MAPA-01 | Phase 19 | Pending |
+| CABI-02 | Phase 19 | Pending |
 
 **Coverage:**
-- v1.7 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 ⚠️ (pendiente de roadmap)
+- v1.7 requirements: 21 total (nota: el encabezado de esta sección decía "20 total" — recuento real de la tabla de arriba es 21; corregido acá durante la creación del roadmap)
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+
+**Phase mapping:**
+- Phase 16 (Ubicación e Isócrona — Motor Desacoplado): UBIC-01→05, CABI-01
+- Phase 17 (Demografía y Consumo): DEMO-01→03
+- Phase 18 (Competencia por Formato): COMPE-01→06
+- Phase 19 (Veredicto, Metodología, Mapa y Tab): VERE-01→04, MAPA-01, CABI-02
 
 ---
 *Requirements defined: 2026-08-02*
 *Last updated: 2026-08-02 — v1.7 Cabida Comercial requirements definidos vía `/gsd:new-milestone`*
+*Traceability updated: 2026-08-02 — ROADMAP.md v1.7 creado (Fases 16-19), 21/21 requirements mapeados vía roadmapper*

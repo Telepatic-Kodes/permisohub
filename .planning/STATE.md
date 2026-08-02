@@ -1,6 +1,9 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `81df899` docs: define milestone v1.7 requirements
+- `2026-08-02` `0550c80` docs: complete project research
+- `2026-08-02` `f56b13c` docs: start milestone v1.7 Cabida Comercial
 - `2026-08-02` `8124061` docs: record commit log entry
 - `2026-08-02` `785c891` chore: complete v1.6 milestone
 - `2026-08-02` `d8ed8ed` docs: record commit log entry
@@ -61,17 +64,21 @@ _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, req
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-08-02 — Milestone v1.7 (Cabida Comercial) started
+Phase: 16 of 19 (Ubicación e Isócrona — Motor Desacoplado)
+Plan: — (roadmap created, not yet planned)
+Status: Ready to plan
+Last activity: 2026-08-02 — ROADMAP.md v1.7 creado (Fases 16-19), 21/21 requirements mapeados, STATE.md y REQUIREMENTS.md actualizados
 
-Progress: [░░░░░░░░░░] 0% (milestone v1.7 recién iniciado)
+Progress: [░░░░░░░░░░] 0% (milestone v1.7 — roadmap listo, ejecución no iniciada)
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
+| 16 | Ubicación e Isócrona (Motor Desacoplado) | ⬜ No iniciada |
+| 17 | Demografía y Consumo | ⬜ No iniciada |
+| 18 | Competencia por Formato | ⬜ No iniciada |
+| 19 | Veredicto, Metodología, Mapa y Tab | ⬜ No iniciada |
 | 13 | Refactor de Scoring + Dashboard de Detalle | ✅ Completa (7/7 planes) — 13-01 ✅ (evaluarOportunidad() extraída y testeada en lib/mercado-locales-server.ts, fuente única de verdad de scoring — ver 13-01-SUMMARY.md) 13-02 ✅ (lib/formato-fecha.ts + streamConContexto() en lib/ai.ts sin tool web_search_preview + lib/resumen-oportunidad-prompts.ts — ver 13-02-SUMMARY.md) 13-03 ✅ (obtenerOportunidadPorId/obtenerComparablesOportunidad/obtenerHistorialPrecioListing + REASON_LABEL_DETALLE en lib/mercado-locales-server.ts — ver 13-03-SUMMARY.md) 13-04 ✅ (POST /api/oportunidades-resumen + ResumenTab, DETA-06 sin auto-disparo — ver 13-04-SUMMARY.md) 13-05 ✅ (PosicionamientoTab: banda de precio vs. cohorte + banner amber de advertencia + rentabilidad implícita de zona, DETA-02/DETA-07 — ver 13-05-SUMMARY.md) 13-06 ✅ (HistorialTab + ComparablesTab, DETA-03/DETA-04/DETA-05 — ver 13-06-SUMMARY.md) 13-07 ✅ (Server Component [id]/page.tsx integra las 4 tabs con datos reales + wiring de la lista, checkpoint humano end-to-end aprobado, DETA-01 a DETA-07 completos — ver 13-07-SUMMARY.md) |
 | 14 | Comparación Lado a Lado | ✅ Completa (3/3 planes) — 14-01 ✅ (obtenerOportunidadesPorIds batched en lib/mercado-locales-server.ts — ver 14-01-SUMMARY.md) 14-02 ✅ (SelectorComparacion client island: checkbox + tope 5 + botón "Comparar (N)" + wireado en oportunidades/page.tsx — ver 14-02-SUMMARY.md) 14-03 ✅ (TablaComparacion + /oportunidades/comparar con validación server-side de rango/existencia/homogeneidad, checkpoint humano aprobado en vivo — COMPA-01 a COMPA-04 completos, ver 14-03-SUMMARY.md) |
 | 15 | Informe Exportable | ✅ Completa (3/3 planes) — 15-01 ✅ (fix print:hidden/print:pl-0 global, formatTimestampCorto compartido, PrintButton/PreparadoPorPara/PortadaInforme/MetodologiaInforme en components/mercado-inmobiliario/informe/ — ver 15-01-SUMMARY.md). 15-02 ✅ (`/oportunidades/[id]/informe` + link "Exportar informe" en `[id]/page.tsx`, INFO-01/03/04 informe individual, checkpoint humano aprobado en vivo, commits `eab3286`/`c7132ff` — ver 15-02-SUMMARY.md). 15-03 ✅ (`/oportunidades/comparar/informe` con re-validación independiente de rango/existencia/homogeneidad — Pitfall 5 — + link "Exportar informe" en comparar/page.tsx, INFO-02/03/04 informe de comparación, checkpoint humano aprobado en vivo, commits `eab3286`/`9805c8b` — ver 15-03-SUMMARY.md). Milestone v1.6 (Reportes Profesionales de Oportunidades) completo — INFO-01 a INFO-04 verificados. |
@@ -92,7 +99,7 @@ Progress: [░░░░░░░░░░] 0% (milestone v1.7 recién iniciado)
 
 See: .planning/PROJECT.md (updated 2026-08-02 al iniciar milestone v1.7)
 **Core value:** El copiloto IA del arquitecto chileno — acelera y automatiza la tramitación de permisos DOM
-**Current focus:** Milestone v1.7 (Cabida Comercial — Demografía y Consumo) en definición de requirements.
+**Current focus:** Milestone v1.7 (Cabida Comercial — Demografía y Consumo), Fase 16 (Ubicación e Isócrona) lista para planear.
 
 ## Accumulated Context
 
