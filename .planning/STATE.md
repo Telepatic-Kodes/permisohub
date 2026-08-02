@@ -1,6 +1,9 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `0d2a10b` feat(14-03): add /oportunidades/comparar route with server-side homogeneity validation
+- `2026-08-02` `07a5a06` feat(14-03): add TablaComparacion component
+- `2026-08-02` `9cafa1e` docs(14-01): complete capa de datos para comparación en lote plan
 - `2026-08-02` `55ecf32` docs(14-02): complete selector de comparación plan
 - `2026-08-02` `ecf1a71` feat(14-02): wire SelectorComparacion en oportunidades/page.tsx
 - `2026-08-02` `8cc0137` feat(14-01): add obtenerOportunidadesPorIds(ids) con fetch batched
@@ -38,19 +41,19 @@ _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, req
 
 ## Current Position
 
-Phase: 14 of 15 (Comparación Lado a Lado) — EN CURSO, 2/3 planes (wave 1 completa)
-Plan: 02 de 3 completo (SelectorComparacion: client island con checkbox + tope de 5 + botón flotante "Comparar (N)" + navegación vía URL) — Plan 01 también completo en paralelo (obtenerOportunidadesPorIds, capa de datos batched) — falta Plan 14-03 (ruta /comparar, wave 2, depende de ambos)
-Status: Plan 14-01 completo (obtenerOportunidadesPorIds(ids) en lib/mercado-locales-server.ts, 1 query de listings + 1 de historial + cache de bandas por comuna×tipo×operación, reusa construirOportunidadDetalle() extraído de obtenerOportunidadPorId — ver 14-01-SUMMARY.md) — Plan 14-02 completo (components/mercado-inmobiliario/selector-comparacion.tsx nuevo + oportunidades/page.tsx wireado, tsc/build limpios — ver 14-02-SUMMARY.md)
-Last activity: 2026-08-02 — `/gsd:execute-phase 14` ejecutó planes 14-01 y 14-02 en paralelo (wave 1, sin dependencias entre sí): 14-01 agregó la capa de datos en lote para la comparación; 14-02 agregó el selector interactivo en /oportunidades que arma la URL `?ids=...`. La ruta `/oportunidades/comparar` (Plan 14-03) que consume ambos aún no existe — pendiente, wave 2.
+Phase: 14 of 15 (Comparación Lado a Lado) — EN CURSO, 2/3 planes completos + 14-03 en checkpoint humano
+Plan: 03 de 3 — Tasks 1-2 completos (TablaComparacion + ruta /oportunidades/comparar con validación server-side de rango/existencia/homogeneidad), Task 3 (checkpoint:human-verify, gate blocking) PENDIENTE de aprobación del usuario antes de cerrar la fase 14
+Status: Plan 14-01 y 14-02 completos (ver SUMMARIES respectivos). Plan 14-03: `components/mercado-inmobiliario/comparacion/tabla-comparacion.tsx` y `app/(dashboard)/mercado-inmobiliario/oportunidades/comparar/page.tsx` creados y commiteados — `npx tsc --noEmit` y `npm run build` limpios. Verificación automatizada previa al checkpoint (vía curl contra dev server real en :7891, con ids reales de la base): ruta homogénea renderiza la tabla (200 OK, filas Precio UF/Precio UF/m²/Rentabilidad de zona presentes); 1 solo id muestra "Selección inválida"; mezcla local_comercial+oficina muestra "Comparación inválida" (defensa real de COMPA-03 confirmada); un id dado_de_baja se incluye con badge "Dado de baja" visible. Falta la verificación EN VIVO en navegador (checkbox → botón "Comparar (N)" → tabla, F5, resaltado visual) — Task 3 no se puede completar sin el usuario.
+Last activity: 2026-08-02 — Se ejecutó Plan 14-03 (Tasks 1-2 automatizados, commits `07a5a06`/`0d2a10b`); Task 3 detenido en checkpoint humano esperando aprobación en vivo del flujo completo COMPA-01 a COMPA-04.
 
-Progress: [██████░░░░] 67% (2/3 planes de la fase 14 completos, wave 1 cerrada) — falta 14-03 (wave 2)
+Progress: [█████████░] 89% (2/3 planes de la fase 14 completos + 14-03 con 2/3 tasks hechos, esperando checkpoint humano)
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
 | 13 | Refactor de Scoring + Dashboard de Detalle | ✅ Completa (7/7 planes) — 13-01 ✅ (evaluarOportunidad() extraída y testeada en lib/mercado-locales-server.ts, fuente única de verdad de scoring — ver 13-01-SUMMARY.md) 13-02 ✅ (lib/formato-fecha.ts + streamConContexto() en lib/ai.ts sin tool web_search_preview + lib/resumen-oportunidad-prompts.ts — ver 13-02-SUMMARY.md) 13-03 ✅ (obtenerOportunidadPorId/obtenerComparablesOportunidad/obtenerHistorialPrecioListing + REASON_LABEL_DETALLE en lib/mercado-locales-server.ts — ver 13-03-SUMMARY.md) 13-04 ✅ (POST /api/oportunidades-resumen + ResumenTab, DETA-06 sin auto-disparo — ver 13-04-SUMMARY.md) 13-05 ✅ (PosicionamientoTab: banda de precio vs. cohorte + banner amber de advertencia + rentabilidad implícita de zona, DETA-02/DETA-07 — ver 13-05-SUMMARY.md) 13-06 ✅ (HistorialTab + ComparablesTab, DETA-03/DETA-04/DETA-05 — ver 13-06-SUMMARY.md) 13-07 ✅ (Server Component [id]/page.tsx integra las 4 tabs con datos reales + wiring de la lista, checkpoint humano end-to-end aprobado, DETA-01 a DETA-07 completos — ver 13-07-SUMMARY.md) |
-| 14 | Comparación Lado a Lado | En curso (2/3 planes) — 14-01 ✅ (obtenerOportunidadesPorIds batched en lib/mercado-locales-server.ts — ver 14-01-SUMMARY.md) 14-02 ✅ (SelectorComparacion client island: checkbox + tope 5 + botón "Comparar (N)" + wireado en oportunidades/page.tsx — ver 14-02-SUMMARY.md) 14-03 pendiente (ruta /oportunidades/comparar, wave 2) |
+| 14 | Comparación Lado a Lado | En curso (2/3 planes + 14-03 en checkpoint humano) — 14-01 ✅ (obtenerOportunidadesPorIds batched en lib/mercado-locales-server.ts — ver 14-01-SUMMARY.md) 14-02 ✅ (SelectorComparacion client island: checkbox + tope 5 + botón "Comparar (N)" + wireado en oportunidades/page.tsx — ver 14-02-SUMMARY.md) 14-03 Tasks 1-2 ✅ (TablaComparacion + /oportunidades/comparar con validación server-side de rango/existencia/homogeneidad, tsc/build limpios, commits `07a5a06`/`0d2a10b`) — Task 3 checkpoint:human-verify PENDIENTE |
 | 15 | Informe Exportable | Not started — INFO-01..04 |
 | 10 | Motor de Zonificación | ✅ Completa — 10-01 ✅ (migración zonificacion_cache + proyectos.zona_* aplicada vía Supabase MCP) 10-02 ✅ (lib/zonificacion-comunas.ts, registro 4 comunas) 10-03 ✅ (lib/geocoding.ts, Nominatim geocoder) 10-04 ✅ (lib/zonificacion.ts + ruta GET /api/zonificacion/lookup, orquestación completa) 10-05 ✅ (lib/zonificacion-server.ts + after() en POST/PATCH /api/proyectos, persistencia automática de zona_* sin UI) |
 | 11 | Vista de Zonificación en el Proyecto | ✅ Completa (8/8 planes) — 11-01 ✅ (types/index.ts zona_* + lib/zonificacion-format.ts + migración 20260730_zonificacion_v2.sql) 11-02 ✅ (lib/zonificacion-zonas.ts, GET /api/zonificacion/zonas) 11-03 ✅ (lib/zonificacion-compat.ts + POST /api/proyectos/[id]/compatibilidad) 11-04 ✅ (leaflet + CSP img-src + components/proyecto/zonificacion-mapa.tsx) 11-05 ✅ (lib/zonificacion-geo.ts + geometría real WGS84 + ?force=true vía upsert) 11-06 ✅ (GET-POST /api/proyectos/[id]/zonificacion + zona_codigo) 11-07 ✅ (ZonificacionCard + disclaimer, integrados en la página) 11-08 ✅ (fallback manual + compat checker + checkpoint humano verificado en vivo — ver 11-08-SUMMARY.md) |
