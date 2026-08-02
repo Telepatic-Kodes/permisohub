@@ -140,14 +140,22 @@ export async function aiCompleteWithPDF(
 // para no perder el detalle del dibujo — dolor explícito del arquitecto.
 // Responses API + web_search_preview — a diferencia de aiComplete() (Chat
 // Completions, sin acceso a internet), esto permite que el modelo busque en
-// vivo antes de responder. Usado solo por app/api/tasacion/route.ts: no hay
-// todavía una tabla de comparables reales para terrenos (a diferencia de
-// locales comerciales, que sí tiene mercado_locales_listings scrapeado a
-// diario — ver lib/mercado-locales-server.ts), así que la búsqueda web es la
-// única fuente de comparables disponible en esta fase. Devuelve el stream
-// crudo del SDK — cada ruta que la use decide cómo traducir sus eventos a su
-// propio framing SSE, igual que app/api/ai/chat/route.ts hace con
-// ai.chat.completions.create({stream: true}) en vez de envolverlo acá.
+// vivo antes de responder. Usado por Tasación (app/api/tasacion/route.ts,
+// informe de 10 secciones con varias tablas) y Due Diligence
+// (app/api/due-diligence-propiedad/route.ts, 7 secciones) — ninguna de las
+// dos tiene todavía una tabla de comparables/precedentes real, así que la
+// búsqueda web es la única fuente disponible en esta fase. Devuelve el
+// stream crudo del SDK — cada ruta que la use decide cómo traducir sus
+// eventos a su propio framing SSE, igual que app/api/ai/chat/route.ts hace
+// con ai.chat.completions.create({stream: true}) en vez de envolverlo acá.
+//
+// `max_output_tokens` explícito: sin este parámetro, la Responses API cae al
+// default del modelo (gpt-4o: 4.096 tokens) — verificado en vivo que esto
+// truncaba el informe de Tasación antes de llegar a "Score de Liquidez" (la
+// sección 8 de 10), porque las llamadas de búsqueda web y sus resultados
+// comparten el mismo presupuesto de salida que el texto final en la
+// Responses API. 12.000 da margen real para 10 secciones con tablas + 8+
+// búsquedas sin ser un límite tan alto que oculte una regresión futura.
 export async function streamConBusquedaWeb(instructions: string, input: string) {
   const ai = getAI()
   if (!ai) throw new Error('OPENAI_API_KEY no configurado')
@@ -157,6 +165,7 @@ export async function streamConBusquedaWeb(instructions: string, input: string) 
     tools: [{ type: 'web_search_preview' }],
     input,
     stream: true,
+    max_output_tokens: 12000,
   })
 }
 
