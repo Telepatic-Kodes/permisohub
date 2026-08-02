@@ -54,7 +54,7 @@ function ConversorUfPage({ ufValor }: { ufValor: number }) {
   const [clp, setClp] = useState(String(Math.round(ufValor)))
 
   return (
-    <Card className="rounded-[4px] border-line-fine">
+    <Card className="rounded-lg border-line-fine">
       <CardContent className="space-y-4 p-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
@@ -102,7 +102,7 @@ function CapRatePanel() {
   })
 
   return (
-    <Card className="rounded-[4px] border-line-fine">
+    <Card className="rounded-lg border-line-fine">
       <CardContent className="space-y-5 p-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
@@ -124,7 +124,7 @@ function CapRatePanel() {
         </div>
 
         {precioVenta && rentaMensual && (
-          <div className="rounded-[4px] border border-line-fine bg-card p-4 text-sm">
+          <div className="rounded-lg border border-line-fine bg-card p-4 text-sm">
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
               <div>
                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cap bruto</p>
@@ -163,7 +163,7 @@ function RoiPanel() {
   })
 
   return (
-    <Card className="rounded-[4px] border-line-fine">
+    <Card className="rounded-lg border-line-fine">
       <CardContent className="space-y-5 p-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
@@ -181,7 +181,7 @@ function RoiPanel() {
         </div>
 
         {precioCompra && arriendoMensual && (
-          <div className="rounded-[4px] border border-line-fine bg-card p-4 text-sm">
+          <div className="rounded-lg border border-line-fine bg-card p-4 text-sm">
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
               <div>
                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground">ROI anual</p>

@@ -289,6 +289,35 @@ export async function obtenerBandasMercadoLocales(
   return aBandas(filaCiudad as FilaStats, true, filaComuna?.muestra_n ?? 0)
 }
 
+/**
+ * Serie histórica de mediana UF/m² para sparkline (KpiCard de Reportes de
+ * Mercado). El motor de bandas corre a diario desde el 1 ago 2026 — hoy solo
+ * hay 1 día de historia real por comuna, así que esto devuelve un array de
+ * 0-1 puntos hasta que se acumulen más corridas. Nunca se infla ni se
+ * inventa historia: KpiCard ya degrada con gracia (sin sparkline) si recibe
+ * menos de 2 puntos.
+ */
+export async function obtenerHistorialMedianaUfM2(
+  comuna: string,
+  operacion: OperacionMercadoLocal,
+  tipoPropiedad: TipoPropiedadComercial = TIPO_PROPIEDAD_DEFAULT,
+  dias = 30,
+): Promise<number[]> {
+  const supabase = createServiceClient()
+
+  const { data } = await supabase
+    .from('mercado_locales_stats_diarias')
+    .select('mediana_uf_m2, stats_date')
+    .eq('comuna', comuna)
+    .eq('operacion', operacion)
+    .eq('tipo_propiedad', tipoPropiedad)
+    .order('stats_date', { ascending: true })
+    .limit(dias)
+
+  if (!data) return []
+  return data.map((f) => f.mediana_uf_m2).filter((v): v is number => v !== null)
+}
+
 export interface OportunidadMercadoLocal {
   id: string
   titulo: string

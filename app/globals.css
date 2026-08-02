@@ -172,6 +172,110 @@
   --line-fine: oklch(1 0 0 / 0.08);
 }
 
+/* ── Tema Consultora — Mercado Inmobiliario ────────────────────────────────
+   Reskin literal hacia el look de informe de consultora (navy + grises
+   neutros, un solo acento, sin ornamentación arquitectónica), scoped vía
+   `.tema-consultora` (aplicado en app/(dashboard)/mercado-inmobiliario/layout.tsx).
+   El lado Permisos/DOM no se toca — sigue usando la paleta "Blueprint
+   Precision" de arriba sin cambios. Overridea las variables crudas, no las
+   utilidades: cada `bg-card`/`text-primary`/`border-line-fine` ya existente
+   cambia solo, sin tocar componentes (mismo mecanismo que usa `.dark`). */
+.tema-consultora {
+  --background: oklch(0.975 0.003 90);
+  --foreground: oklch(0.25 0.04 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.25 0.04 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.25 0.04 260);
+  --primary: oklch(0.32 0.09 260);
+  --primary-foreground: oklch(0.98 0.003 90);
+  --secondary: oklch(0.96 0.004 90);
+  --secondary-foreground: oklch(0.32 0.09 260);
+  --muted: oklch(0.965 0.003 90);
+  --muted-foreground: oklch(0.5 0.015 260);
+  --accent: oklch(0.96 0.004 90);
+  --accent-foreground: oklch(0.25 0.04 260);
+  --border: oklch(0.90 0.004 90);
+  --input: oklch(0.90 0.004 90);
+  --ring: oklch(0.32 0.09 260 / 40%);
+  --radius: 0.625rem;
+
+  /* Un solo acento — reemplaza blueprint azul Y dorado de módulo, que en
+     consultora clásica serían dos ejes de color redundantes. */
+  --blueprint: oklch(0.48 0.12 258);
+  --blueprint-soft: oklch(0.48 0.12 258 / 0.10);
+  --modulo-mercado: oklch(0.48 0.12 258);
+  --modulo-mercado-subtle: oklch(0.48 0.12 258 / 0.10);
+
+  /* Verdicto normativo real — se mantiene semánticamente, solo se afina el
+     tono para sentirse corporativo en vez de saturado. */
+  --state-ok: oklch(0.52 0.11 155);
+  --state-warn: oklch(0.62 0.13 68);
+  --state-error: oklch(0.55 0.18 27);
+
+  --line-strong: oklch(0.32 0.09 260);
+  --line-med: oklch(0.85 0.006 90);
+  --line-fine: oklch(0.90 0.004 90);
+
+  --shadow-card: 0 1px 3px oklch(0.25 0.04 260 / 0.06), 0 1px 2px oklch(0.25 0.04 260 / 0.04);
+  --shadow-elevated: 0 4px 20px oklch(0.25 0.04 260 / 0.08), 0 2px 8px oklch(0.25 0.04 260 / 0.05);
+  --shadow-card-hover: 0 6px 24px oklch(0.25 0.04 260 / 0.11), 0 2px 8px oklch(0.25 0.04 260 / 0.06);
+}
+
+.dark .tema-consultora {
+  --background: oklch(0.16 0.015 260);
+  --foreground: oklch(0.96 0.004 90);
+  --card: oklch(0.20 0.02 260);
+  --card-foreground: oklch(0.96 0.004 90);
+  --popover: oklch(0.20 0.02 260);
+  --popover-foreground: oklch(0.96 0.004 90);
+  --primary: oklch(0.72 0.10 258);
+  --primary-foreground: oklch(0.16 0.015 260);
+  --secondary: oklch(0.25 0.02 260);
+  --secondary-foreground: oklch(0.96 0.004 90);
+  --muted: oklch(0.25 0.02 260);
+  --muted-foreground: oklch(0.65 0.015 260);
+  --accent: oklch(0.25 0.02 260);
+  --accent-foreground: oklch(0.96 0.004 90);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.72 0.10 258 / 40%);
+
+  --blueprint: oklch(0.72 0.10 258);
+  --blueprint-soft: oklch(0.72 0.10 258 / 0.16);
+  --modulo-mercado: oklch(0.72 0.10 258);
+  --modulo-mercado-subtle: oklch(0.72 0.10 258 / 0.16);
+
+  --state-ok: oklch(0.68 0.12 155);
+  --state-warn: oklch(0.75 0.14 68);
+  --state-error: oklch(0.70 0.18 22);
+
+  --line-strong: oklch(1 0 0 / 0.30);
+  --line-med: oklch(1 0 0 / 0.14);
+  --line-fine: oklch(1 0 0 / 0.08);
+}
+
+/* Dentro del tema consultora, el vocabulario "dibujo técnico" se aplana:
+   mismas clases, sin ornamentación arquitectónica (sin cajetín de borde
+   fuerte, sin grilla milimetrada, sin achurado diagonal) — los componentes
+   que ya usan `.rotulo`/`.bg-blueprint-grid`/`.hatch-*` no se tocan. */
+.tema-consultora .rotulo {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.tema-consultora .bg-blueprint-grid {
+  background-image: none;
+  background-color: var(--background);
+}
+.tema-consultora .hatch-observa {
+  background-image: none;
+  background-color: oklch(0.62 0.13 68 / 0.08);
+}
+.tema-consultora .hatch-rechaza {
+  background-image: none;
+  background-color: oklch(0.55 0.18 27 / 0.07);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

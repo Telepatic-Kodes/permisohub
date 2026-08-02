@@ -170,7 +170,7 @@ function DueDiligencePageInner() {
       <div className="flex-1 p-8">
         <div className="mx-auto max-w-4xl space-y-6">
           <form onSubmit={(e) => void handleSubmit(e)}>
-            <Card className="rounded-[4px] border-line-fine">
+            <Card className="rounded-lg border-line-fine">
               <CardHeader>
                 <CardTitle className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
                   Propiedad y dominio
@@ -202,7 +202,7 @@ function DueDiligencePageInner() {
                   <div className="space-y-1.5">
                     <Label>Tipo de dominio</Label>
                     <select
-                      className="flex h-9 w-full rounded-[4px] border border-line-fine bg-card px-3 py-1 text-sm"
+                      className="flex h-9 w-full rounded-lg border border-line-fine bg-card px-3 py-1 text-sm"
                       value={form.tipoDominio}
                       onChange={(e) => setField("tipoDominio", e.target.value)}
                     >
@@ -312,7 +312,7 @@ function DueDiligencePageInner() {
             />
           ) : (
             streamingText && (
-              <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4">
+              <div className="rounded-lg border border-line-fine bg-card px-5 py-4">
                 <MarkdownRenderer content={streamingText} />
                 {loading && <span className="inline-block w-1 h-4 bg-[var(--blueprint)] animate-pulse ml-0.5 align-middle" />}
               </div>

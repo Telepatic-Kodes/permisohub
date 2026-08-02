@@ -44,7 +44,7 @@ export function InformeEjecutivo({ content, fuentes, className }: InformeEjecuti
   return (
     <div className={cn("space-y-4", className)}>
       {resumen && (
-        <div className="rounded-[4px] border-2 border-[var(--blueprint)] bg-[var(--blueprint-soft)] px-5 py-4">
+        <div className="rounded-lg border-2 border-[var(--blueprint)] bg-[var(--blueprint-soft)] px-5 py-4">
           <p className="mb-2 font-technical text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--blueprint)]">
             Resumen ejecutivo
           </p>
@@ -68,7 +68,7 @@ export function InformeEjecutivo({ content, fuentes, className }: InformeEjecuti
         </div>
       )}
 
-      <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4">
+      <div className="rounded-lg border border-line-fine bg-card px-5 py-4">
         <MarkdownRenderer content={resto} />
       </div>
     </div>

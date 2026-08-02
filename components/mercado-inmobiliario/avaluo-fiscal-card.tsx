@@ -12,7 +12,7 @@ export function AvaluoFiscalCard({ data }: { data: SIILookupServerData }) {
   const CLP = new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 })
 
   return (
-    <div className="rounded-[4px] border border-line-fine bg-card p-4">
+    <div className="rounded-lg border border-line-fine bg-card p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Landmark className="size-4 text-muted-foreground" />

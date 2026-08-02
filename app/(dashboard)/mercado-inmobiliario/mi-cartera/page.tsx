@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { TIPO_PROPIEDAD_LABEL, type OperacionMercadoLocal, type TipoPropiedadComercial } from "@/lib/scrapers/mercado-locales-common"
+import { KpiCard } from "@/components/mercado-inmobiliario/charts/kpi-card"
+import { DistribucionDonut } from "@/components/mercado-inmobiliario/charts/distribucion-donut"
+import { DesviacionBar } from "@/components/mercado-inmobiliario/charts/desviacion-bar"
 
 const TIPOS_PROPIEDAD: TipoPropiedadComercial[] = ["local_comercial", "oficina", "bodega", "industrial"]
 
@@ -96,7 +99,7 @@ function VencimientoBadge({ fecha }: { fecha: string }) {
 function VeredictoMercado({ comparacion }: { comparacion: Comparacion }) {
   const cfg = VEREDICTO_CONFIG[comparacion.veredicto]
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2.5">
       <span
         className="inline-flex items-center gap-1.5 rounded-[3px] border px-2 py-0.5 text-[11px] font-medium"
         style={{ color: cfg.color, borderColor: cfg.color }}
@@ -105,10 +108,13 @@ function VeredictoMercado({ comparacion }: { comparacion: Comparacion }) {
         {cfg.label}
       </span>
       {comparacion.veredicto !== "sin_dato" && comparacion.variacionPct !== null && (
-        <span className="text-xs text-muted-foreground">
-          {comparacion.variacionPct >= 0 ? "+" : ""}
-          {comparacion.variacionPct.toFixed(0)}% vs. mediana real de la comuna (N={comparacion.muestraN})
-        </span>
+        <>
+          <DesviacionBar variacionPct={comparacion.variacionPct} color={cfg.color} />
+          <span className="num text-xs text-muted-foreground">
+            {comparacion.variacionPct >= 0 ? "+" : ""}
+            {comparacion.variacionPct.toFixed(0)}% vs. mediana (N={comparacion.muestraN})
+          </span>
+        </>
       )}
     </div>
   )
@@ -154,37 +160,34 @@ function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
 }
 
 function ResumenPortafolioStrip({ resumen }: { resumen: ResumenPortafolio }) {
+  const enRiesgo = resumen.contratosVencidos + resumen.contratosPorVencer
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <div className="rounded-[4px] border border-line-fine bg-card p-3">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Propiedades</p>
-        <p className="num text-lg font-semibold text-primary">{resumen.total}</p>
-        <p className="text-[11px] text-muted-foreground">{resumen.superficieTotalM2.toLocaleString("es-CL")} m² en total</p>
-      </div>
-      <div className="rounded-[4px] border border-line-fine bg-card p-3">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Renta mensual</p>
-        <p className="num text-lg font-semibold text-primary">{formatUf(resumen.rentaMensualTotalUf)} UF</p>
-        <p className="text-[11px] text-muted-foreground">solo activos arrendados</p>
-      </div>
-      <div className="rounded-[4px] border border-line-fine bg-card p-3">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Vs. mercado</p>
-        <p className="text-xs text-foreground/80">
-          <span style={{ color: "var(--state-warn, #d97706)" }}>{resumen.bajoMercado} bajo</span>
-          {" · "}
-          <span style={{ color: "var(--state-ok, #16a34a)" }}>{resumen.aMercado} a</span>
-          {" · "}
-          <span style={{ color: "var(--blueprint)" }}>{resumen.sobreMercado} sobre</span>
-        </p>
-      </div>
-      <div className="rounded-[4px] border border-line-fine bg-card p-3">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Contratos</p>
-        <p className="text-xs text-foreground/80">
-          {resumen.contratosVencidos > 0 && <span style={{ color: "var(--state-error, #dc2626)" }}>{resumen.contratosVencidos} vencidos</span>}
-          {resumen.contratosVencidos > 0 && resumen.contratosPorVencer > 0 && " · "}
-          {resumen.contratosPorVencer > 0 && <span style={{ color: "var(--state-warn, #d97706)" }}>{resumen.contratosPorVencer} por vencer (60d)</span>}
-          {resumen.contratosVencidos === 0 && resumen.contratosPorVencer === 0 && "sin vencimientos próximos"}
-        </p>
-      </div>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <KpiCard label="Propiedades" valor={String(resumen.total)} contexto={`${resumen.superficieTotalM2.toLocaleString("es-CL")} m² en total`} />
+      <KpiCard label="Renta mensual" valor={`${formatUf(resumen.rentaMensualTotalUf)} UF`} contexto="solo activos arrendados" />
+      <DistribucionDonut
+        titulo="Vs. mercado"
+        size={56}
+        segmentos={[
+          { label: "Bajo", valor: resumen.bajoMercado, color: "var(--state-warn, #d97706)" },
+          { label: "A mercado", valor: resumen.aMercado, color: "var(--state-ok, #16a34a)" },
+          { label: "Sobre", valor: resumen.sobreMercado, color: "var(--blueprint)" },
+        ]}
+      />
+      <KpiCard
+        label="Contratos en riesgo"
+        valor={String(enRiesgo)}
+        contexto={
+          enRiesgo === 0
+            ? "sin vencimientos próximos"
+            : [
+                resumen.contratosVencidos > 0 ? `${resumen.contratosVencidos} vencidos` : null,
+                resumen.contratosPorVencer > 0 ? `${resumen.contratosPorVencer} por vencer (60d)` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")
+        }
+      />
     </div>
   )
 }
@@ -291,7 +294,7 @@ export default function MiCarteraPage() {
       <div className="flex-1 p-8">
         <div className="mx-auto max-w-3xl space-y-6">
           <form onSubmit={(e) => void handleSubmit(e)}>
-            <Card className="rounded-[4px] border-line-fine">
+            <Card className="rounded-lg border-line-fine">
               <CardHeader>
                 <CardTitle className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
                   Agregar propiedad
@@ -310,7 +313,7 @@ export default function MiCarteraPage() {
                   <div className="space-y-1.5">
                     <Label>Tipo de propiedad</Label>
                     <select
-                      className="flex h-9 w-full rounded-[4px] border border-line-fine bg-card px-3 py-1 text-sm"
+                      className="flex h-9 w-full rounded-lg border border-line-fine bg-card px-3 py-1 text-sm"
                       value={form.tipoPropiedad}
                       onChange={(e) => setField("tipoPropiedad", e.target.value as TipoPropiedadComercial)}
                     >
@@ -326,7 +329,7 @@ export default function MiCarteraPage() {
                   <div className="space-y-1.5">
                     <Label>Estado actual</Label>
                     <select
-                      className="flex h-9 w-full rounded-[4px] border border-line-fine bg-card px-3 py-1 text-sm"
+                      className="flex h-9 w-full rounded-lg border border-line-fine bg-card px-3 py-1 text-sm"
                       value={form.operacion}
                       onChange={(e) => setField("operacion", e.target.value as OperacionMercadoLocal)}
                     >
@@ -375,14 +378,14 @@ export default function MiCarteraPage() {
               <Loader2 className="size-4 animate-spin" /> Cargando cartera…
             </div>
           ) : filas.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-[4px] border border-line-fine bg-card p-10 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-line-fine bg-card p-10 text-center">
               <TrendingDown className="size-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">Aún no agregas propiedades a tu cartera.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {filas.map(({ propiedad, comparacion, senalExpansion, tendenciaConstruccion }) => (
-                <div key={propiedad.id} className="rounded-[4px] border border-line-fine bg-card p-4">
+                <div key={propiedad.id} className="rounded-lg border border-line-fine bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-primary">{propiedad.direccion}</p>

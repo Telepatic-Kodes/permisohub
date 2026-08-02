@@ -2,13 +2,14 @@
 
 import { useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { AlertCircle, BadgeCheck, Loader2, ShieldQuestion, TrendingUp } from "lucide-react"
+import { AlertCircle, Loader2, TrendingUp } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { KpiCard } from "@/components/mercado-inmobiliario/charts/kpi-card"
+import { RankingBarChart, type ItemRanking } from "@/components/mercado-inmobiliario/charts/ranking-bar-chart"
 
 interface ReporteKpi {
   label: string
@@ -26,6 +27,22 @@ interface ReporteMercado {
   riesgos: string[]
   oportunidades: string[]
   fuentes: string[]
+  historialPrecio: number[]
+}
+
+const DEMANDA_COLOR: Record<string, string> = {
+  Alta: "var(--blueprint)",
+  Media: "color-mix(in oklch, var(--blueprint) 60%, var(--muted-foreground))",
+  Baja: "var(--muted-foreground)",
+}
+
+// El precio del rubro viene como rango de texto ("0.55–0.75") del reporte de
+// IA — se parsea el punto medio para poder rankear, nunca se inventa un
+// número que el reporte no entregó.
+function precioMedioRubro(precio: string): number {
+  const numeros = precio.match(/[\d.]+/g)?.map(Number) ?? []
+  if (numeros.length === 0) return 0
+  return numeros.reduce((a, b) => a + b, 0) / numeros.length
 }
 
 function ReportesPageInner() {
@@ -84,7 +101,7 @@ function ReportesPageInner() {
       <div className="flex-1 p-8">
         <div className="mx-auto max-w-4xl space-y-6">
           <form onSubmit={(e) => void handleSubmit(e)}>
-            <Card className="rounded-[4px] border-line-fine">
+            <Card className="rounded-lg border-line-fine">
               <CardHeader>
                 <CardTitle className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
                   Zona y perfil
@@ -131,27 +148,22 @@ function ReportesPageInner() {
           {reporte && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-                {reporte.kpis.map((kpi, i) => (
-                  <div key={i} className="rounded-[4px] border border-line-fine bg-card p-3">
-                    <div className="flex items-center justify-between gap-1">
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{kpi.label}</p>
-                      {kpi.verificado ? (
-                        <BadgeCheck className="size-3.5 text-primary" />
-                      ) : (
-                        <ShieldQuestion className="size-3.5 text-muted-foreground/50" />
-                      )}
-                    </div>
-                    <p className="num text-lg font-semibold text-primary">{kpi.value}</p>
-                    {kpi.trend && <p className="text-[11px] text-muted-foreground">{kpi.trend}</p>}
-                    <p className="text-[10px] text-muted-foreground/70">{kpi.context}</p>
-                    <Badge variant={kpi.verificado ? "default" : "muted"} className="mt-1.5">
-                      {kpi.verificado ? "Dato verificado" : "Estimado"}
-                    </Badge>
-                  </div>
-                ))}
+                {reporte.kpis.map((kpi, i) => {
+                  const esPrecio = /precio/i.test(kpi.label)
+                  return (
+                    <KpiCard
+                      key={i}
+                      label={kpi.label}
+                      valor={kpi.value}
+                      verificado={kpi.verificado}
+                      sparkline={esPrecio ? reporte.historialPrecio : undefined}
+                      contexto={[kpi.trend, kpi.context].filter(Boolean).join(" — ")}
+                    />
+                  )
+                })}
               </div>
 
-              <Card className="rounded-[4px] border-line-fine">
+              <Card className="rounded-lg border-line-fine">
                 <CardContent className="p-5">
                   <p className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground mb-2">
                     Recomendación · {reporte.recomendacion.accion}
@@ -160,7 +172,7 @@ function ReportesPageInner() {
                 </CardContent>
               </Card>
 
-              <Card className="rounded-[4px] border-line-fine">
+              <Card className="rounded-lg border-line-fine">
                 <CardContent className="p-5 space-y-2">
                   <p className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
                     Zona · flujo {reporte.zona.flujo}
@@ -170,7 +182,19 @@ function ReportesPageInner() {
                 </CardContent>
               </Card>
 
-              <div className="overflow-hidden rounded-[4px] border border-line-fine bg-card">
+              <RankingBarChart
+                titulo="Rubros por precio (UF/m²/mes) — color = demanda"
+                formatValor={(n) => n.toFixed(2)}
+                items={reporte.rubros.map(
+                  (r): ItemRanking => ({
+                    label: r.nombre,
+                    valor: precioMedioRubro(r.precio),
+                    color: DEMANDA_COLOR[r.demanda] ?? "var(--blueprint)",
+                  }),
+                )}
+              />
+
+              <div className="overflow-hidden rounded-lg border border-line-fine bg-card">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-line-fine text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
@@ -194,7 +218,7 @@ function ReportesPageInner() {
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Card className="rounded-[4px] border-line-fine">
+                <Card className="rounded-lg border-line-fine">
                   <CardContent className="p-4">
                     <p className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground mb-2">Riesgos</p>
                     <ul className="space-y-1.5 text-sm text-foreground/80">
@@ -202,7 +226,7 @@ function ReportesPageInner() {
                     </ul>
                   </CardContent>
                 </Card>
-                <Card className="rounded-[4px] border-line-fine">
+                <Card className="rounded-lg border-line-fine">
                   <CardContent className="p-4">
                     <p className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground mb-2">Oportunidades</p>
                     <ul className="space-y-1.5 text-sm text-foreground/80">

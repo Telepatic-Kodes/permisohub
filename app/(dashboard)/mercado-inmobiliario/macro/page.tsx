@@ -62,7 +62,7 @@ export default async function MacroPage() {
           )}
 
           {!errorMsg && filas.length === 0 && (
-            <div className="flex flex-col items-center gap-3 rounded-[4px] border border-line-fine bg-card p-10 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-line-fine bg-card p-10 text-center">
               <LineChart className="size-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
                 Aún no hay historial — la ingesta corre a diario vía{" "}
@@ -99,7 +99,7 @@ export default async function MacroPage() {
           )}
 
           {!errorMsg && filas.length > 0 && (
-            <div className="overflow-x-auto rounded-[4px] border border-line-fine bg-card">
+            <div className="overflow-x-auto rounded-lg border border-line-fine bg-card">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line-fine text-[10px] uppercase tracking-[0.2em] text-muted-foreground">

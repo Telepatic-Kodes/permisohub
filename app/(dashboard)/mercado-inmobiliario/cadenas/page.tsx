@@ -47,7 +47,7 @@ export default async function ExpansionCadenasPage() {
           )}
 
           {pendientes.length > 0 && (
-            <div className="flex gap-3 rounded-[4px] border border-amber-200 bg-amber-50 p-4">
+            <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
               <AlertTriangle className="size-5 shrink-0 text-amber-600" />
               <div className="text-sm text-amber-800">
                 <p className="font-medium">
@@ -65,7 +65,7 @@ export default async function ExpansionCadenasPage() {
           )}
 
           {!errorMsg && resumen.length === 0 && (
-            <div className="flex flex-col items-center gap-3 rounded-[4px] border border-line-fine bg-card p-10 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-line-fine bg-card p-10 text-center">
               <Radar className="size-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
                 Sin datos todavía — la nómina del SII se sincroniza el día 2 de cada mes.
@@ -76,7 +76,7 @@ export default async function ExpansionCadenasPage() {
           {resumen.length > 0 && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {resumen.map((r) => (
-                <div key={r.cadena} className="rounded-[4px] border border-line-fine bg-card p-4">
+                <div key={r.cadena} className="rounded-lg border border-line-fine bg-card p-4">
                   <p className="text-sm font-semibold text-primary">{r.cadena}</p>
                   <p className="num mt-1 text-2xl font-light">{r.sucursalesActivas}</p>
                   <p className="text-xs text-muted-foreground">
@@ -96,7 +96,7 @@ export default async function ExpansionCadenasPage() {
                 {recientes.map((s, i) => (
                   <div
                     key={`${s.cadena}-${s.calle}-${i}`}
-                    className="flex items-center justify-between gap-3 rounded-[4px] border border-line-fine bg-card px-4 py-2.5"
+                    className="flex items-center justify-between gap-3 rounded-lg border border-line-fine bg-card px-4 py-2.5"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{s.calle}</p>

@@ -66,7 +66,7 @@ function BandaPrecioChart({
   ]
 
   return (
-    <Card className="rounded-[4px] border-line-fine">
+    <Card className="rounded-lg border-line-fine">
       <CardContent className="p-5">
         <div className="mb-3 flex items-center justify-between">
           <p className="font-technical text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
@@ -195,7 +195,7 @@ function PricingPageInner() {
       <div className="flex-1 p-8">
         <div className="mx-auto max-w-3xl space-y-6">
           <form onSubmit={(e) => void handleSubmit(e)}>
-            <Card className="rounded-[4px] border-line-fine">
+            <Card className="rounded-lg border-line-fine">
               <CardHeader>
                 <CardTitle className="font-technical text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
                   Comuna y operación
@@ -282,7 +282,7 @@ function PricingPageInner() {
           )}
 
           {(streamingText || result) && (
-            <div className="rounded-[4px] border border-line-fine bg-card px-5 py-4">
+            <div className="rounded-lg border border-line-fine bg-card px-5 py-4">
               <MarkdownRenderer content={result ?? streamingText} />
               {loading && <span className="inline-block w-1 h-4 bg-[var(--blueprint)] animate-pulse ml-0.5 align-middle" />}
             </div>

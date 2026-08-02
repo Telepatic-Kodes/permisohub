@@ -76,7 +76,7 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
 
       <div className="flex-1 p-8">
         <div className="mx-auto max-w-3xl space-y-6">
-          <Card className="rounded-[4px] border-line-fine">
+          <Card className="rounded-lg border-line-fine">
             <CardContent className="p-4">
               <form method="GET" className="flex flex-wrap items-end gap-3">
                 <div className="flex-1 min-w-[160px] space-y-1.5">
@@ -88,7 +88,7 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
                   <select
                     name="tipoPropiedad"
                     defaultValue={tipoPropiedad}
-                    className="flex h-9 w-full rounded-[4px] border border-line-fine bg-card px-3 py-1 text-sm"
+                    className="flex h-9 w-full rounded-lg border border-line-fine bg-card px-3 py-1 text-sm"
                   >
                     {TIPOS_PROPIEDAD_VALIDOS.map((t) => (
                       <option key={t} value={t}>{TIPO_PROPIEDAD_LABEL[t].singular}</option>
@@ -100,7 +100,7 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
                   <select
                     name="operacion"
                     defaultValue={operacion}
-                    className="flex h-9 w-full rounded-[4px] border border-line-fine bg-card px-3 py-1 text-sm"
+                    className="flex h-9 w-full rounded-lg border border-line-fine bg-card px-3 py-1 text-sm"
                   >
                     <option value="arriendo">Arriendo</option>
                     <option value="venta">Venta</option>
@@ -116,7 +116,7 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
           )}
 
           {!errorMsg && oportunidades.length === 0 && (
-            <div className="flex flex-col items-center gap-3 rounded-[4px] border border-line-fine bg-card p-10 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-line-fine bg-card p-10 text-center">
               <TrendingDown className="size-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
                 No hay oportunidades hoy con las bandas actuales{comuna ? ` para "${comuna}"` : ""}. El motor de bandas corre a diario.
@@ -126,7 +126,7 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
 
           <div className="space-y-3">
             {oportunidades.map((o) => (
-              <div key={o.id} className="rounded-[4px] border border-line-fine bg-card p-4">
+              <div key={o.id} className="rounded-lg border border-line-fine bg-card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <a href={o.url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-primary hover:underline">
                     {o.titulo}

@@ -69,7 +69,7 @@ export default async function NoticiasPage({ searchParams }: NoticiasPageProps) 
 
       <div className="flex-1 p-8">
         <div className="mx-auto max-w-3xl space-y-6">
-          <Card className="rounded-[4px] border-line-fine">
+          <Card className="rounded-lg border-line-fine">
             <CardContent className="p-4">
               <form method="GET" className="flex flex-wrap items-end gap-3">
                 <div className="flex-1 min-w-[160px] space-y-1.5">
@@ -90,7 +90,7 @@ export default async function NoticiasPage({ searchParams }: NoticiasPageProps) 
           )}
 
           {!errorMsg && noticias.length === 0 && (
-            <div className="flex flex-col items-center gap-3 rounded-[4px] border border-line-fine bg-card p-10 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-line-fine bg-card p-10 text-center">
               <Newspaper className="size-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
                 Aún no hay noticias {comuna || tipo ? "con ese filtro" : "ingeridas"}. La ingesta corre a diario vía{" "}
@@ -101,7 +101,7 @@ export default async function NoticiasPage({ searchParams }: NoticiasPageProps) 
 
           <div className="space-y-3">
             {noticias.map((n) => (
-              <div key={n.id} className="rounded-[4px] border border-line-fine bg-card p-4">
+              <div key={n.id} className="rounded-lg border border-line-fine bg-card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-primary hover:underline">
                     {n.titulo}

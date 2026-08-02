@@ -150,7 +150,7 @@ function CopilotoMercadoPageInner() {
 
       <div className="flex flex-1 flex-col gap-4 overflow-auto p-8">
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4">
-          <div className="flex-1 overflow-y-auto rounded-[4px] border border-line-fine bg-blueprint-grid p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto rounded-lg border border-line-fine bg-blueprint-grid p-4 space-y-4">
             {messages.length === 0 && !streamingText && (
               <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
                 <div className="space-y-2">
@@ -165,7 +165,7 @@ function CopilotoMercadoPageInner() {
                     <button
                       key={q}
                       onClick={() => void sendMessage(q)}
-                      className="flex items-center gap-3 rounded-[4px] border border-line-fine bg-card px-4 py-2.5 text-left text-sm text-primary transition-colors hover:border-[var(--blueprint)] hover:bg-[var(--blueprint)]/[0.05]"
+                      className="flex items-center gap-3 rounded-lg border border-line-fine bg-card px-4 py-2.5 text-left text-sm text-primary transition-colors hover:border-[var(--blueprint)] hover:bg-[var(--blueprint)]/[0.05]"
                     >
                       <span className="num shrink-0 text-[10px] text-muted-foreground/60">{String(i + 1).padStart(2, "0")}</span>
                       {q}
@@ -183,7 +183,7 @@ function CopilotoMercadoPageInner() {
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-[4px] px-4 py-3 text-sm leading-relaxed ${
+                  className={`max-w-[80%] rounded-lg px-4 py-3 text-sm leading-relaxed ${
                     msg.role === "user" ? "bg-primary text-white" : "border border-line-fine bg-card text-gray-800"
                   }`}
                 >
@@ -202,7 +202,7 @@ function CopilotoMercadoPageInner() {
                 <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-[3px] bg-primary text-white">
                   <Bot className="size-4" />
                 </div>
-                <div className="flex items-center gap-2 rounded-[4px] border border-line-fine bg-card px-4 py-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 rounded-lg border border-line-fine bg-card px-4 py-3 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" /> {status}
                 </div>
               </div>
@@ -213,7 +213,7 @@ function CopilotoMercadoPageInner() {
                 <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-[3px] bg-primary text-white">
                   <Bot className="size-4" />
                 </div>
-                <div className="max-w-[80%] rounded-[4px] border border-line-fine bg-card px-4 py-3 text-sm leading-relaxed text-gray-800">
+                <div className="max-w-[80%] rounded-lg border border-line-fine bg-card px-4 py-3 text-sm leading-relaxed text-gray-800">
                   <MarkdownRenderer content={streamingText} />
                   <span className="ml-0.5 inline-block h-4 w-1 animate-pulse bg-[var(--blueprint)] align-middle" />
                 </div>
@@ -225,7 +225,7 @@ function CopilotoMercadoPageInner() {
                 <div className="flex size-8 items-center justify-center rounded-[3px] bg-primary text-white">
                   <Bot className="size-4" />
                 </div>
-                <div className="rounded-[4px] border border-line-fine bg-card px-4 py-3">
+                <div className="rounded-lg border border-line-fine bg-card px-4 py-3">
                   <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 </div>
               </div>
@@ -234,7 +234,7 @@ function CopilotoMercadoPageInner() {
             <div ref={bottomRef} />
           </div>
 
-          <Card className="rounded-[4px] border-line-fine transition-colors focus-within:border-[var(--blueprint)]">
+          <Card className="rounded-lg border-line-fine transition-colors focus-within:border-[var(--blueprint)]">
             <CardContent className="flex gap-3 p-3">
               <Textarea
                 value={input}
@@ -247,7 +247,7 @@ function CopilotoMercadoPageInner() {
               <Button
                 onClick={() => void sendMessage()}
                 disabled={!input.trim() || loading}
-                className="h-12 w-12 shrink-0 rounded-[4px] bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
+                className="h-12 w-12 shrink-0 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
               >
                 <Send className="size-4" />
               </Button>

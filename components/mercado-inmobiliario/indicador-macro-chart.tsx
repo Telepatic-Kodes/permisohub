@@ -39,7 +39,7 @@ export function IndicadorMacroChart({ titulo, data, formato, color = "var(--blue
   const puntos = data.filter((d) => d.valor !== null) as { fecha: string; valor: number }[]
 
   return (
-    <div className="rounded-[4px] border border-line-fine bg-card p-3">
+    <div className="rounded-lg border border-line-fine bg-card p-3">
       <div className="mb-1.5 flex items-baseline justify-between">
         <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{titulo}</p>
         {puntos.length > 0 && (

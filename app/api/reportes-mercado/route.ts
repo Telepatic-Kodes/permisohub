@@ -4,7 +4,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { recordUsage } from '@/lib/usage'
 import { createClient } from '@/lib/supabase/server'
 import { parseAiJson } from '@/lib/ai-parse'
-import { obtenerBandasMercadoLocales, obtenerOportunidadesMercadoLocales } from '@/lib/mercado-locales-server'
+import { obtenerBandasMercadoLocales, obtenerOportunidadesMercadoLocales, obtenerHistorialMedianaUfM2 } from '@/lib/mercado-locales-server'
 import { fetchMacroData } from '@/lib/indicadores-macro'
 import { obtenerTendenciaConstruccionComuna } from '@/lib/ine-permisos-server'
 import {
@@ -115,9 +115,10 @@ export async function POST(request: Request) {
     )
 
     const reporte = parseAiJson(text, ReporteMercadoSchema, 'reportes-mercado') ?? ReporteMercadoSchema.parse({})
+    const historialPrecio = await obtenerHistorialMedianaUfM2(body.comuna, 'arriendo').catch(() => [])
 
     await recordUsage(auth.userId, 'ai_chats')
-    return Response.json({ ok: true, ...reporte })
+    return Response.json({ ok: true, ...reporte, historialPrecio })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error desconocido'
     return Response.json({ error: msg }, { status: 500 })

@@ -51,7 +51,7 @@ export function PageHeader({
       className
     )}>
       {/* Top accent line */}
-      <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[oklch(0.28_0.055_158)]/30 to-transparent" />
+      <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
       {(modulo || (breadcrumbs && breadcrumbs.length > 0)) && (
         <nav className="mb-3 flex items-center gap-1 text-[11px] text-muted-foreground">
