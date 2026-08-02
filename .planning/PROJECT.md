@@ -87,6 +87,14 @@ Serie de sesiones ad-hoc entre v1.5 y v1.6 (sin milestone formal propio) — cap
 - ✓ Mi Cartera: alerta de reajuste de renta UF/IPC (Ley 18.101 Art. 13) + Cap Rate en el resumen de portafolio — primer uso de 2 agentes en paralelo (git worktrees) en el proyecto
 - ✓ Torre de Control: cierre de 5/6 `needs-decision` del registro de fuentes (spot-check real de 23 comunas, decisión de no cablear RAG-embeddings, cierre de DOM Digital tras investigar viabilidad)
 
+### Requirements (v1.6 — Reportes Profesionales de Oportunidades, shipped 2026-08-02)
+
+- ✓ DETA-01→07: Dashboard de detalle por oportunidad individual (`/oportunidades/[id]`) — posicionamiento vs. cohorte con `muestra_n` explícito, historial de precio, reason codes + señales cruzadas, comparables sugeridos, resumen ejecutivo IA bajo demanda, rentabilidad implícita de zona — v1.6
+- ✓ COMPA-01→04: Comparación lado a lado de 2-5 oportunidades homogéneas, tabla con mejor valor resaltado, prevención estructural real (server-side, no solo checkbox) de mezclar tipo/operación, estado persistido en URL — v1.6
+- ✓ INFO-01→04: Informe exportable/imprimible (individual y de comparación) vía `@media print`, con fecha de generación Y de última verificación por dato, campo "preparado por/para" personalizable — v1.6
+- ✓ `evaluarOportunidad()` extraído como fuente única de verdad para scoring (TDD) — previene divergencia entre lista y ficha de detalle
+- ✓ Patrón `@media print` + `window.print()` establecido como estándar del proyecto para vistas exportables (sin jsPDF/html2canvas) — resuelve una contradicción interna del research de milestone entre sus propios documentos
+
 ### Backlog (no comprometido — semillas para futuras sesiones de discovery)
 
 - [ ] Dashboard de zonificación a nivel portafolio (todos los proyectos activos)
@@ -97,6 +105,15 @@ Serie de sesiones ad-hoc entre v1.5 y v1.6 (sin milestone formal propio) — cap
 - [ ] Reparar el mojibake residual de doble-corrupción en un subconjunto de nombres de zona de Las Condes (hallado en el checkpoint de 11-08, cosmético, no bloqueante)
 - [ ] Corregir la etiqueta de cita "Fuente: capa oficial {municipio}" para usar la comuna realmente seleccionada en el fallback manual, no `proyecto.municipio` (hallado en 11-08)
 - [ ] Aplicar el mismo tratamiento de reporte profesional (research-driven) a Reportes de Mercado, una vez validado en Oportunidades v1.6
+
+### Out of Scope (v1.6 — resuelto, para referencia histórica)
+
+- Cap rate/NOI real por activo — no calculable con datos de listing (un scrape es arriendo O venta, nunca ambos del mismo activo); solo se ofrece "rentabilidad implícita de zona", etiquetada como estimado
+- Rent roll, Walk Score, score único de "mejor oportunidad" — contradice la disciplina de "nunca fabricar interpretación no fundamentada" del proyecto
+- Boilerplate legal de Offering Memorandum institucional (formato EE.UU.) — no aplica al contexto chileno/PYME de arquitectos
+- Reportes de Mercado (página separada) — fuera de alcance, solo Oportunidades; evaluar mismo tratamiento después (ver Backlog)
+- Mapa de posicionamiento a nivel comuna — bloqueado, sin GeoJSON de comunas RM disponible
+- jsPDF/html2canvas para generación de PDF sin usuario presente — ninguno de los requisitos lo pedía; `@media print` cubre el caso de uso interactivo
 
 ### Out of Scope (v1.4 — resuelto, para referencia histórica)
 
@@ -120,6 +137,7 @@ Serie de sesiones ad-hoc entre v1.5 y v1.6 (sin milestone formal propio) — cap
 - **GTM**: Colegio de Arquitectos + AOA, SEO normativa chilena, referidos $50K CLP
 - **Post-v1.4**: Supabase MCP configurado a nivel `user` en `~/.claude.json` — reusable en futuras sesiones de agente sin reconfigurar (project-ref `nojejnebedjpbdlynrqs`). Dev-auth bypass (`BYPASS_AUTH=true` + `/auth/dev-login`) confirmado funcional para testing con sesión real sin password — usar en vez de reportar "sin browser/sesión disponible" como bloqueo en futuros checkpoints.
 - **Deuda técnica conocida (no bloqueante)**: mojibake residual de doble-corrupción en un subconjunto de nombres de zona ArcGIS de Las Condes; etiqueta de cita del fallback manual usa `proyecto.municipio` en vez de la comuna seleccionada; checklist del copiloto se genera una sola vez y no se regenera si la zonificación llega después.
+- **Post-v1.6**: `gsd-tools.cjs phase complete` tiene un bug de regex que captura la línea de Requirements equivocada cuando el bullet-summary de "Phases" en ROADMAP.md menciona una fase antes de la sección completa de otra — ocurrió en Fase 14 y 15, corregido a mano ambas veces, causa raíz no arreglada en el script. `gsd-tools.cjs milestone complete` también copió ROADMAP.md/REQUIREMENTS.md completos sin acotar al milestone (a diferencia de v1.4) — corregido a mano reconstruyendo `milestones/v1.6-*.md`. `.planning/STATE.md` sigue en formato narrativo legacy que los comandos `state advance-plan/update-progress` no pueden parsear — cada ejecutor de plan lo actualiza a mano.
 
 ## Constraints
 
@@ -153,26 +171,19 @@ Serie de sesiones ad-hoc entre v1.5 y v1.6 (sin milestone formal propio) — cap
 | Acceso comercial a TocToc (único vendor real de precios de transacción efectiva en Chile) — diferido, no descartado | Founder (1 ago 2026, confirmado 2026-08-01): política actual es no pagar por ninguna aplicación/dato de terceros por el momento — no es específico de TocToc, aplica a cualquier fuente paga que surja en la investigación de mercado en curso | — Deferred |
 | RUT operativo real de Unimarc — no seguir investigando vía agentes | Founder (1 ago 2026): cobertura parcial de SMU (Alvi + Super10, sin Unimarc) es aceptable — más tiempo de búsqueda automatizada no vale la pena; reabrir solo si aparece por otra vía. Ver `sii-nomina-sucursales-holdings-sin-tiendas` en `data-sources.yaml` | ✓ Good |
 | Refresh de bases de conocimiento legal (LGUC/OGUC/DDU) en cadencia fija trimestral (`freshness_sla_days: 90`), no ad-hoc | Founder (1 ago 2026): prefiere un recordatorio automático y determinista (el validador ya existente avisa cuando vence) a decidir caso a caso cuándo revisar | ✓ Good |
+| `evaluarOportunidad()` extraído como fuente única de verdad para scoring, vía TDD (v1.6) | Previene que lista y ficha de detalle diverjan en qué cuenta como "oportunidad" — el bug exacto que motivó el prerequisito técnico de la Fase 13 | ✓ Good |
+| Comparables y comparación de oportunidades vía queries nuevas y directas, no reusando `obtenerOportunidadesMercadoLocales()` (v1.6) | Esa función descarta listings sin reasonCodes — un subconjunto autoseleccionado, no el universo real de comparación | ✓ Good |
+| Resumen ejecutivo IA de Oportunidades vía `streamConContexto` sin herramienta de búsqueda web, no `streamConBusquedaWeb` (v1.6) | Oportunidades sí tiene datos reales de mercado — dejar que el modelo busque en la web arriesgaría inventar contexto no anclado a esos datos | ✓ Good |
+| Defensa de COMPA-03 en dos capas — checkbox deshabilitado (UX) + validación server-side real en `/comparar` (v1.6) | La URL `?ids=` es alcanzable directo, sin pasar por el checkbox — la validación real tiene que vivir en el servidor | ✓ Good |
+| Informe exportable vía `@media print` + `window.print()`, no jsPDF/html2canvas (v1.6) | Resuelve una contradicción interna del research de milestone entre sus propios documentos; ninguno de los requisitos pedía generación sin usuario presente | ✓ Good |
+| Sin gráficos Recharts en la v1 del informe exportable (v1.6) | Comportamiento de impresión de `ResponsiveContainer` no verificado en ningún caso real del repo — se evita el riesgo completo usando `GaugeArc`/`DesviacionBar` (SVG plano) | ✓ Good |
 
 ## Previous Milestones
 
 - **v1.3 Army of Skills** (shipped 2026-06-26) — Copiloto IA drawer (Permisos/Desarchivo/Patentes), verificación DOM diaria automática, enriquecimiento SII automático, resumen semanal con tip de IA.
 - **v1.4 Zonificación** (shipped 2026-07-30) — Zonificación automática por dirección (ArcGIS MINVU/OCUC), mapa con confirmación visual, compatibilidad de uso IA de 3 estados, fallback manual, integración aditiva en vía de tramitación/due diligence/copiloto. Full detail: `.planning/milestones/1.4-ROADMAP.md`.
 - **v1.5 Fusión PROPRA·BI** (shipped 2026-08-01) — Absorción completa de la suite de inteligencia de mercado inmobiliario PROPRA·BI como módulo nativo "Mercado Inmobiliario", módulo Terrenos, instrumentos IPT, checklist dinámico, fusión de permisohub-enterprise, rediseño UX/IA de separación de módulos. Full detail: `.planning/MILESTONES.md`.
+- **v1.6 Reportes Profesionales de Oportunidades** (shipped 2026-08-02) — Dashboard de detalle por oportunidad (posicionamiento vs. cohorte, historial, señales, comparables, resumen ejecutivo IA), comparación lado a lado (2-5 oportunidades, prevención estructural de mezclar tipo/operación), informe exportable/imprimible vía `@media print` con disciplina de fechas de vigencia. Full detail: `.planning/milestones/v1.6-ROADMAP.md`.
 
 ---
-
-## Current Milestone: v1.6 Reportes Profesionales de Oportunidades
-
-**Goal:** Elevar la búsqueda de oportunidades comerciales (`/mercado-inmobiliario/oportunidades`, hoy una lista plana + un histograma) a un producto de reporting profesional — dashboard de detalle por oportunidad, comparación lado a lado entre oportunidades, e informe exportable para compartir con cliente/inversionista — inspirado en cómo reportan consultoras inmobiliarias globales (CBRE/JLL/Colliers/Cushman & Wakefield) y plataformas de datos (CoStar/LoopNet).
-
-**Target features:**
-- Dashboard de detalle por oportunidad (gráficos, comparables, señales, mapa — más allá de la card actual)
-- Comparación lado a lado de 2+ oportunidades
-- Informe exportable (PDF/vista imprimible) para compartir externamente
-- Diseño de reporte informado por investigación real de cómo reportan los mejores actores del mercado (no solo intuición de diseño)
-
-**Alcance confirmado con la founder:** solo Oportunidades en este milestone — Reportes de Mercado (página separada) queda fuera, se evalúa después si el tratamiento funciona bien acá (ver Backlog).
-
----
-*Last updated: 2026-08-02 — inicio del milestone v1.6 (Reportes Profesionales de Oportunidades) vía `/gsd:new-milestone`*
+*Last updated: 2026-08-02 — cierre del milestone v1.6 (Reportes Profesionales de Oportunidades) vía `/gsd:complete-milestone`*

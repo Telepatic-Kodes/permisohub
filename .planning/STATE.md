@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `d8ed8ed` docs: record commit log entry
 - `2026-08-02` `48b1d44` docs(phase-15): complete phase execution, close milestone v1.6
 - `2026-08-02` `706452c` docs(15-03): complete informe de comparación plan
 - `2026-08-02` `9d257e0` docs(15-02): complete informe individual plan, close phase 15
@@ -87,9 +88,9 @@ Progress: [██████████] 100% (3/3 planes de la fase 15 comple
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-02 al iniciar milestone v1.6)
+See: .planning/PROJECT.md (updated 2026-08-02 al cerrar milestone v1.6)
 **Core value:** El copiloto IA del arquitecto chileno — acelera y automatiza la tramitación de permisos DOM
-**Current focus:** Milestone v1.6 (Reportes Profesionales de Oportunidades) — dashboard de detalle, comparación, e informe exportable en Oportunidades de Mercado Inmobiliario.
+**Current focus:** Milestone v1.6 (Reportes Profesionales de Oportunidades) shipped 2026-08-02. Planeando próximo milestone vía `/gsd:new-milestone`.
 
 ## Accumulated Context
 

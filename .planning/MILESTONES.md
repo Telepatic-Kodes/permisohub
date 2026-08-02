@@ -121,3 +121,19 @@ Absorber PROPRA·BI (suite de inteligencia de mercado inmobiliario, hasta entonc
 
 ---
 
+
+## v1.6 Reportes Profesionales de Oportunidades (Shipped: 2026-08-02)
+
+**Phases completed:** Phases 13-15 (3 phases, 13 plans)
+
+**Key accomplishments:**
+- Ficha de detalle por oportunidad individual (`/oportunidades/[id]`) — posicionamiento vs. cohorte, historial de precio, señales explicadas, comparables sugeridos, resumen ejecutivo IA bajo demanda
+- `evaluarOportunidad()` extraído como fuente única de verdad para scoring (TDD, 9 casos) — previene que list y detail diverjan en qué cuenta como "oportunidad"
+- Comparación lado a lado (2-5 oportunidades) con tabla comparativa y prevención estructural real (server-side, no solo checkbox) de mezclar tipo/operación
+- Informe exportable/imprimible — individual y de comparación — vía `@media print`, con fecha de generación Y de última verificación por dato (nunca snapshot sin fecha)
+- Disciplina de "nunca fabricar/ocultar datos" aplicada consistentemente en las 3 fases (comparables sin datos, rentabilidad de zona sin cobertura, informes)
+
+Full detail archived: `.planning/milestones/v1.6-ROADMAP.md`, `.planning/milestones/v1.6-REQUIREMENTS.md`
+
+---
+
