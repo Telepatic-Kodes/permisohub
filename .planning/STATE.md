@@ -1,6 +1,11 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `7f24561` feat(13-03): add obtenerComparablesOportunidad()
+- `2026-08-02` `0530389` feat(13-04): add ResumenTab on-demand executive summary component
+- `2026-08-02` `8ed59c6` feat(13-04): add POST /api/oportunidades-resumen SSE route
+- `2026-08-02` `08ef64e` feat(13-03): add obtenerOportunidadPorId + historial + labels
+- `2026-08-02` `983281b` docs(13-02): complete utilidades compartidas plan
 - `2026-08-02` `3e6a533` docs(13-01): complete evaluarOportunidad extraction plan
 - `2026-08-02` `182dd0e` feat(13-02): add resumen ejecutivo IA prompt builders
 - `2026-08-02` `c3e920a` feat(13-02): add streamConContexto without web search tool
@@ -16,17 +21,17 @@ _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, req
 ## Current Position
 
 Phase: 13 of 15 (Refactor de Scoring + Dashboard de Detalle) — ejecución en curso, planes 01-07
-Plan: 02 de 7 completos (wave 1: 13-01 y 13-02, sin dependencias entre sí) — 03-07 pendientes
-Status: Plan 13-01 completo (TDD RED→GREEN, 9/9 tests, tsc limpio) — Plan 13-02 completo (3 utilidades compartidas: lib/formato-fecha.ts, streamConContexto() en lib/ai.ts, lib/resumen-oportunidad-prompts.ts) — ambos desbloquean 13-03 en adelante
-Last activity: 2026-08-02 — `/gsd:execute-phase 13` ejecutó plan 13-02: `lib/formato-fecha.ts` (formatFechaCorta movida verbatim desde oportunidades/page.tsx), `streamConContexto()` agregada a `lib/ai.ts` (streaming Responses API SIN tool web_search_preview — estructuralmente imposible que busque en vivo, para narrar datos ya calculados server-side), `lib/resumen-oportunidad-prompts.ts` (builders del resumen ejecutivo IA de una oportunidad, nunca fabrica campos null). Ningún archivo existente fuera de lib/ai.ts modificado. Ver 13-02-SUMMARY.md.
+Plan: 04 de 7 completos (wave 2: 13-03 y 13-04 completos, ambos dependientes de wave 1) — 05-07 pendientes
+Status: Plan 13-01 completo (TDD RED→GREEN, 9/9 tests, tsc limpio) — Plan 13-02 completo (3 utilidades compartidas) — Plan 13-03 completo (obtenerOportunidadPorId/obtenerComparablesOportunidad/obtenerHistorialPrecioListing en lib/mercado-locales-server.ts, ver 13-03-SUMMARY.md) — Plan 13-04 completo (POST /api/oportunidades-resumen + ResumenTab, DETA-06 end-to-end salvo wiring de 13-07)
+Last activity: 2026-08-02 — `/gsd:execute-phase 13` ejecutó plan 13-04: `app/api/oportunidades-resumen/route.ts` (ruta SSE flat, mismo orden de guardas que app/api/tasacion/route.ts, streamConContexto sin búsqueda web) + `components/mercado-inmobiliario/oportunidad-detalle/resumen-tab.tsx` (client component sin useEffect de auto-disparo — botón explícito → streaming → InformeEjecutivo). Ningún archivo existente modificado. Ver 13-04-SUMMARY.md.
 
-Progress: [██░░░░░░░░] ~29% (2/7 planes de la fase 13 completos)
+Progress: [█████░░░░░] ~57% (4/7 planes de la fase 13 completos)
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
-| 13 | Refactor de Scoring + Dashboard de Detalle | En curso (2/7 planes) — 13-01 ✅ (evaluarOportunidad() extraída y testeada en lib/mercado-locales-server.ts, fuente única de verdad de scoring — ver 13-01-SUMMARY.md) 13-02 ✅ (lib/formato-fecha.ts + streamConContexto() en lib/ai.ts sin tool web_search_preview + lib/resumen-oportunidad-prompts.ts — ver 13-02-SUMMARY.md) |
+| 13 | Refactor de Scoring + Dashboard de Detalle | En curso (4/7 planes) — 13-01 ✅ (evaluarOportunidad() extraída y testeada en lib/mercado-locales-server.ts, fuente única de verdad de scoring — ver 13-01-SUMMARY.md) 13-02 ✅ (lib/formato-fecha.ts + streamConContexto() en lib/ai.ts sin tool web_search_preview + lib/resumen-oportunidad-prompts.ts — ver 13-02-SUMMARY.md) 13-03 ✅ (obtenerOportunidadPorId/obtenerComparablesOportunidad/obtenerHistorialPrecioListing + REASON_LABEL_DETALLE en lib/mercado-locales-server.ts — ver 13-03-SUMMARY.md) 13-04 ✅ (POST /api/oportunidades-resumen + ResumenTab, DETA-06 sin auto-disparo — ver 13-04-SUMMARY.md) |
 | 14 | Comparación Lado a Lado | Not started — COMPA-01..04 |
 | 15 | Informe Exportable | Not started — INFO-01..04 |
 | 10 | Motor de Zonificación | ✅ Completa — 10-01 ✅ (migración zonificacion_cache + proyectos.zona_* aplicada vía Supabase MCP) 10-02 ✅ (lib/zonificacion-comunas.ts, registro 4 comunas) 10-03 ✅ (lib/geocoding.ts, Nominatim geocoder) 10-04 ✅ (lib/zonificacion.ts + ruta GET /api/zonificacion/lookup, orquestación completa) 10-05 ✅ (lib/zonificacion-server.ts + after() en POST/PATCH /api/proyectos, persistencia automática de zona_* sin UI) |
@@ -125,10 +130,14 @@ See: .planning/PROJECT.md (updated 2026-08-02 al iniciar milestone v1.6)
 
 - [13-02] **3 utilidades compartidas construidas (2026-08-02, commits `017fc96`/`c3e920a`/`182dd0e`)** — `lib/formato-fecha.ts` (`formatFechaCorta`, movida verbatim desde `oportunidades/page.tsx:26-31`, esa página NO fue tocada — 13-07 hará el swap al import compartido). `streamConContexto(instructions, input)` agregada a `lib/ai.ts` junto a `streamConBusquedaWeb`, pero **sin** el `tools: [{type: 'web_search_preview'}]` — estructuralmente imposible que el modelo busque en vivo (no es solo instrucción de prompt), `max_output_tokens: 3000` (vs 12000 de la versión con búsqueda). `lib/resumen-oportunidad-prompts.ts` (`ResumenOportunidadContexto` + `buildSystemResumenOportunidad()` + `buildUserQueryResumenOportunidad()`) — narra bandas P25/mediana/P75, comparables e historial ya calculados server-side, marca explícitamente "no disponible" en vez de fabricar cualquier campo `null`. Ningún archivo existente fuera de `lib/ai.ts` modificado. Sin deviations (único hallazgo: error de tsc preexistente en `tests/unit/evaluar-oportunidad.test.ts`, ajeno a este plan, de la ejecución paralela de 13-01 — fuera de alcance, no corregido acá). Desbloquea 13-04 (resumen IA) y 13-05/13-06/13-07 (formateo de fecha). Ver 13-02-SUMMARY.md.
 
+- [13-03] **Data layer de la ficha de detalle construida (2026-08-02, commits `08ef64e`/`7f24561`)** — `obtenerOportunidadPorId(id)` (listing individual, status='activo' O 'dado_de_baja', bandas y reasonCodes vía `evaluarOportunidad()` de 13-01), `obtenerComparablesOportunidad(params)` (comparables reales por match exacto comuna+tipo+operación, consulta directa a `mercado_locales_listings` — NO reutiliza `obtenerOportunidadesMercadoLocales()` porque esa descarta listings sin reasonCodes), `obtenerHistorialPrecioListing(listingId)` (historial completo, no acotado a 7 días), `REASON_LABEL_DETALLE` + `REASON_LABEL` re-exportado. Todo agregado a `lib/mercado-locales-server.ts`, ningún archivo nuevo. Desbloquea 13-05/13-06/13-07. Ver 13-03-SUMMARY.md.
+
+- [13-04] **DETA-06 completo end-to-end salvo wiring final (2026-08-02, commits `8ed59c6`/`0530389`)** — `app/api/oportunidades-resumen/route.ts` (ruta SSE flat POST, mismo orden de guardas que `app/api/tasacion/route.ts`: `aiAuthGuard` → `checkRateLimit` → `recordUsage` antes de streamear, usa `streamConContexto` de 13-02 exclusivamente — confirmado sin rastro de `streamConBusquedaWeb`, sin sección avaluoFiscal/SII). `components/mercado-inmobiliario/oportunidad-detalle/resumen-tab.tsx` (`<ResumenTab contexto={...}>` client component, sin `useEffect` de auto-disparo — el resumen ejecutivo IA SOLO se genera con click explícito en "Generar resumen ejecutivo", por decisión bloqueada en `13-CONTEXT.md`; streamea vía `leerEventosSSE`, renderiza con `InformeEjecutivo`, error/loading aislados sin afectar el resto de la ficha). Sin deviations. Falta solo que 13-07 arme el `ResumenOportunidadContexto` real (con datos de 13-01/13-03) y lo pase a `<ResumenTab>` desde la página de detalle. Ver 13-04-SUMMARY.md.
+
 ## Session Continuity
 
 Last session: 2026-08-02
-Stopped at: Completados 13-01-PLAN.md y 13-02-PLAN.md (wave 1 de la fase 13, sin dependencias entre sí — ver 13-01-SUMMARY.md y 13-02-SUMMARY.md). Fase 13 en ejecución — quedan 13-03..13-07.
+Stopped at: Completados 13-01-PLAN.md, 13-02-PLAN.md, 13-03-PLAN.md y 13-04-PLAN.md (waves 1 y 2 de la fase 13 — ver SUMMARYs respectivos). Fase 13 en ejecución — quedan 13-05..13-07.
 Resume file: None
 
 ---
