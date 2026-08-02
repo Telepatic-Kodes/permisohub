@@ -13,6 +13,7 @@ interface PatchPropiedadBody {
   precioActualUf?: number
   rolSii?: string
   notas?: string
+  fechaVencimientoContrato?: string
 }
 
 const FIELD_MAP: Record<keyof PatchPropiedadBody, string> = {
@@ -24,6 +25,7 @@ const FIELD_MAP: Record<keyof PatchPropiedadBody, string> = {
   precioActualUf: 'precio_actual_uf',
   rolSii: 'rol_sii',
   notas: 'notas',
+  fechaVencimientoContrato: 'fecha_vencimiento_contrato',
 }
 
 export async function PATCH(

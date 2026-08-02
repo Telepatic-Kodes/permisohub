@@ -12,6 +12,7 @@ export interface PropiedadPortafolio {
   precioActualUf: number | null
   rolSii: string | null
   notas: string | null
+  fechaVencimientoContrato: string | null
   createdAt: string
 }
 
@@ -63,7 +64,7 @@ export async function obtenerPropiedadesPortafolio(workspaceId: string): Promise
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('propiedades_portafolio')
-    .select('id, direccion, comuna, tipo_propiedad, superficie_m2, operacion, precio_actual_uf, rol_sii, notas, created_at')
+    .select('id, direccion, comuna, tipo_propiedad, superficie_m2, operacion, precio_actual_uf, rol_sii, notas, fecha_vencimiento_contrato, created_at')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
 
@@ -79,6 +80,7 @@ export async function obtenerPropiedadesPortafolio(workspaceId: string): Promise
     precioActualUf: f.precio_actual_uf,
     rolSii: f.rol_sii,
     notas: f.notas,
+    fechaVencimientoContrato: f.fecha_vencimiento_contrato,
     createdAt: f.created_at,
   }))
 }

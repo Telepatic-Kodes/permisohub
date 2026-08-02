@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { AlertCircle, Loader2, Plus, Radar, TrendingDown, TrendingUp, Trash2 } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { AlertCircle, CalendarClock, Loader2, Plus, Radar, TrendingDown, TrendingUp, Trash2 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +22,7 @@ interface Propiedad {
   precioActualUf: number | null
   rolSii: string | null
   notas: string | null
+  fechaVencimientoContrato: string | null
   createdAt: string
 }
 
@@ -61,6 +62,37 @@ function formatUf(n: number): string {
   return n.toLocaleString("es-CL", { maximumFractionDigits: 2 })
 }
 
+function diasHasta(fechaIso: string): number {
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const fecha = new Date(`${fechaIso}T00:00:00`)
+  return Math.round((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function VencimientoBadge({ fecha }: { fecha: string }) {
+  const dias = diasHasta(fecha)
+  const fechaFormateada = new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Santiago" }).format(
+    new Date(`${fecha}T00:00:00`)
+  )
+
+  let color = "var(--muted-foreground)"
+  let texto = `Contrato vence ${fechaFormateada}`
+  if (dias < 0) {
+    color = "var(--state-error, #dc2626)"
+    texto = `Contrato vencido (${fechaFormateada})`
+  } else if (dias <= 60) {
+    color = "var(--state-warn, #d97706)"
+    texto = `Contrato vence en ${dias} días (${fechaFormateada})`
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 rounded-[3px] border px-2 py-0.5 text-[10px] font-medium" style={{ color, borderColor: color }}>
+      <CalendarClock className="size-2.5" />
+      {texto}
+    </span>
+  )
+}
+
 function VeredictoMercado({ comparacion }: { comparacion: Comparacion }) {
   const cfg = VEREDICTO_CONFIG[comparacion.veredicto]
   return (
@@ -82,11 +114,88 @@ function VeredictoMercado({ comparacion }: { comparacion: Comparacion }) {
   )
 }
 
+interface ResumenPortafolio {
+  total: number
+  superficieTotalM2: number
+  rentaMensualTotalUf: number
+  bajoMercado: number
+  aMercado: number
+  sobreMercado: number
+  contratosPorVencer: number
+  contratosVencidos: number
+}
+
+function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
+  const resumen: ResumenPortafolio = {
+    total: filas.length,
+    superficieTotalM2: 0,
+    rentaMensualTotalUf: 0,
+    bajoMercado: 0,
+    aMercado: 0,
+    sobreMercado: 0,
+    contratosPorVencer: 0,
+    contratosVencidos: 0,
+  }
+
+  for (const { propiedad, comparacion } of filas) {
+    if (propiedad.superficieM2) resumen.superficieTotalM2 += propiedad.superficieM2
+    if (propiedad.operacion === "arriendo" && propiedad.precioActualUf) resumen.rentaMensualTotalUf += propiedad.precioActualUf
+    if (comparacion.veredicto === "bajo_mercado") resumen.bajoMercado++
+    else if (comparacion.veredicto === "a_mercado") resumen.aMercado++
+    else if (comparacion.veredicto === "sobre_mercado") resumen.sobreMercado++
+    if (propiedad.fechaVencimientoContrato) {
+      const dias = diasHasta(propiedad.fechaVencimientoContrato)
+      if (dias < 0) resumen.contratosVencidos++
+      else if (dias <= 60) resumen.contratosPorVencer++
+    }
+  }
+
+  return resumen
+}
+
+function ResumenPortafolioStrip({ resumen }: { resumen: ResumenPortafolio }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="rounded-[4px] border border-line-fine bg-card p-3">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Propiedades</p>
+        <p className="num text-lg font-semibold text-primary">{resumen.total}</p>
+        <p className="text-[11px] text-muted-foreground">{resumen.superficieTotalM2.toLocaleString("es-CL")} m² en total</p>
+      </div>
+      <div className="rounded-[4px] border border-line-fine bg-card p-3">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Renta mensual</p>
+        <p className="num text-lg font-semibold text-primary">{formatUf(resumen.rentaMensualTotalUf)} UF</p>
+        <p className="text-[11px] text-muted-foreground">solo activos arrendados</p>
+      </div>
+      <div className="rounded-[4px] border border-line-fine bg-card p-3">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Vs. mercado</p>
+        <p className="text-xs text-foreground/80">
+          <span style={{ color: "var(--state-warn, #d97706)" }}>{resumen.bajoMercado} bajo</span>
+          {" · "}
+          <span style={{ color: "var(--state-ok, #16a34a)" }}>{resumen.aMercado} a</span>
+          {" · "}
+          <span style={{ color: "var(--blueprint)" }}>{resumen.sobreMercado} sobre</span>
+        </p>
+      </div>
+      <div className="rounded-[4px] border border-line-fine bg-card p-3">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Contratos</p>
+        <p className="text-xs text-foreground/80">
+          {resumen.contratosVencidos > 0 && <span style={{ color: "var(--state-error, #dc2626)" }}>{resumen.contratosVencidos} vencidos</span>}
+          {resumen.contratosVencidos > 0 && resumen.contratosPorVencer > 0 && " · "}
+          {resumen.contratosPorVencer > 0 && <span style={{ color: "var(--state-warn, #d97706)" }}>{resumen.contratosPorVencer} por vencer (60d)</span>}
+          {resumen.contratosVencidos === 0 && resumen.contratosPorVencer === 0 && "sin vencimientos próximos"}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export default function MiCarteraPage() {
   const [filas, setFilas] = useState<FilaPortafolio[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const resumen = useMemo(() => calcularResumen(filas), [filas])
 
   const [form, setForm] = useState({
     direccion: "",
@@ -95,6 +204,7 @@ export default function MiCarteraPage() {
     superficieM2: "",
     operacion: "arriendo" as OperacionMercadoLocal,
     precioActualUf: "",
+    fechaVencimientoContrato: "",
     notas: "",
   })
 
@@ -141,6 +251,7 @@ export default function MiCarteraPage() {
           superficieM2: form.superficieM2 ? Number(form.superficieM2) : undefined,
           operacion: form.operacion,
           precioActualUf: form.precioActualUf ? Number(form.precioActualUf) : undefined,
+          fechaVencimientoContrato: form.fechaVencimientoContrato || undefined,
           notas: form.notas || undefined,
         }),
       })
@@ -150,7 +261,7 @@ export default function MiCarteraPage() {
         throw new Error(err.error ?? "Error del servidor")
       }
 
-      setForm({ direccion: "", comuna: "", tipoPropiedad: "local_comercial", superficieM2: "", operacion: "arriendo", precioActualUf: "", notas: "" })
+      setForm({ direccion: "", comuna: "", tipoPropiedad: "local_comercial", superficieM2: "", operacion: "arriendo", precioActualUf: "", fechaVencimientoContrato: "", notas: "" })
       await cargar()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido")
@@ -227,6 +338,12 @@ export default function MiCarteraPage() {
                     <Label>{form.operacion === "arriendo" ? "Renta actual (UF/mes)" : "Precio de referencia (UF)"}</Label>
                     <Input type="number" value={form.precioActualUf} onChange={(e) => setField("precioActualUf", e.target.value)} />
                   </div>
+                  {form.operacion === "arriendo" && (
+                    <div className="space-y-1.5">
+                      <Label>Vencimiento del contrato</Label>
+                      <Input type="date" value={form.fechaVencimientoContrato} onChange={(e) => setField("fechaVencimientoContrato", e.target.value)} />
+                    </div>
+                  )}
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label>Notas</Label>
                     <Textarea value={form.notas} onChange={(e) => setField("notas", e.target.value)} placeholder="opcional — ej: contrato vence dic 2026" />
@@ -250,6 +367,8 @@ export default function MiCarteraPage() {
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
+
+          {!loading && filas.length > 0 && <ResumenPortafolioStrip resumen={resumen} />}
 
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -283,8 +402,9 @@ export default function MiCarteraPage() {
                     </button>
                   </div>
 
-                  <div className="mt-2.5">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     <VeredictoMercado comparacion={comparacion} />
+                    {propiedad.fechaVencimientoContrato && <VencimientoBadge fecha={propiedad.fechaVencimientoContrato} />}
                   </div>
 
                   {(senalExpansion || tendenciaConstruccion?.tendencia === "creciente") && (

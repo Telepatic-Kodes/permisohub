@@ -18,6 +18,7 @@ const NuevaPropiedadSchema = z.object({
   precioActualUf: z.number().positive().optional(),
   rolSii: z.string().optional(),
   notas: z.string().optional(),
+  fechaVencimientoContrato: z.string().optional(),
 })
 
 export async function GET() {
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
         precio_actual_uf: body.precioActualUf ?? null,
         rol_sii: body.rolSii ?? null,
         notas: body.notas ?? null,
+        fecha_vencimiento_contrato: body.fechaVencimientoContrato ?? null,
       })
       .select('id')
       .single()
