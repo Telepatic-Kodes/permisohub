@@ -694,4 +694,117 @@ export async function obtenerOportunidadPorId(id: string): Promise<OportunidadDe
   }
 }
 
+export interface ComparableOportunidad {
+  id: string
+  titulo: string
+  comuna: string
+  precioUfNormalizado: number
+  precioUfM2Normalizado: number | null
+  reasonCodes: string[]
+}
+
+/**
+ * Comparables sugeridos (DETA-05) — CORRECCIÓN vs. la sugerencia literal del
+ * research de milestone: NO reutiliza obtenerOportunidadesMercadoLocales(),
+ * que descarta cualquier listing sin reasonCodes (línea 503) — un
+ * subconjunto autoseleccionado de "ya flageados", no "todo el cohorte". El
+ * criterio bloqueado en CONTEXT.md es match exacto de comuna+tipo+operación,
+ * sin exigir que el comparable sea EN SÍ una oportunidad flageada.
+ */
+export async function obtenerComparablesOportunidad(params: {
+  comuna: string
+  operacion: OperacionMercadoLocal
+  tipoPropiedad: TipoPropiedadComercial
+  excludeId: string
+  precioUfM2Objetivo: number | null
+  precioUfObjetivo: number
+  limit?: number
+}): Promise<ComparableOportunidad[]> {
+  const { comuna, operacion, tipoPropiedad, excludeId, precioUfM2Objetivo, precioUfObjetivo, limit = 5 } = params
+  const supabase = createServiceClient()
+
+  const bandas = await obtenerBandasMercadoLocales(comuna, operacion, tipoPropiedad)
+  const ufRate = bandas?.ufValorUsado ?? null
+
+  const { data, error } = await supabase
+    .from('mercado_locales_listings')
+    .select('id, titulo, comuna, precio_monto, precio_moneda, superficie_m2')
+    .eq('status', 'activo')
+    .eq('comuna', comuna)
+    .eq('operacion', operacion)
+    .eq('tipo_propiedad', tipoPropiedad)
+    .neq('id', excludeId)
+    .limit(500) // cota de seguridad — un cohorte comuna×tipo×operación real no se acerca a esto
+
+  if (error || !data) return []
+
+  type Candidato = { id: string; titulo: string; comuna: string; precioUf: number; precioUfM2: number | null }
+  const candidatos: Candidato[] = []
+  for (const row of data) {
+    if (row.precio_monto === null) continue
+    if (row.precio_moneda !== 'UF' && row.precio_moneda !== 'CLP') continue
+    const precioMonto = row.precio_monto as number
+    let precioUf: number
+    if (row.precio_moneda === 'UF') precioUf = precioMonto
+    else if (ufRate) precioUf = precioMonto / ufRate
+    else continue // sin banda para convertir CLP→UF — se descarta en vez de mostrar un precio inventado
+    const superficieM2 = row.superficie_m2 as number | null
+    const precioUfM2 = superficieM2 && superficieM2 > 0 ? precioUf / superficieM2 : null
+    candidatos.push({ id: row.id as string, titulo: row.titulo as string, comuna: row.comuna as string, precioUf, precioUfM2 })
+  }
+
+  // Orden por cercanía de UF/m² al objetivo — null-goes-last: un candidato
+  // sin superficie conocida NUNCA se trata como "el más cercano" (no se
+  // coerciona a 0). Si el objetivo mismo no tiene UF/m² (la oportunidad
+  // actual no declara superficie), la base de comparación pasa a ser el
+  // precio UF crudo para TODOS los candidatos por igual.
+  let ordenados: Candidato[]
+  if (precioUfM2Objetivo !== null) {
+    const conM2 = candidatos.filter((c) => c.precioUfM2 !== null)
+    const sinM2 = candidatos.filter((c) => c.precioUfM2 === null)
+    conM2.sort(
+      (a, b) => Math.abs((a.precioUfM2 as number) - precioUfM2Objetivo) - Math.abs((b.precioUfM2 as number) - precioUfM2Objetivo),
+    )
+    sinM2.sort((a, b) => Math.abs(a.precioUf - precioUfObjetivo) - Math.abs(b.precioUf - precioUfObjetivo))
+    ordenados = [...conM2, ...sinM2]
+  } else {
+    ordenados = [...candidatos].sort((a, b) => Math.abs(a.precioUf - precioUfObjetivo) - Math.abs(b.precioUf - precioUfObjetivo))
+  }
+
+  const top = ordenados.slice(0, limit)
+
+  // reasonCodes solo se calculan para el puñado final que se va a mostrar —
+  // evita traer historial de precio de cientos de candidatos descartados.
+  const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const historyByListing = new Map<string, { precio_monto: number; capturado_el: string }[]>()
+  if (top.length > 0) {
+    const { data: historyRows } = await supabase
+      .from('mercado_locales_historial_precio')
+      .select('listing_id, precio_monto, capturado_el')
+      .in('listing_id', top.map((c) => c.id))
+      .gte('capturado_el', sevenDaysAgoIso)
+      .order('capturado_el', { ascending: true })
+    for (const row of historyRows ?? []) {
+      const arr = historyByListing.get(row.listing_id as string) ?? []
+      arr.push(row as { precio_monto: number; capturado_el: string })
+      historyByListing.set(row.listing_id as string, arr)
+    }
+  }
+
+  return top.map((c) => ({
+    id: c.id,
+    titulo: c.titulo,
+    comuna: c.comuna,
+    precioUfNormalizado: c.precioUf,
+    precioUfM2Normalizado: c.precioUfM2,
+    reasonCodes: evaluarOportunidad({
+      precioUf: c.precioUf,
+      precioUfM2: c.precioUfM2,
+      cohortP25Uf: bandas?.p25Uf ?? null,
+      cohortP25UfM2: bandas?.p25UfM2 ?? null,
+      historialReciente: historyByListing.get(c.id) ?? [],
+    }),
+  }))
+}
+
 export { obtenerValorUF }
