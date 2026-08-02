@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `55ecf32` docs(14-02): complete selector de comparación plan
 - `2026-08-02` `ecf1a71` feat(14-02): wire SelectorComparacion en oportunidades/page.tsx
 - `2026-08-02` `8cc0137` feat(14-01): add obtenerOportunidadesPorIds(ids) con fetch batched
 - `2026-08-02` `36f2c6d` refactor(14-01): extraer construirOportunidadDetalle() de obtenerOportunidadPorId
