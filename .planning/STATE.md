@@ -1,15 +1,16 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `e815a65` docs(13): capture phase context
 
 _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, requirements, config bump, roadmap) ya están descritos en "Current Position" y en los propios PROJECT.md/ROADMAP.md/REQUIREMENTS.md — son el ciclo estándar de `/gsd:new-milestone`, no necesitan bullet propio en Accumulated Context. Sección alimentada automáticamente por `.githooks/post-commit` — cada commit agrega una línea acá. Un comando/sesión futura la digiere hacia una narrativa real en "Current Position"/"Accumulated Context" y la limpia. Ver Key Decisions en PROJECT.md: "captura automática, curación cuando se pueda".)_
 
 ## Current Position
 
-Phase: 13 of 15 (Refactor de Scoring + Dashboard de Detalle) — ready to plan
-Plan: TBD (roadmap created, `/gsd:plan-phase` not yet run)
-Status: Roadmap created — ready to plan Phase 13
-Last activity: 2026-08-02 — Roadmap creado para milestone v1.6 (Reportes Profesionales de Oportunidades): 3 fases derivadas 1:1 de la estructura sugerida en `research/SUMMARY.md`, numeradas 13-15 (continúa desde 12, último número formal de v1.4 — v1.5 y las sesiones ad-hoc posteriores no usaron fases GSD). Orden Detalle → Comparación → Informe replica la cadena de dependencias documentada en el research. 15/15 requisitos v1.6 (DETA-01..07, COMPA-01..04, INFO-01..04) mapeados sin huérfanos. Ver `.planning/ROADMAP.md` y traceability en `.planning/REQUIREMENTS.md`.
+Phase: 13 of 15 (Refactor de Scoring + Dashboard de Detalle) — contexto listo, próximo paso `/gsd:plan-phase 13`
+Plan: TBD (contexto capturado, `/gsd:plan-phase` no se ha corrido aún)
+Status: Contexto de fase capturado — listo para planificar Phase 13
+Last activity: 2026-08-02 — `/gsd:discuss-phase 13` capturó decisiones en `phases/13-refactor-de-scoring-dashboard-de-detalle/13-CONTEXT.md`: jerarquía de la ficha (dato duro → posicionamiento → resumen IA → historial → comparables, en tabs), banner de advertencia cuando `muestra_n` es chica, criterio y comportamiento de comparables sugeridos (mismo comuna+tipo+operación, mensaje explícito si 0/1), rentabilidad implícita de zona (badge "Estimado de zona", desglose completo, aplica a toda ficha de la comuna×tipo, mensaje explícito si falta cobertura), resumen ejecutivo IA bajo demanda (no auto, patrón `InformeEjecutivo` existente) sin bloquear el resto de la ficha.
 
 Progress: [░░░░░░░░░░] 0% (roadmap listo, ejecución no iniciada)
 
