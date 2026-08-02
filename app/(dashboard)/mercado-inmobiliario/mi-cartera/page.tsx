@@ -37,6 +37,9 @@ interface Propiedad {
   fechaVencimientoContrato: string | null
   tieneAscensor: boolean
   tieneGas: boolean
+  siiDestino: string | null
+  siiAvaluoFiscalUf: number | null
+  siiConsultadoEl: string | null
   createdAt: string
 }
 
@@ -333,6 +336,8 @@ export default function MiCarteraPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consultandoSii, setConsultandoSii] = useState<string | null>(null)
+  const [mismatchSii, setMismatchSii] = useState<Record<string, boolean | null>>({})
 
   const resumen = useMemo(() => calcularResumen(filas), [filas])
 
@@ -349,6 +354,7 @@ export default function MiCarteraPage() {
     notas: "",
     tieneAscensor: false,
     tieneGas: false,
+    rolSii: "",
   })
 
   function setField<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
@@ -398,6 +404,7 @@ export default function MiCarteraPage() {
           notas: form.notas || undefined,
           tieneAscensor: form.tieneAscensor,
           tieneGas: form.tieneGas,
+          rolSii: form.rolSii || undefined,
         }),
       })
 
@@ -406,7 +413,7 @@ export default function MiCarteraPage() {
         throw new Error(err.error ?? "Error del servidor")
       }
 
-      setForm({ direccion: "", comuna: "", tipoPropiedad: "local_comercial", superficieM2: "", operacion: "arriendo", precioActualUf: "", fechaVencimientoContrato: "", notas: "", tieneAscensor: false, tieneGas: false })
+      setForm({ direccion: "", comuna: "", tipoPropiedad: "local_comercial", superficieM2: "", operacion: "arriendo", precioActualUf: "", fechaVencimientoContrato: "", notas: "", tieneAscensor: false, tieneGas: false, rolSii: "" })
       await cargar()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido")
@@ -447,6 +454,29 @@ export default function MiCarteraPage() {
       )
     } catch {
       setError("No se pudo registrar la obligación")
+    }
+  }
+
+  async function handleConsultarSII(propiedadId: string) {
+    setConsultandoSii(propiedadId)
+    setError(null)
+    try {
+      const res = await fetch(`/api/propiedades-portafolio/${propiedadId}/enriquecer-sii`, { method: "POST" })
+      const json = (await res.json()) as { error?: string; destino?: string; avaluoFiscalUf?: number | null; coincideTipo?: boolean | null; consultadoEl?: string }
+      if (!res.ok) throw new Error(json.error ?? "No se pudo consultar el SII")
+
+      setFilas((prev) =>
+        prev.map((f) =>
+          f.propiedad.id !== propiedadId
+            ? f
+            : { ...f, propiedad: { ...f.propiedad, siiDestino: json.destino ?? null, siiAvaluoFiscalUf: json.avaluoFiscalUf ?? null, siiConsultadoEl: json.consultadoEl ?? null } },
+        ),
+      )
+      setMismatchSii((prev) => ({ ...prev, [propiedadId]: json.coincideTipo ?? null }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo consultar el SII")
+    } finally {
+      setConsultandoSii(null)
     }
   }
 
@@ -515,6 +545,10 @@ export default function MiCarteraPage() {
                       <Input type="date" value={form.fechaVencimientoContrato} onChange={(e) => setField("fechaVencimientoContrato", e.target.value)} />
                     </div>
                   )}
+                  <div className="space-y-1.5">
+                    <Label>Rol SII</Label>
+                    <Input value={form.rolSii} onChange={(e) => setField("rolSii", e.target.value)} placeholder="ej: 1234-56 — habilita cruce con destino y avalúo fiscal" />
+                  </div>
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label>Notas</Label>
                     <Textarea value={form.notas} onChange={(e) => setField("notas", e.target.value)} placeholder="opcional — ej: contrato vence dic 2026" />
@@ -610,6 +644,36 @@ export default function MiCarteraPage() {
                           <TrendingUp className="size-2.5" />
                           Actividad constructiva histórica en alza (INE, {tendenciaConstruccion.variacionPct?.toFixed(0)}%)
                         </span>
+                      )}
+                    </div>
+                  )}
+
+                  {propiedad.rolSii && (
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                      {propiedad.siiConsultadoEl ? (
+                        <>
+                          <span className="inline-flex items-center gap-1 rounded-[3px] border border-line-fine px-2 py-0.5 text-[10px] text-muted-foreground">
+                            SII: {propiedad.siiDestino}
+                            {propiedad.siiAvaluoFiscalUf !== null ? ` · avalúo fiscal ${formatUf(propiedad.siiAvaluoFiscalUf)} UF` : ""}
+                          </span>
+                          {mismatchSii[propiedad.id] === false && (
+                            <span className="inline-flex items-center gap-1 rounded-[3px] border px-2 py-0.5 text-[10px] font-medium" style={{ color: "var(--state-warn, #d97706)", borderColor: "var(--state-warn, #d97706)" }}>
+                              El destino SII no coincide con el tipo declarado
+                            </span>
+                          )}
+                          <button type="button" onClick={() => void handleConsultarSII(propiedad.id)} className="text-[10px] text-muted-foreground underline hover:text-primary" disabled={consultandoSii === propiedad.id}>
+                            {consultandoSii === propiedad.id ? "Consultando…" : "Volver a consultar"}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void handleConsultarSII(propiedad.id)}
+                          disabled={consultandoSii === propiedad.id}
+                          className="inline-flex items-center gap-1 rounded-[3px] border border-line-fine px-2 py-0.5 text-[10px] text-muted-foreground transition-colors hover:bg-muted/50"
+                        >
+                          {consultandoSii === propiedad.id ? <><Loader2 className="size-2.5 animate-spin" /> Consultando SII…</> : "Consultar SII (destino y avalúo fiscal)"}
+                        </button>
                       )}
                     </div>
                   )}
