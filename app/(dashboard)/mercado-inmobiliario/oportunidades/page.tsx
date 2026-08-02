@@ -1,33 +1,22 @@
+import Link from "next/link"
 import { TrendingDown, TrendingUp, Radar } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { obtenerOportunidadesMercadoLocales } from "@/lib/mercado-locales-server"
+import { obtenerOportunidadesMercadoLocales, REASON_LABEL } from "@/lib/mercado-locales-server"
 import { obtenerSenalesExpansionPorComuna } from "@/lib/cadenas-sucursales-server"
 import { obtenerTendenciasConstruccionPorComuna } from "@/lib/ine-permisos-server"
 import { TIPO_PROPIEDAD_LABEL, type OperacionMercadoLocal, type TipoPropiedadComercial } from "@/lib/scrapers/mercado-locales-common"
 import { Histograma } from "@/components/mercado-inmobiliario/charts/histograma"
+import { formatFechaCorta } from "@/lib/formato-fecha"
 
 const TIPOS_PROPIEDAD_VALIDOS: TipoPropiedadComercial[] = ["local_comercial", "oficina", "bodega", "industrial"]
 
 export const dynamic = "force-dynamic"
 
-const REASON_LABEL: Record<string, string> = {
-  below_p25_ufm2: "Bajo P25 por m² — entre los más baratos de su comuna",
-  below_p25_uf: "Bajo P25 — entre los más baratos de su comuna",
-  price_drop_7d: "Bajó de precio en los últimos 7 días",
-}
-
 function formatUf(n: number): string {
   return n.toLocaleString("es-CL", { maximumFractionDigits: 2 })
-}
-
-function formatFechaCorta(iso: string | null): string | null {
-  if (!iso) return null
-  return new Intl.DateTimeFormat("es-CL", { month: "short", year: "numeric", timeZone: "America/Santiago" }).format(
-    new Date(`${iso}T00:00:00`)
-  )
 }
 
 interface OportunidadesPageProps {
@@ -164,6 +153,14 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
                       Actividad constructiva histórica en alza (INE, {tendenciasConstruccion.get(o.comuna)!.variacionPct?.toFixed(0)}%)
                     </span>
                   )}
+                </div>
+                <div className="mt-2.5">
+                  <Link
+                    href={`/mercado-inmobiliario/oportunidades/${o.id}`}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Ver ficha completa →
+                  </Link>
                 </div>
               </div>
             ))}
