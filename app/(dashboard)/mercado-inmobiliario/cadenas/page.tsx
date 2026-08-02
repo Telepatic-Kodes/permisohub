@@ -5,6 +5,7 @@ import {
   obtenerSucursalesRecientes,
 } from "@/lib/cadenas-sucursales-server"
 import { CADENAS_RUT_CONOCIDOS } from "@/lib/scrapers/sii-nomina-sucursales"
+import { RankingBarChart } from "@/components/mercado-inmobiliario/charts/ranking-bar-chart"
 
 export const dynamic = "force-dynamic"
 
@@ -74,17 +75,23 @@ export default async function ExpansionCadenasPage() {
           )}
 
           {resumen.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {resumen.map((r) => (
-                <div key={r.cadena} className="rounded-lg border border-line-fine bg-card p-4">
-                  <p className="text-sm font-semibold text-primary">{r.cadena}</p>
-                  <p className="num mt-1 text-2xl font-light">{r.sucursalesActivas}</p>
-                  <p className="text-xs text-muted-foreground">
-                    sucursales activas en {r.comunas.length} comuna{r.comunas.length !== 1 ? "s" : ""}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <>
+              <RankingBarChart
+                titulo="Sucursales vigentes por cadena"
+                items={resumen.map((r) => ({ label: r.cadena, valor: r.sucursalesActivas }))}
+              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {resumen.map((r) => (
+                  <div key={r.cadena} className="rounded-lg border border-line-fine bg-card p-4">
+                    <p className="text-sm font-semibold text-primary">{r.cadena}</p>
+                    <p className="num mt-1 text-2xl font-light">{r.sucursalesActivas}</p>
+                    <p className="text-xs text-muted-foreground">
+                      sucursales activas en {r.comunas.length} comuna{r.comunas.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {recientes.length > 0 && (

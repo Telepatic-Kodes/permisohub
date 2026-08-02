@@ -7,6 +7,7 @@ import { obtenerOportunidadesMercadoLocales } from "@/lib/mercado-locales-server
 import { obtenerSenalesExpansionPorComuna } from "@/lib/cadenas-sucursales-server"
 import { obtenerTendenciasConstruccionPorComuna } from "@/lib/ine-permisos-server"
 import { TIPO_PROPIEDAD_LABEL, type OperacionMercadoLocal, type TipoPropiedadComercial } from "@/lib/scrapers/mercado-locales-common"
+import { Histograma } from "@/components/mercado-inmobiliario/charts/histograma"
 
 const TIPOS_PROPIEDAD_VALIDOS: TipoPropiedadComercial[] = ["local_comercial", "oficina", "bodega", "industrial"]
 
@@ -122,6 +123,10 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
                 No hay oportunidades hoy con las bandas actuales{comuna ? ` para "${comuna}"` : ""}. El motor de bandas corre a diario.
               </p>
             </div>
+          )}
+
+          {oportunidades.length > 1 && (
+            <Histograma titulo="Distribución de precios (UF)" valores={oportunidades.map((o) => o.precioUfNormalizado)} />
           )}
 
           <div className="space-y-3">

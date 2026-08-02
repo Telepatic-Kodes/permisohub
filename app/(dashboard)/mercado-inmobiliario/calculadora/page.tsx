@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Num } from "@/components/arch/dato"
+import { GaugeArc } from "@/components/mercado-inmobiliario/charts/gauge-arc"
 import {
   calcularCapRate,
   calcularRoi,
@@ -35,18 +36,6 @@ function formatCLP(n: number): string {
 
 function formatPct(n: number): string {
   return n.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function Semaforito({ valor }: { valor: Semaforo }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-[3px] border px-2 py-0.5 text-[11px] font-medium"
-      style={{ color: SEMAFORO_COLOR[valor], borderColor: SEMAFORO_COLOR[valor] }}
-    >
-      <span className="size-1.5 rounded-full" style={{ background: SEMAFORO_COLOR[valor] }} />
-      {SEMAFORO_LABEL[valor]}
-    </span>
-  )
 }
 
 function ConversorUfPage({ ufValor }: { ufValor: number }) {
@@ -125,24 +114,30 @@ function CapRatePanel() {
 
         {precioVenta && rentaMensual && (
           <div className="rounded-lg border border-line-fine bg-card p-4 text-sm">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cap bruto</p>
-                <p className="num text-lg font-semibold text-primary">{formatPct(resultado.capBruto)}%</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
+              <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cap bruto</p>
+                  <p className="num text-lg font-semibold text-primary">{formatPct(resultado.capBruto)}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cap neto</p>
+                  <p className="num text-lg font-semibold text-primary">{formatPct(resultado.capNeto)}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Payback</p>
+                  <p className="num text-lg font-semibold text-primary">
+                    {resultado.paybackAnios !== null ? `${formatPct(resultado.paybackAnios)} años` : "—"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cap neto</p>
-                <p className="num text-lg font-semibold text-primary">{formatPct(resultado.capNeto)}%</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Payback</p>
-                <p className="num text-lg font-semibold text-primary">
-                  {resultado.paybackAnios !== null ? `${formatPct(resultado.paybackAnios)} años` : "—"}
-                </p>
-              </div>
-              <div className="flex items-end">
-                <Semaforito valor={resultado.semaforo} />
-              </div>
+              <GaugeArc
+                value={resultado.capNeto}
+                max={12}
+                label={SEMAFORO_LABEL[resultado.semaforo]}
+                valueLabel={`${formatPct(resultado.capNeto)}%`}
+                color={SEMAFORO_COLOR[resultado.semaforo]}
+              />
             </div>
           </div>
         )}
@@ -182,20 +177,26 @@ function RoiPanel() {
 
         {precioCompra && arriendoMensual && (
           <div className="rounded-lg border border-line-fine bg-card p-4 text-sm">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">ROI anual</p>
-                <p className="num text-lg font-semibold text-primary">{formatPct(resultado.roiAnual)}%</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">ROI anual</p>
+                  <p className="num text-lg font-semibold text-primary">{formatPct(resultado.roiAnual)}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Payback</p>
+                  <p className="num text-lg font-semibold text-primary">
+                    {resultado.paybackAnios !== null ? `${formatPct(resultado.paybackAnios)} años` : "—"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Payback</p>
-                <p className="num text-lg font-semibold text-primary">
-                  {resultado.paybackAnios !== null ? `${formatPct(resultado.paybackAnios)} años` : "—"}
-                </p>
-              </div>
-              <div className="flex items-end">
-                <Semaforito valor={resultado.semaforo} />
-              </div>
+              <GaugeArc
+                value={resultado.roiAnual}
+                max={20}
+                label={SEMAFORO_LABEL[resultado.semaforo]}
+                valueLabel={`${formatPct(resultado.roiAnual)}%`}
+                color={SEMAFORO_COLOR[resultado.semaforo]}
+              />
             </div>
           </div>
         )}
