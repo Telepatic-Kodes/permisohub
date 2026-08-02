@@ -2,7 +2,7 @@
 
 ## Commits sin procesar
 
-_(Ninguno pendiente — `35c3e10` digerido inline, ver bullet [torre-control-cierre-deuda] en "Accumulated Context". Sección alimentada automáticamente por `.githooks/post-commit` — cada commit agrega una línea acá. Un comando/sesión futura la digiere hacia una narrativa real en "Current Position"/"Accumulated Context" y la limpia. Ver Key Decisions en PROJECT.md: "captura automática, curación cuando se pueda".)_
+_(Ninguno pendiente — `f26fa93` es el propio commit de inicio de milestone v1.6, ya descrito en "Current Position"/PROJECT.md, no necesita bullet propio en Accumulated Context. Sección alimentada automáticamente por `.githooks/post-commit` — cada commit agrega una línea acá. Un comando/sesión futura la digiere hacia una narrativa real en "Current Position"/"Accumulated Context" y la limpia. Ver Key Decisions en PROJECT.md: "captura automática, curación cuando se pueda".)_
 
 ## Current Position
 
