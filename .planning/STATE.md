@@ -1,11 +1,8 @@
 # State
 
 ## Commits sin procesar
-- `2026-08-02` `82e1359` chore: bump config.json a v1.6 (Reportes Profesionales de Oportunidades)
-- `2026-08-02` `a277135` docs: define milestone v1.6 requirements
-- `2026-08-02` `2184e23` docs: complete project research
 
-_(Ninguno pendiente — `f26fa93` es el propio commit de inicio de milestone v1.6, ya descrito en "Current Position"/PROJECT.md, no necesita bullet propio en Accumulated Context. Sección alimentada automáticamente por `.githooks/post-commit` — cada commit agrega una línea acá. Un comando/sesión futura la digiere hacia una narrativa real en "Current Position"/"Accumulated Context" y la limpia. Ver Key Decisions en PROJECT.md: "captura automática, curación cuando se pueda".)_
+_(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, requirements, config bump, roadmap) ya están descritos en "Current Position" y en los propios PROJECT.md/ROADMAP.md/REQUIREMENTS.md — son el ciclo estándar de `/gsd:new-milestone`, no necesitan bullet propio en Accumulated Context. Sección alimentada automáticamente por `.githooks/post-commit` — cada commit agrega una línea acá. Un comando/sesión futura la digiere hacia una narrativa real en "Current Position"/"Accumulated Context" y la limpia. Ver Key Decisions en PROJECT.md: "captura automática, curación cuando se pueda".)_
 
 ## Current Position
 
