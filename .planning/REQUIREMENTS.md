@@ -3,6 +3,55 @@
 **Defined:** 2026-06-20
 **Core Value:** El copiloto IA del arquitecto chileno
 
+## v1.6 Requirements — Reportes Profesionales de Oportunidades
+
+Elevar `/mercado-inmobiliario/oportunidades` (hoy una lista plana + un histograma) a un producto de reporting profesional — dashboard de detalle, comparación lado a lado, e informe exportable — informado por investigación real de cómo reportan CBRE/JLL/Colliers (consultoras) y CoStar/LoopNet/Crexi (plataformas de datos). Ver `.planning/research/SUMMARY.md` para el research completo.
+
+### DETA — Dashboard de Detalle por Oportunidad
+
+- [ ] **DETA-01**: Usuario puede ver una ficha de detalle de una oportunidad individual en su propia ruta (no solo la card de la lista)
+- [ ] **DETA-02**: La ficha muestra el posicionamiento de precio vs. la banda de mercado real de su cohorte (P25/mediana/P75), con la muestra (`muestra_n`) declarada explícitamente
+- [ ] **DETA-03**: La ficha muestra el historial de precio del listing y hace cuántos días está publicado
+- [ ] **DETA-04**: La ficha explica en detalle los reason codes y muestra las señales cruzadas (expansión de cadenas, tendencia constructiva) ya usadas en la lista
+- [ ] **DETA-05**: La ficha sugiere automáticamente otras oportunidades comparables (misma comuna/tipo)
+- [ ] **DETA-06**: La ficha incluye un resumen ejecutivo narrado por IA (mismo patrón `InformeEjecutivo` ya usado en Tasación/Due Diligence)
+- [ ] **DETA-07**: La ficha muestra una rentabilidad implícita de zona (estimado de zona, nunca del activo específico), solo cuando hay cobertura real de datos para calcularla
+
+### COMPA — Comparación Lado a Lado
+
+- [ ] **COMPA-01**: Usuario puede seleccionar 2 a 5 oportunidades del mismo tipo de propiedad y misma operación para comparar
+- [ ] **COMPA-02**: La comparación se muestra en tabla (columnas=propiedades, filas=atributos), con el mejor valor resaltado por fila
+- [ ] **COMPA-03**: El sistema previene estructuralmente (no solo advierte) seleccionar oportunidades de tipo/operación distintos en la misma comparación
+- [ ] **COMPA-04**: La selección de comparación persiste en la URL (compartible/recargable)
+
+### INFO — Informe Exportable
+
+- [ ] **INFO-01**: Usuario puede exportar/imprimir un informe de una oportunidad individual con portada, cuerpo y sección de metodología/fuentes
+- [ ] **INFO-02**: Usuario puede exportar/imprimir un informe de una comparación de oportunidades con la misma disciplina de fuentes
+- [ ] **INFO-03**: El informe muestra fecha de generación Y fecha de última verificación por dato
+- [ ] **INFO-04**: Usuario puede personalizar el informe con un campo "preparado por / para" en la portada
+
+### Future Requirements (v2+)
+
+- Mapa de posicionamiento a nivel comuna — bloqueado, no hay GeoJSON de comunas RM disponible en el proyecto
+- Fotos y ubicación exacta (lat/lng) por oportunidad — bloqueado, el dataset de scraping solo tiene comuna
+- Radar chart complementario a la tabla de comparación — solo si aparece señal real de que la tabla sola no basta
+
+### Out of Scope (v1.6)
+
+| Feature | Reason |
+|---------|--------|
+| Cap rate/NOI real por activo | No calculable con datos de listing — un scrape es arriendo O venta, nunca ambos del mismo activo. Solo se ofrece la "rentabilidad implícita de zona" (DETA-07), etiquetada como estimado |
+| Rent roll, Walk Score, score único de "mejor oportunidad" | Contradice la disciplina de "nunca fabricar interpretación no fundamentada" que ya rige el resto del proyecto |
+| Boilerplate legal de Offering Memorandum institucional (formato EE.UU.) | No aplica al contexto chileno/PYME de arquitectos — anti-feature confirmado en research (FEATURES.md) |
+| Reportes de Mercado (página separada) | Fuera de alcance de este milestone — alcance confirmado con la founder: solo Oportunidades. Evaluar el mismo tratamiento ahí después de validar en Oportunidades |
+
+### Traceability
+
+_(Vacío — se llena al crear el roadmap)_
+
+---
+
 ## v1.4 Requirements — Zonificación
 
 ### ZONE — Zonificación por Dirección (Núcleo)
