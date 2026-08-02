@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
-import { ExternalLink } from "lucide-react"
+import Link from "next/link"
+import { ExternalLink, Printer } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -135,14 +136,22 @@ export default async function OportunidadDetallePage({ params }: Props) {
                   <p className="num text-sm text-muted-foreground">{fmt(oportunidad.precioUfM2Normalizado)} UF/m²</p>
                 )}
               </div>
-              <a
-                href={oportunidad.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-              >
-                Ver aviso original <ExternalLink className="size-3.5" />
-              </a>
+              <div className="flex flex-col items-end gap-1.5">
+                <a
+                  href={oportunidad.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                >
+                  Ver aviso original <ExternalLink className="size-3.5" />
+                </a>
+                <Link
+                  href={`/mercado-inmobiliario/oportunidades/${oportunidad.id}/informe`}
+                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                >
+                  <Printer className="size-3.5" /> Exportar informe
+                </Link>
+              </div>
             </div>
           </div>
 
