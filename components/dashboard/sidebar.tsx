@@ -8,6 +8,7 @@ import {
   BarChart2,
   Bot,
   BookMarked,
+  Briefcase,
   Building2,
   Calculator,
   ChevronDown,
@@ -118,6 +119,12 @@ const PERMISOS_GROUPS: NavGroup[] = [
 ]
 
 const MERCADO_GROUPS: NavGroup[] = [
+  {
+    label: "Mi Cartera",
+    items: [
+      { href: "/mercado-inmobiliario/mi-cartera", label: "Mi Cartera", icon: Briefcase },
+    ],
+  },
   {
     label: "Análisis",
     items: [
