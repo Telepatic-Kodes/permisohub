@@ -1,175 +1,106 @@
 # Requirements: PermisoHub
 
-**Defined:** 2026-06-20
+**Defined:** 2026-08-02
 **Core Value:** El copiloto IA del arquitecto chileno
 
-## v1.4 Requirements — Zonificación
+## v1.7 Requirements — Cabida Comercial (Demografía y Consumo)
 
-### ZONE — Zonificación por Dirección (Núcleo)
+Determinar si hay demanda real ("cabida") para un nuevo supermercado, minimarket, strip center o power center en una oportunidad, cruzando demografía/consumo público chileno y competencia existente dentro de un área de influencia (isócrona).
 
-- [x] **ZONE-01**: Al abrir un proyecto con dirección, el arquitecto ve automáticamente la zona PRC (código + nombre) determinada por geocoding + consulta espacial contra el layer ArcGIS de MINVU/OCUC
-- [x] **ZONE-02**: El resultado incluye un mapa que confirma visualmente que el punto geocodificado cae dentro del polígono de la zona retornada
-- [x] **ZONE-03**: El resultado muestra los usos permitidos y usos prohibidos de la zona en texto verbatim, con cita a la fuente oficial (link al decreto cuando esté disponible, tratamiento no-verificado cuando no — distinto del flag `verificado` de normativa-retrieval.ts)
-- [x] **ZONE-04**: El resultado de zonificación queda persistido en el proyecto, con una acción explícita "Actualizar" — sin refresco silencioso en background
-- [x] **ZONE-05**: Si el geocoding falla o la comuna no tiene cobertura, el arquitecto puede seleccionar manualmente comuna y zona desde un listado en vez de ver un error sin salida
-- [x] **ZONE-06**: Toda pantalla de zonificación muestra el disclaimer "Informativo, no reemplaza el Certificado de Informaciones Previas (CIP) oficial"
+### UBIC — Ubicación e Isócrona
 
-### COMPAT — Compatibilidad de Uso
+- [ ] **UBIC-01**: Al abrir el tab "Cabida Comercial" de una oportunidad, el sistema resuelve su punto geolocalizado (lat/lng) a partir de comuna + `locationText` vía geocoding, con fallback a centroide de comuna si no resuelve más fino
+- [ ] **UBIC-02**: La precisión real obtenida (ej. "dirección aproximada" vs. "centroide de comuna") se muestra explícitamente en la UI — nunca se presenta como ubicación exacta si no lo es
+- [ ] **UBIC-03**: El área de influencia se calcula como isócrona real (caminata/auto, vía openrouteservice) cuando el servicio responde correctamente
+- [ ] **UBIC-04**: Si el cálculo de isócrona falla o no está disponible, el sistema degrada a un radio simple equivalente, señalando explícitamente el método usado (`red_vial` vs. `círculo_equivalente`) — nunca de forma silenciosa
+- [ ] **UBIC-05**: El usuario puede forzar un recálculo explícito ("Actualizar"), sin refresco silencioso en background — mismo patrón que zonificación
 
-- [x] **COMPAT-01**: El arquitecto puede indicar el uso pretendido del proyecto y el sistema responde con uno de tres estados — Permitido / No permitido / No especificado (requiere revisión) — nunca un veredicto binario
+### DEMO — Demografía y Consumo
 
-### INTEG — Integración con Motores Existentes
+- [ ] **DEMO-01**: El tab muestra población estimada dentro del área de influencia, por intersección geoespacial con Censo 2017 (manzana), con disclaimer de antigüedad del dato
+- [ ] **DEMO-02**: El tab muestra capacidad de gasto estimada por categoría de consumo (ingreso/pobreza comunal vía CASEN + share de categoría vía EPF), etiquetada explícitamente como "estimado agregado a nivel macro-zona, no medido en el área específica" — nunca presentado con precisión de isócrona
+- [ ] **DEMO-03**: Cada cifra demográfica/de consumo muestra su fuente y año/vintage de forma visible — nunca mezclando vintages censales (2017 vs. 2024) sin declararlo
 
-- [x] **INTEG-01**: `via-tramitacion.ts` muestra una alerta citada cuando el uso declarado no calza con los usos permitidos de la zona, sin modificar el árbol de decisión determinista (`recomendarVia()` no se altera)
-- [x] **INTEG-02**: `due-diligence.ts` puede citar la zona como fuente de hallazgo (nuevo tipo `'PRC'` en `RefNormativa`) cuando detecta incoherencia entre el destino declarado y los usos permitidos
-- [x] **INTEG-03**: Los skills del copiloto IA (diagnóstico OGUC, checklist) reciben el texto de usos permitidos/prohibidos como contexto adicional al generar sus respuestas
+### COMPE — Competencia
 
-### Future Requirements (v1.4.x / v2+)
+- [ ] **COMPE-01**: El usuario puede seleccionar uno de los 4 formatos objetivo (supermercado, minimarket, strip center, power center) para el análisis
+- [ ] **COMPE-02**: El tab muestra el conteo de competidores existentes por formato dentro del área de influencia, con nombre/tag y distancia, extendiendo la consulta Overpass ya existente (`obtenerSenalesUbicacion`)
+- [ ] **COMPE-03**: Para supermercado/minimarket, la detección usa tags OSM estándar (`shop=supermarket|convenience|mall|department_store`)
+- [ ] **COMPE-04**: Para strip center/power center, la detección usa una lista curada a mano de centros conocidos en Chile (mantenida por el equipo), dado que no existe tag OSM ni fuente pública con direcciones para estos formatos
+- [ ] **COMPE-05**: Un conteo de 0 competidores nunca se interpreta como "confirmado: no hay competencia" cuando la cobertura de la fuente es conocida como incompleta (ej. roster SII sin Unimarc) — el nivel de confianza se degrada explícitamente en ese caso
+- [ ] **COMPE-06**: El usuario puede ver el nombre real de cadena de cada competidor detectado (ej. "Líder Express"), cruzando OSM con la nómina SII geocodificada on-demand por comuna
 
-- Dashboard de zonificación a nivel portafolio (todos los proyectos activos)
-- Exportar PDF/anexo del hallazgo de zonificación para el expediente
-- Indicador de vigencia/antigüedad del PRC ("vigente desde...") — pendiente confirmar si el layer expone fecha de decreto
-- Coeficientes urbanísticos numéricos (FOS, constructibilidad, altura, rasante, distanciamiento) — requiere fuente de datos distinta, paga o verificada
+### VERE — Veredicto y Metodología
 
-### Out of Scope (v1.4)
+- [ ] **VERE-01**: El tab presenta un veredicto de 3 estados por formato (ej. "evidencia de espacio" / "mercado parece cubierto" / "evidencia insuficiente para concluir") — nunca un veredicto binario sí/no
+- [ ] **VERE-02**: El veredicto siempre se muestra junto a su nivel de confianza — nunca uno sin el otro
+- [ ] **VERE-03**: El tab incluye una sección de metodología/fuentes citando fecha del censo, fecha de scraping de competidores, radio/isócrona usado, y qué no se pudo verificar
+- [ ] **VERE-04**: El gap score se presenta explícitamente como proxy de densidad de oferta vs. demanda estimada — nunca como índice de fuga de ventas (leakage/surplus) real
 
-- Coeficientes urbanísticos numéricos — sin fuente pública citable a la fidelidad requerida; ver Future Requirements
-- Capas de riesgo (inundación, remoción en masa, tsunami) — fuente de datos no confirmada, no stubear UI
-- Explorador GIS completo / modo de navegación libre — diluye el foco del producto (velocidad de tramitación DOM), duplica la superficie de zonificación.cl
-- Repositorio legal nacional de ordenanzas — redundante con `normativa-retrieval.ts` existente
-- Métricas o paywall por consulta interna — el valor estratégico de este milestone es no cobrar por consulta (a diferencia de zonificación.cl); se agrupa sin medir dentro del plan existente
+### MAPA — Mapa Visual
 
-### Traceability
+- [ ] **MAPA-01**: El tab muestra un mapa Leaflet con el polígono del área de influencia (isócrona o radio) y pines de los competidores detectados
 
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| ZONE-01 | 11 | Complete |
-| ZONE-02 | 11 | Complete |
-| ZONE-03 | 11 | Complete |
-| ZONE-04 | 11 | Complete |
-| ZONE-05 | 11 | Complete |
-| ZONE-06 | 11 | Complete |
-| COMPAT-01 | 11 | Complete |
-| INTEG-01 | 12 | Complete |
-| INTEG-02 | 12 | Complete |
-| INTEG-03 | 12 | Complete |
+### CABI — Arquitectura del Motor
+
+- [ ] **CABI-01**: El análisis de cabida comercial se implementa como una función pura `(lat, lng, formato) → resultado`, no acoplada a `oportunidadId`, para soportar un modo standalone por dirección/comuna en un milestone futuro sin refactor
+- [ ] **CABI-02**: El tab "Cabida Comercial" aparece como una 5ª pestaña en la ficha de detalle de oportunidad (`/oportunidades/[id]`), junto a posicionamiento/historial/comparables/resumen, con carga bajo demanda (no eager) siguiendo el patrón de `ResumenTab`
+
+## Future Requirements (v1.x / v2+)
+
+### Cabida Comercial (extensión)
+
+- **CABI-03**: Modo standalone por dirección/comuna libre, sin pasar por una oportunidad ya cargada
+- **CABI-04**: Riesgo de canibalización entre el formato objetivo y otras oportunidades/propiedades del propio usuario (cartera)
+- **CABI-05**: GSE (grupo socioeconómico) proxy propio desde variables censales, si el ingreso/pobreza comunal de CASEN resulta insuficiente
+
+## Out of Scope
+
+Explícitamente excluido de v1.7 — todos requieren un insumo que Chile no publica públicamente, o un vendor ya vetado por la founder.
+
+| Feature | Reason |
+|---------|--------|
+| Huff model calibrado (probabilidad de captura de mercado) | Requiere datos reales de visitas/ventas para calibrar atractivo y decaimiento por distancia — Chile no los publica; simularlo sería fabricar una probabilidad con apariencia científica |
+| Índice de leakage/surplus real (ventas reales del área vs. potencial) | No existe en Chile un equivalente al Economic Census of Retail Trade (ventas reales por categoría y comuna) |
+| Foot traffic real (tipo Placer.ai) | Vendor pagado, ya vetado explícitamente por la founder (2026-08-01: no pagar por datos/apps de terceros por ahora) |
+| GSE preciso vía dataset comercial (Adimark/Ipsos/similar) | Vendor pagado, mismo veto que Foot traffic real |
+| Score único 0-100 de "viabilidad del local" | Esconde criterios subjetivos como si fueran objetivos — mismo anti-patrón ya descartado en v1.6 (Mercado Inmobiliario) |
+| Proyección de ventas/facturación esperada ($/mes) | Requiere modelo de captura de mercado + ticket promedio real por formato — ninguno disponible con fuentes públicas chilenas |
+| Isócrona con tráfico en tiempo real (hora punta vs. valle) | Requiere servicios pagados (Google/TomTom Traffic) con la fidelidad necesaria |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| UBIC-01 | TBD | Pending |
+| UBIC-02 | TBD | Pending |
+| UBIC-03 | TBD | Pending |
+| UBIC-04 | TBD | Pending |
+| UBIC-05 | TBD | Pending |
+| DEMO-01 | TBD | Pending |
+| DEMO-02 | TBD | Pending |
+| DEMO-03 | TBD | Pending |
+| COMPE-01 | TBD | Pending |
+| COMPE-02 | TBD | Pending |
+| COMPE-03 | TBD | Pending |
+| COMPE-04 | TBD | Pending |
+| COMPE-05 | TBD | Pending |
+| COMPE-06 | TBD | Pending |
+| VERE-01 | TBD | Pending |
+| VERE-02 | TBD | Pending |
+| VERE-03 | TBD | Pending |
+| VERE-04 | TBD | Pending |
+| MAPA-01 | TBD | Pending |
+| CABI-01 | TBD | Pending |
+| CABI-02 | TBD | Pending |
 
 **Coverage:**
-- v1.4 requirements: 10 total
-- Mapped to phases: 10/10 ✓
-- Unmapped: 0
-- Note: Phase 10 (Motor de Zonificación) has no directly-mapped requirement — it's enabling infrastructure (geocoding, coverage registry, ArcGIS adapter, cache, persistence) that Phase 11's user-facing requirements depend on.
+- v1.7 requirements: 20 total
+- Mapped to phases: 0
+- Unmapped: 20 ⚠️ (pendiente de roadmap)
 
 ---
-
-## v1.3 Requirements — Army of Skills
-
-### FOUND — Foundation (Preconditions)
-
-- [x] **FOUND-01**: Los crons `daily-check` y `weekly-summary` usan `createServiceClient()` con `SUPABASE_SERVICE_ROLE_KEY` (no cliente anon) — corrige bug de 0 filas silenciosas en contexto sin cookies
-- [x] **FOUND-02**: Tabla `document_checklist_items` existe en Supabase con columnas: `id`, `proyecto_id`, `item_key`, `label`, `articulo_oguc`, `estado` (pendiente | ok), `source` (ai | manual)
-- [x] **FOUND-03**: Componente `Sheet` de shadcn/ui instalado y disponible para el drawer del copiloto
-
-### SKILL — Copiloto IA Drawer
-
-- [x] **SKILL-01**: Usuario puede abrir panel "Copiloto IA" (Sheet lateral derecho) desde cualquier proyecto en Permisos, Desarchivo o Patentes — muestra task cards sugeridas, no un input en blanco
-- [x] **SKILL-02**: Copiloto ejecuta Diagnóstico OGUC con los datos reales del proyecto interpolados en las fórmulas normativas (no artículos genéricos)
-- [x] **SKILL-03**: Copiloto predice observaciones probables de la DOM con: categoría, señal de frecuencia, trigger específico en este proyecto, y acción preventiva por ítem
-- [x] **SKILL-04**: Copiloto genera Checklist de Documentos requeridos, persistido a DB con `item_key` y artículo normativo, con estado pendiente/ok modificable manualmente
-- [x] **SKILL-05**: Copiloto calcula Estimación de Tiempo (días hábiles) y Derechos (CLP y UF) basado en datos del proyecto e inteligencia municipal
-
-### AUTO — Automatizaciones de Fondo
-
-- [x] **AUTO-01**: El cron diario actualiza `estado` y `etapa` en DB cuando el scraper DOM detecta un cambio, usando write idempotente (`.neq()`) para tolerar double-invoke de Vercel
-- [x] **AUTO-02**: Al cambiar el `estado` DOM del proyecto en DB, el cliente recibe WhatsApp automático con el nuevo estado
-- [x] **AUTO-03**: Al crear una patente comercial, `after()` dispara enriquecimiento SII automáticamente para pre-llenar `giro_sii` y `rol_avaluo` sin bloquear la respuesta del formulario
-- [x] **AUTO-04**: Cada lunes 08:00 America/Santiago, el arquitecto recibe email de resumen semanal con estados de proyectos desde DB más una sección de tip/insight escrita por IA
-
-### Future Requirements
-
-- Análisis OGUC con corpus curado y citaciones a documentos oficiales (Q4 2026)
-- Copiloto conversacional en el drawer con follow-up questions (Q4 2026)
-- DOM auto-update para todos los 346 municipios vía MINVU API (pendiente publicación API oficial)
-- Copiloto accesible vía `/herramientas/copiloto` como página standalone
-
-### Out of Scope (v1.3)
-
-- Migración de OpenAI GPT-4o a Claude Sonnet 4.6 — riesgo de migración mid-milestone; mantener OpenAI para este milestone
-- Copiloto con streaming SSE — análisis es JSON estructurado; streaming solo para el chat OGUC existente
-- WhatsApp hacia el arquitecto (no el cliente) — fuera de scope del mvp de notificaciones
-
-### Traceability
-
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| FOUND-01 | 7 | Complete |
-| FOUND-02 | 7 | Complete |
-| FOUND-03 | 7 | Complete |
-| SKILL-01 | 8 | Complete |
-| SKILL-02 | 8 | Complete |
-| SKILL-03 | 8 | Complete |
-| SKILL-04 | 8 | Complete |
-| SKILL-05 | 8 | Complete |
-| AUTO-01 | 9 | Complete |
-| AUTO-02 | 9 | Complete |
-| AUTO-03 | 9 | Complete |
-| AUTO-04 | 9 | Complete |
-
----
-
-## v1.2 Requirements — Dashboard Clarity
-
-### DASH — Dashboard Redesign
-
-- [x] **DASH-01**: Sección "Acción requerida" muestra proyectos con obs. + alertas juntos, ordenados por urgencia
-- [x] **DASH-02**: Tres métricas hero (Urgentes, Activos, Días prom.) son los únicos KPIs prominentes
-- [x] **DASH-03**: Cuatro secciones temporales organizan todos los proyectos sin superposición
-- [x] **DASH-04**: Cada proyecto aparece exactamente una vez en el timeline
-- [x] **DASH-05**: El estado visual (color/icono de fila) es el ÚNICO indicador — sin badges redundantes
-- [x] **DASH-06**: Quick actions accesibles como pills horizontales desde el header del contenido
-
----
-
-## v1.1 Requirements — Cumplir la Promesa
-
-### BILL — Billing & Subscription
-
-- [x] **BILL-01**: Usuario puede suscribirse al plan Starter ($29.990 CLP/mes) via Stripe Checkout
-- [x] **BILL-02**: Usuario puede suscribirse al plan Pro ($79.990 CLP/mes) via Stripe Checkout
-- [x] **BILL-03**: Usuario puede suscribirse al plan Estudio ($149.990 CLP/mes) via Stripe Checkout
-- [x] **BILL-04**: Usuario puede elegir facturación anual con 17% de descuento en cualquier plan
-- [x] **BILL-05**: Usuario puede gestionar/cancelar su suscripción via Stripe Customer Portal
-- [x] **BILL-06**: Webhook de Stripe actualiza el estado de suscripción en Supabase en tiempo real
-- [x] **BILL-07**: Usuario ve su plan activo, fecha de renovación y monto en `/configuracion/billing`
-
-### GATE — Feature Gating
-
-- [x] **GATE-01**: Proyectos del plan Starter limitados a 5; plan Pro ilimitados
-- [x] **GATE-02**: AI chats limitados a 20/mes en Starter, 100 en Pro, ilimitados en Estudio
-- [x] **GATE-03**: PDF extractions limitadas a 5/mes en Starter, 30 en Pro, ilimitadas en Estudio
-- [x] **GATE-04**: Al alcanzar límite, el usuario ve un upgrade prompt con CTA a Stripe Checkout
-- [x] **GATE-05**: El uso mensual se resetea automáticamente el día 1 de cada mes
-- [x] **GATE-06**: Plan Free (sin suscripción) tiene límites menores que Starter
-
-### LAND — Landing Page
-
-- [x] **LAND-01**: Página pública en `/` con hero, 6 features, 3 pricing tiers y footer — sin sidebar
-- [x] **LAND-02**: Toggle mensual/anual en la sección de pricing
-- [x] **LAND-03**: CTA "Suscribirse" en pricing conecta a Stripe Checkout
-- [x] **LAND-04**: `/dashboard` redirige a /login si el usuario no está autenticado (landing en `/` es pública)
-
-### ONBD — Onboarding
-
-- [x] **ONBD-01**: Usuario nuevo ve wizard de 3 pasos al primer login: Bienvenida → Primer proyecto → Tour
-- [x] **ONBD-02**: Wizard redirige al dashboard con checklist visible al completarse
-- [x] **ONBD-03**: Usuario que ya completó onboarding no ve el wizard al volver
-
-### PWA — Progressive Web App
-
-- [x] **PWA-01**: Manifest.json completo con iconos 192x512
-- [x] **PWA-02**: Prompt de instalación en mobile Chrome
-- [x] **PWA-03**: App abre en modo standalone cuando está instalada (sin chrome del browser)
-
----
-*Requirements defined: 2026-06-20*
-*Last updated: 2026-07-30 — v1.4 Zonificación roadmap created (Phases 10-12), traceability mapped 10/10*
+*Requirements defined: 2026-08-02*
+*Last updated: 2026-08-02 — v1.7 Cabida Comercial requirements definidos vía `/gsd:new-milestone`*
