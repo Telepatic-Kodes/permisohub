@@ -186,6 +186,28 @@ export async function streamConBusquedaWeb(instructions: string, input: string) 
   })
 }
 
+// Como streamConBusquedaWeb pero SIN el tool web_search_preview — para
+// dominios donde los datos reales ya existen server-side (Fase 13:
+// mercado_locales_stats_diarias, comparables, historial de precio) y el rol
+// del modelo es narrar/citar esos números, no inventar contexto de mercado
+// vía búsqueda. Reusar streamConBusquedaWeb acá dejaría que el modelo
+// busque en vivo y devuelva un rango "plausible" pero no anclado a los
+// datos reales de PermisoHub — exactamente el riesgo de fabricación que el
+// resto del proyecto evita (ver AUDIT-FIDELIDAD-DATOS-2026-07-30.md). Sin
+// `tools` en el payload: no es solo una instrucción de prompt (que el
+// modelo podría ignorar), es estructuralmente imposible que busque.
+export async function streamConContexto(instructions: string, input: string) {
+  const ai = getAI()
+  if (!ai) throw new Error('OPENAI_API_KEY no configurado')
+  return ai.responses.create({
+    model: AI_MODEL,
+    instructions,
+    input,
+    stream: true,
+    max_output_tokens: 3000,
+  })
+}
+
 export async function aiCompleteWithImages(
   prompt: string,
   images: string[],
