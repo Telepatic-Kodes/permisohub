@@ -21,6 +21,9 @@ export interface PropiedadPortafolio {
   siiDestino: string | null
   siiAvaluoFiscalUf: number | null
   siiConsultadoEl: string | null
+  reajusteAplica: boolean
+  reajustePeriodicidadMeses: number | null
+  reajusteFechaUltimo: string | null
   createdAt: string
 }
 
@@ -139,7 +142,7 @@ export async function obtenerPropiedadesPortafolio(workspaceId: string): Promise
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('propiedades_portafolio')
-    .select('id, direccion, comuna, tipo_propiedad, superficie_m2, operacion, precio_actual_uf, rol_sii, notas, fecha_vencimiento_contrato, tiene_ascensor, tiene_gas, sii_destino, sii_avaluo_fiscal_uf, sii_consultado_el, created_at')
+    .select('id, direccion, comuna, tipo_propiedad, superficie_m2, operacion, precio_actual_uf, rol_sii, notas, fecha_vencimiento_contrato, tiene_ascensor, tiene_gas, sii_destino, sii_avaluo_fiscal_uf, sii_consultado_el, reajuste_aplica, reajuste_periodicidad_meses, reajuste_fecha_ultimo, created_at')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
 
@@ -161,6 +164,9 @@ export async function obtenerPropiedadesPortafolio(workspaceId: string): Promise
     siiDestino: f.sii_destino,
     siiAvaluoFiscalUf: f.sii_avaluo_fiscal_uf,
     siiConsultadoEl: f.sii_consultado_el,
+    reajusteAplica: f.reajuste_aplica,
+    reajustePeriodicidadMeses: f.reajuste_periodicidad_meses,
+    reajusteFechaUltimo: f.reajuste_fecha_ultimo,
     createdAt: f.created_at,
   }))
 }

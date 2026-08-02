@@ -19,6 +19,9 @@ function propiedadBase(overrides: Partial<PropiedadPortafolio> = {}): PropiedadP
     siiDestino: 'LOCAL COMERCIAL',
     siiAvaluoFiscalUf: 8000,
     siiConsultadoEl: '2026-08-01',
+    reajusteAplica: false,
+    reajustePeriodicidadMeses: null,
+    reajusteFechaUltimo: null,
     createdAt: '2026-01-01T00:00:00Z',
     ...overrides,
   }

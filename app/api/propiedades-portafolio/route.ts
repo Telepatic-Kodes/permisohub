@@ -14,6 +14,7 @@ import {
 } from '@/lib/propiedades-portafolio-server'
 import { obtenerSenalesExpansionPorComuna, type SenalExpansionComuna } from '@/lib/cadenas-sucursales-server'
 import { obtenerTendenciasConstruccionPorComuna, type TendenciaConstruccionComuna } from '@/lib/ine-permisos-server'
+import { calcularEstadoReajuste } from '@/lib/reajuste-renta'
 
 const NuevaPropiedadSchema = z.object({
   direccion: z.string().min(1),
@@ -27,6 +28,9 @@ const NuevaPropiedadSchema = z.object({
   fechaVencimientoContrato: z.string().optional(),
   tieneAscensor: z.boolean().optional(),
   tieneGas: z.boolean().optional(),
+  reajusteAplica: z.boolean().optional(),
+  reajustePeriodicidadMeses: z.number().int().positive().optional(),
+  reajusteFechaUltimo: z.string().optional(),
 })
 
 export async function GET() {
@@ -58,6 +62,11 @@ export async function GET() {
       obligaciones: obligaciones.get(p.id) ?? [],
       coincideTipoSii: p.siiDestino ? destinoSiiCoincideConTipo(p.siiDestino, p.tipoPropiedad) : null,
       capRate: calcularCapRatePropiedad(p),
+      estadoReajuste: calcularEstadoReajuste({
+        reajusteAplica: p.reajusteAplica,
+        periodicidadMeses: p.reajustePeriodicidadMeses,
+        fechaUltimo: p.reajusteFechaUltimo,
+      }),
     }))
 
     return Response.json({ data: conComparacion })
@@ -100,6 +109,9 @@ export async function POST(request: Request) {
         fecha_vencimiento_contrato: body.fechaVencimientoContrato ?? null,
         tiene_ascensor: body.tieneAscensor ?? false,
         tiene_gas: body.tieneGas ?? false,
+        reajuste_aplica: body.reajusteAplica ?? false,
+        reajuste_periodicidad_meses: body.reajustePeriodicidadMeses ?? null,
+        reajuste_fecha_ultimo: body.reajusteFechaUltimo ?? null,
       })
       .select('id')
       .single()

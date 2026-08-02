@@ -16,6 +16,9 @@ interface PatchPropiedadBody {
   fechaVencimientoContrato?: string
   tieneAscensor?: boolean
   tieneGas?: boolean
+  reajusteAplica?: boolean
+  reajustePeriodicidadMeses?: number
+  reajusteFechaUltimo?: string
 }
 
 const FIELD_MAP: Record<keyof PatchPropiedadBody, string> = {
@@ -30,6 +33,9 @@ const FIELD_MAP: Record<keyof PatchPropiedadBody, string> = {
   fechaVencimientoContrato: 'fecha_vencimiento_contrato',
   tieneAscensor: 'tiene_ascensor',
   tieneGas: 'tiene_gas',
+  reajusteAplica: 'reajuste_aplica',
+  reajustePeriodicidadMeses: 'reajuste_periodicidad_meses',
+  reajusteFechaUltimo: 'reajuste_fecha_ultimo',
 }
 
 export async function PATCH(

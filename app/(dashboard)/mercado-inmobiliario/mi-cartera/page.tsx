@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { AlertCircle, CalendarClock, ChevronDown, ChevronRight, Loader2, Plus, Radar, ShieldAlert, TrendingDown, TrendingUp, Trash2 } from "lucide-react"
+import { AlertCircle, CalendarClock, ChevronDown, ChevronRight, Loader2, Plus, Radar, RefreshCw, ShieldAlert, TrendingDown, TrendingUp, Trash2 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +15,7 @@ import { DesviacionBar } from "@/components/mercado-inmobiliario/charts/desviaci
 import { RankingBarChart } from "@/components/mercado-inmobiliario/charts/ranking-bar-chart"
 import { calcularEstadoObligacion, type EstadoObligacion, type ObligacionRegulatoria } from "@/lib/obligaciones-regulatorias"
 import type { CapRateResultado, Semaforo } from "@/lib/calculadora-inversion"
+import { calcularEstadoReajuste, type EstadoReajuste, type EstadoReajusteResultado } from "@/lib/reajuste-renta"
 
 const TIPOS_PROPIEDAD: TipoPropiedadComercial[] = ["local_comercial", "oficina", "bodega", "industrial"]
 
@@ -41,6 +42,9 @@ interface Propiedad {
   siiDestino: string | null
   siiAvaluoFiscalUf: number | null
   siiConsultadoEl: string | null
+  reajusteAplica: boolean
+  reajustePeriodicidadMeses: number | null
+  reajusteFechaUltimo: string | null
   createdAt: string
 }
 
@@ -77,6 +81,7 @@ interface FilaPortafolio {
   obligaciones: ObligacionConEstado[]
   coincideTipoSii: boolean | null
   capRate: CapRateResultado | null
+  estadoReajuste: EstadoReajusteResultado
 }
 
 const ESTADO_OBLIGACION_CONFIG: Record<EstadoObligacion, { label: string; color: string }> = {
@@ -85,6 +90,27 @@ const ESTADO_OBLIGACION_CONFIG: Record<EstadoObligacion, { label: string; color:
   al_dia: { label: "Al día", color: "var(--state-ok, #16a34a)" },
   sin_registro: { label: "Sin registro", color: "var(--muted-foreground)" },
   verificar: { label: "Verificar con certificador", color: "var(--modulo-mercado)" },
+}
+
+// no_aplica no tiene label — ese estado nunca se renderiza (ReajusteBadge
+// devuelve null), es sólo un placeholder para que el Record quede completo.
+const ESTADO_REAJUSTE_CONFIG: Record<EstadoReajuste, { label: string; color: string }> = {
+  vencido: { label: "Reajuste vencido", color: "var(--state-error, #dc2626)" },
+  proximo: { label: "Reajuste próximo", color: "var(--state-warn, #d97706)" },
+  al_dia: { label: "Reajuste al día", color: "var(--state-ok, #16a34a)" },
+  sin_registro: { label: "Reajuste pactado sin registro", color: "var(--muted-foreground)" },
+  no_aplica: { label: "", color: "var(--muted-foreground)" },
+}
+
+// Fecha de HOY en calendario LOCAL (YYYY-MM-DD) — mismo criterio anti
+// timezone-drift que diasHasta() más abajo: nunca toISOString(), que
+// convierte a UTC y puede correr la fecha un día en huso horario UTC+.
+function hoyLocalISO(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
 }
 
 const VEREDICTO_CONFIG: Record<Comparacion["veredicto"], { label: string; color: string }> = {
@@ -176,6 +202,62 @@ function CapRateBadge({ capRate }: { capRate: CapRateResultado }) {
   )
 }
 
+function ReajusteBadge({
+  propiedadId,
+  estado,
+  onMarcarHoy,
+}: {
+  propiedadId: string
+  estado: EstadoReajusteResultado
+  onMarcarHoy: (propiedadId: string) => void
+}) {
+  // no_aplica: la propiedad no tiene cláusula de reajuste pactada — no hay
+  // nada que mostrar ni fabricar acá, se omite el badge por completo.
+  if (estado.estado === "no_aplica") return null
+
+  const cfg = ESTADO_REAJUSTE_CONFIG[estado.estado]
+
+  if (estado.estado === "sin_registro") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded-[3px] border px-2 py-0.5 text-[10px] font-medium"
+        style={{ color: cfg.color, borderColor: cfg.color }}
+      >
+        <RefreshCw className="size-2.5" />
+        Reajuste pactado — falta declarar periodicidad y última fecha
+      </span>
+    )
+  }
+
+  const fechaFormateada = estado.proximaFecha
+    ? new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Santiago" }).format(
+        new Date(`${estado.proximaFecha}T00:00:00`)
+      )
+    : null
+
+  return (
+    <div className="inline-flex items-center gap-1.5">
+      <span
+        className="inline-flex items-center gap-1 rounded-[3px] border px-2 py-0.5 text-[10px] font-medium"
+        style={{ color: cfg.color, borderColor: cfg.color }}
+      >
+        <RefreshCw className="size-2.5" />
+        {cfg.label}
+        {fechaFormateada ? ` (${fechaFormateada})` : ""}
+      </span>
+      {(estado.estado === "vencido" || estado.estado === "proximo") && (
+        <button
+          type="button"
+          onClick={() => onMarcarHoy(propiedadId)}
+          className="text-[10px] text-muted-foreground underline hover:text-primary"
+        >
+          Marcar aplicado hoy
+        </button>
+      )}
+    </div>
+  )
+}
+
 interface ResumenPortafolio {
   total: number
   superficieTotalM2: number
@@ -191,6 +273,8 @@ interface ResumenPortafolio {
   porTipo: Record<TipoPropiedadComercial, number>
   capRateNetoPromedio: number | null
   propiedadesConCapRate: number
+  reajustesVencidos: number
+  reajustesProximos: number
 }
 
 function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
@@ -209,11 +293,13 @@ function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
     porTipo: { local_comercial: 0, oficina: 0, bodega: 0, industrial: 0 },
     capRateNetoPromedio: null,
     propiedadesConCapRate: 0,
+    reajustesVencidos: 0,
+    reajustesProximos: 0,
   }
 
   let sumaCapNeto = 0
 
-  for (const { propiedad, comparacion, obligaciones, capRate } of filas) {
+  for (const { propiedad, comparacion, obligaciones, capRate, estadoReajuste } of filas) {
     if (propiedad.superficieM2) resumen.superficieTotalM2 += propiedad.superficieM2
     if (propiedad.operacion === "arriendo" && propiedad.precioActualUf) resumen.rentaMensualTotalUf += propiedad.precioActualUf
     if (comparacion.veredicto === "bajo_mercado") resumen.bajoMercado++
@@ -228,6 +314,8 @@ function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
       if (o.estado === "vencido") resumen.obligacionesVencidas++
       else if (o.estado === "por_vencer") resumen.obligacionesPorVencer++
     }
+    if (estadoReajuste.estado === "vencido") resumen.reajustesVencidos++
+    else if (estadoReajuste.estado === "proximo") resumen.reajustesProximos++
     resumen.porComuna[propiedad.comuna] = (resumen.porComuna[propiedad.comuna] ?? 0) + 1
     resumen.porTipo[propiedad.tipoPropiedad] += 1
     if (capRate) {
@@ -247,9 +335,10 @@ function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
 function ResumenPortafolioStrip({ resumen }: { resumen: ResumenPortafolio }) {
   const contratosEnRiesgo = resumen.contratosVencidos + resumen.contratosPorVencer
   const obligacionesEnRiesgo = resumen.obligacionesVencidas + resumen.obligacionesPorVencer
+  const reajustesEnRiesgo = resumen.reajustesVencidos + resumen.reajustesProximos
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
         <KpiCard label="Propiedades" valor={String(resumen.total)} contexto={`${resumen.superficieTotalM2.toLocaleString("es-CL")} m² en total`} />
         <KpiCard label="Renta mensual" valor={`${formatUf(resumen.rentaMensualTotalUf)} UF`} contexto="solo activos arrendados" />
         <KpiCard
@@ -293,6 +382,20 @@ function ResumenPortafolioStrip({ resumen }: { resumen: ResumenPortafolio }) {
               : [
                   resumen.obligacionesVencidas > 0 ? `${resumen.obligacionesVencidas} vencidas` : null,
                   resumen.obligacionesPorVencer > 0 ? `${resumen.obligacionesPorVencer} por vencer (30d)` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+          }
+        />
+        <KpiCard
+          label="Reajustes de renta pendientes"
+          valor={String(reajustesEnRiesgo)}
+          contexto={
+            reajustesEnRiesgo === 0
+              ? "sin reajustes pactados vencidos ni próximos"
+              : [
+                  resumen.reajustesVencidos > 0 ? `${resumen.reajustesVencidos} vencidos` : null,
+                  resumen.reajustesProximos > 0 ? `${resumen.reajustesProximos} próximos (30d)` : null,
                 ]
                   .filter(Boolean)
                   .join(" · ")
@@ -427,6 +530,9 @@ export default function MiCarteraPage() {
     tieneAscensor: false,
     tieneGas: false,
     rolSii: "",
+    reajusteAplica: false,
+    reajustePeriodicidadMeses: "",
+    reajusteFechaUltimo: "",
   })
 
   function setField<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
@@ -477,6 +583,9 @@ export default function MiCarteraPage() {
           tieneAscensor: form.tieneAscensor,
           tieneGas: form.tieneGas,
           rolSii: form.rolSii || undefined,
+          reajusteAplica: form.reajusteAplica,
+          reajustePeriodicidadMeses: form.reajusteAplica && form.reajustePeriodicidadMeses ? Number(form.reajustePeriodicidadMeses) : undefined,
+          reajusteFechaUltimo: form.reajusteAplica && form.reajusteFechaUltimo ? form.reajusteFechaUltimo : undefined,
         }),
       })
 
@@ -485,7 +594,22 @@ export default function MiCarteraPage() {
         throw new Error(err.error ?? "Error del servidor")
       }
 
-      setForm({ direccion: "", comuna: "", tipoPropiedad: "local_comercial", superficieM2: "", operacion: "arriendo", precioActualUf: "", fechaVencimientoContrato: "", notas: "", tieneAscensor: false, tieneGas: false, rolSii: "" })
+      setForm({
+        direccion: "",
+        comuna: "",
+        tipoPropiedad: "local_comercial",
+        superficieM2: "",
+        operacion: "arriendo",
+        precioActualUf: "",
+        fechaVencimientoContrato: "",
+        notas: "",
+        tieneAscensor: false,
+        tieneGas: false,
+        rolSii: "",
+        reajusteAplica: false,
+        reajustePeriodicidadMeses: "",
+        reajusteFechaUltimo: "",
+      })
       await cargar()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido")
@@ -527,6 +651,39 @@ export default function MiCarteraPage() {
       )
     } catch {
       setError("No se pudo registrar la obligación")
+    }
+  }
+
+  async function handleMarcarReajusteHoy(propiedadId: string) {
+    const fecha = hoyLocalISO()
+    try {
+      const res = await fetch(`/api/propiedades-portafolio/${propiedadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reajusteFechaUltimo: fecha }),
+      })
+      if (!res.ok) throw new Error("No se pudo registrar el reajuste")
+
+      setFilas((prev) =>
+        prev.map((f) =>
+          f.propiedad.id !== propiedadId
+            ? f
+            : {
+                ...f,
+                propiedad: { ...f.propiedad, reajusteFechaUltimo: fecha },
+                estadoReajuste: calcularEstadoReajuste(
+                  {
+                    reajusteAplica: f.propiedad.reajusteAplica,
+                    periodicidadMeses: f.propiedad.reajustePeriodicidadMeses,
+                    fechaUltimo: fecha,
+                  },
+                  new Date(),
+                ),
+              },
+        ),
+      )
+    } catch {
+      setError("No se pudo registrar el reajuste")
     }
   }
 
@@ -629,7 +786,7 @@ export default function MiCarteraPage() {
                     <Label>Notas</Label>
                     <Textarea value={form.notas} onChange={(e) => setField("notas", e.target.value)} placeholder="opcional — ej: contrato vence dic 2026" />
                   </div>
-                  <div className="flex items-center gap-4 sm:col-span-2">
+                  <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
                     <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <input type="checkbox" checked={form.tieneAscensor} onChange={(e) => setField("tieneAscensor", e.target.checked)} className="size-3.5" />
                       Tiene ascensor
@@ -638,7 +795,28 @@ export default function MiCarteraPage() {
                       <input type="checkbox" checked={form.tieneGas} onChange={(e) => setField("tieneGas", e.target.checked)} className="size-3.5" />
                       Tiene instalación de gas
                     </label>
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <input type="checkbox" checked={form.reajusteAplica} onChange={(e) => setField("reajusteAplica", e.target.checked)} className="size-3.5" />
+                      ¿Tiene cláusula de reajuste?
+                    </label>
                   </div>
+                  {form.reajusteAplica && (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label>Periodicidad del reajuste (meses)</Label>
+                        <Input
+                          type="number"
+                          value={form.reajustePeriodicidadMeses}
+                          onChange={(e) => setField("reajustePeriodicidadMeses", e.target.value)}
+                          placeholder="ej: 12"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Fecha del último reajuste</Label>
+                        <Input type="date" value={form.reajusteFechaUltimo} onChange={(e) => setField("reajusteFechaUltimo", e.target.value)} />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <Button type="submit" disabled={saving} className="bg-primary text-white hover:bg-primary/90">
@@ -672,7 +850,7 @@ export default function MiCarteraPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {filas.map(({ propiedad, comparacion, senalExpansion, tendenciaConstruccion, obligaciones, coincideTipoSii, capRate }) => (
+              {filas.map(({ propiedad, comparacion, senalExpansion, tendenciaConstruccion, obligaciones, coincideTipoSii, capRate, estadoReajuste }) => (
                 <div key={propiedad.id} className="rounded-lg border border-line-fine bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -697,6 +875,7 @@ export default function MiCarteraPage() {
                     <VeredictoMercado comparacion={comparacion} />
                     {capRate && <CapRateBadge capRate={capRate} />}
                     {propiedad.fechaVencimientoContrato && <VencimientoBadge fecha={propiedad.fechaVencimientoContrato} />}
+                    <ReajusteBadge propiedadId={propiedad.id} estado={estadoReajuste} onMarcarHoy={(id) => void handleMarcarReajusteHoy(id)} />
                     <ObligacionesToggle
                       obligaciones={obligaciones}
                       expandido={expandido === propiedad.id}
