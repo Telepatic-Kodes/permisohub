@@ -53,7 +53,16 @@ Full details archived: `.planning/milestones/1.4-ROADMAP.md`
 4. La ficha sugiere automáticamente otras oportunidades comparables de la misma comuna/tipo
 5. La ficha incluye un resumen ejecutivo narrado por IA (patrón `InformeEjecutivo`) y, solo cuando hay cobertura real de datos para calcularla, una rentabilidad implícita de zona etiquetada explícitamente como estimado
 
-**Plans:** TBD
+**Plans:** 7 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — Extraer evaluarOportunidad() (TDD, prerequisito de scoring)
+- [ ] 13-02-PLAN.md — Utilidades compartidas: formato-fecha, streamConContexto, prompts del resumen
+- [ ] 13-03-PLAN.md — Capa de datos: obtenerOportunidadPorId, obtenerComparablesOportunidad, obtenerHistorialPrecioListing
+- [ ] 13-04-PLAN.md — Resumen ejecutivo IA: ruta SSE + ResumenTab
+- [ ] 13-05-PLAN.md — Tab Posicionamiento + Rentabilidad implícita de zona
+- [ ] 13-06-PLAN.md — Tab Historial + Tab Comparables
+- [ ] 13-07-PLAN.md — Ensamblado final: [id]/page.tsx + wiring de la lista + checkpoint humano
 
 ---
 
@@ -95,7 +104,7 @@ Full details archived: `.planning/milestones/1.4-ROADMAP.md`
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 13. Refactor de Scoring + Dashboard de Detalle | 0/TBD | Not started | - |
+| 13. Refactor de Scoring + Dashboard de Detalle | 0/7 | Planned | - |
 | 14. Comparación Lado a Lado | 0/TBD | Not started | - |
 | 15. Informe Exportable | 0/TBD | Not started | - |
 
