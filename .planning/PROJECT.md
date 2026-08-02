@@ -79,9 +79,15 @@ El copiloto IA del arquitecto chileno — reduce el tiempo de tramitación DOM d
 - ✓ Separación de módulos Permisos/Mercado Inmobiliario en la UI (switcher, sidebar contextual, badge) — v1.5
 - ✓ Fusión de permisohub-enterprise en una sola app — v1.5
 
-### Próximo milestone formal — sin definir todavía
+### Requirements (auditoría de código + Mi Cartera + cierre de deuda — shipped 2026-08-02, mergeado a main)
 
-Correr `/gsd:new-milestone` para definir el próximo ciclo de requirements una vez cierre Torre de Control. Candidatos surgidos durante v1.4 (no comprometidos, solo semillas para la próxima sesión de discovery):
+Serie de sesiones ad-hoc entre v1.5 y v1.6 (sin milestone formal propio) — capturado acá para que "Validated" refleje la realidad del código:
+
+- ✓ Auditoría de código de Mi Cartera, resto de Mercado Inmobiliario, y Permisos/DOM — 1 falla P0 de seguridad (RLS cross-tenant, patrón encontrado 3 veces), workspace-sharing roto en 4 rutas, fabricación financiera en cuadros de cálculo/derechos municipales, honestidad de IA (fabricación en fallos de parseo, truncamiento silencioso), SSE roto, N+1, timezone UTC — ver bullets `[auditoria-*]` en `.planning/STATE.md` Accumulated Context
+- ✓ Mi Cartera: alerta de reajuste de renta UF/IPC (Ley 18.101 Art. 13) + Cap Rate en el resumen de portafolio — primer uso de 2 agentes en paralelo (git worktrees) en el proyecto
+- ✓ Torre de Control: cierre de 5/6 `needs-decision` del registro de fuentes (spot-check real de 23 comunas, decisión de no cablear RAG-embeddings, cierre de DOM Digital tras investigar viabilidad)
+
+### Backlog (no comprometido — semillas para futuras sesiones de discovery)
 
 - [ ] Dashboard de zonificación a nivel portafolio (todos los proyectos activos)
 - [ ] Exportar PDF/anexo del hallazgo de zonificación para el expediente
@@ -90,6 +96,7 @@ Correr `/gsd:new-milestone` para definir el próximo ciclo de requirements una v
 - [ ] Coeficientes urbanísticos numéricos (FOS, constructibilidad, altura, rasante, distanciamiento) — requiere fuente de datos distinta, paga o verificada
 - [ ] Reparar el mojibake residual de doble-corrupción en un subconjunto de nombres de zona de Las Condes (hallado en el checkpoint de 11-08, cosmético, no bloqueante)
 - [ ] Corregir la etiqueta de cita "Fuente: capa oficial {municipio}" para usar la comuna realmente seleccionada en el fallback manual, no `proyecto.municipio` (hallado en 11-08)
+- [ ] Aplicar el mismo tratamiento de reporte profesional (research-driven) a Reportes de Mercado, una vez validado en Oportunidades v1.6
 
 ### Out of Scope (v1.4 — resuelto, para referencia histórica)
 
@@ -155,9 +162,17 @@ Correr `/gsd:new-milestone` para definir el próximo ciclo de requirements una v
 
 ---
 
-## Current Milestone
+## Current Milestone: v1.6 Reportes Profesionales de Oportunidades
 
-Ninguno formal definido todavía — correr `/gsd:new-milestone` para iniciar el próximo ciclo (questioning → research → requirements → roadmap) una vez cierre el trabajo en curso. Ver "Active" arriba: rama `feature/torre-de-control` (gobernanza de datos/decisiones, en curso, no fusionada a main).
+**Goal:** Elevar la búsqueda de oportunidades comerciales (`/mercado-inmobiliario/oportunidades`, hoy una lista plana + un histograma) a un producto de reporting profesional — dashboard de detalle por oportunidad, comparación lado a lado entre oportunidades, e informe exportable para compartir con cliente/inversionista — inspirado en cómo reportan consultoras inmobiliarias globales (CBRE/JLL/Colliers/Cushman & Wakefield) y plataformas de datos (CoStar/LoopNet).
+
+**Target features:**
+- Dashboard de detalle por oportunidad (gráficos, comparables, señales, mapa — más allá de la card actual)
+- Comparación lado a lado de 2+ oportunidades
+- Informe exportable (PDF/vista imprimible) para compartir externamente
+- Diseño de reporte informado por investigación real de cómo reportan los mejores actores del mercado (no solo intuición de diseño)
+
+**Alcance confirmado con la founder:** solo Oportunidades en este milestone — Reportes de Mercado (página separada) queda fuera, se evalúa después si el tratamiento funciona bien acá (ver Backlog).
 
 ---
-*Last updated: 2026-08-01 — puesta al día tras el milestone v1.5 (fusión PROPRA·BI) y durante la construcción de Torre de Control*
+*Last updated: 2026-08-02 — inicio del milestone v1.6 (Reportes Profesionales de Oportunidades) vía `/gsd:new-milestone`*

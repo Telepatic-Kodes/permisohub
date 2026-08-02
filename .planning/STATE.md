@@ -6,14 +6,12 @@ _(Ninguno pendiente — `35c3e10` digerido inline, ver bullet [torre-control-cie
 
 ## Current Position
 
-**Puesta al día (2026-08-01):** milestone v1.5 (Fusión PROPRA·BI) shipped 2026-08-01, 17 commits (`7d84126`..`c6f567e`) ejecutados en sesiones ad-hoc SIN pasar por el ritual de fases GSD — este archivo, `PROJECT.md`, `MILESTONES.md` y `config.json` no reflejaban ese trabajo hasta ahora. Detalle completo en `.planning/MILESTONES.md` § v1.5. Torre de Control (gobernanza de datos/decisiones — registro de fuentes, salud de datos, este mismo mecanismo de puesta al día) completo: 4 commits en `feature/torre-de-control`, mergeados a `main` checkpoint por checkpoint. Ver "Key Decisions" en PROJECT.md para el porqué de Torre de Control.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-08-02 — Milestone v1.6 (Reportes Profesionales de Oportunidades) iniciado vía `/gsd:new-milestone`. Foco: dashboard de detalle por oportunidad + comparación lado a lado + informe exportable en `/mercado-inmobiliario/oportunidades`, informado por investigación real de cómo reportan consultoras inmobiliarias globales (CBRE/JLL/Colliers) y plataformas de datos (CoStar/LoopNet). Alcance confirmado con la founder: solo Oportunidades, no Reportes de Mercado. Fase numérica continúa desde 12 (último número formal, v1.4) — v1.5 y el trabajo ad-hoc posterior (auditorías, Mi Cartera, cierre de deuda) no usaron numeración de fases GSD, ver Accumulated Context y `.planning/MILESTONES.md`.
 
-Phase: 12 of 12 (Integración con Motores de Decisión) — ✅ COMPLETA (4/4 planes, checkpoint humano verificado en vivo por el orquestador). **Milestone v1.4 (Zonificación) completo — fases 10, 11 y 12 todas cerradas.**
-Plan: 12-01 ✅ (components/proyecto/via-decision.tsx + pmo-panel.tsx — INTEG-01: `ViaDecision` recibe `proyecto: Proyecto` completo, tercer useEffect llama `POST /api/proyectos/[id]/compatibilidad` cuando la zona es utilizable (`zona_status==='encontrado' && zona_usos_disponibles===true`) y hay `destino_sii`, alerta AlertTriangle citada solo si `compat.estado==='no_permitido'`; `lib/via-tramitacion.ts` y `tests/unit/via-tramitacion.test.ts` confirmados sin cambios (`git diff` vacío), 14 tests unitarios siguen pasando — ver 12-01-SUMMARY.md. Commits 452ec57 (Task 1) y 374eff1 (Task 2)). 12-02 ✅ (lib/due-diligence.ts + app/api/ai/due-diligence/route.ts — INTEG-02: hallazgos del Due Diligence pueden citar la zona del proyecto como fuente 'PRC', resuelta directamente desde proyectos.zona_* — ver 12-02-SUMMARY.md). 12-03 ✅ (INTEG-03, otro executor — ver 12-03-SUMMARY.md y bullet en Accumulated Context).
-Status: In progress
-Last activity: 2026-07-30 — Wave 1 de Phase 12 completa (12-01, 12-02, 12-03 ejecutados en paralelo en el mismo working tree, sin git worktree isolation). 12-01: ver detalle en Plan arriba. Una race transitoria de git durante la ejecución de 12-01/12-03 (un `git commit` sin pathspec de 12-03 barrió brevemente los cambios staged-pero-no-commiteados de 12-01 en `via-decision.tsx`) se detectó y resolvió sin pérdida de código — ambos planes terminaron con sus propios commits limpios y disjuntos (452ec57/374eff1 para 12-01, e1e563d/ca3302e para 12-02, b3f5c13 para 12-03). Recomendación registrada en Accumulated Context: futuros executors de Wave paralela deben commitear siempre con pathspec explícito, nunca `git commit` a secas. 12-02 ejecutado: `FuenteHallazgo` (tipo local, NO se extendió FuenteNormativa en normativa-retrieval.ts), `ProyectoContexto` ampliado con destino_sii + zona_*, `buildSynthesisPrompt()` inyecta sección "## Zonificación (PRC)" guardada por `zona_status==='encontrado' && zona_usos_disponibles===true` con `fixMojibakeArcGIS()` aplicado, `resolverRefNormativa()` bifurca en PRC antes de FUENTES_VALIDAS (cita construida directo desde zona_codigo/zona_nombre/zona_fuente_url, descartada en silencio si la zona no es utilizable). Route's `ProyectoRow`/`proyectoContexto` ensanchados en lockstep. `components/proyecto/due-diligence-report.tsx` sin cambios (confirmado por git diff --stat vacío). tsc/eslint limpios en ambos archivos tocados. Commits e1e563d (Task 1) y ca3302e (Task 2).
-
-Progress: [██████████] 100% (milestone v1.4 completo — fases 7, 8, 9, 10, 11, 12 todas completas)
+Progress: [░░░░░░░░░░] 0% (milestone v1.6 recién iniciado — requirements/roadmap en curso)
 
 ## Phases Status
 
@@ -34,9 +32,9 @@ Progress: [██████████] 100% (milestone v1.4 completo — fas
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-30 tras milestone v1.4)
+See: .planning/PROJECT.md (updated 2026-08-02 al iniciar milestone v1.6)
 **Core value:** El copiloto IA del arquitecto chileno — acelera y automatiza la tramitación de permisos DOM
-**Current focus:** Milestone v1.4 (Zonificación) shipped 2026-07-30. Sin milestone activo — correr `/gsd:new-milestone` para el próximo ciclo.
+**Current focus:** Milestone v1.6 (Reportes Profesionales de Oportunidades) — dashboard de detalle, comparación, e informe exportable en Oportunidades de Mercado Inmobiliario.
 
 ## Accumulated Context
 
