@@ -1,168 +1,100 @@
-# Stack Research — v1.4 Zonificación
+# Stack Research — Oportunidades: Dashboards, Comparación e Informe Exportable
 
-**Domain:** Zonificación automática por dirección (ArcGIS FeatureServer point-in-polygon lookup + Supabase caching) — PermisoHub v1.4
-**Researched:** 2026-07-30
-**Confidence:** HIGH
+**Domain:** Dashboard de detalle por oportunidad, comparación lado a lado y reporte exportable "calidad consultora" — módulo Mercado Inmobiliario / Oportunidades, PermisoHub
+**Researched:** 2026-08-02
+**Confidence:** HIGH (verificado contra `node_modules` real del proyecto, `package.json`/`package-lock.json`, y patrones ya en producción en el propio repo — no solo training data)
 
-> Supersedes the v1.3 "Army of Skills" research previously in this file for the areas covered below (ArcGIS/zoning lookup, geospatial caching). The v1.3 findings (Copiloto Drawer, AI Analysis API, Background Automations) remain valid for their own milestone but are not part of this scope — see git history if that content is needed for reference.
+> Este archivo reemplaza el contenido anterior de `STACK.md` (research de v1.4 Zonificación, dominio de ArcGIS/geoespacial). Ese research no se pierde — queda en el historial de git — pero pertenece a un milestone distinto sin solapamiento con este dominio (dashboards/reportes de Oportunidades).
+
+## Conclusión ejecutiva
+
+**No hace falta instalar ninguna librería nueva.** Recharts 3.10.1 (ya instalado) incluye `RadarChart` nativo y soporta gráficos de banda de rango (`Area` con tupla `[min, max]`) sin dependencias extra. Para el informe exportable, jsPDF (ya instalado) **no es la herramienta correcta para este caso** — el propio repo ya resuelve "informe profesional imprimible" con un patrón superior (vista HTML + `@media print`) en `app/(dashboard)/clientes/[id]/informe/page.tsx`, que imprime los gráficos Recharts como SVG vivo sin rasterizar nada. Para la comparación lado a lado, no existe un paquete de industria para esto — se construye con `Table`/`Tabs` de shadcn/ui, ya instalados.
 
 ## Recommended Stack
 
-### Core Technologies
+### Core Technologies (ya instaladas — uso extendido)
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| Native `fetch()` (Node 20.9+, bundled with Next.js 16 runtime) | n/a (built-in) | Query ArcGIS FeatureServer REST `/query` endpoint | Verified live against the two production endpoints in scope (`PrcCuencaMaipo` and `PRC_Las_Condes`): both are public, unauthenticated, and return plain JSON (`f=json`) with `attributes` objects for `outFields=REGION,COMUNA,SECTOR,ZONA,NOMBRE,UPERM,UPROH&returnGeometry=false`. No auth token, no CORS concern (server-side call), no binary/geometry parsing needed. This is exactly the shape `lib/sii-lookup.ts` already handles for the SII site — same pattern, same tool. |
-| Supabase Postgres (existing) — plain columns, no PostGIS | n/a | Cache ArcGIS query results keyed by rounded lat/lng + comuna | The lookup is a point → attributes query, not a spatial join. The project already stores `lat`/`lng` as `double precision` columns on `proyectos` (see `supabase/migrations/20260705_proyectos_sii.sql`) with zero geospatial operators. Continue that convention — cache the *result attributes*, not geometry. |
+| Recharts | 3.10.1 (`package.json` actual) | Radar/spider chart para comparación multi-atributo (precio/m², plusvalía, riesgo, liquidez); gráfico de banda de rango (P25–P75 de la cohorte) en el dashboard de detalle | Verificado en `node_modules/recharts/es6/chart/RadarChart.js`, `ComposedChart.js`, `AreaChart.js` — existen en la versión exacta ya instalada, cero riesgo de bump de versión. `Area` con `dataKey` que devuelve tupla `[min, max]` renderiza una banda de rango de forma nativa (docs oficiales de Recharts), justo lo que se necesita para "¿esta oportunidad está cara o barata vs su cohorte?" sin cálculos manuales de path SVG. |
+| Vista HTML + `@media print` (React Server/Client Components, Next 16 App Router) | React 19.2.4 / Next 16.2.12 | Informe exportable de una oportunidad o de una comparación, con calidad "consultora" | El repo ya resuelve exactamente este problema en `app/(dashboard)/clientes/[id]/informe/page.tsx` y `app/(dashboard)/cadenas-comerciales/[id]/compliance/page.tsx` + `print-button.tsx`: CSS `@page { size: A4 portrait; margin: ... }`, clases `no-print` / `page-break` / `.report-card { break-inside: avoid }`, botón `window.print()`. Los gráficos Recharts son SVG real en el DOM — el navegador ("Guardar como PDF") los imprime nítidos y vectoriales, sin el paso de rasterización que sí necesita jsPDF. Es el enfoque de menor esfuerzo y mayor fidelidad visual ya validado en dos informes distintos del proyecto. |
+| shadcn/ui `Table` + `Tabs` (ya instalados: `components/ui/table.tsx`, `components/ui/tabs.tsx`) | — | Vista de comparación lado a lado de 2+ oportunidades | No existe un paquete npm estándar de industria para "comparar propiedades lado a lado" (confirmado por búsqueda de mercado — lo que aparece son demos de diseño de dashboards de comparación de productos SaaS, no librerías). El patrón de industria (comparadores inmobiliarios, G2/Capterra-style) es una tabla con atributos en filas y una columna por ítem, celda destacada para el mejor/peor valor — se construye directo sobre `Table` de shadcn/ui, ya integrada al tema "Consultora" del proyecto. |
 
-### Supporting Libraries
+### Supporting Libraries (uso puntual, ya resueltas — no requieren `npm install`)
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| None beyond the above | — | — | MVP scope (~4-10 comunas, attribute-only queries, `returnGeometry=false`) needs no additional runtime dependency. See "What NOT to Use" below for what was considered and rejected. |
+| `html2canvas` | 1.4.1 (dependencia opcional transitiva de `jspdf`, ya resuelta en `node_modules`) | Único caso válido: generar un archivo `.pdf` descargable de verdad a partir del informe HTML (no solo abrir el diálogo de impresión), p.ej. para adjuntar a un email automático | `require.resolve('html2canvas')` confirma que ya está disponible en el árbol de dependencias sin tocar `package.json`. Se usaría vía `jspdf`'s `pdf.html(el, { html2canvas })`. No importar directo salvo que este caso de uso ("archivo real, sin usuario presente") se active — hoy ningún archivo del proyecto lo importa. |
+| `jspdf` | ^4.2.1 (ya instalado) | Seguir usándolo tal cual está: PDF client-side con imágenes rasterizadas (planos anotados de Due Diligence) | Rol ya cumplido en `lib/informe-pdf.ts`. No es la herramienta para el informe de Oportunidades: ese caso no tiene imágenes que rasterizar, tiene gráficos SVG vivos — forzarlos por jsPDF agrega un paso de canvas que el propio repo ya evita en su otro informe. |
+| `pdfkit` | ^0.19.1 (ya instalado) | PDF **server-side**, sin gráficos ricos (texto + formas vectoriales simples dibujadas a mano) | Patrón usado en `app/api/cadenas/[id]/reporte/route.ts`. Camino válido si en el futuro se necesita el PDF de Oportunidades generado 100% en servidor (ej. cron/email sin navegador) — pero no dibuja gráficos Recharts, solo primitivas vectoriales manuales. |
 
 ### Development Tools
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| Hand-written TS interfaces (in a new `lib/zonificacion.ts` or `lib/zoning-lookup.ts`) | Type the ArcGIS `/query` JSON response | Verified against live response shape (see below) — 3 interfaces (`ArcGISField`, `ArcGISQueryResponse`, `ZonaAttributes`) cover the full contract for this use case. No need for `@esri/arcgis-rest-types` or `@types/arcgis-rest-api`. |
-| Zod (already installed, `^4.4.3`) | Runtime-validate the ArcGIS response before trusting it (external, unversioned API) | Same defensive pattern the app should already apply to `sii-lookup` responses — ArcGIS field names/order are not contractually guaranteed to stay stable, so parse-don't-trust at the boundary. |
+Ninguna herramienta nueva. TypeScript estricto, ESLint y Prettier ya cubren estos componentes igual que el resto del módulo Mercado Inmobiliario.
 
 ## Installation
 
 ```bash
-# No new dependencies required — fetch, URLSearchParams and JSON parsing are
-# all native to the Next.js 16 / Node 20.9+ runtime already in use.
+# Ninguna instalación nueva requerida.
+# Ya disponibles: recharts@3.10.1, jspdf@4.2.1, html2canvas@1.4.1 (transitiva,
+# resoluble), pdfkit@0.19.1, componentes shadcn/ui (table, tabs, dialog, sheet).
 ```
-
-## Verified Response Shape (live, 2026-07-30)
-
-```
-GET https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer/0/query
-    ?f=json
-    &geometry=-70.5,-33.4
-    &geometryType=esriGeometryPoint
-    &inSR=4326
-    &spatialRel=esriSpatialRelIntersects
-    &outFields=REGION,COMUNA,SECTOR,ZONA,NOMBRE,UPERM,UPROH
-    &returnGeometry=false
-```
-
-Returns:
-
-```json
-{
-  "objectIdFieldName": "FID",
-  "geometryType": "esriGeometryPolygon",
-  "spatialReference": { "wkid": 102100, "latestWkid": 3857 },
-  "fields": [
-    { "name": "ZONA", "type": "esriFieldTypeString", "alias": "ZONA", "length": 25, "...": "..." }
-  ],
-  "features": [
-    {
-      "attributes": {
-        "REGION": "Metropolitana",
-        "COMUNA": "Las Condes",
-        "SECTOR": "Las Condes",
-        "ZONA": "UEe3/Ee3",
-        "NOMBRE": "UEe3/Ee3 Zona Especial 3 Área de Parques",
-        "UPERM": "Equipamiento de esparcimiento.",
-        "UPROH": "Residencial; equipamiento de comercio, culto, culto, deporte,  educación,  salud, seguridad, servicio y social; actividad productiva; infraestructura; espacio público y áreas verdes."
-      }
-    }
-  ]
-}
-```
-
-Minimal TS types to add (illustrative, not exhaustive — extend per-layer as needed):
-
-```typescript
-interface ArcGISField {
-  name: string
-  type: string // 'esriFieldTypeString' | 'esriFieldTypeDouble' | ...
-  alias: string
-}
-
-interface ArcGISQueryResponse<A extends Record<string, unknown> = Record<string, unknown>> {
-  objectIdFieldName: string
-  geometryType?: string
-  fields: ArcGISField[]
-  features: Array<{ attributes: A }>
-}
-
-interface ZonaAttributes {
-  REGION: string
-  COMUNA: string
-  SECTOR: string | null
-  ZONA: string
-  NOMBRE: string
-  UPERM: string
-  UPROH: string
-  url?: string // present on newer per-comuna layers (e.g. Las Condes), absent on older ones
-}
-```
-
-`features.length === 0` is a normal, expected response (point falls outside any published polygon — e.g. área rural, límite comunal impreciso, or comuna not covered by the configured layer). Treat as "zona no determinada", not an error.
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|--------------------------|
-| Raw `fetch()` to `/query` endpoint | `@esri/arcgis-rest-request` + `@esri/arcgis-rest-feature-service` (latest `4.10.3`, published 2026-06-17 — actively maintained) | Only if the app later needs generic multi-layer discovery, editing features, authenticated portals, or geometry return/reprojection across many arbitrary services. For a fixed, small registry of known public FeatureServer URLs doing read-only attribute queries, the SDK adds ~4 transitive packages (`@esri/arcgis-rest-fetch`, `@esri/arcgis-rest-form-data`, `mitt`, `tslib`) to replace one `fetch()` call the runtime already provides natively. Verified via npm registry: `@esri/arcgis-rest-fetch@4.10.3` (2026) still lists `node-fetch@^3` as a hard dependency — i.e. the "modern" SDK does not rely on Node's native fetch even in its newest release. |
-| Cache result attributes as plain columns/JSONB, no PostGIS | Enable the `postgis` extension on Supabase and store a `geography(Point,4326)` column + spatial index | Only if the app starts doing its *own* spatial computation (e.g. "find all projects within 500m of X", polygon storage/editing, multi-point radius search). Here, the point-in-polygon math is already performed server-side by Esri's ArcGIS service — Supabase never touches geometry, only receives an attribute dict back. Adding PostGIS for this would mean maintaining an extension, spatial indexes, and geometry types to solve a problem you don't have. |
-| Round lat/lng to a fixed precision as the cache key | Geocode-then-hash the normalized address as the cache key instead of coordinates | If `lib/sii-lookup.ts`'s geocoding is ever swapped for a provider with non-deterministic coordinates for the same address (jitter), or if you want the cache to survive small geocoder revisions — address-based keys are more stable long-term than coordinate rounding. For MVP, coordinate rounding is simpler and reuses the already-resolved `lat`/`lng` from `sii-lookup`. |
+| Recharts `RadarChart` (nativo) | Nivo, Visx, ECharts | Solo si se necesitara radar chart con miles de puntos, animaciones complejas o interacción muy custom (drag de vértices). Para comparar 4-8 atributos entre 2-4 oportunidades, Recharts sobra en capacidad y evita una segunda librería de charting duplicando bundle y rompiendo el tema visual "Consultora" ya aplicado. |
+| Recharts `Area` con tupla `[min, max]` | D3 custom, `victory-area` | Solo si el rango necesitara relleno con gradiente multi-stop muy específico o eje logarítmico no soportado por Recharts. No aplica para una banda P25–P75 simple. |
+| Vista HTML `@media print` (patrón ya en el repo) | `jsPDF` + `pdf.html()` + `html2canvas` | Cuando se necesite un archivo `.pdf` descargable real sin intervención del usuario (adjunto de email, guardado automático en Supabase Storage). Ahí sí conviene activar `html2canvas` (ya resoluble) sobre el mismo HTML — no reconstruir el layout dos veces. |
+| Tabla shadcn/ui a medida | `react-compare-slider` u otras "compare UI" genéricas | Nunca para este caso: esas librerías son para comparación de imágenes (before/after) o diffs de código, no de atributos tabulares de propiedades. No adoptar. |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|--------------|
-| ArcGIS JS API (`@arcgis/core` / `esri-leaflet`) | This is a full mapping/rendering SDK (map widgets, layers, symbology, ~MBs of bundle) meant for interactive map UIs in the browser. This feature needs one server-side attribute query, not a map component. | Raw `fetch()` server-side, as above. If a visual map is added in a *later* milestone (e.g. showing the parcel + zone boundary), evaluate `@arcgis/core` or a lighter Leaflet+GeoJSON approach then — not now. |
-| `@terraformer/arcgis` (Esri JSON ↔ GeoJSON converter, latest `2.2.2`, actively maintained) | Only needed when requesting `returnGeometry=true` and rendering/manipulating the polygon shape. The MVP query uses `returnGeometry=false` and only reads attribute fields (`ZONA`, `UPERM`, `UPROH`) — no geometry ever crosses the wire. | Nothing needed; if geometry display is added later, reconsider then. |
-| PostGIS extension | Solves a spatial-computation problem this feature doesn't have — see "Alternatives Considered" above. Adds an extension dependency, migration complexity, and a new data type family (`geography`/`geometry`) to a codebase that has deliberately stayed on plain `double precision` lat/lng columns everywhere else (`proyectos_sii` migration). | `double precision` lat/lng columns + a rounded cache-key column, matching existing convention. |
-| A "universal" ArcGIS service discovery/registry system (auto-detecting FeatureServer URLs for all 345 Chilean comunas) | Out of scope for this milestone (~4-10 comunas) and not reliably automatable — comuna PRC layers are published inconsistently (different orgs, different field names, different URL patterns; e.g. `services7...PrcCuencaMaipo` covers a multi-comuna basin while `services9...PRC_Las_Condes` is comuna-specific with an extra `url` field). Building a generic crawler for this is a multi-week research/scraping project on its own — and `lib/scrapers/plan-reguladores.ts` already shows that even *metadata* discovery from datos.gob.cl is non-trivial. | A small, hand-maintained TypeScript config mapping `comuna → { featureServerUrl, layerIndex, fieldMap, hasSourceUrl }` for the target comunas, extended manually as new comunas are added. This also gives an explicit place to note per-layer quirks (e.g. missing `url` field → fall back to a generic MINVU/observatoriourbano citation, matching the `FUENTE_FALLBACK_URL` pattern already used in `lib/normativa-retrieval.ts`). |
-| `node-fetch` / `cross-fetch` / `isomorphic-fetch` polyfills | Needed only if using the `@esri/arcgis-rest-*` SDK (which still bundles `node-fetch` internally as of its 2026-06-17 release) or if targeting Node <18. Next.js 16 requires Node ≥20.9, which has native, stable global `fetch`. | Native `fetch()`. |
+| Nueva librería de gráficos (Chart.js, Nivo, Victory, ECharts, Highcharts) | Recharts 3.10.1 ya cubre radar, banda de rango y sparkline (el sparkline ya existe hecho con `LineChart` puro en `kpi-card.tsx`). Sumar una segunda librería de charting rompe el tema "Consultora" aplicado vía scope CSS y duplica ~50-100kb de bundle sin necesidad real. | Extender `components/mercado-inmobiliario/charts/` con nuevos componentes (ej. `radar-comparativo.tsx`, `rango-banda.tsx`) sobre Recharts, siguiendo el mismo patrón que `desviacion-bar.tsx` / `histograma.tsx`. |
+| jsPDF client-side calcado de `lib/informe-pdf.ts` para el informe de Oportunidades | Ese módulo resuelve un problema distinto: planos rasterizados con anotaciones dibujadas en canvas, sin gráficos SVG. Forzar los gráficos Recharts por ese camino exige rasterización (canvas/html2canvas) que el propio repo ya evita en su otro informe (`clientes/[id]/informe`). Replicar el patrón equivocado es sobre-ingeniería. | Vista HTML imprimible `@media print`, calcada de `app/(dashboard)/clientes/[id]/informe/page.tsx` + `print-button.tsx`. |
+| Motor de PDF adicional (`@react-pdf/renderer`, `puppeteer`) | Introduciría un tercer motor de PDF en el proyecto (ya conviven jsPDF client-side + pdfkit server-side). `@react-pdf/renderer` no renderiza SVG de Recharts directamente (exige reescribir cada gráfico en su propio DSL `<Page>/<View>`); `puppeteer` es un binario de Chromium pesado para un caso que `window.print()` del navegador ya resuelve. | Vista HTML imprimible (cero dependencias nuevas) para el caso interactivo del usuario logueado; `pdfkit` (ya instalado) solo si se necesita generación 100% server-side sin usuario presente. |
+| Paquete npm genérico de "comparación de productos/propiedades" en React | La búsqueda de mercado no encontró un estándar de industria empaquetado como librería (solo demos/patrones de diseño). El dominio (UF/m², plusvalía, riesgo, comuna) es demasiado específico para que un paquete genérico agregue valor sobre una tabla shadcn/ui bien resaltada. | `Table` de shadcn/ui (ya instalada) + lógica propia de "mejor/peor valor por fila" (comparación numérica simple, sin librería). |
+| Declarar `html2canvas` explícito en `package.json` desde ya | Hoy está resuelto transitivamente vía `jspdf` (`optionalDependencies`) y ningún archivo lo importa — declararlo explícito antes de usarlo agrega una dependencia fantasma al manifiesto. | Agregarlo explícito a `dependencies` recién cuando se active el caso "PDF descargable real" (ver alternativas). |
 
 ## Stack Patterns by Variant
 
-**If the feature stays read-only attribute lookups for a fixed small set of comunas (current MVP scope):**
-- Use raw `fetch()` + hand-written TS interfaces + Zod validation at the boundary
-- Cache in a plain Supabase table keyed by rounded lat/lng (and/or `rol_sii` if available from the existing SII flow)
-- Because this is the lowest-dependency path that fully satisfies the requirement, and matches every existing external-lookup pattern in the codebase (`sii-lookup.ts`, `plan-reguladores.ts` scraper)
+**Dashboard de detalle — comparación multi-atributo tipo "spider" (precio/m², plusvalía, riesgo, liquidez, distancia a polos):**
+- `RadarChart` + `PolarGrid` + `PolarAngleAxis` + `Radar` de Recharts, un `<Radar>` por oportunidad (2-4 máximo; más satura el polígono).
+- Porque es el patrón de industria confirmado para este caso (mismo patrón que shadcn.io publica como "radar-multiple") y no exige tocar dependencias.
 
-**If the product later needs to render the actual zone polygon on a map (e.g. showing parcel + zone boundary visually):**
-- Reconsider `returnGeometry=true` + `@terraformer/arcgis` (convert Esri JSON geometry → GeoJSON) + a lightweight map lib (Leaflet/MapLibre) for client-side rendering
-- Because geometry conversion and rendering are genuinely non-trivial and worth a dedicated library at that point — but this is NOT needed for "determine the zone + usos permitidos/prohibidos and cite the source," which is the actual v1.4 scope
+**Dashboard de detalle — "¿esta oportunidad está cara o barata vs su cohorte?" como banda visual, no solo un número:**
+- `ComposedChart` con `Area` de rango (`dataKey` → `[p25, p75]`) más un `ReferenceDot`/`Scatter` marcando el valor puntual de la oportunidad.
+- Porque evita reinventar el cálculo de banda en SVG a mano; Recharts lo soporta de fábrica desde la versión ya instalada.
 
-**If the registry of comunas grows beyond ~15-20 and per-comuna FeatureServer quirks multiply:**
-- Reconsider moving the comuna→FeatureServer mapping from a TS config file into a Supabase table (admin-editable, no redeploy needed to add a comuna)
-- Because a hardcoded TS config is the right MVP choice for 4-10 comunas but becomes an operational bottleneck at scale (every new comuna requires a code change + deploy)
+**Informe exportable — caso base del milestone (usuario logueado quiere ver/imprimir/guardar como PDF):**
+- Vista `@media print` + botón `window.print()`, exclusivamente.
+- Cero dependencias nuevas, cero rasterización; el navegador ("Guardar como PDF") produce un PDF vectorial nítido — mejor calidad que uno rasterizado por canvas.
 
-## Integration Notes (this milestone specifically)
-
-- **Reuse `sii-lookup`'s resolved `lat`/`lng`.** `lib/sii-lookup.ts` already returns `SIIData.lat` / `SIIData.lng` from `/api/sii/lookup`. The new zoning API route should accept `lat`/`lng` directly (already resolved) rather than re-geocoding — don't duplicate geocoding logic.
-- **Follow the citation-engine convention from `lib/normativa-retrieval.ts`.** That module's pattern — a `verificado: boolean` flag, a specific `url` when available, and a generic `FUENTE_FALLBACK_URL` per source when not — maps directly onto the zoning result: `url` field present (Las Condes-style layers) → cite it directly; absent (older layers like `PrcCuencaMaipo`) → fall back to a generic MINVU/observatoriourbano.cl link, and mark the citation as needing manual verification, consistent with how unverified DDU/OGUC citations are flagged today.
-- **New Supabase table, not new columns on `proyectos`.** Unlike `proyectos_sii` (1:1 enrichment of a project), a zoning lookup is really an external-cache table keyed by location, potentially shared across multiple projects at the same address. Model it as its own table (e.g. `zonificacion_cache`) with `lat_r`/`lng_r` (rounded, e.g. `numeric(9,6)` ≈ 11cm precision) + `comuna` as the practical lookup key, plus the raw ArcGIS `attributes` JSON, `fetched_at`, and a `verificado`/`url_fuente` pair mirroring the citation convention above. Then reference this cache from `proyectos` (e.g. `zonificacion_cache_id` FK) rather than duplicating zoning data per project.
-- **Cache freshness:** PRC documents change on the order of years (municipal decree amendments), not days. A generous TTL (e.g. re-fetch if `fetched_at` is older than 90-180 days) avoids hammering the public ArcGIS service on every request while still self-healing if a comuna updates its plan. No need for webhook/push invalidation for MVP — this isn't in `lib/scrapers/plan-reguladores.ts`'s CKAN metadata scope either, so there's no existing "PRC changed" signal to hook into yet.
-- **Feed into `lib/due-diligence.ts` / `lib/via-tramitacion.ts` as a typed result, not raw ArcGIS JSON.** Those engines should consume a normalized shape (`{ zona, upermitidos: string[], uprohibidos: string[], comuna, citable: ArticuloCitable-like }`), not the raw `attributes` object — keeps the ArcGIS response shape (which varies per comuna layer) isolated to the new zoning lookup module.
+**Informe exportable — caso extendido futuro (el PDF debe llegar a un tercero sin que abra la app, ej. adjunto de email):**
+- Activar `jspdf` + `pdf.html()` + `html2canvas` (ya resoluble) sobre el mismo HTML del informe imprimible, sin reconstruir el layout dos veces.
+- Porque reutiliza el markup/estilos ya escritos para `@media print` en vez de mantener dos versiones del informe.
 
 ## Version Compatibility
 
 | Package A | Compatible With | Notes |
 |-----------|------------------|-------|
-| Next.js `16.2.9` (Node ≥20.9 required) | Native `fetch`, `URLSearchParams`, `AbortSignal.timeout()` | All used natively in API routes; no polyfill packages needed for this feature. |
-| Supabase JS `@supabase/supabase-js@^2.108.2` / `@supabase/ssr@^0.12.0` (existing) | Plain `double precision`, `text`, `jsonb`, `timestamptz` columns | No PostGIS extension enable/migration needed; consistent with existing `proyectos_sii` and `plan_reguladores` migrations, which use plain scalar types throughout. |
-| ArcGIS FeatureServer REST `f=json` | Any HTTP client with JSON support | Confirmed unauthenticated and CORS-irrelevant when called server-side (Next.js API route, not client component) — matches how `lib/sii-lookup.ts` already proxies an external Chilean government-adjacent source through an internal `/api/*` route. |
+| recharts@3.10.1 | react@19.2.4 | Ya en uso productivo en 6+ componentes del propio módulo (`KpiCard`, `RankingBarChart`, `DistribucionDonut`, `DesviacionBar`, `Histograma`, `GaugeArc` usa SVG plano a propósito). Cero riesgo adicional al extender con `RadarChart`/`ComposedChart` de la misma versión ya instalada. |
+| jspdf@4.2.1 | html2canvas@1.4.1 | `html2canvas` es `optionalDependencies` de `jspdf` (rango `^1.0.0-rc.5`), resuelto en `node_modules` a 1.4.1 — es el par que jsPDF documenta oficialmente para su método `.html()`. |
+| jspdf@4.2.1 / html2canvas | Next.js 16 App Router | Debe importarse dinámicamente en cliente (`await import("jspdf")`), tal como ya hace `lib/informe-pdf.ts` — ambas dependen de APIs de DOM/canvas no disponibles en Server Components. Mismo criterio aplica si se activa el caso "PDF descargable real". |
 
 ## Sources
 
-- Live verification (this session, 2026-07-30): `curl` against `https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer/0/query` — confirmed unauthenticated JSON response, field schema, and a real feature match (Las Condes, zona `UEe3/Ee3`) for a point-in-polygon query. HIGH confidence (primary source, directly observed).
-- https://developers.arcgis.com/rest/services-reference/enterprise/query-feature-service-layer-.htm — official ArcGIS REST API query endpoint reference (params, response structure). HIGH confidence.
-- https://www.npmjs.com/package/@esri/arcgis-rest-request and https://registry.npmjs.org/@esri/arcgis-rest-request — confirmed latest version `4.10.3`, published 2026-06-17 (actively maintained), dependency tree. HIGH confidence.
-- https://registry.npmjs.org/@esri/arcgis-rest-fetch — confirmed this SDK dependency still requires `node-fetch@^3` even in its newest 2026 release, i.e. does not rely on Node's native fetch. HIGH confidence (primary source: npm registry metadata).
-- https://registry.npmjs.org/@terraformer/arcgis — confirmed latest `2.2.2`, published 2026-06-29 (actively maintained, only relevant if geometry conversion is later needed). HIGH confidence.
-- https://nextjs.org/docs/app/guides/upgrading/version-16 (via WebSearch, MEDIUM confidence, not directly fetched) — Next.js 16 minimum Node.js version 20.9+, confirming native `fetch` availability without polyfills.
-- Existing codebase (read directly): `lib/sii-lookup.ts`, `lib/normativa-retrieval.ts`, `supabase/migrations/20260705_proyectos_sii.sql`, `supabase/migrations/20260630_plan_reguladores.sql` — confirmed established project conventions (plain lat/lng columns, no PostGIS, citation fallback-URL pattern, external-lookup-via-internal-API-route pattern). HIGH confidence (ground truth).
+- `node_modules/recharts/package.json`, `.../es6/chart/RadarChart.js`, `ComposedChart.js`, `AreaChart.js` — verificación directa de que Recharts 3.10.1 (versión exacta instalada en el proyecto) incluye estos componentes. Confianza: HIGH.
+- `node_modules/html2canvas/package.json` + `node_modules/jspdf/package.json` (campo `optionalDependencies`) — verificación de que html2canvas 1.4.1 ya está resuelto transitivamente y es resoluble vía `require.resolve('html2canvas')`. Confianza: HIGH.
+- Código propio del repo (leído directamente, no training data): `lib/informe-pdf.ts`, `app/(dashboard)/clientes/[id]/informe/page.tsx`, `app/(dashboard)/cadenas-comerciales/[id]/compliance/page.tsx` + `print-button.tsx`, `components/mercado-inmobiliario/charts/kpi-card.tsx`, `gauge-arc.tsx`, `app/api/cadenas/[id]/reporte/route.ts` — patrones ya validados en producción: PDF client-side con rasterización de planos, informe HTML imprimible, sparkline con Recharts puro, y PDF server-side con pdfkit. Confianza: HIGH.
+- [jspdf — npm](https://www.npmjs.com/package/jspdf) y notas de release v4.0.0/v4.2.1 (WebSearch) — confirma que jsPDF v4.x es una versión real y reciente (2026, foco en parches de seguridad), no un error tipográfico de versión. Confianza: MEDIUM, corroborado contra el propio `package-lock.json` del repo.
+- [Recharts — Area API docs](https://recharts.github.io/en-US/api/Area/) (WebSearch) — confirma el patrón de `dataKey` con tupla `[min, max]` para banda de rango. Confianza: MEDIUM, verificado contra la presencia real del componente en `node_modules`.
+- [shadcn.io — Radar Multiple](https://www.shadcn.io/charts/radar-multiple) (WebSearch) — confirma que "radar con series superpuestas" es el patrón estándar de industria para comparación multi-atributo sobre Recharts. Confianza: MEDIUM.
+- Búsqueda de mercado sobre librerías de "comparación de propiedades en React" — no arrojó un paquete npm estándar de industria; solo demos/patrones de diseño. Reportado como hallazgo honesto (ausencia de evidencia), no como certeza absoluta. Confianza: MEDIUM.
 
 ---
-*Stack research for: Zonificación automática por dirección (PermisoHub v1.4)*
-*Researched: 2026-07-30*
+*Stack research for: dashboards de detalle/comparación e informe exportable — módulo Oportunidades, PermisoHub*
+*Researched: 2026-08-02*

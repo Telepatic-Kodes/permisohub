@@ -1,183 +1,201 @@
 # Feature Research
 
-**Domain:** Zoning/land-use lookup for a B2B DOM-permitting SaaS (Chilean architects) — "zonificación automática por dirección"
-**Researched:** 2026-07-30
-**Confidence:** MEDIUM (zonificación.cl UX inferred from public marketing page, not a hands-on trial; ZoneOmics/US patterns verified via official product pages; general zoning-table semantics — Permitted/Conditional/Prohibited — is well-established US planning practice, MEDIUM-HIGH confidence; Chilean-specific PRC ambiguity handling is LOW confidence since no competitor documents it publicly)
+**Domain:** Reportes profesionales de oportunidades inmobiliarias comerciales (dashboard de detalle, comparación lado a lado, informe exportable) — módulo Mercado Inmobiliario de PermisoHub
+**Researched:** 2026-08-02
+**Confidence:** MEDIUM-HIGH (estructura de reportes de consultoras verificada por múltiples fuentes independientes que coinciden entre sí; el mapeo a "qué es posible con nuestros datos reales" está verificado directamente contra el código y schema actuales, no supuesto)
+
+## Contexto verificado del sistema actual
+
+Antes de listar features, esto es lo que el código YA tiene disponible (verificado en `lib/mercado-locales-server.ts`, `lib/scrapers/mercado-locales-common.ts`, `lib/scrapers/portalinmobiliario.ts` y las migraciones `supabase/migrations/20260802_*`, `20260803_*`, `20260805_*`):
+
+**Por cada oportunidad (`OportunidadMercadoLocal`):** id, título, url externa (Portalinmobiliario), comuna, precio (monto+moneda), superficie m², precio UF normalizado, precio UF/m² normalizado, `reasonCodes` (`below_p25_ufm2`, `below_p25_uf`, `price_drop_7d`).
+
+**Por cohorte comuna×operación×tipo_propiedad:** banda P25/mediana/P75 en UF y UF/m², tamaño de muestra (`muestra_n`), con fallback honesto a rollup `__TODAS__` cuando la muestra es chica (`MIN_COHORT_SIZE = 15`). Serie diaria desde el 1 ago 2026 (historia real corta).
+
+**Por listing individual:** historial de precio real (`mercado_locales_historial_precio`, trigger en cada cambio de precio) + `primera_vez_visto_el`/`ultima_vez_visto_el` (permite calcular "días publicado" — dato real, hoy sin usar en UI).
+
+**Señales cruzadas honestas ya calculadas a nivel comuna:** expansión de cadenas retail (SII, `obtenerSenalesExpansionPorComuna`) y tendencia de actividad constructiva histórica (INE, `obtenerTendenciasConstruccionPorComuna`).
+
+**Lo que NO existe y no se debe fingir que existe:** dirección exacta, coordenadas lat/long, fotos, planos, rol SII vinculado automáticamente, datos de arriendo Y venta para el mismo activo físico (cada listing es una publicación de un solo tipo de operación), rent roll/arrendatarios, transacciones efectivas cerradas (ya descartado en sesiones previas — sin fuente pública ni vendor aprobado).
+
+**Ya construido y reutilizable (no partir de cero):** librería de charts "Tema Consultora" (`components/mercado-inmobiliario/charts/`: `KpiCard` con sparkline+delta+badge verificado/estimado, `Histograma`, `GaugeArc`, `DesviacionBar`, `DistribucionDonut`, `RankingBarChart`), componente `InformeEjecutivo` (extrae "## Resumen Ejecutivo" de markdown generado por IA + badges de fuentes disponibles/no disponibles, ya usado en Tasación/Due Diligence/Auditor/Predictor), dos patrones de exportación a PDF ya en producción — (a) `lib/informe-pdf.ts`: jsPDF dibujado a mano, pixel-a-pixel, con rasterización de planos (usado para due diligence con láminas anotadas, complejidad alta, pensado para anotar sobre dibujos) y (b) patrón `print-button.tsx` + CSS `print:hidden`/`@media print` (usado en `cadenas-comerciales/[id]/compliance` y `clientes/[id]/informe`: `window.print()` sobre una vista ya estilizada, complejidad baja). Leaflet ya es dependencia del proyecto (`zonificacion-mapa.tsx`), pero solo para geometría de parcela/ROL conocido — no hay polígonos de comuna ni geocoding de listings.
+
+## Cómo reportan los mejores actores (hallazgos de investigación)
+
+**Consultoras institucionales (CBRE, JLL, Colliers, Cushman & Wakefield) — "Offering Memorandum" / informe de oportunidad individual.** Estructura consistente entre fuentes: portada de marca → resumen ejecutivo / "Investment Highlights" (bullets, no prosa larga) → descripción de la propiedad (fotos, site plan, aérea) → resumen financiero (rent roll, cap rate, NOI, proyección de flujo) → overview de ubicación (mapa, demografía de área de influencia, conteos de tráfico para retail) → overview de mercado/submercado comparable → comparables de venta/arriendo → contacto del corredor + disclaimer legal. (MEDIUM confianza — verificado contra múltiples guías de "cómo se arma un OM" e imagen de un OM real de CBRE; no se pudo extraer texto completo del PDF binario de CBRE, así que la estructura exacta interna se corrobora por 3+ fuentes independientes que coinciden, no por lectura directa de un documento).
+
+**Plataformas de datos (CoStar, LoopNet, Crexi) — ficha de propiedad + comps.** Ficha individual: fotos/video, atributos físicos, historial de venta/arriendo previo, estado (activo/vendido), comparables sugeridos automáticamente con cap rate/precio/tamaño, mapa. Comparación: **tabla** de comparables lado a lado (columnas = propiedades, filas = atributos) es el formato dominante — ni CoStar ni Crexi ni LoopNet usan radar/spider chart para comparar activos comerciales; ese patrón aparece solo en herramientas de consumo residencial con "scoring" ponderado por el comprador (ej. comparadores de casas para familias), no en CRE profesional. Exportan comps a PDF con foto+mapa+tabla (Crexi: "print-friendly PDF" desde comps guardados).
+
+**Chile (CBRE Chile, Colliers Chile):** mismo lenguaje de "rentabilidad"/cap rate se usa localmente (6-8% anual "sólido" para comercial, más alto que residencial), pero los reportes públicos de mercado chilenos son casi siempre agregados por submercado (ej. "0,47 UF/m² arriendo oficina Clase A"), no fichas de activo individual — el activo individual con foto+comps es un producto de corretaje privado (Propital, TocToc), no de las consultoras grandes en Chile. Confirma que el "gap" que PermisoHub llena (ficha honesta de UNA oportunidad de mercado, sin fabricar comps de transacciones cerradas) no tiene competidor directo chileno haciendo lo mismo con datos reales de publicaciones activas.
+
+**Conclusión clave para el cap rate/NOI:** un cap rate real requiere ingreso (arriendo) y valor (venta) del MISMO activo — un listing scrapeado es arriendo O venta, nunca ambos. Cualquier "cap rate" mostrado por oportunidad solo puede ser una **rentabilidad implícita de zona** (mediana UF/m² venta ÷ mediana UF/m² arriendo de la misma comuna×tipo), y debe etiquetarse explícitamente como estimado de zona, no del activo — igual disciplina que ya aplica `AvaluoFiscalCard` ("No es dato de mercado").
 
 ## Feature Landscape
 
 ### Table Stakes (Users Expect These)
 
-Features an architect will assume exist the moment "zonificación" appears inside a project. Missing these makes the feature feel like a toy, not a professional tool.
+Lo que un reporte serio de oportunidad SIEMPRE tiene, según CBRE/JLL/Colliers/CoStar/LoopNet — sin esto el producto se siente incompleto frente a la comparación que la propia founder pidió.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Address → zone lookup (geocode + point-in-polygon against PRC layer) | This is the entire premise of the feature — zonificación.cl's core loop is "busca una comuna o dirección" → zone resolves automatically. ZoneOmics: "enter an address and zoning data populates automatically." | MEDIUM | Depends on geocoding. `lib/sii-lookup.ts` already resolves `direccion + comuna → lat/lng`, but only when the address matches a SII rol — not a general-purpose geocoder. This feature needs its own geocode step (independent of SII match) feeding into a spatial (point-in-polygon) query against the MINVU/OCUC ArcGIS PRC feature layer. Reuse the `direccion`/`comuna` param shape from `sii-lookup.ts` for consistency, but do not assume SII lookup ran first. |
-| Zone code + zone name shown as text (not just a map pin) | Both zonificación.cl and ZoneOmics present a combined map+text view; architects need the zone identifier (e.g. "ZM-3") as a copyable/citable string for expedientes, memorias, and DOM correspondence — a map alone isn't citable. | LOW | Straightforward render once the lookup returns data. |
-| Map view confirming the point/parcel sits inside the returned zone polygon | Standard GIS lookup pattern: geocode → query parcel/zoning layer → render point over zoning polygon so the user can visually sanity-check the match (source: ArcGIS zoning-lookup workflow docs; zonificación.cl's "Mapa de análisis por dirección"). For an architect, a bare zone code with no visual boundary confirmation is not trustworthy — geocoding errors are common enough that visual confirmation is expected, not optional. | MEDIUM-HIGH | **New dependency**: no mapping library exists in the codebase today (`package.json` has no Leaflet/MapLibre/Mapbox/Google Maps). This is the single highest-complexity item in the table-stakes set — budget for adding a lightweight map lib (MapLibre GL or Leaflet) + a basemap tile source, not just an API call. |
-| `usos permitidos` / `usos prohibidos` shown verbatim, with source attribution | zonificación.cl's core value line: "identificar la zona normativa y sus restricciones... usos permitidos." Architects need the exact regulatory text, not a paraphrase — paraphrasing zoning text is a liability in a tool that feeds permit decisions. | LOW | Confirmed available in MINVU/OCUC data per milestone context. Follow the `normativa-retrieval.ts` citation convention: display raw text + a `verificado` flag + link to the official decree when the ArcGIS record includes one, fallback link (e.g. to the comuna's PRC page) when it doesn't — mirrors `FUENTE_FALLBACK_URL` pattern already used for OGUC/LGUC/DDU. |
-| Persisted/cached lookup result on the proyecto record | Architects reopen a project's zoning tab repeatedly (during design iteration, before DOM submission, during due diligence) — re-querying the ArcGIS service every page load is wasteful and fragile if MINVU's service has latency/downtime. | LOW | New Supabase column/table on `proyectos` (e.g. `zonificacion` jsonb + `zonificacion_fecha`), with an explicit "actualizar" action rather than silent background refresh — matches the app's existing pattern of explicit AI/lookup actions (due diligence, SII enrichment) rather than invisible polling. |
-| Manual fallback when address isn't found / geocode fails | Chilean addresses (rural sectors, new subdivisions, non-standard numbering) frequently fail geocoders. A tool that just errors out with no path forward is unusable for the ~10-20% of addresses geocoding will miss. | LOW-MEDIUM | Simplest version: let the architect manually select comuna + zone from a dropdown seeded from the same ArcGIS PRC layer (comuna's zone list), skipping the spatial query. Do not silently guess. |
-| "Informativo, no reemplaza el Certificado de Informaciones Previas" disclaimer | The zone shown is derived from public geospatial data, not the DOM's own record. Chilean architects know the CIP (Certificado de Informaciones Previas) is the only legally binding zoning document; a tool that implies otherwise misleads a professional user and creates liability exposure. | LOW | Copy-only. Mirrors the "ORIENTATIVO" framing already used verbatim in `via-tramitacion.ts` header comments and UI. |
+| Dashboard de detalle: header con precio, UF/m², comuna, tipo, operación, link al aviso original | Toda ficha CoStar/LoopNet/Crexi tiene esto como bloque superior | BAJA | 100% con datos ya existentes en `OportunidadMercadoLocal` |
+| Posicionamiento vs cohorte (dónde cae este precio vs P25/mediana/P75 de su comuna×tipo) | Es el corazón de cualquier "comp analysis" — CoStar lo llama "vs submarket" | BAJA | Reutilizar `GaugeArc` o `DesviacionBar` (ya construidos), datos ya existen en `obtenerBandasMercadoLocales` |
+| Gráfico de historial de precio de ESE listing | CoStar/LoopNet muestran "price history" por ficha individual | BAJA-MEDIA | Dato real en `mercado_locales_historial_precio`; degradar con gracia si <2 puntos (mismo patrón que `KpiCard.sparkline`) — historia acumulada aún corta (desde 1 ago 2026) |
+| "Días publicado" / tiempo en mercado | Métrica clásica de CoStar/LoopNet ("days on market") | BAJA | `ultima_vez_visto_el - primera_vez_visto_el` ya está en la tabla, solo falta calcularlo/mostrarlo — quick win no explotado hoy |
+| Explicación de por qué es "oportunidad" (reason codes con contexto ampliado) | Ya existe en lista, pero un OM siempre explica el "por qué" en detalle, no solo un badge | BAJA | Ya existe la lógica, solo expandir la presentación en la vista de detalle |
+| Señales cruzadas honestas (expansión SII, tendencia INE) en la ficha de detalle | Ya se muestran en la lista — un informe de detalle no puede tener MENOS contexto que la lista | BAJA | Funciones ya existen (`obtenerSenalesExpansionPorComuna`, `obtenerTendenciasConstruccionPorComuna`), solo llamarlas también en detalle |
+| Listado de "oportunidades comparables" dentro de la misma comuna/tipo | CoStar/LoopNet siempre sugieren comparables automáticos en la ficha | MEDIA | Reusar `obtenerOportunidadesMercadoLocales` filtrando por comuna+tipo, excluyendo el activo actual |
+| Comparación: tabla lado a lado (columnas=propiedades, filas=atributos) | Es el formato universal de CoStar/Crexi/LoopNet/Houzez para comps — no radar chart | BAJA-MEDIA | Todo el dato ya existe por listing; el trabajo es de UI (selección de 2-4 IDs + tabla) |
+| Resaltar el mejor valor por fila en la tabla comparativa | Todo comp-grid profesional (CoStar, Crexi) marca visualmente el mejor número por fila | BAJA | Solo lógica de comparación en frontend, sin dato nuevo |
+| Límite de 2-4 propiedades en comparación | Houzez/LoopNet imponen este límite para que la tabla siga siendo legible | BAJA | Decisión de UX, no de datos |
+| Informe exportable: portada con nombre de oportunidad/comparación, fecha de generación, filtros usados | Todo OM tiene portada — es lo primero que un cliente/inversionista ve | BAJA | Reutilizar patrón `print-button.tsx` + CSS `@media print` (ya en producción en `cadenas-comerciales/compliance` y `clientes/[id]/informe`) |
+| Sección de metodología/fuentes con fecha de scraping, UF usada, tamaño de muestra de la cohorte, disclaimer de "solo publicaciones activas, no transacciones cerradas" | Todo informe serio de CBRE/JLL/Colliers cita metodología — y es exactamente la disciplina "nunca fabricar" que ya rige el resto de PermisoHub | BAJA | Texto/template nuevo; los datos a citar (fecha, UF, muestra_n) ya existen |
+| Layout optimizado para impresión (oculta nav/controles interactivos, saltos de página, tamaño A4) | Estándar de cualquier informe exportable — sin esto el PDF se ve "cortado a mano" | BAJA | Copiar patrón exacto de `print-button.tsx` (`print:hidden`) |
 
 ### Differentiators (Competitive Advantage)
 
-Where PermisoHub can beat zonificación.cl and a raw MINVU/ArcGIS portal — not by having more zoning data, but by making zoning data operate as a first-class citable input across an existing DOM-permitting workflow instead of a standalone lookup silo.
+Elevan la percepción de calidad — no son obligatorios, pero son donde PermisoHub puede verse "a la altura" de una consultora sin fingir datos que no tiene.
 
 | Feature | Value Proposition | Complexity | Notes |
-|---------|--------------------|------------|-------|
-| Zoning becomes a citable input to `via-tramitacion.ts` (specifically the `excedePRC` / `cambiaDestino` questions) | Today `excedePRC` and `cambiaDestino` are self-reported by the architect with no grounding. Cross-referencing the architect's stated intended use against the zone's `usos permitidos/prohibidos` lets the vía-de-tramitación decision cite a real source instead of trusting an unverified checkbox — directly strengthens the deterministic decision engine that is PermisoHub's core differentiator. | MEDIUM | Requires the activity-compatibility check (below) to exist first. Do not auto-answer `excedePRC` (that needs numeric coefficients, out of scope) — only pre-fill/flag `cambiaDestino`-adjacent signal ("el uso declarado no aparece en los usos permitidos de esta zona") as a warning `via-tramitacion.ts` can surface in its `alertas` array. |
-| Zoning data as grounding context for the AI copiloto drawer (`diagnóstico OGUC`, `checklist` skills) | Turns a static "here's your zone" lookup into the same AI-reasoning experience the rest of the app already delivers (e.g. explaining that a "taller artesanal" likely falls under "actividades productivas inofensivas" even if the PRC text doesn't use that exact phrase) — something a rigid keyword-matcher (or zonificación.cl's opaque black-box "compatible/no compatible" verdict) can't do transparently. | MEDIUM | Feed the zone's raw `usos permitidos/prohibidos` text into the existing skill prompts as additional context, same pattern as `getContextoNormativo()` feeding OGUC/LGUC/DDU text into prompts. |
-| Zoning becomes a citable `refNormativa`-style finding inside `due-diligence.ts` | When the DD engine detects a destino mismatch (e.g. SII `destino` says "Comercio" but the project's stated use in documents is residential), it can now cite the actual zone's permitted-uses text as evidence, not just flag an "incoherencia interna." Extends the DD product's core loop (fundamented findings, `verificado` boolean) into a new evidence source. | MEDIUM | Needs a `RefNormativa`-shaped citable object for zone data (new `fuente` type, e.g. `'PRC'`), parallel to `getArticuloById()` — same verified/unverified convention. |
-| Zero marginal cost per query vs zonificación.cl's ~CLP 10.000/consulta | Architects juggling many active proyectos would otherwise pay per-address on a competitor tool; folding this into the existing subscription removes a real, recurring out-of-pocket cost and a reason to tab out to a separate paid product mid-workflow. | LOW (business model, not a build item) | Reinforce by NOT metering the internal feature (see anti-features). |
-| Portfolio-wide zoning view across all active proyectos | A per-query-credit competitor structurally cannot offer a "show me zoning status/compatibility across all 40 of my active projects" dashboard economically — it's a natural extension once zoning is stored per-proyecto, and plays to PermisoHub's existing multi-project SaaS structure (vs. zonificación.cl's single-lookup tool). | MEDIUM | v1.x — depends on the table-stakes lookup+persistence existing first for every project. |
-| Data-freshness transparency ("PRC vigente desde [fecha]", flag if MINVU's underlying decree looks stale) | Research found no evidence zonificación.cl surfaces PRC vintage/staleness to the user — an opening for a tool built for professionals who care whether the plan they're relying on is the currently governing instrument (PRCs get modified/appealed and old zoning data circulating is a known real pitfall in Chile). | LOW-MEDIUM | Depends on whether the MINVU/OCUC ArcGIS layer exposes a decree/publication date field — verify at build time; if absent, at minimum timestamp "consultado el [fecha]" so the architect knows how fresh the app's own cache is. |
-| PDF/exhibit export of the zoning finding for the expediente | Architects assembling a DOM submission or a due-diligence packet need a citable artifact, not just an in-app screen — matches the existing pattern of exportable, citable outputs elsewhere in the product (DD reports, formal communications). | LOW-MEDIUM | v1.x, straightforward once the underlying data model is stable. |
+|---------|-------------------|------------|-------|
+| Resumen ejecutivo narrativo generado por IA (estilo "Investment Highlights" de un OM, en bullets) | Es literalmente el bloque que un cliente lee primero en un informe CBRE/JLL — hoy la lista solo tiene badges | MEDIA | Reutilizar el patrón `InformeEjecutivo` + prompts existentes (`lib/reportes-mercado-prompts.ts`) como plantilla; requiere prompt nuevo pero la arquitectura (extracción de "## Resumen Ejecutivo" + badges de fuentes) ya existe |
+| Rentabilidad implícita de zona (UF/m² venta ÷ UF/m² arriendo de la misma cohorte) como "cap rate" aproximado | Acerca el lenguaje al de CBRE/Colliers Chile ("rentabilidad 6-8% sólida para comercial") sin inventar NOI de un activo específico | MEDIA | Cálculo simple sobre bandas ya existentes — **debe** etiquetarse "estimado de zona, no del activo" (mismo criterio que `AvaluoFiscalCard`); solo disponible si existen bandas de AMBAS operaciones para la comuna×tipo |
+| Mapa de posicionamiento a nivel comuna (ej. destacar la comuna dentro de un mapa de la región, coloreado por banda de precio) | Da contexto espacial sin fabricar una ubicación exacta que no se tiene | MEDIA-ALTA | Leaflet ya es dependencia, pero requiere conseguir/cargar polígonos de comuna (no existen hoy en el proyecto) — verificar disponibilidad de un GeoJSON de comunas RM antes de comprometer esto a un plan |
+| Personalización del informe ("Preparado por ___ para ___") antes de exportar | Los OM de CBRE/JLL siempre llevan a quién va dirigido — ayuda al caso de uso explícito de la founder ("compartir con cliente/inversionista") | BAJA | Solo un pequeño formulario efímero antes de generar el PDF, sin persistencia nueva |
+| Radar/spider chart pequeño como complemento visual (NO reemplazo) de la tabla comparativa — ej. 4 ejes: precio relativo, superficie, posición vs P25, señales cruzadas | Un "vistazo" visual adicional; ningún actor de CRE profesional lo usa como comparación principal, pero como complemento no contradice el estándar | MEDIA | Nice-to-have explícito — nunca debe sustituir la tabla (ver anti-feature de "score único") |
+| Gráfico de tendencia de la banda P25/mediana/P75 de la comuna en el tiempo (no solo el precio de un listing) | CBRE/JLL siempre incluyen "market overview" con tendencia de submercado, no solo del activo | MEDIA | Reusar `obtenerHistorialMedianaUfM2` (ya existe) — mismo límite de historia corta (desde 1 ago 2026), degradar con gracia igual que hoy |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
+Cosas que estos actores SÍ hacen pero que no aplican a datos reales disponibles en Chile/PermisoHub, o que estos mismos actores evitan a propósito por buena razón.
+
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|------------------|-------------|
-| Numeric urbanistic coefficients (FOS, coef. de constructibilidad, altura máxima, rasante, distanciamiento) | Feels like "the natural next step" once zone lookup exists — an architect will immediately ask "ok but what's my max height." | Explicitly out of scope this milestone: not reliably available in the free MINVU/OCUC data at the fidelity needed to be citable (unlike text-based usos, which are directly quotable). Building placeholder UI or a half-verified numeric feed risks presenting unverified numbers as fact in a tool whose whole value prop is trustworthy, citable output. | Ship text-based zone/uso data only this milestone; link out to the official decree/ordinance PDF (already required as a citation source) for coefficients, and flag numeric coefficients as a clearly-labeled "próximamente" or defer entirely to a future milestone with a paid/verified data source. |
-| Full GIS map explorer (browse the whole comuna without an address, draw custom polygons, toggle every layer as a standalone mapping product) | This is literally what zonificación.cl and ZoneOmics look like as products, so it's the "obvious" shape to copy. | PermisoHub's users are architects working a specific project at a specific address, not consumers or brokers browsing a city map. Building a general-purpose GIS explorer duplicates an entire competitor product surface, adds large ongoing maintenance cost (layer management, map performance, tile hosting), and dilutes the core value prop ("speed up DOM permit processing") rather than serving it. | Scope the map to a single fixed view: the project's address pinned inside its own zone polygon, nothing more. No free-roam exploration mode. |
-| National legal-document repository (all comunas' ordinances/decrees as a browsable library) | zonificación.cl advertises this as a differentiator ("base de datos legal completa... MINVU, MINSAL, MINEDUC, MMA, INE, SUBDERE"), so it looks table-stakes by association. | PermisoHub already has a curated, verified normativa layer (`normativa-retrieval.ts` — OGUC/LGUC/DDU) with its own "verificado" discipline. Duplicating a national ordinance library for zoning specifically is redundant infrastructure not needed to answer "what's my zone and is my use compatible" — and a large, hard-to-maintain scope expansion disconnected from the milestone's actual question. | Store/link only the specific decree relevant to the project's own comuna/zone (one link, resolved at lookup time), not a browsable national library. |
-| Automated, unconditional "SÍ, tu uso es compatible" verdict with no caveats | Feels like the most useful, decisive answer — and is literally what a "compatible/incompatible" binary check implies. | Dangerous in a B2B tool whose output feeds real permit-track decisions: PRC `usos permitidos/prohibidos` text is often written at a coarser grain than a specific real-world activity (e.g. PRC lists "Equipamiento — Salud" as a category; the architect's actual use is "clínica dental ambulatoria") — a rigid text match can produce false confidence in either direction. US zoning-table practice itself uses a three-state model (Permitted / Conditional-requires-review / not listed), not binary, precisely because binary answers overstate certainty. | Three-state result: **Permitido** / **No permitido** / **No especificado — requiere revisión** (when the stated use doesn't clearly match the zone's listed text), always paired with the CIP disclaimer already noted in table stakes. |
-| Risk-layer overlays (flood/tsunami/landslide/mass-movement zones) as a shipped feature this milestone | zonificación.cl bundles this ("Zonas de riesgo... inundaciones, remociones en masa, tsunamis") and it feels like a natural companion to zoning. | Milestone context confirms this data source is not yet confirmed/sourced. Building UI for a data feed that doesn't exist yet produces a broken-looking placeholder and scope creep beyond the milestone's defined target. | Defer to a future milestone once a public risk-layer data source is identified and verified; do not stub the UI in this milestone. |
-| Per-query internal credit/paywall metering for the zoning feature | Tempting because it "worked" for zonificación.cl and could look like a monetization lever. | Directly undermines the milestone's stated strategic rationale (build in-house on free public data specifically to avoid the CLP ~10.000/query cost architects currently pay a competitor) and adds friction to a feature meant to be a bundled differentiator inside the existing subscription. | Bundle unmetered inside existing plans; if usage-based limits are ever needed, gate at the plan tier (e.g. "N proyectos"), not per zoning query. |
+| Cap rate / NOI real por activo | "Se ve como un reporte institucional de verdad" | Requiere ingreso Y valor del MISMO activo físico — un listing scrapeado es arriendo O venta, nunca ambos; fabricarlo sería inventar un dato de transacción que no existe | Rentabilidad implícita de ZONA, etiquetada explícitamente como estimado agregado (ver differentiator arriba) |
+| Fotos, planos, video tour en la ficha de detalle | Todo OM y toda ficha CoStar/LoopNet tienen fotos | El scraper actual (`portalinmobiliario.ts`) no captura imágenes, solo `headline`+`locationText`; agregarlo es un scraper nuevo, no una feature de reporte | Link directo al aviso original (ya existe) — el usuario ve fotos ahí, sin fingir que están "dentro" de PermisoHub |
+| Pin exacto en un mapa (dirección/lat-long precisos) | Toda ficha CoStar/LoopNet muestra el pin exacto de la propiedad | No hay dirección ni coordenadas en el dataset — solo comuna + texto libre de ubicación; poner un pin "aproximado" sería fabricar precisión que no existe | Mapa a nivel comuna (differentiator arriba), nunca un pin sobre la propiedad específica |
+| Rent roll / información de arrendatarios existentes | Estándar en OM retail institucional (Cenco Malls, Mallplaza manejan esto para SUS activos) | Los listings son publicaciones de terceros en portales — no hay acceso a contratos de arriendo vigentes de esas propiedades | No aplica al contexto: esto es para el dueño evaluando SU propio activo, no para quien busca oportunidades de mercado |
+| Demografía de área de influencia (drive-time rings, ingreso, población) vía vendor pagado (ESRI/Nielsen) | Retail OMs de CBRE/JLL/Colliers siempre la incluyen | Vendor pagado ya vetado por la founder en sesiones previas; sin fuente pública chilena equivalente hoy integrada | Fuera de alcance de este milestone — si se quiere a futuro, evaluar INE/CASEN por comuna (público, pero agregado, no un anillo de radio preciso) |
+| Walk Score / conteo de tráfico vehicular | Común en OM retail de EE.UU. (CBRE/JLL) | Walk Score es un servicio propietario sin cobertura en Chile; conteos de tráfico no son un dato público accesible por comuna/calle hoy | No incluir — sería o fabricado o inaccesible honestamente |
+| Score/ranking automático de "mejor oportunidad" entre las comparadas | Se ve como una IA "inteligente" tomando la decisión por el usuario | Un score ponderado único esconde criterios subjetivos (qué pesa más: precio, ubicación, señales) como si fuera objetivo — contradice la disciplina de "nunca fabricar interpretación no fundamentada" que ya rige el resto del producto, y el usuario (arquitecto/administrador) es quien debe juzgar, no un algoritmo opaco | Tabla comparativa con el mejor valor resaltado POR FILA (el usuario decide qué fila importa más), nunca un ganador único |
+| Proyección de flujo de caja multi-año / IRR / cap rate de salida | Estándar en modelos de adquisición de fondos institucionales (CBRE/JLL Capital Markets) | Requiere supuestos de crecimiento de renta, cap rate de salida, plazo de tenencia — todos inventados sin un modelo de inversión real del cliente | No aplica al público objetivo (arquitectos/administradores PYME evaluando arriendo/compra de UN local, no fondos modelando adquisiciones) |
+| PDF con boilerplate legal extenso (confidencialidad, "esto no es una oferta...") al estilo OM institucional para fondos | Se ve "profesional" y "serio" | Ese lenguaje responde a normativa de valores de EE.UU. para levantamiento de capital — no aplica a un informe de mercado para un arquitecto/administrador chileno | Una nota de fuentes/metodología honesta y corta (ya es el estándar del resto de PermisoHub) es suficiente rigor sin la afectación legal innecesaria |
+| jsPDF dibujado a mano pixel-a-pixel (reutilizar `lib/informe-pdf.ts` tal cual) para el informe de oportunidades | Ya existe ese código en el proyecto, "reutilizarlo" parece eficiente | Esa maquinaria fue diseñada para rasterizar y anotar LÁMINAS DE PLANOS — no hay planos que anotar en oportunidades de mercado; usarla sería sobre-ingeniería para un caso mucho más simple | Patrón `print-button.tsx` + CSS de impresión (ya en producción, mucho más barato) |
 
 ## Feature Dependencies
 
 ```
-Address geocoding (new, general-purpose)
-    └──requires──> extends address-normalization conventions of lib/sii-lookup.ts
-                       (reuse direccion+comuna param shape; do NOT require an SII match first)
+Dashboard de detalle de oportunidad
+    ├──requires──> Datos ya existentes (OportunidadMercadoLocal + bandas + historial de precio)
+    ├──requires──> Componentes de charts ya construidos (KpiCard, GaugeArc, DesviacionBar)
+    └──enhances──> Resumen ejecutivo narrativo IA (usa los mismos datos como "fuentes")
 
-Address → zone spatial lookup (MINVU/OCUC ArcGIS PRC layer)
-    └──requires──> Address geocoding
-    └──feeds──> Zone code/name + usos permitidos/prohibidos display
+Comparación lado a lado (2-4 oportunidades)
+    ├──requires──> Dashboard de detalle (misma data por fila, ya trabajada en la fase anterior)
+    └──requires──> UI de selección ("agregar a comparar" en la lista de /oportunidades)
 
-Map view (point-in-polygon confirmation)
-    └──requires──> Address → zone spatial lookup
-    └──requires──> NEW mapping library (none exists in package.json today)
+Informe exportable (PDF/imprimible)
+    ├──requires──> Dashboard de detalle (para exportar UNA oportunidad)
+    ├──requires──> Comparación lado a lado (para exportar la comparación)
+    ├──requires──> Sección de metodología/fuentes (texto nuevo, sin dependencia de dato adicional)
+    └──enhances──> Personalización "preparado por/para" (opcional, no bloquea el PDF base)
 
-usos permitidos/prohibidos citation (verificado/no verificado + source link)
-    └──requires──> Address → zone spatial lookup
-    └──parallels──> lib/normativa-retrieval.ts citation pattern (ArticuloCitable, FUENTE_FALLBACK_URL)
+Mapa de posicionamiento a nivel comuna ──requires──> Conseguir GeoJSON de comunas RM (NO existe hoy en el proyecto)
 
-Activity/use compatibility check (Permitido / No permitido / No especificado)
-    └──requires──> usos permitidos/prohibidos citation (needs the text to match against)
+Rentabilidad implícita de zona ("cap rate" aproximado) ──requires──> Bandas de AMBAS operaciones (arriendo Y venta) para la misma comuna×tipo — puede no estar disponible en comunas con poca cobertura
 
-via-tramitacion.ts enhancement (flag cambiaDestino risk from zone mismatch)
-    └──requires──> Activity/use compatibility check
-    └──enhances──> lib/via-tramitacion.ts (adds a grounded alerta, does not change the deterministic rule tree)
-
-due-diligence.ts enhancement (cite zone data as a finding source)
-    └──requires──> usos permitidos/prohibidos citation
-    └──enhances──> lib/due-diligence.ts (new refNormativa-shaped fuente: 'PRC')
-
-AI copiloto skill grounding (diagnóstico OGUC / checklist skills use zone text as context)
-    └──requires──> usos permitidos/prohibidos citation
-    └──enhances──> existing copiloto drawer skills (no change to their trigger UX)
-
-Portfolio-wide zoning dashboard
-    └──requires──> Address → zone spatial lookup persisted per-proyecto (table stakes, all projects)
-
-Numeric urbanistic coefficients (FOS, altura, rasante, etc.) ──conflicts with── this milestone's scope
-    (explicitly deferred; do not partially build)
-
-Risk-layer overlays ──conflicts with── this milestone's scope
-    (data source unconfirmed; do not stub UI)
+Radar chart complementario ──enhances──> Comparación lado a lado (nunca la reemplaza)
+Score único de "mejor oportunidad" ──conflicts──> Tabla comparativa con mejor valor resaltado por fila (elegir uno, no ambos — ver anti-feature)
 ```
 
 ### Dependency Notes
 
-- **Map view requires a new mapping library:** this is the one item in the table-stakes set that isn't a pure data/logic extension of existing code — it's a new frontend dependency (MapLibre GL or Leaflet + a basemap/tile source) with no precedent elsewhere in the codebase. Size this explicitly in planning; it's not "just another lib call" the way `sii-lookup.ts`-style features are.
-- **Activity compatibility requires usos permitidos/prohibidos citation to exist first:** you cannot answer "is my use compatible" before you have the zone's text to match against — this is a hard sequencing dependency, not just a nice-to-have ordering.
-- **`via-tramitacion.ts` and `due-diligence.ts` integrations are enhancements, not prerequisites:** both existing engines work today without zoning data (via self-reported flags / document-only evidence). Zoning-derived citations upgrade their grounding but should be additive — do not restructure either engine's core logic to depend on zoning data being present, since geocoding/lookup can fail (see anti-ambiguity fallback in table stakes) and both engines must keep working when it does.
-- **Numeric coefficients and risk layers conflict with this milestone's scope** in the sense that any partial building (e.g., a coefficients section with "N/A" placeholders) creates a broken/unfinished look rather than a clean, complete v1 — treat as fully deferred, not partially started.
+- **Comparación lado a lado requiere Dashboard de detalle:** la tabla comparativa reutiliza exactamente los mismos widgets/datos ya resueltos por listing en la fase de detalle (posicionamiento vs cohorte, historial de precio, señales cruzadas) — construir el detalle primero evita duplicar esa lógica al armar la comparación.
+- **Informe exportable requiere ambas fases anteriores:** el PDF no es una feature nueva de datos, es una vista de impresión de lo que el detalle y la comparación ya muestran en pantalla — por eso su complejidad marcada es BAJA si se hace con el patrón `print-button.tsx`.
+- **Mapa de comuna requiere conseguir un asset nuevo (GeoJSON):** a diferencia de todo lo demás en este documento, esto NO se resuelve solo con código — es una dependencia externa que debe verificarse (¿existe un GeoJSON público de comunas RM usable?) antes de comprometerlo a una fase del roadmap.
+- **Rentabilidad implícita de zona depende de cobertura de datos real:** en comunas donde el scraper no tiene suficiente muestra de AMBAS operaciones (arriendo y venta), esta feature debe degradar con gracia (ocultarse), igual que ya hace `KpiCard` sin sparkline cuando no hay historial.
+- **Radar chart complementario vs. Score único:** son direcciones opuestas — un radar de 4 ejes es una lectura visual auxiliar que el usuario interpreta él mismo; un score único es una conclusión que el sistema le entrega ya masticada. Elegir el radar (si se hace) y descartar explícitamente el score.
 
 ## MVP Definition
 
 ### Launch With (v1)
 
-- [ ] Address → geocode → point-in-polygon zone lookup against MINVU/OCUC ArcGIS PRC layer — the entire premise of the feature
-- [ ] Zone code + zone name displayed as text inside the project
-- [ ] Map view confirming the point sits inside the matched zone polygon — architects won't trust a bare code with no visual check
-- [ ] `usos permitidos` / `usos prohibidos` displayed verbatim, with source link when available (verificado/no verificado pattern from `normativa-retrieval.ts`)
-- [ ] Persisted lookup result on the proyecto record with an explicit "actualizar" action (no silent background polling)
-- [ ] Manual comuna/zone fallback when geocoding fails or address isn't matched
-- [ ] Activity/use compatibility check: architect states intended use → three-state result (Permitido / No permitido / No especificado—revisar), never a bare binary "compatible"
-- [ ] "Informativo, no reemplaza el CIP oficial" disclaimer on every zoning screen
+Mínimo para que las "3 cosas concretas" que pidió la founder se sientan completas y a la altura de la comparación (CBRE/JLL/Colliers + CoStar/LoopNet), sin fabricar nada nuevo.
+
+- [ ] Dashboard de detalle por oportunidad: header, posicionamiento vs cohorte (P25/mediana/P75), historial de precio del listing, días publicado, reason codes explicados, señales cruzadas (SII/INE), comparables sugeridos de la misma comuna/tipo — todo con datos que ya existen
+- [ ] Comparación lado a lado (2-4 oportunidades) en formato tabla, con el mejor valor resaltado por fila
+- [ ] Informe exportable (PDF/vista imprimible) tanto de una oportunidad individual como de una comparación, con portada, cuerpo y sección de metodología/fuentes (fecha de scraping, UF usada, tamaño de muestra, disclaimer "solo publicaciones activas") — usando el patrón `print-button.tsx`, no jsPDF pixel-a-pixel
 
 ### Add After Validation (v1.x)
 
-- [ ] Zoning-derived alerta feeding `via-tramitacion.ts`'s `cambiaDestino` decision — once the compatibility check is proven reliable enough to trust as a decision input
-- [ ] Zoning citation as a `due-diligence.ts` finding source — once the `RefNormativa`-shaped `'PRC'` fuente type is validated
-- [ ] AI copiloto skill grounding with zone text (diagnóstico OGUC, checklist) — once the base lookup+display is stable and the text-matching for compatibility has been tuned
-- [ ] PDF/exhibit export of the zoning finding — once the data model and citation format are stable
-- [ ] Portfolio-wide zoning dashboard across all active proyectos — once persistence exists for a meaningful number of projects
-- [ ] Data-freshness/staleness indicator ("PRC vigente desde...") — pending confirmation the ArcGIS layer exposes a usable date field
+- [ ] Resumen ejecutivo narrativo generado por IA (estilo "Investment Highlights") — agregar una vez que la founder valide que el formato de dashboard/tabla/PDF base ya convence
+- [ ] Rentabilidad implícita de zona ("cap rate" aproximado, etiquetado como estimado) — agregar cuando haya cobertura suficiente de ambas operaciones en más comunas
+- [ ] Personalización "preparado por/para" en el PDF — trigger: primer cliente real pidiendo compartir el informe con un tercero
 
 ### Future Consideration (v2+)
 
-- [ ] Numeric urbanistic coefficients (FOS, coef. constructibilidad, altura máxima, rasante, distanciamiento) — needs a different/paid/verified data source; explicitly out of scope until then
-- [ ] Risk-layer overlays (flood, tsunami, mass movement) — needs a confirmed public data source not yet identified
-- [ ] PRI (planificación intercomunal) layer
-- [ ] Full GIS map explorer / standalone browsing mode — deliberately not planned (anti-feature, see above), only revisit if user research explicitly demands it
+- [ ] Mapa de posicionamiento a nivel comuna — diferir hasta confirmar una fuente de polígonos de comuna utilizable (dependencia externa no resuelta hoy)
+- [ ] Radar chart complementario en la comparación — diferir hasta tener señal de que la tabla sola no es suficiente para la founder/usuarios
+- [ ] Demografía por comuna vía fuente pública (INE/CASEN) como capa adicional de contexto — diferir, fuera del pedido explícito de este milestone y requiere investigación propia de fuentes
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
-|---------|------------|----------------------|----------|
-| Address → zone lookup (geocode + spatial query) | HIGH | MEDIUM | P1 |
-| Zone code/name text display | HIGH | LOW | P1 |
-| Map view (point-in-polygon confirmation) | HIGH | MEDIUM-HIGH (new map lib) | P1 |
-| usos permitidos/prohibidos text + citation | HIGH | LOW | P1 |
-| Persisted lookup + manual refresh | MEDIUM | LOW | P1 |
-| Manual fallback for unmatched addresses | MEDIUM | LOW-MEDIUM | P1 |
-| Activity compatibility check (3-state) | HIGH | MEDIUM | P1 |
-| CIP disclaimer | MEDIUM | LOW | P1 |
-| via-tramitacion.ts integration | HIGH | MEDIUM | P2 |
-| due-diligence.ts citation integration | MEDIUM-HIGH | MEDIUM | P2 |
-| AI copiloto grounding | MEDIUM | MEDIUM | P2 |
-| PDF export of zoning finding | MEDIUM | LOW-MEDIUM | P2 |
-| Portfolio-wide zoning dashboard | MEDIUM | MEDIUM | P3 |
-| Data-freshness indicator | LOW-MEDIUM | LOW-MEDIUM | P3 |
-| Numeric coefficients | HIGH (eventually) | HIGH | Deferred (v2+) |
-| Risk-layer overlays | MEDIUM | MEDIUM-HIGH | Deferred (v2+) |
+|---------|------------|---------------------|----------|
+| Dashboard de detalle (posicionamiento, historial, señales, comparables) | HIGH | LOW-MEDIUM | P1 |
+| Comparación lado a lado (tabla, 2-4, mejor valor resaltado) | HIGH | LOW-MEDIUM | P1 |
+| Informe exportable (PDF vía patrón print) con metodología/fuentes | HIGH | LOW | P1 |
+| Días publicado / tiempo en mercado | MEDIUM | LOW | P1 (quick win, ya son datos existentes sin usar) |
+| Resumen ejecutivo narrativo IA | HIGH | MEDIUM | P2 |
+| Rentabilidad implícita de zona (cap rate aproximado) | MEDIUM | MEDIUM | P2 |
+| Personalización "preparado por/para" en PDF | MEDIUM | LOW | P2 |
+| Mapa a nivel comuna | MEDIUM | MEDIUM-HIGH | P3 |
+| Radar chart complementario | LOW-MEDIUM | MEDIUM | P3 |
+| Demografía pública por comuna | LOW (fuera de pedido) | HIGH | P3 |
 
 **Priority key:**
-- P1: Must have for this milestone's launch
-- P2: Should have, natural v1.x extension once P1 is validated
-- P3: Nice to have, later
-- Deferred: explicitly out of scope per milestone context
+- P1: Must have para este milestone
+- P2: Debería agregarse apenas el P1 esté validado por la founder
+- P3: Nice to have, evaluar en un milestone futuro
 
 ## Competitor Feature Analysis
 
-| Feature | zonificación.cl | ZoneOmics (US) | Our Approach |
-|---------|------------------|------------------|--------------|
-| Address search | Search box, comuna or address | Address entry or pin-drop on map | Address search reusing existing `direccion`/`comuna` conventions; add manual comuna/zone fallback |
-| Results presentation | Combined map + text ("Mapa de análisis por dirección" + key-info panel) | Map + auto-populated report | Combined map + text inside the project (not a separate app/tab) |
-| Compatibility check | "Actividades permitidas según PRC" — cross-references activity against zone; exact UX for activity selection undocumented publicly | "Zone Picker" tool, guided filters; largely US permitted/conditional table semantics | Explicit 3-state result (Permitido/No permitido/No especificado) rather than an opaque binary, to avoid false confidence |
-| Boundary/ambiguity handling | Not documented publicly (no visible confidence indicators, disambiguation, or staleness flags found) | Guided tours, zone picker for manual correction; no explicit boundary-proximity warning found | Manual fallback for unmatched addresses; treat as an open item to design (see Open Questions) |
-| Pricing | Credit-based, ~CLP 10.000/query, one free comuna (Recoleta) for trial | Not surfaced in this research pass | Bundled inside existing subscription, unmetered — a deliberate anti-feature to avoid |
-| Data layers | PRC zoning + PRI + risk zones + equipment/infra + SII property data + national legal doc repository | Zoning + parcel boundaries via geoJSON API | Zoning + usos permitidos/prohibidos only this milestone; explicitly no risk layers, no national doc repository (anti-features above) |
-| Numeric coefficients | Not confirmed present/absent from this research pass | Zoning API implies broader zoning attribute access (not confirmed to include buildability coefficients for Chile, N/A market) | Out of scope this milestone (confirmed by milestone context) |
-| Integration into a broader workflow | Standalone product; user must tab out from their permitting tool to use it | Standalone product/API for real estate use cases | Zoning is a first-class citable input inside `via-tramitacion.ts` and `due-diligence.ts` — this is the core differentiator, not the raw data itself |
+| Feature | CBRE / JLL / Colliers (OM institucional) | CoStar / LoopNet / Crexi (plataforma de datos) | Nuestro enfoque |
+|---------|-------------------------------------------|--------------------------------------------------|-------------------|
+| Resumen ejecutivo | Narrativa larga + "Investment Highlights" en bullets | Poco/nada de narrativa, todo dato tabular | Bullets breves generados por IA (patrón `InformeEjecutivo` ya existente), sin inflar prosa |
+| Cap rate / NOI | Real, por activo, con rent roll | Real, por activo, con historial de transacción | Estimado de ZONA (venta÷arriendo de la cohorte), etiquetado como tal — nunca fabricado por activo |
+| Fotos/planos | Alta calidad, profesionales | Fotos + video + floor plans | Ninguna (no capturadas) — link directo al aviso original |
+| Mapa | Aérea + mapa de puntos de interés | Pin exacto + comparables geolocalizados | Comuna-level en v2+ (sin GeoJSON hoy) — sin pin exacto (sin dato de dirección/coordenadas) |
+| Comparables | Ventas/arriendos "cerrados" curados por el corredor | Comparables automáticos por algoritmo propio | Comparables automáticos por comuna+tipo+operación, siempre desde publicaciones activas reales, nunca transacciones cerradas (no existe esa fuente en Chile) |
+| Formato de comparación | Tabla en el cuerpo del informe | Tabla (comp grid) | Tabla, con mejor valor resaltado por fila — sin radar como reemplazo |
+| Metodología/fuentes | Disclaimer legal extenso (normativa de valores EE.UU.) | Nota de fuente de datos, más corta | Nota corta de fuentes (fecha scraping, UF, muestra_n, "solo publicaciones activas") — mismo rigor sin boilerplate legal ajeno al contexto |
+| Formato de exportación | PDF diseñado en InDesign, pesado | PDF "print-friendly" desde la propia plataforma | PDF vía `window.print()` sobre vista ya estilizada (patrón `print-button.tsx`) — barato de mantener, consistente con lo ya construido |
+| Score/ranking automático | No — el corredor arma la narrativa, no un algoritmo | No — CoStar/Crexi muestran datos, el analista decide | No — explícitamente evitado (ver anti-features) |
 
 ## Sources
 
-- [zonificación.cl](https://www.zonificacion.cl/) — MEDIUM confidence (marketing page fetched directly, not a hands-on account trial; UX details on activity-compatibility mechanism and pricing partially inferred/incomplete)
-- [Zoneomics — Zoning API for Developers](https://www.zoneomics.com/product/api) — MEDIUM-HIGH confidence (official product page)
-- [Zoneomics — Zoning Data Platform](https://www.zoneomics.com/product/platform) — MEDIUM-HIGH confidence (official product page)
-- [Zoneomics — October 2025 release notes](https://www.zoneomics.com/blog/october-2025-release) — MEDIUM confidence (official blog, confirms guided-tour/zone-picker UX patterns)
-- [LA City Zoning Code — "How do I find out if my use is permitted?"](https://zoning.lacity.gov/faq/use/how-do-i-find-out-if-my-use-permitted) — MEDIUM confidence, used to confirm US Permitted/Conditional/Prohibited table convention
-- [PAS QuickNotes — Conditional Uses (American Planning Association)](https://planning-org-uploaded-media.s3.amazonaws.com/document/PASQuickNotes41.pdf) — MEDIUM confidence, general planning-practice reference for the permitted/conditional/prohibited trichotomy
-- General ArcGIS zoning-lookup workflow (geocode → parcel query → zoning layer query → map render) — MEDIUM confidence, synthesized from multiple Esri/GIS practitioner sources found via search, not a single authoritative doc
-- Internal codebase review: `lib/sii-lookup.ts`, `lib/normativa-retrieval.ts`, `lib/via-tramitacion.ts`, `lib/due-diligence.ts` (read directly, HIGH confidence — these are the actual dependency/integration points)
+- CBRE — Offering Memorandum (PDF de ejemplo, oficina): https://www.cbre.com/resources/fileassets/US-SMPL-72241/a2ccf4c5/262d7aa4-6ef1-47ea-9e66-9303397aad67.pdf (MEDIUM confianza — metadata/estructura de archivo confirmada, texto interno no extraíble como binario; estructura corroborada por fuentes secundarias abajo)
+- InvestNext — What is a Commercial Real Estate Offering Memorandum: https://www.investnext.com/blog/what-is-a-commercial-real-estate-offering-memorandum/
+- FNRP — What is an Offering Memorandum in Commercial Real Estate: https://fnrpusa.com/blog/om-commercial-real-estate/
+- SharpLaunch — How to Create an Offering Memorandum that Wins Over Investors: https://www.sharplaunch.com/blog/how-to-create-an-offering-memorandum
+- BTS Brands — Commercial Real Estate Offering Memorandums: https://btsbrands.com/offering-memorandums/
+- CoStar — Sale Comps: https://www.costar.com/products/sales-comps
+- CoStar — Property Records: https://www.costar.com/products/property-records
+- CoStar Real Estate Manager — Market Data & Analytics: https://costarmanager.com/market-data-analytics
+- FasterCapital — Viewing Property Listings on LoopNet: https://fastercapital.com/topics/viewing-property-listings-on-loopnet.html
+- Crexi Help Center — Printing Comps & Property Records: https://learn.crexi.com/printing-comps-property-records-crexi-help-center
+- Reonomy — Commercial Real Estate Database Guide: https://www.reonomy.com/resources/commercial-real-estate-database/
+- Reonomy — What Commercial Real Estate Comps Are & How to Use Them: https://www.reonomy.com/resources/real-estate-comps/
+- Altus Group — Comparative Market Analysis in Commercial Real Estate: https://www.altusgroup.com/insights/commercial-real-estate-comparative-analysis/
+- Houzez — Property Comparison Tool: https://houzez.co/features/compare-properties/
+- Medium/Archilyse — Comparison Tables in Property Search: https://medium.com/archilyse/comparison-tables-in-property-search-da78f258e6c4
+- CBRE Chile — Figures Santiago Oficinas 4T 2025 (PDF): https://mediaassets.cbre.com/-/media/project/cbre/dotcom/americas/chile-emerald/insights/2025/figures-santiago-oficinas-q4-2025.pdf
+- Colliers Chile — Reporte Residencial 1T 2026: https://www.colliers.com/es-cl/investigacion/reporte-residencial-1t-2026
+- Colliers Chile — ¿Qué traerá este 2026 para el rubro inmobiliario?: https://www.colliers.com/es-cl/articulos/santiago/2026-proyecciones
+- bmi.cl — Cap rate inmobiliario: qué es y cómo se calcula en Chile: https://bmi.cl/cap-rate-inmobiliario-chile/
+- Coldwell Banker Chile — Cómo calcular el cap rate o rentabilidad de tu propiedad: https://carreras.coldwellbanker.cl/blog/blog-1/como-calcular-el-cap-rate-o-rentabilidad-de-tu-propiedad-213
+- Código y schema del proyecto (fuente primaria, HIGH confianza): `lib/mercado-locales-server.ts`, `lib/scrapers/mercado-locales-common.ts`, `lib/scrapers/portalinmobiliario.ts`, `supabase/migrations/20260802_mercado_locales_listings.sql`, `supabase/migrations/20260803_mercado_locales_historial_precio_moneda_fix.sql`, `components/mercado-inmobiliario/charts/*`, `components/mercado-inmobiliario/informe-ejecutivo.tsx`, `components/mercado-inmobiliario/avaluo-fiscal-card.tsx`, `lib/informe-pdf.ts`, `app/(dashboard)/cadenas-comerciales/[id]/compliance/print-button.tsx`, `package.json` (leaflet, jspdf, pdfkit ya instalados)
 
-## Open Questions (not resolved by this research pass)
-
-- **Boundary-proximity ambiguity UX**: neither zonificación.cl nor ZoneOmics publicly documents how they handle an address whose geocoded point falls very close to a zone-polygon edge (common with geocoding imprecision). Recommend designing this explicitly rather than assuming a competitor pattern exists to copy — e.g., compute distance-to-nearest-boundary from the ArcGIS response and surface a "cerca del límite de zona — verifica en el CIP oficial" warning below some threshold.
-- **Text-matching mechanism for the activity compatibility check**: whether to implement as a curated OGUC-macro-use taxonomy (art. 2.1.24-style categories: Vivienda, Equipamiento, Actividades Productivas, Infraestructura, etc.) mapped against free-text PRC uses, vs. an AI-assisted classification (consistent with the `due-diligence.ts` map-reduce AI pattern already in the codebase) is a build-time design decision, not something this research resolved — flag for phase-specific research or a design spike before implementation.
-- **MINVU/OCUC ArcGIS layer's date/vintage field**: whether the confirmed-available data includes a decree/publication date usable for the staleness-indicator differentiator was not verified in this pass (out of scope per milestone context, which says only zone code/name/usos/decree-link are confirmed available) — check at implementation time.
+---
+*Feature research for: Reportes profesionales de oportunidades inmobiliarias comerciales (PermisoHub — Mercado Inmobiliario)*
+*Researched: 2026-08-02*
