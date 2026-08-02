@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { obtenerBandasMercadoLocales } from '@/lib/mercado-locales-server'
 import type { OperacionMercadoLocal, TipoPropiedadComercial } from '@/lib/scrapers/mercado-locales-common'
+import { obligacionesAplicables, calcularEstadoObligacion, type ObligacionConEstado } from '@/lib/obligaciones-regulatorias'
 
 export interface PropiedadPortafolio {
   id: string
@@ -13,6 +14,8 @@ export interface PropiedadPortafolio {
   rolSii: string | null
   notas: string | null
   fechaVencimientoContrato: string | null
+  tieneAscensor: boolean
+  tieneGas: boolean
   createdAt: string
 }
 
@@ -64,7 +67,7 @@ export async function obtenerPropiedadesPortafolio(workspaceId: string): Promise
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('propiedades_portafolio')
-    .select('id, direccion, comuna, tipo_propiedad, superficie_m2, operacion, precio_actual_uf, rol_sii, notas, fecha_vencimiento_contrato, created_at')
+    .select('id, direccion, comuna, tipo_propiedad, superficie_m2, operacion, precio_actual_uf, rol_sii, notas, fecha_vencimiento_contrato, tiene_ascensor, tiene_gas, created_at')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false })
 
@@ -81,6 +84,30 @@ export async function obtenerPropiedadesPortafolio(workspaceId: string): Promise
     rolSii: f.rol_sii,
     notas: f.notas,
     fechaVencimientoContrato: f.fecha_vencimiento_contrato,
+    tieneAscensor: f.tiene_ascensor,
+    tieneGas: f.tiene_gas,
     createdAt: f.created_at,
   }))
+}
+
+/**
+ * Estado de cada obligación regulatoria aplicable a una propiedad (filtradas
+ * por tieneAscensor/tieneGas), cruzada con lo que el usuario haya registrado
+ * en propiedad_obligaciones. Una propiedad sin ningún registro aún devuelve
+ * todas sus obligaciones aplicables en estado 'sin_registro', nunca vacío —
+ * el punto del checklist es precisamente mostrar lo que falta declarar.
+ */
+export async function obtenerObligacionesPropiedad(propiedadId: string, tieneAscensor: boolean, tieneGas: boolean): Promise<ObligacionConEstado[]> {
+  const supabase = createServiceClient()
+  const { data } = await supabase
+    .from('propiedad_obligaciones')
+    .select('obligacion_slug, fecha_ultimo_cumplimiento')
+    .eq('propiedad_id', propiedadId)
+
+  const registrado = new Map((data ?? []).map((r) => [r.obligacion_slug, r.fecha_ultimo_cumplimiento as string | null]))
+  const hoy = new Date()
+
+  return obligacionesAplicables(tieneAscensor, tieneGas).map((o) =>
+    calcularEstadoObligacion(o, registrado.get(o.slug) ?? null, hoy),
+  )
 }

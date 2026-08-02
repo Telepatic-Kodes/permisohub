@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { asegurarWorkspace, getWorkspaceActual } from '@/lib/workspace'
-import { obtenerPropiedadesPortafolio, compararConMercado } from '@/lib/propiedades-portafolio-server'
+import { obtenerPropiedadesPortafolio, compararConMercado, obtenerObligacionesPropiedad } from '@/lib/propiedades-portafolio-server'
 import { obtenerSenalesExpansionPorComuna } from '@/lib/cadenas-sucursales-server'
 import { obtenerTendenciasConstruccionPorComuna } from '@/lib/ine-permisos-server'
 
@@ -19,6 +19,8 @@ const NuevaPropiedadSchema = z.object({
   rolSii: z.string().optional(),
   notas: z.string().optional(),
   fechaVencimientoContrato: z.string().optional(),
+  tieneAscensor: z.boolean().optional(),
+  tieneGas: z.boolean().optional(),
 })
 
 export async function GET() {
@@ -46,6 +48,7 @@ export async function GET() {
         comparacion: await compararConMercado(p),
         senalExpansion: senalesExpansion.get(p.comuna) ?? null,
         tendenciaConstruccion: tendenciasConstruccion.get(p.comuna) ?? null,
+        obligaciones: await obtenerObligacionesPropiedad(p.id, p.tieneAscensor, p.tieneGas),
       })),
     )
 
@@ -87,6 +90,8 @@ export async function POST(request: Request) {
         rol_sii: body.rolSii ?? null,
         notas: body.notas ?? null,
         fecha_vencimiento_contrato: body.fechaVencimientoContrato ?? null,
+        tiene_ascensor: body.tieneAscensor ?? false,
+        tiene_gas: body.tieneGas ?? false,
       })
       .select('id')
       .single()

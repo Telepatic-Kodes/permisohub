@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { AlertCircle, CalendarClock, Loader2, Plus, Radar, TrendingDown, TrendingUp, Trash2 } from "lucide-react"
+import { AlertCircle, CalendarClock, ChevronDown, ChevronRight, Loader2, Plus, Radar, ShieldAlert, TrendingDown, TrendingUp, Trash2 } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,8 +12,17 @@ import { TIPO_PROPIEDAD_LABEL, type OperacionMercadoLocal, type TipoPropiedadCom
 import { KpiCard } from "@/components/mercado-inmobiliario/charts/kpi-card"
 import { DistribucionDonut } from "@/components/mercado-inmobiliario/charts/distribucion-donut"
 import { DesviacionBar } from "@/components/mercado-inmobiliario/charts/desviacion-bar"
+import { RankingBarChart } from "@/components/mercado-inmobiliario/charts/ranking-bar-chart"
+import { calcularEstadoObligacion, type EstadoObligacion, type ObligacionRegulatoria } from "@/lib/obligaciones-regulatorias"
 
 const TIPOS_PROPIEDAD: TipoPropiedadComercial[] = ["local_comercial", "oficina", "bodega", "industrial"]
+
+const TIPO_PROPIEDAD_COLOR: Record<TipoPropiedadComercial, string> = {
+  local_comercial: "var(--blueprint)",
+  oficina: "color-mix(in oklch, var(--blueprint) 75%, var(--muted-foreground))",
+  bodega: "color-mix(in oklch, var(--blueprint) 50%, var(--muted-foreground))",
+  industrial: "color-mix(in oklch, var(--blueprint) 25%, var(--muted-foreground))",
+}
 
 interface Propiedad {
   id: string
@@ -26,7 +35,16 @@ interface Propiedad {
   rolSii: string | null
   notas: string | null
   fechaVencimientoContrato: string | null
+  tieneAscensor: boolean
+  tieneGas: boolean
   createdAt: string
+}
+
+interface ObligacionConEstado {
+  obligacion: ObligacionRegulatoria
+  fechaUltimoCumplimiento: string | null
+  proximaFecha: string | null
+  estado: EstadoObligacion
 }
 
 interface Comparacion {
@@ -52,6 +70,15 @@ interface FilaPortafolio {
   comparacion: Comparacion
   senalExpansion: SenalExpansion | null
   tendenciaConstruccion: TendenciaConstruccion | null
+  obligaciones: ObligacionConEstado[]
+}
+
+const ESTADO_OBLIGACION_CONFIG: Record<EstadoObligacion, { label: string; color: string }> = {
+  vencido: { label: "Vencido", color: "var(--state-error, #dc2626)" },
+  por_vencer: { label: "Por vencer", color: "var(--state-warn, #d97706)" },
+  al_dia: { label: "Al día", color: "var(--state-ok, #16a34a)" },
+  sin_registro: { label: "Sin registro", color: "var(--muted-foreground)" },
+  verificar: { label: "Verificar con certificador", color: "var(--modulo-mercado)" },
 }
 
 const VEREDICTO_CONFIG: Record<Comparacion["veredicto"], { label: string; color: string }> = {
@@ -129,6 +156,10 @@ interface ResumenPortafolio {
   sobreMercado: number
   contratosPorVencer: number
   contratosVencidos: number
+  obligacionesVencidas: number
+  obligacionesPorVencer: number
+  porComuna: Record<string, number>
+  porTipo: Record<TipoPropiedadComercial, number>
 }
 
 function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
@@ -141,9 +172,13 @@ function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
     sobreMercado: 0,
     contratosPorVencer: 0,
     contratosVencidos: 0,
+    obligacionesVencidas: 0,
+    obligacionesPorVencer: 0,
+    porComuna: {},
+    porTipo: { local_comercial: 0, oficina: 0, bodega: 0, industrial: 0 },
   }
 
-  for (const { propiedad, comparacion } of filas) {
+  for (const { propiedad, comparacion, obligaciones } of filas) {
     if (propiedad.superficieM2) resumen.superficieTotalM2 += propiedad.superficieM2
     if (propiedad.operacion === "arriendo" && propiedad.precioActualUf) resumen.rentaMensualTotalUf += propiedad.precioActualUf
     if (comparacion.veredicto === "bajo_mercado") resumen.bajoMercado++
@@ -154,41 +189,142 @@ function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
       if (dias < 0) resumen.contratosVencidos++
       else if (dias <= 60) resumen.contratosPorVencer++
     }
+    for (const o of obligaciones) {
+      if (o.estado === "vencido") resumen.obligacionesVencidas++
+      else if (o.estado === "por_vencer") resumen.obligacionesPorVencer++
+    }
+    resumen.porComuna[propiedad.comuna] = (resumen.porComuna[propiedad.comuna] ?? 0) + 1
+    resumen.porTipo[propiedad.tipoPropiedad] += 1
   }
 
   return resumen
 }
 
 function ResumenPortafolioStrip({ resumen }: { resumen: ResumenPortafolio }) {
-  const enRiesgo = resumen.contratosVencidos + resumen.contratosPorVencer
+  const contratosEnRiesgo = resumen.contratosVencidos + resumen.contratosPorVencer
+  const obligacionesEnRiesgo = resumen.obligacionesVencidas + resumen.obligacionesPorVencer
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <KpiCard label="Propiedades" valor={String(resumen.total)} contexto={`${resumen.superficieTotalM2.toLocaleString("es-CL")} m² en total`} />
-      <KpiCard label="Renta mensual" valor={`${formatUf(resumen.rentaMensualTotalUf)} UF`} contexto="solo activos arrendados" />
-      <DistribucionDonut
-        titulo="Vs. mercado"
-        size={56}
-        segmentos={[
-          { label: "Bajo", valor: resumen.bajoMercado, color: "var(--state-warn, #d97706)" },
-          { label: "A mercado", valor: resumen.aMercado, color: "var(--state-ok, #16a34a)" },
-          { label: "Sobre", valor: resumen.sobreMercado, color: "var(--blueprint)" },
-        ]}
-      />
-      <KpiCard
-        label="Contratos en riesgo"
-        valor={String(enRiesgo)}
-        contexto={
-          enRiesgo === 0
-            ? "sin vencimientos próximos"
-            : [
-                resumen.contratosVencidos > 0 ? `${resumen.contratosVencidos} vencidos` : null,
-                resumen.contratosPorVencer > 0 ? `${resumen.contratosPorVencer} por vencer (60d)` : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")
-        }
-      />
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <KpiCard label="Propiedades" valor={String(resumen.total)} contexto={`${resumen.superficieTotalM2.toLocaleString("es-CL")} m² en total`} />
+        <KpiCard label="Renta mensual" valor={`${formatUf(resumen.rentaMensualTotalUf)} UF`} contexto="solo activos arrendados" />
+        <DistribucionDonut
+          titulo="Vs. mercado"
+          size={56}
+          segmentos={[
+            { label: "Bajo", valor: resumen.bajoMercado, color: "var(--state-warn, #d97706)" },
+            { label: "A mercado", valor: resumen.aMercado, color: "var(--state-ok, #16a34a)" },
+            { label: "Sobre", valor: resumen.sobreMercado, color: "var(--blueprint)" },
+          ]}
+        />
+        <KpiCard
+          label="Contratos en riesgo"
+          valor={String(contratosEnRiesgo)}
+          contexto={
+            contratosEnRiesgo === 0
+              ? "sin vencimientos próximos"
+              : [
+                  resumen.contratosVencidos > 0 ? `${resumen.contratosVencidos} vencidos` : null,
+                  resumen.contratosPorVencer > 0 ? `${resumen.contratosPorVencer} por vencer (60d)` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+          }
+        />
+        <KpiCard
+          label="Obligaciones regulatorias"
+          valor={String(obligacionesEnRiesgo)}
+          contexto={
+            obligacionesEnRiesgo === 0
+              ? "sin vencimientos regulatorios próximos"
+              : [
+                  resumen.obligacionesVencidas > 0 ? `${resumen.obligacionesVencidas} vencidas` : null,
+                  resumen.obligacionesPorVencer > 0 ? `${resumen.obligacionesPorVencer} por vencer (30d)` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+          }
+        />
+      </div>
+
+      {resumen.total > 1 && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <RankingBarChart
+            titulo="Exposición del portafolio por comuna"
+            items={Object.entries(resumen.porComuna).map(([label, valor]) => ({ label, valor }))}
+          />
+          <DistribucionDonut
+            titulo="Mezcla por tipo de propiedad"
+            segmentos={(Object.keys(resumen.porTipo) as TipoPropiedadComercial[])
+              .filter((t) => resumen.porTipo[t] > 0)
+              .map((t) => ({ label: TIPO_PROPIEDAD_LABEL[t].singular, valor: resumen.porTipo[t], color: TIPO_PROPIEDAD_COLOR[t] }))}
+          />
+        </div>
+      )}
     </div>
+  )
+}
+
+function ObligacionesToggle({ obligaciones, expandido, onToggle }: { obligaciones: ObligacionConEstado[]; expandido: boolean; onToggle: () => void }) {
+  const vencidas = obligaciones.filter((o) => o.estado === "vencido").length
+  const porVencer = obligaciones.filter((o) => o.estado === "por_vencer").length
+  const color = vencidas > 0 ? "var(--state-error, #dc2626)" : porVencer > 0 ? "var(--state-warn, #d97706)" : "var(--muted-foreground)"
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="inline-flex items-center gap-1 rounded-[3px] border px-2 py-0.5 text-[10px] font-medium transition-colors hover:bg-muted/50"
+      style={{ color, borderColor: color }}
+    >
+      {expandido ? <ChevronDown className="size-2.5" /> : <ChevronRight className="size-2.5" />}
+      <ShieldAlert className="size-2.5" />
+      {vencidas > 0 || porVencer > 0
+        ? `Obligaciones: ${[vencidas > 0 ? `${vencidas} vencidas` : null, porVencer > 0 ? `${porVencer} por vencer` : null].filter(Boolean).join(" · ")}`
+        : `Obligaciones regulatorias (${obligaciones.length})`}
+    </button>
+  )
+}
+
+function ChecklistObligaciones({
+  propiedadId,
+  obligaciones,
+  onRegistrar,
+}: {
+  propiedadId: string
+  obligaciones: ObligacionConEstado[]
+  onRegistrar: (propiedadId: string, slug: string, fecha: string) => void
+}) {
+  return (
+    <ul className="mt-2.5 space-y-2 rounded-lg border border-line-fine bg-muted/20 p-3">
+      {obligaciones.map(({ obligacion, fechaUltimoCumplimiento, proximaFecha, estado }) => {
+        const cfg = ESTADO_OBLIGACION_CONFIG[estado]
+        return (
+          <li key={obligacion.slug} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="min-w-0">
+              <p className="font-medium text-foreground">{obligacion.nombre}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {obligacion.baseLegal} · {obligacion.certificador}
+                {obligacion.periodicidad.tipo === "variable" && ` · ${obligacion.periodicidad.nota}`}
+              </p>
+              {proximaFecha && <p className="text-[10px] text-muted-foreground">Próximo vencimiento: {proximaFecha}</p>}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="rounded-[3px] border px-1.5 py-0.5 text-[10px] font-medium" style={{ color: cfg.color, borderColor: cfg.color }}>
+                {cfg.label}
+              </span>
+              <Input
+                key={fechaUltimoCumplimiento ?? "sin-registro"}
+                type="date"
+                defaultValue={fechaUltimoCumplimiento ?? ""}
+                onChange={(e) => e.target.value && onRegistrar(propiedadId, obligacion.slug, e.target.value)}
+                className="h-7 w-[130px] text-[11px]"
+              />
+            </div>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
@@ -200,6 +336,8 @@ export default function MiCarteraPage() {
 
   const resumen = useMemo(() => calcularResumen(filas), [filas])
 
+  const [expandido, setExpandido] = useState<string | null>(null)
+
   const [form, setForm] = useState({
     direccion: "",
     comuna: "",
@@ -209,6 +347,8 @@ export default function MiCarteraPage() {
     precioActualUf: "",
     fechaVencimientoContrato: "",
     notas: "",
+    tieneAscensor: false,
+    tieneGas: false,
   })
 
   function setField<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
@@ -256,6 +396,8 @@ export default function MiCarteraPage() {
           precioActualUf: form.precioActualUf ? Number(form.precioActualUf) : undefined,
           fechaVencimientoContrato: form.fechaVencimientoContrato || undefined,
           notas: form.notas || undefined,
+          tieneAscensor: form.tieneAscensor,
+          tieneGas: form.tieneGas,
         }),
       })
 
@@ -264,7 +406,7 @@ export default function MiCarteraPage() {
         throw new Error(err.error ?? "Error del servidor")
       }
 
-      setForm({ direccion: "", comuna: "", tipoPropiedad: "local_comercial", superficieM2: "", operacion: "arriendo", precioActualUf: "", fechaVencimientoContrato: "", notas: "" })
+      setForm({ direccion: "", comuna: "", tipoPropiedad: "local_comercial", superficieM2: "", operacion: "arriendo", precioActualUf: "", fechaVencimientoContrato: "", notas: "", tieneAscensor: false, tieneGas: false })
       await cargar()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido")
@@ -279,6 +421,32 @@ export default function MiCarteraPage() {
       setFilas((prev) => prev.filter((f) => f.propiedad.id !== id))
     } catch {
       setError("No se pudo eliminar la propiedad")
+    }
+  }
+
+  async function handleRegistrarObligacion(propiedadId: string, obligacionSlug: string, fecha: string) {
+    try {
+      const res = await fetch(`/api/propiedades-portafolio/${propiedadId}/obligaciones`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ obligacionSlug, fechaUltimoCumplimiento: fecha }),
+      })
+      if (!res.ok) throw new Error("No se pudo registrar la obligación")
+
+      setFilas((prev) =>
+        prev.map((f) =>
+          f.propiedad.id !== propiedadId
+            ? f
+            : {
+                ...f,
+                obligaciones: f.obligaciones.map((o) =>
+                  o.obligacion.slug !== obligacionSlug ? o : calcularEstadoObligacion(o.obligacion, fecha, new Date()),
+                ),
+              },
+        ),
+      )
+    } catch {
+      setError("No se pudo registrar la obligación")
     }
   }
 
@@ -351,6 +519,16 @@ export default function MiCarteraPage() {
                     <Label>Notas</Label>
                     <Textarea value={form.notas} onChange={(e) => setField("notas", e.target.value)} placeholder="opcional — ej: contrato vence dic 2026" />
                   </div>
+                  <div className="flex items-center gap-4 sm:col-span-2">
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <input type="checkbox" checked={form.tieneAscensor} onChange={(e) => setField("tieneAscensor", e.target.checked)} className="size-3.5" />
+                      Tiene ascensor
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <input type="checkbox" checked={form.tieneGas} onChange={(e) => setField("tieneGas", e.target.checked)} className="size-3.5" />
+                      Tiene instalación de gas
+                    </label>
+                  </div>
                 </div>
 
                 <Button type="submit" disabled={saving} className="bg-primary text-white hover:bg-primary/90">
@@ -384,7 +562,7 @@ export default function MiCarteraPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {filas.map(({ propiedad, comparacion, senalExpansion, tendenciaConstruccion }) => (
+              {filas.map(({ propiedad, comparacion, senalExpansion, tendenciaConstruccion, obligaciones }) => (
                 <div key={propiedad.id} className="rounded-lg border border-line-fine bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -408,7 +586,16 @@ export default function MiCarteraPage() {
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     <VeredictoMercado comparacion={comparacion} />
                     {propiedad.fechaVencimientoContrato && <VencimientoBadge fecha={propiedad.fechaVencimientoContrato} />}
+                    <ObligacionesToggle
+                      obligaciones={obligaciones}
+                      expandido={expandido === propiedad.id}
+                      onToggle={() => setExpandido((prev) => (prev === propiedad.id ? null : propiedad.id))}
+                    />
                   </div>
+
+                  {expandido === propiedad.id && (
+                    <ChecklistObligaciones propiedadId={propiedad.id} obligaciones={obligaciones} onRegistrar={(id, slug, fecha) => void handleRegistrarObligacion(id, slug, fecha)} />
+                  )}
 
                   {(senalExpansion || tendenciaConstruccion?.tendencia === "creciente") && (
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
