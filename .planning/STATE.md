@@ -1,24 +1,31 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `182dd0e` feat(13-02): add resumen ejecutivo IA prompt builders
+- `2026-08-02` `c3e920a` feat(13-02): add streamConContexto without web search tool
+- `2026-08-02` `017fc96` feat(13-02): add shared formatFechaCorta date formatter
+- `2026-08-02` `025e3f0` feat(13-01): extract evaluarOportunidad() as single source of truth for scoring
+- `2026-08-02` `e97818d` test(13-01): add failing test for evaluarOportunidad()
+- `2026-08-02` `aa9e797` docs(13): create phase plan
+- `2026-08-02` `684cb8a` docs(state): record phase 13 context session
 - `2026-08-02` `e815a65` docs(13): capture phase context
 
 _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, requirements, config bump, roadmap) ya están descritos en "Current Position" y en los propios PROJECT.md/ROADMAP.md/REQUIREMENTS.md — son el ciclo estándar de `/gsd:new-milestone`, no necesitan bullet propio en Accumulated Context. Sección alimentada automáticamente por `.githooks/post-commit` — cada commit agrega una línea acá. Un comando/sesión futura la digiere hacia una narrativa real en "Current Position"/"Accumulated Context" y la limpia. Ver Key Decisions en PROJECT.md: "captura automática, curación cuando se pueda".)_
 
 ## Current Position
 
-Phase: 13 of 15 (Refactor de Scoring + Dashboard de Detalle) — contexto listo, próximo paso `/gsd:plan-phase 13`
-Plan: TBD (contexto capturado, `/gsd:plan-phase` no se ha corrido aún)
-Status: Contexto de fase capturado — listo para planificar Phase 13
-Last activity: 2026-08-02 — `/gsd:discuss-phase 13` capturó decisiones en `phases/13-refactor-de-scoring-dashboard-de-detalle/13-CONTEXT.md`: jerarquía de la ficha (dato duro → posicionamiento → resumen IA → historial → comparables, en tabs), banner de advertencia cuando `muestra_n` es chica, criterio y comportamiento de comparables sugeridos (mismo comuna+tipo+operación, mensaje explícito si 0/1), rentabilidad implícita de zona (badge "Estimado de zona", desglose completo, aplica a toda ficha de la comuna×tipo, mensaje explícito si falta cobertura), resumen ejecutivo IA bajo demanda (no auto, patrón `InformeEjecutivo` existente) sin bloquear el resto de la ficha.
+Phase: 13 of 15 (Refactor de Scoring + Dashboard de Detalle) — ejecución en curso, planes 01-07
+Plan: 02 de 7 completos (wave 1: 13-01 y 13-02, sin dependencias entre sí) — 03-07 pendientes
+Status: Plan 13-01 completo (TDD RED→GREEN, 9/9 tests, tsc limpio) — Plan 13-02 completo (3 utilidades compartidas: lib/formato-fecha.ts, streamConContexto() en lib/ai.ts, lib/resumen-oportunidad-prompts.ts) — ambos desbloquean 13-03 en adelante
+Last activity: 2026-08-02 — `/gsd:execute-phase 13` ejecutó plan 13-02: `lib/formato-fecha.ts` (formatFechaCorta movida verbatim desde oportunidades/page.tsx), `streamConContexto()` agregada a `lib/ai.ts` (streaming Responses API SIN tool web_search_preview — estructuralmente imposible que busque en vivo, para narrar datos ya calculados server-side), `lib/resumen-oportunidad-prompts.ts` (builders del resumen ejecutivo IA de una oportunidad, nunca fabrica campos null). Ningún archivo existente fuera de lib/ai.ts modificado. Ver 13-02-SUMMARY.md.
 
-Progress: [░░░░░░░░░░] 0% (roadmap listo, ejecución no iniciada)
+Progress: [██░░░░░░░░] ~29% (2/7 planes de la fase 13 completos)
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
-| 13 | Refactor de Scoring + Dashboard de Detalle | Not started — DETA-01..07 |
+| 13 | Refactor de Scoring + Dashboard de Detalle | En curso (2/7 planes) — 13-01 ✅ (evaluarOportunidad() extraída y testeada en lib/mercado-locales-server.ts, fuente única de verdad de scoring — ver 13-01-SUMMARY.md) 13-02 ✅ (lib/formato-fecha.ts + streamConContexto() en lib/ai.ts sin tool web_search_preview + lib/resumen-oportunidad-prompts.ts — ver 13-02-SUMMARY.md) |
 | 14 | Comparación Lado a Lado | Not started — COMPA-01..04 |
 | 15 | Informe Exportable | Not started — INFO-01..04 |
 | 10 | Motor de Zonificación | ✅ Completa — 10-01 ✅ (migración zonificacion_cache + proyectos.zona_* aplicada vía Supabase MCP) 10-02 ✅ (lib/zonificacion-comunas.ts, registro 4 comunas) 10-03 ✅ (lib/geocoding.ts, Nominatim geocoder) 10-04 ✅ (lib/zonificacion.ts + ruta GET /api/zonificacion/lookup, orquestación completa) 10-05 ✅ (lib/zonificacion-server.ts + after() en POST/PATCH /api/proyectos, persistencia automática de zona_* sin UI) |
@@ -113,10 +120,12 @@ See: .planning/PROJECT.md (updated 2026-08-02 al iniciar milestone v1.6)
 
 - [v1.6] **Roadmap creado (2026-08-02)** — 3 fases derivadas del research (`research/SUMMARY.md`), numeración 13-15 (continúa desde 12, último número formal de v1.4 — v1.5 y las sesiones ad-hoc posteriores no usaron fases GSD, ver MILESTONES.md/PROJECT.md Key Decisions). Fase 13 (Detalle): refactor de `evaluarOportunidad()` a función pura + ficha `/oportunidades/[id]` — sienta el contrato de datos (`muestra_n` declarado, helper de fecha compartido, propagación de UF ya calculado) que evita que las fases siguientes reintroduzcan bugs ya corregidos en el proyecto (benchmark circular, timezone). Fase 14 (Comparación): reusa los widgets ya resueltos por listing en la Fase 13, estado tipado `{operacion, tipoPropiedad, ids}` persistido en la URL para prevenir estructuralmente mezclar tipo/operación. Fase 15 (Informe): vista de impresión de lo que Detalle/Comparación ya muestran en pantalla — decisión de arquitectura del informe (`@media print` vs. `jspdf`+`html2canvas`) deliberadamente diferida a confirmarse al inicio de esa fase, no forzada en el roadmap. 15/15 requisitos v1.6 mapeados 1:1 por bloque (DETA-01..07→13, COMPA-01..04→14, INFO-01..04→15), sin huérfanos ni duplicados.
 
+- [13-01] **`evaluarOportunidad()` extraída (2026-08-02, commits `e97818d` test / `025e3f0` feat)** — función pura exportada desde `lib/mercado-locales-server.ts`, fuente única de verdad del scoring de `reasonCodes` (`below_p25_ufm2`/`below_p25_uf` mutuamente excluyentes vía `else if`, `price_drop_7d` comparando solo las últimas dos entradas de `historialReciente`, no el mínimo/máximo de la ventana de 7 días — comportamiento preservado byte a byte del código inline que reemplaza). Cubierta por `tests/unit/evaluar-oportunidad.test.ts` (9/9 casos). `obtenerOportunidadesMercadoLocales()` sin cambio de firma ni comportamiento — confirmado en sus 5 call sites (`oportunidades/page.tsx`, `reportes-mercado/route.ts`, `dashboard/page.tsx` ×2, `mercado-inmobiliario-copiloto.ts`). Desbloquea planes 13-03 en adelante (ficha de detalle y comparables reutilizan esta función en vez de reimplementar el cálculo). Sin deviations. Ver 13-01-SUMMARY.md.
+
 ## Session Continuity
 
 Last session: 2026-08-02
-Stopped at: [torre-control-cierre-deuda] completo y mergeado a `main`/`origin/main` — registro de fuentes bajado de 6 a 1 needs-decision (5 cerrados: 4 con decisión ya tomada/mal reflejada, 1 — dom-digital — cerrado "no ahora" tras investigar viabilidad real). Solo queda abierto `comunas-chile-base` (345 comunas, sin fuente automatizable; 23 ya spot-checkeadas, próximo spot-check en 6-12 meses). No queda ningún pendiente técnico conocido de este pase.
+Stopped at: Completado 13-01-PLAN.md (evaluarOportunidad() extraída, 9/9 tests, tsc limpio, ver 13-01-SUMMARY.md). Fase 13 en ejecución — quedan 13-02..13-07.
 Resume file: None
 
 ---
