@@ -44,7 +44,7 @@ Responde ÚNICAMENTE con JSON válido, sin texto adicional, con esta estructura 
   "fuentes": ["string (portales, noticias o reportes consultados)"]
 }
 
-REGLA CRÍTICA E INQUEBRANTABLE SOBRE DATOS REALES: si el contexto del usuario incluye un bloque "[BANDA DE PRECIO REAL]", el KPI de precio (label "Precio UF/m²/mes" o similar) DEBE usar exactamente ese valor — nunca lo inventes ni lo ajustes — y su campo "verificado" debe ser true. Si NO se te entrega esa banda, estima el precio con tu conocimiento del mercado, pero "verificado" debe ser false y el campo "context" debe indicar que es una estimación no verificada contra datos reales. El mismo criterio aplica a "[OPORTUNIDADES REALES]" (si vienen, priorízalas sobre inventar una genérica) y "[NOTICIAS RECIENTES]" (si vienen, cítalas en "fuentes" con su título en vez de nombrar portales genéricos).
+REGLA CRÍTICA E INQUEBRANTABLE SOBRE DATOS REALES: si el contexto del usuario incluye un bloque "[BANDA DE PRECIO REAL]", el KPI de precio (label "Precio UF/m²/mes" o similar) DEBE usar exactamente ese valor — nunca lo inventes ni lo ajustes — y su campo "verificado" debe ser true. Si NO se te entrega esa banda, estima el precio con tu conocimiento del mercado, pero "verificado" debe ser false y el campo "context" debe indicar que es una estimación no verificada contra datos reales. El mismo criterio aplica a "[OPORTUNIDADES REALES]" (si vienen, priorízalas sobre inventar una genérica) y "[NOTICIAS RECIENTES]" (si vienen, cítalas en "fuentes" con su título en vez de nombrar portales genéricos). Si viene un bloque "[ACTIVIDAD CONSTRUCTIVA HISTÓRICA — INE]", el campo "zona.tendencia" DEBE basarse en esa cifra real (creciente/estable/decreciente + el % de variación entregado) en vez de adivinar una tendencia — deja explícito que es histórica (no un dato de hoy) y agrega "INE" a "fuentes". Si NO viene ese bloque, "zona.tendencia" queda como estimación cualitativa de tu conocimiento del mercado.
 
 REGLAS OBLIGATORIAS:
 - kpis: 4–5 items en este orden cuando apliquen: Precio UF/m²/mes → Cap Rate → Vacancia → Tiempo colocación → Tendencia 12M
@@ -113,6 +113,7 @@ export interface ContextoRealReporte {
   oportunidadesTexto: string | null
   noticiasTexto: string | null
   macroTexto: string
+  construccionTexto: string | null // actividad constructiva histórica INE, null si la comuna no tiene dato
 }
 
 function clip(value: unknown, maxLen: number): string {
@@ -126,6 +127,7 @@ export function buildUserQueryReporteMercado(input: ReporteMercadoInput, context
   if (contexto.bandaPrecioTexto) bloques.push(`[BANDA DE PRECIO REAL]\n${contexto.bandaPrecioTexto}`)
   if (contexto.oportunidadesTexto) bloques.push(`[OPORTUNIDADES REALES]\n${contexto.oportunidadesTexto}`)
   if (contexto.noticiasTexto) bloques.push(`[NOTICIAS RECIENTES]\n${contexto.noticiasTexto}`)
+  if (contexto.construccionTexto) bloques.push(`[ACTIVIDAD CONSTRUCTIVA HISTÓRICA — INE]\n${contexto.construccionTexto}`)
   bloques.push(contexto.macroTexto)
 
   const parts = [

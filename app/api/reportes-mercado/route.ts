@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { parseAiJson } from '@/lib/ai-parse'
 import { obtenerBandasMercadoLocales, obtenerOportunidadesMercadoLocales } from '@/lib/mercado-locales-server'
 import { fetchMacroData } from '@/lib/indicadores-macro'
+import { obtenerTendenciaConstruccionComuna } from '@/lib/ine-permisos-server'
 import {
   SYSTEM_REPORTE_MERCADO,
   ReporteMercadoSchema,
@@ -72,7 +73,20 @@ async function construirContextoReal(input: ReporteMercadoInput): Promise<Contex
     .filter(Boolean)
     .join('\n')
 
-  return { bandaPrecioTexto, oportunidadesTexto, noticiasTexto, macroTexto }
+  const tendenciaConstruccion = await obtenerTendenciaConstruccionComuna(input.comuna).catch(() => null)
+  const construccionTexto = tendenciaConstruccion
+    ? [
+        `Superficie construida NO habitacional + mixta (proxy de actividad comercial/industrial) en ${input.comuna}, dato histórico del INE (fuente oficial, licencia CC BY-SA — cita "INE" en fuentes).`,
+        `Últimos 3 años con dato (hasta ${tendenciaConstruccion.anioMax}): ${Math.round(tendenciaConstruccion.m2Recientes).toLocaleString('es-CL')} m² construidos.`,
+        `3 años anteriores a esos: ${Math.round(tendenciaConstruccion.m2Previos).toLocaleString('es-CL')} m².`,
+        tendenciaConstruccion.variacionPct !== null
+          ? `Variación: ${tendenciaConstruccion.variacionPct >= 0 ? '+' : ''}${tendenciaConstruccion.variacionPct.toFixed(0)}% → tendencia ${tendenciaConstruccion.tendencia}.`
+          : `Sin dato del período anterior para calcular variación — tendencia ${tendenciaConstruccion.tendencia}.`,
+        `IMPORTANTE: esto es histórico (el INE no ha publicado años más recientes en este servicio) — nunca lo presentes como actividad "actual" o "de este año".`,
+      ].join(' ')
+    : null
+
+  return { bandaPrecioTexto, oportunidadesTexto, noticiasTexto, macroTexto, construccionTexto }
 }
 
 export async function POST(request: Request) {

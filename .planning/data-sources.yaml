@@ -306,6 +306,19 @@
   status: stale-kb
   notes: "Cada entrada con verificado: true/false explícito — la disciplina más rigurosa de las 4 bases normativas curadas. Decisión founder (1 ago 2026): cadencia fija trimestral — ver lguc-knowledge."
 
+- id: ine-permisos-edificacion
+  name: "INE — permisos de edificación georreferenciados (CRF_PE_AGOL)"
+  type: scraper
+  owner_files: [lib/scrapers/ine-permisos-edificacion.ts, lib/ine-permisos-server.ts]
+  trigger: manual
+  called_from: [app/api/scraper/ine-permisos-edificacion/route.ts, app/api/reportes-mercado/route.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-01
+  monitoring: sentry
+  duplicate_of: null
+  status: active
+  notes: "Investigación de fuentes (1 ago 2026) encontró el servicio ArcGIS oficial del INE (cuenta 'publicaciones_geodatos', misma que publica los Censos) — verificado en vivo con consultas HTTP reales, no solo documentación: 135.338 permisos nacionales, agregables por comuna/año/uso_destino vía groupByFieldsForStatistics. Se descartó deliberadamente el espejo del Observatorio de Ciudades UC (mismo dato, pero republicado bajo CC BY-NC 4.0 — no comercial). El servicio oficial es CC BY-SA 4.0 (uso comercial permitido, solo exige atribución 'Fuente: INE' — ya wireado en el prompt de reportes-mercado). Cobertura real, confirmada con la ingesta completa (4.243 filas agregadas, 121 comunas — capitales regionales/provinciales + comunas >50.000 habitantes, no las 346): 2010-2022 — HISTÓRICO, el INE no ha publicado años más recientes en este servicio; usado para calcular tendencia de superficie no-habitacional/mixta por comuna (proxy de actividad comercial/industrial) en vez de que la IA la adivine. Sin cron propio todavía — no amerita hasta que INE publique un año nuevo."
+
 - id: mapa-formularios
   name: "Mapa de Formularios MINVU"
   type: static-kb
