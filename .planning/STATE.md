@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `8124061` docs: record commit log entry
 - `2026-08-02` `785c891` chore: complete v1.6 milestone
 - `2026-08-02` `d8ed8ed` docs: record commit log entry
 - `2026-08-02` `48b1d44` docs(phase-15): complete phase execution, close milestone v1.6
@@ -60,12 +61,12 @@ _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, req
 
 ## Current Position
 
-Phase: 15 of 15 (Informe Exportable) — COMPLETA (3/3 planes)
-Plan: Fase 15 cerrada. Plan 15-01 (infraestructura compartida), 15-02 (informe individual `/oportunidades/[id]/informe`) y 15-03 (informe de comparación `/oportunidades/comparar/informe`) completos, cada uno con su checkpoint humano aprobado en vivo por el usuario.
-Status: Milestone v1.6 (Reportes Profesionales de Oportunidades) — las 3 fases (13, 14, 15) están completas. INFO-01 a INFO-04 verificados en vivo: 15-02 cerró INFO-01 + las porciones de INFO-03/INFO-04 del informe individual (aprobado "aprobado", 8 pasos sin hallazgos); 15-03 cerró INFO-02 + las porciones de INFO-03/INFO-04 del informe de comparación, incluida la defensa de Pitfall 5 (aprobado "aprobado" en vivo). Próximo paso: verificar si quedan fases pendientes en ROADMAP.md para el milestone v1.6, o si corresponde `/gsd:complete-milestone`.
-Last activity: 2026-08-02 — Cerrado el checkpoint Task 3 de Plan 15-02 (informe individual) por el usuario ("aprobado", 8 pasos verificados en vivo: link de entrada, navegación, portada con campos editables, guard de precio, vigencia por fila, metodología, Cmd+P sin sidebar/toolbar). Plan 15-03 (informe de comparación) ya había cerrado su propio checkpoint también en vivo (ver 15-03-SUMMARY.md). Fase 15 y milestone v1.6 completos.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-08-02 — Milestone v1.7 (Cabida Comercial) started
 
-Progress: [██████████] 100% (3/3 planes de la fase 15 completos — Fase 15 y milestone v1.6 completos)
+Progress: [░░░░░░░░░░] 0% (milestone v1.7 recién iniciado)
 
 ## Phases Status
 
@@ -89,9 +90,9 @@ Progress: [██████████] 100% (3/3 planes de la fase 15 comple
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-02 al cerrar milestone v1.6)
+See: .planning/PROJECT.md (updated 2026-08-02 al iniciar milestone v1.7)
 **Core value:** El copiloto IA del arquitecto chileno — acelera y automatiza la tramitación de permisos DOM
-**Current focus:** Milestone v1.6 (Reportes Profesionales de Oportunidades) shipped 2026-08-02. Planeando próximo milestone vía `/gsd:new-milestone`.
+**Current focus:** Milestone v1.7 (Cabida Comercial — Demografía y Consumo) en definición de requirements.
 
 ## Accumulated Context
 

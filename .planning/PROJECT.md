@@ -186,4 +186,18 @@ Serie de sesiones ad-hoc entre v1.5 y v1.6 (sin milestone formal propio) — cap
 - **v1.6 Reportes Profesionales de Oportunidades** (shipped 2026-08-02) — Dashboard de detalle por oportunidad (posicionamiento vs. cohorte, historial, señales, comparables, resumen ejecutivo IA), comparación lado a lado (2-5 oportunidades, prevención estructural de mezclar tipo/operación), informe exportable/imprimible vía `@media print` con disciplina de fechas de vigencia. Full detail: `.planning/milestones/v1.6-ROADMAP.md`.
 
 ---
-*Last updated: 2026-08-02 — cierre del milestone v1.6 (Reportes Profesionales de Oportunidades) vía `/gsd:complete-milestone`*
+
+## Current Milestone: v1.7 Cabida Comercial (Demografía y Consumo)
+
+**Goal:** Determinar si hay demanda real ("cabida") para un nuevo supermercado, minimarket, strip center o power center en una oportunidad, cruzando datos públicos de demografía y consumo dentro de un radio de influencia (isócrona) con la competencia existente.
+
+**Target features:**
+- Tab "Cabida Comercial" en la ficha de detalle de oportunidad (`/oportunidades/[id]`), junto a posicionamiento/comparables/historial (v1.6) — interfaz diseñada para poder correrse standalone sobre cualquier dirección/comuna en un milestone futuro, no solo atada a una oportunidad ya cargada
+- Cruce de demografía y gasto de consumo (fuentes públicas chilenas: INE, encuestas de presupuesto familiar, etc.) dentro del radio de influencia de la ubicación
+- Mapeo de competencia existente por formato (supermercado, minimarket, strip center, power center) dentro de ese radio
+- Señal de cabida por formato — nunca binaria sin evidencia, con nivel de confianza y fuente citada (misma disciplina "nunca fabricar/ocultar datos" de v1.5/v1.6)
+
+**Alcance confirmado con la founder (2 ago 2026):** radio de influencia (isócrona), no nivel comuna — el founder priorizó precisión sobre disponibilidad garantizada de datos; investigación previa a Requirements para validar qué fuentes públicas chilenas realmente permiten ese nivel de granularidad antes de comprometer alcance.
+
+---
+*Last updated: 2026-08-02 — inicio del milestone v1.7 (Cabida Comercial) vía `/gsd:new-milestone`*
