@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `706452c` docs(15-03): complete informe de comparación plan
 - `2026-08-02` `9d257e0` docs(15-02): complete informe individual plan, close phase 15
 - `2026-08-02` `0385318` docs(15-02): record checkpoint progress (Tasks 1-2 done, Task 3 human-verify pending)
 - `2026-08-02` `c7132ff` feat(15-02): wire "Exportar informe" entry point en ficha de detalle

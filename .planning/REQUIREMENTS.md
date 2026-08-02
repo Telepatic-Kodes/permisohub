@@ -26,10 +26,10 @@ Elevar `/mercado-inmobiliario/oportunidades` (hoy una lista plana + un histogram
 
 ### INFO — Informe Exportable
 
-- [ ] **INFO-01**: Usuario puede exportar/imprimir un informe de una oportunidad individual con portada, cuerpo y sección de metodología/fuentes
-- [ ] **INFO-02**: Usuario puede exportar/imprimir un informe de una comparación de oportunidades con la misma disciplina de fuentes
-- [ ] **INFO-03**: El informe muestra fecha de generación Y fecha de última verificación por dato
-- [ ] **INFO-04**: Usuario puede personalizar el informe con un campo "preparado por / para" en la portada
+- [x] **INFO-01**: Usuario puede exportar/imprimir un informe de una oportunidad individual con portada, cuerpo y sección de metodología/fuentes
+- [x] **INFO-02**: Usuario puede exportar/imprimir un informe de una comparación de oportunidades con la misma disciplina de fuentes
+- [x] **INFO-03**: El informe muestra fecha de generación Y fecha de última verificación por dato
+- [x] **INFO-04**: Usuario puede personalizar el informe con un campo "preparado por / para" en la portada
 
 ### Future Requirements (v2+)
 
@@ -61,10 +61,10 @@ Elevar `/mercado-inmobiliario/oportunidades` (hoy una lista plana + un histogram
 | COMPA-02 | 14 | Complete |
 | COMPA-03 | 14 | Complete |
 | COMPA-04 | 14 | Complete |
-| INFO-01 | 15 | Pending |
-| INFO-02 | 15 | Pending |
-| INFO-03 | 15 | Pending |
-| INFO-04 | 15 | Pending |
+| INFO-01 | 15 | Complete |
+| INFO-02 | 15 | Complete |
+| INFO-03 | 15 | Complete |
+| INFO-04 | 15 | Complete |
 
 **Coverage:**
 - v1.6 requirements: 15 total

@@ -34,7 +34,7 @@ Full details archived: `.planning/milestones/1.4-ROADMAP.md`
 
 - [x] **Phase 13: Refactor de Scoring + Dashboard de Detalle** — Ficha de detalle por oportunidad en su propia ruta, con posicionamiento vs. cohorte, historial de precio, señales y resumen ejecutivo IA (completed 2026-08-02)
 - [x] **Phase 14: Comparación Lado a Lado** — Selección de 2-5 oportunidades del mismo tipo/operación, comparadas en tabla vía estado-en-URL (completed 2026-08-02)
-- [ ] **Phase 15: Informe Exportable** — Vista imprimible/exportable de una oportunidad o comparación, con portada, metodología y personalización
+- [x] **Phase 15: Informe Exportable** — Vista imprimible/exportable de una oportunidad o comparación, con portada, metodología y personalización (completed 2026-08-02)
 
 ## Phase Details
 
@@ -103,7 +103,7 @@ Plans:
 3. El informe muestra fecha de generación Y fecha de última verificación por dato (nunca un snapshot sin fecha)
 4. Usuario puede personalizar el informe con un campo "preparado por / para" en la portada
 
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 15-01-PLAN.md — Infraestructura compartida: fix de layout de impresión (sidebar), formatTimestampCorto, PrintButton/PreparadoPorPara/PortadaInforme/MetodologiaInforme
@@ -116,7 +116,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 13. Refactor de Scoring + Dashboard de Detalle | 0/7 | Complete    | 2026-08-02 |
 | 14. Comparación Lado a Lado | 0/3 | Complete    | 2026-08-02 |
-| 15. Informe Exportable | 0/TBD | Not started | - |
+| 15. Informe Exportable | 0/TBD | Complete    | 2026-08-02 |
 
 ---
 
