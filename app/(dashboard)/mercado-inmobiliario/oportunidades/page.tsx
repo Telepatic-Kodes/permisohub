@@ -1,10 +1,11 @@
-import { TrendingDown, Radar } from "lucide-react"
+import { TrendingDown, TrendingUp, Radar } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { obtenerOportunidadesMercadoLocales } from "@/lib/mercado-locales-server"
 import { obtenerSenalesExpansionPorComuna } from "@/lib/cadenas-sucursales-server"
+import { obtenerTendenciasConstruccionPorComuna } from "@/lib/ine-permisos-server"
 import { TIPO_PROPIEDAD_LABEL, type OperacionMercadoLocal, type TipoPropiedadComercial } from "@/lib/scrapers/mercado-locales-common"
 
 const TIPOS_PROPIEDAD_VALIDOS: TipoPropiedadComercial[] = ["local_comercial", "oficina", "bodega", "industrial"]
@@ -54,6 +55,15 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
   // si esto falla, las oportunidades se siguen mostrando igual, solo sin badge.
   const comunasPresentes = Array.from(new Set(oportunidades.map((o) => o.comuna)))
   const senalesExpansion = await obtenerSenalesExpansionPorComuna(comunasPresentes).catch(() => new Map())
+
+  // Actividad constructiva histórica del INE (2010-2022, CC BY-SA — atribuir
+  // "INE") como segunda señal honesta: solo se muestra cuando la comuna tuvo
+  // un alza real (+15% o más) de superficie no-habitacional/mixta en sus
+  // últimos años con dato — nunca "estable"/"decreciente", eso sería ruido
+  // para una lista de oportunidades, no una señal de interés.
+  const tendenciasConstruccion = await obtenerTendenciasConstruccionPorComuna(comunasPresentes).catch(
+    () => new Map(),
+  )
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -141,6 +151,12 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
                       {formatFechaCorta(senalesExpansion.get(o.comuna)!.fechaRegistro)
                         ? ` (registrada ${formatFechaCorta(senalesExpansion.get(o.comuna)!.fechaRegistro)})`
                         : ""}
+                    </span>
+                  )}
+                  {tendenciasConstruccion.get(o.comuna)?.tendencia === "creciente" && (
+                    <span className="inline-flex items-center gap-1 rounded-[3px] border border-modulo-mercado/20 bg-modulo-mercado-subtle px-2 py-0.5 text-[10px] text-modulo-mercado">
+                      <TrendingUp className="size-2.5" />
+                      Actividad constructiva histórica en alza (INE, {tendenciasConstruccion.get(o.comuna)!.variacionPct?.toFixed(0)}%)
                     </span>
                   )}
                 </div>

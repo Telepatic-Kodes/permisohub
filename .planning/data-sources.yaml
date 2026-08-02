@@ -311,7 +311,7 @@
   type: scraper
   owner_files: [lib/scrapers/ine-permisos-edificacion.ts, lib/ine-permisos-server.ts]
   trigger: manual
-  called_from: [app/api/scraper/ine-permisos-edificacion/route.ts, app/api/reportes-mercado/route.ts]
+  called_from: [app/api/scraper/ine-permisos-edificacion/route.ts, app/api/reportes-mercado/route.ts, app/(dashboard)/mercado-inmobiliario/oportunidades/page.tsx]
   freshness_sla_days: null
   last_verified: 2026-08-01
   monitoring: sentry
