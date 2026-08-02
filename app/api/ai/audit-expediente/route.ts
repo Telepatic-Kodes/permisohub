@@ -113,7 +113,12 @@ Responde SOLO con JSON válido (sin markdown, sin texto adicional):
 }`
 
   try {
-    const text = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 3000 })
+    // 3000 → 4500: el array "documentos" escala con la cantidad de PDFs
+    // subidos al expediente, no es un tamaño fijo — un expediente con varios
+    // documentos podía truncar el JSON a medias (falla visible, no silenciosa,
+    // porque JSON.parse abajo lanza y el catch devuelve 500 — pero mejor
+    // evitarlo con más margen que depender del error).
+    const text = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 4500 })
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('No JSON en respuesta')
 

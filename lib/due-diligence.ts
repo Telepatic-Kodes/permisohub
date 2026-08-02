@@ -13,6 +13,7 @@
 // ---------------------------------------------------------------------------
 
 import { aiComplete, aiCompleteWithPDF } from '@/lib/ai'
+import { reportWarning } from '@/lib/observability'
 import {
   getContextoNormativo,
   getArticuloById,
@@ -448,11 +449,26 @@ export async function synthesizeDueDiligence(
   proyecto: ProyectoContexto,
   generadoEl: string,
 ): Promise<DueDiligenceResult> {
+  // 4096 → 8000: esta etapa cruza TODOS los extracts en un solo JSON
+  // (hallazgos, inventario, vigencias, próximos pasos) — escala con el N° de
+  // documentos del expediente, no con un tamaño fijo. Con 4096 un expediente
+  // con varios documentos podía truncar el JSON a medias; extractJson()
+  // devolvía null y cada campo abajo caía a su default (`hallazgos: []`,
+  // `riesgoGlobal: 'MEDIO'`) SIN ningún error visible — un expediente con
+  // hallazgos reales podía mostrarse como "sin hallazgos". El reportWarning
+  // de abajo hace que al menos quede visible en Sentry/logs si vuelve a
+  // pasar, en vez de fallar en silencio absoluto.
   const text = await aiComplete(
     [{ role: 'user', content: buildSynthesisPrompt(extracts, proyecto) }],
-    { max_tokens: 4096 },
+    { max_tokens: 8000 },
   )
   const parsed = extractJson<SynthesisPayload>(text)
+  if (!parsed) {
+    reportWarning('synthesizeDueDiligence: JSON no parseable (posible truncamiento) — el informe cae a defaults sin hallazgos', {
+      scope: 'due-diligence.synthesize',
+      extra: { proyecto: proyecto.nombre, nDocumentos: extracts.length, largoRespuesta: text.length },
+    })
+  }
 
   // Post-proceso de citas + estado de revisión: cada hallazgo nace 'propuesto'
   // con su fundamento normativo resuelto y verificado contra la base.

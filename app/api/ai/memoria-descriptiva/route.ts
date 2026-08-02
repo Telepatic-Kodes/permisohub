@@ -104,7 +104,11 @@ Genera la memoria con estas secciones exactas en orden:
 Usa formato formal con mayúsculas para títulos de sección. Sé técnico y preciso. Cita artículos OGUC relevantes. Incluye valores numéricos donde corresponde.`
 
   try {
-    const memoria = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 4096 })
+    // 4096 → 6000: documento formal de 7 secciones detalladas (programa
+    // arquitectónico por piso, cuadro de superficies, citas OGUC) — 4096 da
+    // poco margen para una respuesta genuinamente extensa, mismo patrón de
+    // riesgo que se encontró y corrigió en streamConBusquedaWeb (Tasación).
+    const memoria = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 6000 })
 
     // Extract section titles (lines that are ALL CAPS and non-empty)
     const secciones = memoria
