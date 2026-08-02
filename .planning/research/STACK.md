@@ -1,100 +1,129 @@
-# Stack Research — Oportunidades: Dashboards, Comparación e Informe Exportable
+# Stack Research
 
-**Domain:** Dashboard de detalle por oportunidad, comparación lado a lado y reporte exportable "calidad consultora" — módulo Mercado Inmobiliario / Oportunidades, PermisoHub
+**Domain:** Geospatial market-sizing for retail siting ("Cabida Comercial") — isochrone computation + demographic/competition intersection, Chilean market
 **Researched:** 2026-08-02
-**Confidence:** HIGH (verificado contra `node_modules` real del proyecto, `package.json`/`package-lock.json`, y patrones ya en producción en el propio repo — no solo training data)
+**Confidence:** MEDIUM-HIGH (isochrone tooling and INE geodata endpoints verified against live sources; EPF/CASEN granularity verified against official INE methodology docs; some ArcGIS field-level details for zona/distrito layers not yet queried live — flagged below)
 
-> Este archivo reemplaza el contenido anterior de `STACK.md` (research de v1.4 Zonificación, dominio de ArcGIS/geoespacial). Ese research no se pierde — queda en el historial de git — pero pertenece a un milestone distinto sin solapamiento con este dominio (dashboards/reportes de Oportunidades).
-
-## Conclusión ejecutiva
-
-**No hace falta instalar ninguna librería nueva.** Recharts 3.10.1 (ya instalado) incluye `RadarChart` nativo y soporta gráficos de banda de rango (`Area` con tupla `[min, max]`) sin dependencias extra. Para el informe exportable, jsPDF (ya instalado) **no es la herramienta correcta para este caso** — el propio repo ya resuelve "informe profesional imprimible" con un patrón superior (vista HTML + `@media print`) en `app/(dashboard)/clientes/[id]/informe/page.tsx`, que imprime los gráficos Recharts como SVG vivo sin rasterizar nada. Para la comparación lado a lado, no existe un paquete de industria para esto — se construye con `Table`/`Tabs` de shadcn/ui, ya instalados.
+> Este archivo reemplaza el contenido anterior de `STACK.md` (research de dashboards/reportes de Oportunidades). Ese research no se pierde — queda en el historial de git — pero pertenece a un milestone distinto sin solapamiento con este dominio (isochronas + demografía + competencia retail).
 
 ## Recommended Stack
 
-### Core Technologies (ya instaladas — uso extendido)
+### Core Technologies
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| Recharts | 3.10.1 (`package.json` actual) | Radar/spider chart para comparación multi-atributo (precio/m², plusvalía, riesgo, liquidez); gráfico de banda de rango (P25–P75 de la cohorte) en el dashboard de detalle | Verificado en `node_modules/recharts/es6/chart/RadarChart.js`, `ComposedChart.js`, `AreaChart.js` — existen en la versión exacta ya instalada, cero riesgo de bump de versión. `Area` con `dataKey` que devuelve tupla `[min, max]` renderiza una banda de rango de forma nativa (docs oficiales de Recharts), justo lo que se necesita para "¿esta oportunidad está cara o barata vs su cohorte?" sin cálculos manuales de path SVG. |
-| Vista HTML + `@media print` (React Server/Client Components, Next 16 App Router) | React 19.2.4 / Next 16.2.12 | Informe exportable de una oportunidad o de una comparación, con calidad "consultora" | El repo ya resuelve exactamente este problema en `app/(dashboard)/clientes/[id]/informe/page.tsx` y `app/(dashboard)/cadenas-comerciales/[id]/compliance/page.tsx` + `print-button.tsx`: CSS `@page { size: A4 portrait; margin: ... }`, clases `no-print` / `page-break` / `.report-card { break-inside: avoid }`, botón `window.print()`. Los gráficos Recharts son SVG real en el DOM — el navegador ("Guardar como PDF") los imprime nítidos y vectoriales, sin el paso de rasterización que sí necesita jsPDF. Es el enfoque de menor esfuerzo y mayor fidelidad visual ya validado en dos informes distintos del proyecto. |
-| shadcn/ui `Table` + `Tabs` (ya instalados: `components/ui/table.tsx`, `components/ui/tabs.tsx`) | — | Vista de comparación lado a lado de 2+ oportunidades | No existe un paquete npm estándar de industria para "comparar propiedades lado a lado" (confirmado por búsqueda de mercado — lo que aparece son demos de diseño de dashboards de comparación de productos SaaS, no librerías). El patrón de industria (comparadores inmobiliarios, G2/Capterra-style) es una tabla con atributos en filas y una columna por ítem, celda destacada para el mejor/peor valor — se construye directo sobre `Table` de shadcn/ui, ya integrada al tema "Consultora" del proyecto. |
+| **openrouteservice (ORS) public API** | v2 REST (`/v2/isochrones/{profile}`) | Compute walking/driving isochrone polygons from a geocoded address | Free tier (2,500 req/day, no credit card) explicitly permits commercial use at that volume — verified on `openrouteservice.org/terms-of-service`. Routes on OpenStreetMap data, the same data family already backing your Nominatim geocoding, so street-network assumptions stay consistent across geocoding, zoning (ArcGIS) and now isochrones. Returns native GeoJSON polygons (not a fixed-radius circle) for `foot-walking` and `driving-car` profiles — exactly what's asked for. Zero infrastructure to run. |
+| **PostGIS extension (Supabase Postgres)** | bundled with Supabase Postgres, enable via `create extension if not exists postgis;` | Store census polygons + retail POIs as native geometry, run `ST_Intersects`/`ST_Area`/`ST_Intersection` server-side | Already included free in every Supabase project (toggle in Dashboard → Database → Extensions, no plan upgrade). Doing the isochrone∩manzana intersection in SQL (spatial GIST index) scales far better than pulling thousands of manzana polygons into a serverless function and intersecting with Turf in Node — critical since Vercel functions are ephemeral and cold-start-sensitive. Confirmed current in Supabase's official docs (`supabase.com/docs/guides/database/extensions/postgis`). |
+| **@turf/turf** | 7.3.5 (latest, published within last few months) | Client/edge-side geometry ops: validating the isochrone GeoJSON before sending to Postgres, computing isochrone area, drawing/debugging on the Leaflet map, and as a fallback intersection method for small ad-hoc computations | Standard JS geospatial toolkit, actively maintained (GIScience/Turfjs), TypeScript types included, works both server (API route) and browser (Leaflet overlay). Use it for *display and light validation*; use PostGIS for the *heavy* intersection/aggregation against hundreds of manzana polygons. |
 
-### Supporting Libraries (uso puntual, ya resueltas — no requieren `npm install`)
+### Supporting Libraries
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| `html2canvas` | 1.4.1 (dependencia opcional transitiva de `jspdf`, ya resuelta en `node_modules`) | Único caso válido: generar un archivo `.pdf` descargable de verdad a partir del informe HTML (no solo abrir el diálogo de impresión), p.ej. para adjuntar a un email automático | `require.resolve('html2canvas')` confirma que ya está disponible en el árbol de dependencias sin tocar `package.json`. Se usaría vía `jspdf`'s `pdf.html(el, { html2canvas })`. No importar directo salvo que este caso de uso ("archivo real, sin usuario presente") se active — hoy ningún archivo del proyecto lo importa. |
-| `jspdf` | ^4.2.1 (ya instalado) | Seguir usándolo tal cual está: PDF client-side con imágenes rasterizadas (planos anotados de Due Diligence) | Rol ya cumplido en `lib/informe-pdf.ts`. No es la herramienta para el informe de Oportunidades: ese caso no tiene imágenes que rasterizar, tiene gráficos SVG vivos — forzarlos por jsPDF agrega un paso de canvas que el propio repo ya evita en su otro informe. |
-| `pdfkit` | ^0.19.1 (ya instalado) | PDF **server-side**, sin gráficos ricos (texto + formas vectoriales simples dibujadas a mano) | Patrón usado en `app/api/cadenas/[id]/reporte/route.ts`. Camino válido si en el futuro se necesita el PDF de Oportunidades generado 100% en servidor (ej. cron/email sin navegador) — pero no dibuja gráficos Recharts, solo primitivas vectoriales manuales. |
+| `osmium-tool` (system binary, not npm) | latest via `brew install osmium-tool` (or apt) | One-off/periodic ETL: filter Chile's OSM extract down to retail POIs (`shop=supermarket`, `shop=convenience`, `shop=mall`, `shop=department_store`) before loading into Supabase | Use this **instead of** live Overpass calls if you need a full-country refresh and want it scriptable/reproducible in CI (e.g., a monthly GitHub Action). Input: `chile-latest.osm.pbf` from Geofabrik (~330MB). |
+| Overpass API (`overpass-api.de` or `overpass.kumi.systems`) | — (HTTP API, no package) | Simpler alternative to osmium: a single Overpass QL query pulling all Chilean `shop=supermarket`/`shop=convenience`/`shop=mall` nodes+ways, run on a schedule (not per-request) | Use for the *first* implementation — one manually-triggered or cron'd batch query is far simpler than standing up an osmium pipeline, and well within the documented fair-use policy (≤10,000 req/day, ≤1GB/day) since you'd run it maybe monthly, not per page-load. **Do not** call Overpass live inside the Cabida Comercial request path — OSMF's own operations policy warns commercial services their access "may be withdrawn at any point" if usage looks abusive; batch-ingest into Supabase instead, same pattern you already use for the SII retail roster. |
+| `@supabase/supabase-js` (existing) | already in project | Query PostGIS RPC functions from Next.js API routes | No new dependency — call a Postgres function (`rpc()`) that runs `ST_Intersects` and returns aggregated population/dwellings for a submitted isochrone GeoJSON. |
+| Manual `fetch()` to ORS (no wrapper package) | — | Call the ORS isochrones endpoint from a Next.js server-side API route | Prefer a direct `fetch` over the community `openrouteservice-js` npm wrapper — it's a thin, single-endpoint POST with a stable JSON contract; adding a wrapper dependency isn't worth it for TypeScript-strict code where you'll define the response types yourself anyway. |
 
 ### Development Tools
 
-Ninguna herramienta nueva. TypeScript estricto, ESLint y Prettier ya cubren estos componentes igual que el resto del módulo Mercado Inmobiliario.
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| Supabase SQL editor / migration | Define `census_manzana`, `census_zona`, `retail_competitors` tables with `geometry(Polygon, 4326)` / `geometry(Point, 4326)` columns + GIST index | Follow the same migration-file pattern already used for the SII roster and SII-geo schema (per existing project memory: schema changes for geo layers are pending in Supabase — this milestone should land in the same migration set). |
+| Geofabrik download (`download.geofabrik.de/south-america/chile.html`) | Source PBF for the retail-POI ETL | Updated continuously (observed "1 hour ago" at time of research); use dated snapshots if you want reproducible refreshes. |
 
 ## Installation
 
 ```bash
-# Ninguna instalación nueva requerida.
-# Ya disponibles: recharts@3.10.1, jspdf@4.2.1, html2canvas@1.4.1 (transitiva,
-# resoluble), pdfkit@0.19.1, componentes shadcn/ui (table, tabs, dialog, sheet).
+# Core (Node/Next.js side)
+npm install @turf/turf
+
+# No SDK needed for ORS — plain fetch() against https://api.openrouteservice.org
+# No SDK needed for PostGIS — plain SQL via supabase-js .rpc()
+
+# ETL tooling (not an npm dependency — system binary, used in a one-off/cron script)
+brew install osmium-tool   # only if you choose the Geofabrik+osmium ingestion path over Overpass batch queries
+```
+
+```sql
+-- Supabase migration: enable PostGIS
+create extension if not exists postgis;
+
+create table census_manzana (
+  id text primary key,           -- MANZENT_I from INE/OCUC layer
+  comuna_code text not null,
+  total_personas int,
+  total_viviendas int,
+  geom geometry(Polygon, 4326) not null
+);
+create index census_manzana_geom_idx on census_manzana using gist (geom);
+
+create table retail_competitors (
+  id uuid primary key default gen_random_uuid(),
+  source text not null,          -- 'sii' | 'osm'
+  category text not null,        -- 'supermercado' | 'minimarket' | 'strip_center' | 'power_center'
+  chain_name text,
+  geom geometry(Point, 4326) not null
+);
+create index retail_competitors_geom_idx on retail_competitors using gist (geom);
 ```
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|--------------------------|
-| Recharts `RadarChart` (nativo) | Nivo, Visx, ECharts | Solo si se necesitara radar chart con miles de puntos, animaciones complejas o interacción muy custom (drag de vértices). Para comparar 4-8 atributos entre 2-4 oportunidades, Recharts sobra en capacidad y evita una segunda librería de charting duplicando bundle y rompiendo el tema visual "Consultora" ya aplicado. |
-| Recharts `Area` con tupla `[min, max]` | D3 custom, `victory-area` | Solo si el rango necesitara relleno con gradiente multi-stop muy específico o eje logarítmico no soportado por Recharts. No aplica para una banda P25–P75 simple. |
-| Vista HTML `@media print` (patrón ya en el repo) | `jsPDF` + `pdf.html()` + `html2canvas` | Cuando se necesite un archivo `.pdf` descargable real sin intervención del usuario (adjunto de email, guardado automático en Supabase Storage). Ahí sí conviene activar `html2canvas` (ya resoluble) sobre el mismo HTML — no reconstruir el layout dos veces. |
-| Tabla shadcn/ui a medida | `react-compare-slider` u otras "compare UI" genéricas | Nunca para este caso: esas librerías son para comparación de imágenes (before/after) o diffs de código, no de atributos tabulares de propiedades. No adoptar. |
+| ORS public free API for isochrones | Self-hosted Valhalla (Docker, Chile-only OSM extract) | If you exceed 2,500 isochrone requests/day, need sub-second latency at scale, or want to avoid any external-API dependency. Valhalla has *native* isochrone support (unlike OSRM) and a Chile-only tile set would be a few GB, not the 15-20GB quoted for continent-scale extracts — feasible on a small VM later. Not worth the ops overhead for MVP given Cabida Comercial is an analyst-triggered, low-frequency action (per-opportunity, not per-pageview). |
+| ORS | Self-hosted OSRM + isochrone hack | Avoid: OSRM has no native isochrone endpoint; community workarounds (running many point-to-point queries and hulling the results) are slower and less accurate than Valhalla's or ORS's native isochrone algorithm. Only relevant if you already run OSRM for turn-by-turn routing elsewhere. |
+| ORS | GraphHopper free tier | Comparable free-tier shape (small daily quota, isochrone support). Reasonable fallback if ORS rate-limits you or changes terms — worth keeping as a documented Plan B, not worth integrating both now. |
+| ORS/Valhalla-based isochrone | Fixed-radius circle (`turf.circle` around geocoded point) | Only as a *degraded-mode fallback* if ORS is down or the address geocodes somewhere ORS' road network can't route (rural areas). Never as the primary method — the whole point of this feature is that walkability/drive-time shape ≠ circle, especially in gridded Chilean cities with one-way streets and blocked-off areas. |
+| Batch/scheduled Overpass query or Geofabrik+osmium ETL into Supabase | Live Overpass calls per Cabida Comercial request | Never for a commercial SaaS in the hot path — OSMF operations policy explicitly flags commercial services as being cut off first under load; batch ingestion (same pattern as your existing SII roster) avoids any runtime dependency on Overpass uptime. |
+| PostGIS `ST_Intersects`/`ST_Area` for isochrone∩manzana aggregation | Turf.js `booleanIntersects`/`intersect` in a Node/serverless function | Use Turf only for small, one-off client-side computations (e.g., highlighting overlap on the Leaflet map) or if you decide *not* to persist census geometries in Postgres and instead fetch them ad hoc from the ArcGIS FeatureServer per request — in that case Turf becomes necessary since there's no DB to push the SQL work to. Recommended path is to persist census geometries in Supabase, so PostGIS should be primary. |
+| INE/OCUC manzana-level census (`TOTAL_PERS`, `TOTAL_VIVI`) as the spatial population layer | ENGH/EPF (Encuesta de Presupuestos Familiares) as the spatial layer | **Never use EPF for spatial intersection.** EPF/IX-EPF is only statistically representative at three macro-areas: Gran Santiago, "resto de capitales regionales," and "total capitales regionales" (confirmed in INE's own EPF methodology PDF). It has no comuna-level, let alone zona-censal or manzana-level, representativity — using it as if it had spatial granularity would silently fabricate precision the source data doesn't have. Use EPF only as a *citywide average household-spending multiplier* applied to the population figure the isochrone actually gives you (see Stack Patterns below). |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|--------------|
-| Nueva librería de gráficos (Chart.js, Nivo, Victory, ECharts, Highcharts) | Recharts 3.10.1 ya cubre radar, banda de rango y sparkline (el sparkline ya existe hecho con `LineChart` puro en `kpi-card.tsx`). Sumar una segunda librería de charting rompe el tema "Consultora" aplicado vía scope CSS y duplica ~50-100kb de bundle sin necesidad real. | Extender `components/mercado-inmobiliario/charts/` con nuevos componentes (ej. `radar-comparativo.tsx`, `rango-banda.tsx`) sobre Recharts, siguiendo el mismo patrón que `desviacion-bar.tsx` / `histograma.tsx`. |
-| jsPDF client-side calcado de `lib/informe-pdf.ts` para el informe de Oportunidades | Ese módulo resuelve un problema distinto: planos rasterizados con anotaciones dibujadas en canvas, sin gráficos SVG. Forzar los gráficos Recharts por ese camino exige rasterización (canvas/html2canvas) que el propio repo ya evita en su otro informe (`clientes/[id]/informe`). Replicar el patrón equivocado es sobre-ingeniería. | Vista HTML imprimible `@media print`, calcada de `app/(dashboard)/clientes/[id]/informe/page.tsx` + `print-button.tsx`. |
-| Motor de PDF adicional (`@react-pdf/renderer`, `puppeteer`) | Introduciría un tercer motor de PDF en el proyecto (ya conviven jsPDF client-side + pdfkit server-side). `@react-pdf/renderer` no renderiza SVG de Recharts directamente (exige reescribir cada gráfico en su propio DSL `<Page>/<View>`); `puppeteer` es un binario de Chromium pesado para un caso que `window.print()` del navegador ya resuelve. | Vista HTML imprimible (cero dependencias nuevas) para el caso interactivo del usuario logueado; `pdfkit` (ya instalado) solo si se necesita generación 100% server-side sin usuario presente. |
-| Paquete npm genérico de "comparación de productos/propiedades" en React | La búsqueda de mercado no encontró un estándar de industria empaquetado como librería (solo demos/patrones de diseño). El dominio (UF/m², plusvalía, riesgo, comuna) es demasiado específico para que un paquete genérico agregue valor sobre una tabla shadcn/ui bien resaltada. | `Table` de shadcn/ui (ya instalada) + lógica propia de "mejor/peor valor por fila" (comparación numérica simple, sin librería). |
-| Declarar `html2canvas` explícito en `package.json` desde ya | Hoy está resuelto transitivamente vía `jspdf` (`optionalDependencies`) y ningún archivo lo importa — declararlo explícito antes de usarlo agrega una dependencia fantasma al manifiesto. | Agregarlo explícito a `dependencies` recién cuando se active el caso "PDF descargable real" (ver alternativas). |
+| Mapbox Isochrone API / Google Distance Matrix for isochrones | Paid, usage-billed API — violates founder's explicit no-pay-for-third-party-data stance, even though both have "free" starter credits that convert to billing | ORS free tier (OSM-based, no card required at this volume) |
+| Any geodemographic data vendor (e.g., commercial "mapa socioeconómico"/GSE-by-zone products sold by Chilean real-estate data firms) | Paid vendor data — explicitly out of scope per founder decision | INE Census 2017 manzana/zona layers (free, official) + CASEN (free, official, comuna-level) as the closest free proxy for socioeconomic gradient |
+| Treating EPF/ENGH as if it were geocoded to zona censal or comuna | It isn't — see Alternatives table above. This is the single easiest mistake to make in this milestone and would corrupt every "cabida" number downstream | Use EPF as a single citywide/region-wide multiplier only, applied on top of isochrone-level population |
+| Live Overpass API calls inside the user-facing request path | Fair-use policy explicitly deprioritizes and can withdraw access from commercial/heavy users | Scheduled batch ingestion into Supabase (weekly/monthly), same as your existing SII roster ingestion pattern |
+| `MANZANA_SIN_INF_C17` layer treated as "zero population" | These are manzanas where INE suppressed the count for statistical-disclosure reasons (very low population), not manzanas that are actually empty — silently reading them as 0 will systematically undercount dense-but-small blocks | Flag these manzanas in the UI as "sin información INE" and fall back to zona-censal aggregate for that patch of the isochrone, rather than defaulting to 0 |
 
 ## Stack Patterns by Variant
 
-**Dashboard de detalle — comparación multi-atributo tipo "spider" (precio/m², plusvalía, riesgo, liquidez, distancia a polos):**
-- `RadarChart` + `PolarGrid` + `PolarAngleAxis` + `Radar` de Recharts, un `<Radar>` por oportunidad (2-4 máximo; más satura el polígono).
-- Porque es el patrón de industria confirmado para este caso (mismo patrón que shadcn.io publica como "radar-multiple") y no exige tocar dependencias.
+**If the isochrone falls entirely within Gran Santiago or another regional capital:**
+- Population/dwellings: intersect isochrone against `census_manzana` (or `census_zona` if manzana coverage is patchy) via PostGIS.
+- Household spending proxy: apply the EPF "Gran Santiago" (or "resto de capitales regionales") average household expenditure figure uniformly — do not attempt to vary it within the isochrone; the source data doesn't support that resolution.
+- Income/poverty gradient (optional refinement): pull comuna-level CASEN indicators (poverty rate, average income) for the comuna(s) the isochrone touches, to at least differentiate between comunas even though EPF itself can't.
 
-**Dashboard de detalle — "¿esta oportunidad está cara o barata vs su cohorte?" como banda visual, no solo un número:**
-- `ComposedChart` con `Area` de rango (`dataKey` → `[p25, p75]`) más un `ReferenceDot`/`Scatter` marcando el valor puntual de la oportunidad.
-- Porque evita reinventar el cálculo de banda en SVG a mano; Recharts lo soporta de fábrica desde la versión ya instalada.
+**If the isochrone spans a smaller/non-capital comuna:**
+- Manzana/zona coverage from the ArcGIS census layers should still exist (national coverage), but EPF only differentiates "Gran Santiago" vs "resto de capitales regionales" vs "total capitales" — smaller comunas outside regional capitals may fall outside EPF's sampling frame entirely. Check INE's EPF sampling frame per case; if the comuna isn't a regional capital, use the national/aggregate EPF figure and flag lower confidence in the UI.
 
-**Informe exportable — caso base del milestone (usuario logueado quiere ver/imprimir/guardar como PDF):**
-- Vista `@media print` + botón `window.print()`, exclusivamente.
-- Cero dependencias nuevas, cero rasterización; el navegador ("Guardar como PDF") produce un PDF vectorial nítido — mejor calidad que uno rasterizado por canvas.
-
-**Informe exportable — caso extendido futuro (el PDF debe llegar a un tercero sin que abra la app, ej. adjunto de email):**
-- Activar `jspdf` + `pdf.html()` + `html2canvas` (ya resoluble) sobre el mismo HTML del informe imprimible, sin reconstruir el layout dos veces.
-- Porque reutiliza el markup/estilos ya escritos para `@media print` en vez de mantener dos versiones del informe.
+**If ORS free-tier quota (2,500/day) becomes a real constraint:**
+- Move to self-hosted Valhalla with a Chile-only extract before considering any paid isochrone API — this keeps the zero-third-party-cost stance intact and is realistic given Chile's extract size (~330MB PBF vs. multi-GB continental extracts).
 
 ## Version Compatibility
 
 | Package A | Compatible With | Notes |
 |-----------|------------------|-------|
-| recharts@3.10.1 | react@19.2.4 | Ya en uso productivo en 6+ componentes del propio módulo (`KpiCard`, `RankingBarChart`, `DistribucionDonut`, `DesviacionBar`, `Histograma`, `GaugeArc` usa SVG plano a propósito). Cero riesgo adicional al extender con `RadarChart`/`ComposedChart` de la misma versión ya instalada. |
-| jspdf@4.2.1 | html2canvas@1.4.1 | `html2canvas` es `optionalDependencies` de `jspdf` (rango `^1.0.0-rc.5`), resuelto en `node_modules` a 1.4.1 — es el par que jsPDF documenta oficialmente para su método `.html()`. |
-| jspdf@4.2.1 / html2canvas | Next.js 16 App Router | Debe importarse dinámicamente en cliente (`await import("jspdf")`), tal como ya hace `lib/informe-pdf.ts` — ambas dependen de APIs de DOM/canvas no disponibles en Server Components. Mismo criterio aplica si se activa el caso "PDF descargable real". |
+| `@turf/turf@7.3.5` | Node 18+/20+ (Next.js 16 requirement already satisfied) | ESM-first; Next.js 16 App Router server components/route handlers support ESM imports natively, no config changes needed. |
+| Supabase PostGIS extension | Any Supabase Postgres project (Postgres 15/17 depending on project age) | Enabling the extension is non-destructive and reversible; do it via a numbered SQL migration file, not the Dashboard toggle, to keep it reproducible across environments (matches existing project convention of tracked migrations). |
+| ORS isochrones GeoJSON output | Leaflet (existing) | ORS returns standard GeoJSON `FeatureCollection` of `Polygon`s — drop directly into a Leaflet `L.geoJSON()` layer, same pattern already used for ArcGIS zoning polygons. |
 
 ## Sources
 
-- `node_modules/recharts/package.json`, `.../es6/chart/RadarChart.js`, `ComposedChart.js`, `AreaChart.js` — verificación directa de que Recharts 3.10.1 (versión exacta instalada en el proyecto) incluye estos componentes. Confianza: HIGH.
-- `node_modules/html2canvas/package.json` + `node_modules/jspdf/package.json` (campo `optionalDependencies`) — verificación de que html2canvas 1.4.1 ya está resuelto transitivamente y es resoluble vía `require.resolve('html2canvas')`. Confianza: HIGH.
-- Código propio del repo (leído directamente, no training data): `lib/informe-pdf.ts`, `app/(dashboard)/clientes/[id]/informe/page.tsx`, `app/(dashboard)/cadenas-comerciales/[id]/compliance/page.tsx` + `print-button.tsx`, `components/mercado-inmobiliario/charts/kpi-card.tsx`, `gauge-arc.tsx`, `app/api/cadenas/[id]/reporte/route.ts` — patrones ya validados en producción: PDF client-side con rasterización de planos, informe HTML imprimible, sparkline con Recharts puro, y PDF server-side con pdfkit. Confianza: HIGH.
-- [jspdf — npm](https://www.npmjs.com/package/jspdf) y notas de release v4.0.0/v4.2.1 (WebSearch) — confirma que jsPDF v4.x es una versión real y reciente (2026, foco en parches de seguridad), no un error tipográfico de versión. Confianza: MEDIUM, corroborado contra el propio `package-lock.json` del repo.
-- [Recharts — Area API docs](https://recharts.github.io/en-US/api/Area/) (WebSearch) — confirma el patrón de `dataKey` con tupla `[min, max]` para banda de rango. Confianza: MEDIUM, verificado contra la presencia real del componente en `node_modules`.
-- [shadcn.io — Radar Multiple](https://www.shadcn.io/charts/radar-multiple) (WebSearch) — confirma que "radar con series superpuestas" es el patrón estándar de industria para comparación multi-atributo sobre Recharts. Confianza: MEDIUM.
-- Búsqueda de mercado sobre librerías de "comparación de propiedades en React" — no arrojó un paquete npm estándar de industria; solo demos/patrones de diseño. Reportado como hallazgo honesto (ausencia de evidencia), no como certeza absoluta. Confianza: MEDIUM.
+- `openrouteservice.org/services/`, `openrouteservice.org/restrictions/`, `openrouteservice.org/terms-of-service/` — verified isochrone endpoint capabilities (foot/driving profiles, GeoJSON polygon output, max 5 locations/10 intervals/120km/20h-foot), free-tier commercial-use allowance (2,500 req/day) via WebFetch/WebSearch, MEDIUM-HIGH confidence (official docs, current)
+- `supabase.com/docs/guides/database/extensions/postgis` — confirmed PostGIS is a free, one-click extension on all Supabase plans, HIGH confidence (official docs)
+- `npmjs.com/package/@turf/turf` — confirmed v7.3.5 as latest, actively published, HIGH confidence
+- `ine.gob.cl/herramientas/portal-de-mapas/geodatos-abiertos`, `geoine-ine-chile.opendata.arcgis.com` datasets ("Microdatos Censo 2017: Manzana", "Distrito Censal") — confirmed manzana-level population/dwelling data exists as open geodata, HIGH confidence (official INE portal)
+- `services3.arcgis.com/cTnMkBRk4HWkUCRo/arcgis/rest/services/SHAPES_CENSO_2017/FeatureServer` — live-queried FeatureServer: confirmed 13 layers spanning REGION→PROVINCIA→COMUNA→DISTRITO→ZONA→MANZANA(3 variants)→ENTIDAD, and confirmed layer 8 (`MANZANA_IND_C17`) exposes `TOTAL_PERS` and `TOTAL_VIVI` fields directly queryable via standard ArcGIS REST — HIGH confidence, directly verified live, and notably this is the **same ArcGIS REST service pattern already integrated for MINVU/OCUC zoning**, meaning no new integration paradigm is needed, only a new FeatureServer URL and field mapping (confirm at implementation time whether this is the same ArcGIS org already whitelisted in the project's existing MINVU/OCUC integration, or a distinct org requiring its own URL/config entry)
+- INE, "Manual de Usuario de la Base de Datos del Censo 2017" (`redatam-ine.ine.cl/manuales/Manual-Usuario.pdf`) — confirmed REDATAM full cross-tab data is published at zona-localidad level (not manzana) for detailed sociodemographic variables, and that a separate "Manzana-Entidad" summary table exists with limited fields due to statistical-disclosure suppression for low-population blocks — MEDIUM confidence (search-summarized, not directly fetched PDF; recommend re-verifying exact suppressed-field list before building the UI copy for `MANZANA_SIN_INF_C17`)
+- INE, VIII/IX EPF methodology and results documents (`ine.gob.cl/docs/.../metodologia-ix-epf.pdf`, informe-principales-resultados) — confirmed EPF statistical representativity is limited to Gran Santiago / resto de capitales regionales / total capitales regionales, explicitly stating fieldwork occurs at finer geography but published results do not — HIGH confidence, this is the load-bearing finding for the whole milestone's granularity ceiling
+- `wiki.openstreetmap.org/wiki/Overpass_API`, `operations.osmfoundation.org/policies/api/` — confirmed Overpass fair-use policy (~10,000 req/day, ~1GB/day) and explicit warning that commercial services may have access withdrawn under load — MEDIUM-HIGH confidence (official OSMF policy page, summarized via search)
+- `download.geofabrik.de/south-america/chile.html` — confirmed current Chile OSM extract exists and is actively updated (~330MB PBF), usable for `osmium-tool` batch retail-POI extraction — HIGH confidence
+- `pistack.xyz` (2026-04-25) OSRM vs Valhalla vs GraphHopper comparison — confirmed OSRM lacks native isochrone support while Valhalla has first-class isochrone generation, and rough self-hosting memory footprint — MEDIUM confidence (single third-party blog, not official docs; directionally consistent with Valhalla's own published architecture docs but should be re-verified against `valhalla.github.io/valhalla` if self-hosting is actually pursued)
 
 ---
-*Stack research for: dashboards de detalle/comparación e informe exportable — módulo Oportunidades, PermisoHub*
+*Stack research for: Cabida Comercial (isochrone + demographic/competition intersection) — PermisoHub milestone*
 *Researched: 2026-08-02*

@@ -1,322 +1,264 @@
-# Architecture Research — Dashboards de Oportunidades (detalle, comparación, informe exportable)
+# Architecture Research — v1.7 Cabida Comercial (Demografía y Consumo)
 
-**Milestone:** Detalle por oportunidad + comparación lado a lado + informe exportable, sobre `/mercado-inmobiliario/oportunidades`
+**Milestone:** Tab "Cabida Comercial" en `/mercado-inmobiliario/oportunidades/[id]` — isócrona + demografía/consumo + competencia por formato + veredicto citado, diseñado para correr standalone por dirección en un milestone futuro.
 **Researched:** 2026-08-02
-**Based on:** Direct codebase inspection (`app/(dashboard)/mercado-inmobiliario/`, `lib/mercado-locales-server.ts`, `lib/informe-pdf.ts`, `components/mercado-inmobiliario/`, `supabase/migrations/20260802_mercado_locales_listings.sql`)
-**Confidence:** HIGH for all three integration decisions below — verified against the real schema, the real query function, and the real PDF module, not assumed from the milestone brief.
+**Based on:** Direct inspection of `lib/geocoding.ts`, `lib/zonificacion*.ts`, `app/api/zonificacion/lookup/route.ts`, `lib/mercado-locales-server.ts`, `lib/terrenos-ubicacion.ts` (Overpass), `lib/cadenas-sucursales-server.ts`, `supabase/migrations/20260730_zonificacion*.sql` + `20260802_mercado_locales_listings.sql` + `20260808_cadenas_sucursales.sql`, `app/(dashboard)/mercado-inmobiliario/oportunidades/[id]/page.tsx`, `components/mercado-inmobiliario/oportunidad-detalle/*.tsx`, `.planning/PROJECT.md`, `.planning/data-sources.yaml`, `.planning/RESEARCH-MERCADO-CENTROS-COMERCIALES.md`. Plus targeted web verification of INE ArcGIS census coverage and isochrone-provider free tiers (see Sources).
+**Confidence:** HIGH on integration surface (verified against real code). MEDIUM-LOW on external data availability for 2 of 4 target formats — flagged explicitly below, this is the load-bearing uncertainty for the whole milestone.
 
 ## Executive Summary
 
-The premise in the milestone brief that oportunidades "no son entidades persistentes con id estable" is **not accurate** — verified against `supabase/migrations/20260802_mercado_locales_listings.sql` and `lib/mercado-locales-server.ts`. `mercado_locales_listings.id` is a real `uuid PRIMARY KEY`, and `obtenerOportunidadesMercadoLocales()` already returns that exact `listing.id` as `OportunidadMercadoLocal.id` (used today only as a React `key` in `oportunidades/page.tsx`). The table is a **global, RLS-read-open dataset** (`FOR SELECT TO authenticated USING (true)`, no `workspace_id`) — every authenticated user across every workspace sees the same row. This removes an entire class of concerns (no per-workspace scoping, no ownership check) and directly unblocks a stable `/oportunidades/[id]` route: **no new table, no new migration, no id-generation problem.**
+The existing codebase already contains **three of the four building blocks Cabida Comercial needs**, each living in a different subsystem, none of them wired together today:
 
-The only real gap is that "oportunidad" today is not a first-class row — it's a *computed label* (`reasonCodes`) applied at read time to a `mercado_locales_listings` row by comparing it against `mercado_locales_stats_diarias`. That scoring logic lives inline inside `obtenerOportunidadesMercadoLocales()`'s loop and is not currently reusable. **This is the one piece of real prerequisite work**: extracting that scoring into a pure, testable function so the list view and the new detail/comparison views compute identical `reasonCodes` from the same listing, instead of two implementations drifting apart. This is exactly the kind of extraction the project's own convention already documents (`lib/calculadora-inversion.ts`, `lib/obligaciones-regulatorias.ts`) — same pattern, different file.
+1. **Geocoding** — `lib/geocoding.ts` (`geocodeDireccion`), server-only, Nominatim-based, already used by zonificación. Reusable as-is, zero changes needed.
+2. **"Query an external geo-service, cache by rounded coordinates, expose an explicit `force` refresh"** — the exact orchestration shape in `app/api/zonificacion/lookup/route.ts` (geocode → cache read-through on `(comuna_id, lat_r, lng_r)` → external call → upsert → return). Cabida Comercial's isochrone step is architecturally identical to this, just with a different external service (isochrone provider instead of ArcGIS) and no comuna-tier registry gate.
+3. **Nearby-commerce-by-radius via Overpass** — `lib/terrenos-ubicacion.ts` (`obtenerSenalesUbicacion`) already queries OSM for `shop~"mall|supermarket|department_store"` within 1000m of a point, with production-grade rate-limit handling (2 slots/IP, 5s throttle, 429 backoff, `OverpassUnavailableError`). It currently returns **counts only** (`out count`), not named/located POIs — Cabida Comercial needs the POI list itself (name, tag, coordinates), which is a natural extension of the same query shape, not a new integration pattern.
 
-For selection state, the project has **zero precedent for global client state** (no Zustand/Redux in `package.json`; Mi Cartera and Terrenos each use page-local `useState`, never shared across routes) and a **strong, repeated precedent for URL-driven state on exactly this module** (`oportunidades/page.tsx`'s GET form on `comuna`/`operacion`/`tipoPropiedad`; `reportes/page.tsx`'s `useSearchParams().get("comuna")`). The comparison feature should follow that same idiom: a `?ids=uuid1,uuid2,uuid3` querystring on a new `/oportunidades/comparar` route, with an in-page client "island" (checkbox selector + floating action bar) building that URL — not a store, not React Context, not localStorage.
+The **fourth block — a true isochrone (not a circle) and granular demographic/consumption data — does not exist anywhere in the codebase today**, and is the genuinely new, unverified piece. Research below (Sources) confirms INE does publish Census 2017 population at **manzana censal** (city-block) granularity via an ArcGIS `MapServer`/`FeatureServer` under the same INE account already used for building-permits data (`sig.ine.cl`, `geoine-ine-chile.opendata.arcgis.com`) — this is directly queryable with the same "point/polygon → ArcGIS query → GeoJSON" pattern zonificación already uses, which is a strong signal the founder's precision bar (isócrona, not comuna) is achievable **for population**. Consumption/spending data (Encuesta de Presupuesto Familiar and similar) is published at a much coarser geography (Gran Santiago / regional-capital level) in INE's standard releases — no manzana-level consumption dataset was found. This means "demografía y consumo" cannot be treated as one uniform data layer: **population intersects the isochrone at high precision; consumption/spend is realistically a comuna-or-GSE-level proxy overlaid on top, not independently isochrone-precise.** This asymmetry should be locked into Requirements explicitly, not discovered mid-build.
 
-For the exportable report, `lib/informe-pdf.ts` is real Due Diligence domain logic (láminas anotadas, hallazgos con cita normativa, estado DOM) wrapped in a single "autocontenido" module — its own header comment says as much. Bolting an Oportunidades report onto it would violate that single-responsibility boundary and drag in `pdfjs-dist` rasterization that Oportunidades never needs (no planos involved). The correct move is a **new sibling module**, `lib/informe-oportunidades-pdf.ts`, following the exact same conventions (`"use client"` caller, dynamic `import("jspdf")`, `pdf.save(...)` client-side download) but with none of the plano-rasterization machinery — it is a strictly simpler module than `informe-pdf.ts`, not a variant of it.
+A second, code-verified risk is more severe: **`mercado_locales_listings` (the "oportunidad" row) has no structured address field** — only `titulo` (a scraped ad headline) and `comuna`. The one somewhat-usable field is `atributos_raw->>'locationText'` (a sector-level teaser string like "Providencia, Metropolitana", captured by the scraper but never surfaced as a column) — coarser than a street address, comparable to what `proyectos.direccion` gives zonificación today. Geocoding an oportunidad for Cabida Comercial will therefore be **less precise than geocoding a proyecto**, directly undercutting the founder's stated precision priority, independent of which isochrone provider gets chosen. This should be tested with real data before any isochrone-provider decision is locked in.
+
+Finally, the target formats named in `.planning/PROJECT.md` split into two very different data-availability tiers: `supermercado` and `minimarket` map cleanly onto standard OSM shop tags (`shop=supermarket`, `shop=convenience`) that Overpass already proved queryable in this exact codebase (`terrenos-ubicacion.ts`). `strip_center` and `power_center` are Chilean commercial-real-estate typologies, **not OSM shop tags** — no node/way in OSM is tagged "this building is a strip center." The only lead found (`.planning/RESEARCH-MERCADO-CENTROS-COMERCIALES.md`, from the sales-research track) cites a Cámara Chilena de Centros Comerciales count of 277 assets (53 malls / 76 power centers / 70 strip centers / 68 stand-alone / 10 outlets) with **no public address list or API** — that number is marketing-verified, not integration-verified. Treat automated strip/power-center detection as **unresolved**, not merely "needs more research time" — it may not be automatable within v1.7's public-data constraint at all, and Requirements needs to decide a fallback (manual entry, AI-assisted inference from Overpass `landuse=retail` clusters, or explicit "sin datos suficientes" per format) before roadmap phases are cut.
 
 ## System Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│  app/(dashboard)/mercado-inmobiliario/oportunidades/page.tsx  (Server Comp.)  │
-│    reads searchParams (comuna/operacion/tipoPropiedad)                       │
-│    → obtenerOportunidadesMercadoLocales()  (existing)                        │
-│    → obtenerSenalesExpansionPorComuna() / obtenerTendenciasConstruccionPorComuna() │
-│    renders: filter form + Histograma (client) + list of cards                │
-│    NEW: each card gets a "Ver detalle" <Link> + a client checkbox (island)   │
-├────────────────────────────────────────────────────────────────────────────────┤
-│  NEW  app/.../oportunidades/[id]/page.tsx  (Server Component)                 │
-│    params.id → obtenerOportunidadPorId(id)     [NEW fn, lib/mercado-locales-server.ts] │
-│    → same senales/tendencias lookups, single-comuna                          │
-│    renders: KpiCard + GaugeArc (posición en banda) + DesviacionBar + historial │
-│    "Exportar informe (single)" button → lib/informe-oportunidades-pdf.ts      │
-├────────────────────────────────────────────────────────────────────────────────┤
-│  NEW  app/.../oportunidades/comparar/page.tsx  (Server Component)             │
-│    searchParams.ids ("uuid,uuid,uuid") → obtenerOportunidadesPorIds(ids)      │
-│    [NEW fn, batched like compararPortafolioConMercado()]                     │
-│    renders: side-by-side table/grid, RankingBarChart, DesviacionBar per fila │
-│    "Exportar informe (comparación)" button → lib/informe-oportunidades-pdf.ts │
-├────────────────────────────────────────────────────────────────────────────────┤
-│  REFACTORED  lib/mercado-locales-server.ts                                    │
-│    evaluarOportunidad(listing, cohort, historial) → { reasonCodes, precios } │
-│    ← used by obtenerOportunidadesMercadoLocales() (list, unchanged behavior) │
-│    ← used by obtenerOportunidadPorId()            (NEW)                     │
-│    ← used by obtenerOportunidadesPorIds()         (NEW)                     │
-├────────────────────────────────────────────────────────────────────────────────┤
-│  NEW  lib/informe-oportunidades-pdf.ts  (client-side, jsPDF, no pdfjs-dist)  │
-│    generarInformeOportunidadPDF(oportunidad)                                 │
-│    generarInformeOportunidadesComparadasPDF(oportunidades[])                 │
-├────────────────────────────────────────────────────────────────────────────────┤
-│  Supabase (unchanged schema)                                                  │
-│    mercado_locales_listings          (id uuid PK, status, RLS: read-open)    │
-│    mercado_locales_historial_precio  (listing_id FK)                        │
-│    mercado_locales_stats_diarias     (bandas por comuna×operación×tipo)      │
-└────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  EXISTING — reused as-is                                                     │
+│  lib/geocoding.ts :: geocodeDireccion(direccion, comuna) → {lat,lng}         │
+│  (Nominatim, server-only, throttled 1.1s — same instance zonificación uses)  │
+└───────────────────────────────┬───────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  NEW — lib/cabida-comercial-server.ts (orchestration, mirrors                │
+│  app/api/zonificacion/lookup/route.ts's shape, NOT its code)                 │
+│                                                                                │
+│  resolverUbicacionDesdeOportunidad(oportunidadId)  ──┐                       │
+│  resolverUbicacionDesdeDireccion(direccion, comuna) ──┼──► UbicacionCabida    │
+│  (lat, lng override, same seam zonificacion/lookup    │    {lat,lng,comuna,   │
+│   already exposes for pre-geocoded callers)          ─┘     direccionLabel}  │
+│                                                                                │
+│  obtenerAnalisisCabidaComercial(ubicacion, opts) — single entry point,       │
+│  same signature regardless of caller (v1.7: oportunidad; future: dirección)  │
+│    1. obtenerIsocrona()      → cache-through → external isochrone provider   │
+│    2. obtenerDemografia()    → cache-through → INE ArcGIS (manzana censal)   │
+│    3. obtenerCompetencia()   → cache-through → Overpass (extended query)     │
+│    4. evaluarCabidaPorFormato() — PURE function, single source of truth      │
+│       (same role as evaluarOportunidad() in mercado-locales-server.ts)       │
+└───────────────────────────────┬───────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  NEW table — cabida_comercial_cache (Supabase)                              │
+│  keyed by (lat_r, lng_r, modo, minutos) — same rounding/UNIQUE-index pattern │
+│  as zonificacion_cache. Per-field status (NOT one blanket status column) so  │
+│  a demografía failure doesn't blank an already-fetched competencia result.  │
+└───────────────────────────────┬───────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  NEW — app/api/cabida-comercial/analisis/route.ts                           │
+│  Accepts oportunidadId OR direccion+comuna OR lat+lng — same "generic core, │
+│  entity-specific caller resolves first" shape as zonificacion/lookup.       │
+└───────────────────────────────┬───────────────────────────────────────────────┘
+                                 │  fetch() on user action, NOT eager SSR
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  NEW — components/mercado-inmobiliario/oportunidad-detalle/                 │
+│         cabida-comercial-tab.tsx  ("use client", follows ResumenTab's       │
+│         on-demand-fetch pattern, NOT the eager-server-fetch pattern of      │
+│         Posicionamiento/Historial/Comparables)                              │
+│                                                                                │
+│  MODIFIED — app/(dashboard)/mercado-inmobiliario/oportunidades/[id]/page.tsx │
+│  adds a 5th <TabsTrigger>/<TabsContent>, passes only oportunidad.id + comuna │
+│  (no eager data fetch added to the parent Promise.all — see rationale below) │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+## Integration Points (real file names)
 
-| Component | Responsibility | New / Modified |
-|-----------|-----------------|-----------------|
-| `oportunidades/page.tsx` | Lista filtrada + histograma (existente) | **Modified** — agrega link de detalle + checkbox de selección |
-| `oportunidades/[id]/page.tsx` | Ficha de detalle de una oportunidad (Server Component) | **New** |
-| `oportunidades/comparar/page.tsx` | Comparación lado a lado de N oportunidades (Server Component) | **New** |
-| `lib/mercado-locales-server.ts` | Fuente de verdad de scoring + lecturas por id/lote | **Modified** (refactor interno) + funciones nuevas |
-| `lib/informe-oportunidades-pdf.ts` | Generación de PDF (detalle y comparación) | **New** |
-| `components/mercado-inmobiliario/selector-comparacion.tsx` | Checkbox + botón flotante "Comparar (N)" — client island | **New** |
-| `components/mercado-inmobiliario/exportar-informe-oportunidades-button.tsx` | Botón cliente que invoca `lib/informe-oportunidades-pdf.ts` | **New** |
-| `components/mercado-inmobiliario/charts/*` | KpiCard, GaugeArc, DesviacionBar, RankingBarChart, Histograma | **Reused as-is**, sin cambios |
+| File / Module | New or Modified | Role |
+|---|---|---|
+| `lib/geocoding.ts` | **Reused, unmodified** | `geocodeDireccion()` — same Nominatim call zonificación uses. No change. |
+| `app/api/zonificacion/lookup/route.ts` | **Reused as reference pattern only** | Not called by Cabida Comercial — its *shape* (geocode → cache-through → external call → upsert → explicit `force`) is the template for the new route. Zoning and Cabida Comercial stay fully decoupled subsystems; they only share the geocoding primitive. |
+| `lib/terrenos-ubicacion.ts` | **Reused pattern, not the module itself** | `obtenerSenalesUbicacion()`'s Overpass query construction, throttle (5s/`MIN_INTERVAL_MS`), and `OverpassUnavailableError` handling are the direct template for the new competencia query — but that file is scoped to the Terrenos domain (`enriquecerTerreno()`) and returns counts only. Do not import it from Mercado Inmobiliario; replicate its *pattern* in a new module that returns POIs, not counts. |
+| `lib/cadenas-sucursales-server.ts` + `cadenas_sucursales` table | **Reused as a secondary signal, not primary** | Already has Walmart (211 direcciones, alta confianza) and partial SMU (Alvi + Super10; Unimarc explicitly not resolved — founder decision 1 ago 2026 to stop chasing it). No `lat`/`lng` columns — only `calle`/`comuna` text, so it cannot be intersected with an isochrone polygon without a geocoding pass of its own. Useful as a "known national chain present in this comuna" cross-check (same role it already plays via `obtenerSenalesExpansionPorComuna()` on the oportunidad detail page today), not as the primary competencia-por-formato source. |
+| `lib/mercado-locales-server.ts` | **Unmodified** | `obtenerOportunidadPorId()` stays the read path for the oportunidad itself; Cabida Comercial consumes its output (`id`, `comuna`, `titulo`) but does not modify this file. |
+| `supabase/migrations/20260802_mercado_locales_listings.sql` | **Read-only finding** | Confirms `mercado_locales_listings` has no `direccion`/`lat`/`lng` columns — only `titulo`, `comuna`, `atributos_raw jsonb`. This is a hard constraint on v1.7 geocoding precision, documented above. |
+| `lib/scrapers/portalinmobiliario.ts` | **Read-only finding** | `atributos_raw.locationText` (from `poly-component__location`) is captured for mercado-locales cards but currently unused beyond raw storage — the best available geocoding input for an oportunidad, better than `titulo`, still sector-level not street-level. |
+| `app/(dashboard)/mercado-inmobiliario/oportunidades/[id]/page.tsx` | **Modified** | Add a 5th tab. Do **not** add Cabida Comercial's data fetch to the existing `Promise.all([...])` eager fetch — see rationale in "Tab integration" below. |
+| `components/mercado-inmobiliario/oportunidad-detalle/*.tsx` | **New sibling added, existing 4 untouched** | `PosicionamientoTab`/`HistorialTab`/`ComparablesTab`/`ResumenTab` are unmodified. New: `cabida-comercial-tab.tsx`. |
+| `lib/cabida-comercial-server.ts` | **New** | Server-only orchestration module (see Service-Layer Interface below). |
+| `lib/cabida-comercial.ts` | **New** | Client-safe types + Zod schemas + fetch helper — mirrors `lib/zonificacion.ts` exactly (never imports the service-role Supabase client). |
+| `lib/cabida-comercial-geo.ts` (only if the chosen isochrone provider needs geometry conversion) | **New, conditional** | Mirrors `lib/zonificacion-geo.ts`'s role (Esri rings → GeoJSON) but for whatever the isochrone provider returns. If the provider returns GeoJSON natively (OpenRouteService does), this file may not be needed at all — confirm during Phase 1 of build order before creating it. |
+| `app/api/cabida-comercial/analisis/route.ts` | **New** | Orchestration endpoint, generic-by-location with an oportunidad-resolving convenience path — see Service-Layer Interface. |
+| `supabase/migrations/2026XXXX_cabida_comercial_cache.sql` | **New migration** | `cabida_comercial_cache` table — see Cache Design below. |
+| `components/proyecto/zonificacion-mapa.tsx` (Leaflet) | **Reused pattern, likely copied not imported** | Same dynamic-`import("leaflet")` + GeoJSON-layer pattern needed to render the isochrone polygon + competitor pins. It's currently coupled to a single zone polygon prop shape; a new `cabida-comercial-mapa.tsx` following the same structure (not extending this one) keeps the two domains decoupled, matching how zonificación itself stayed decoupled from Terrenos' own Overpass usage. |
+| `components/mercado-inmobiliario/oportunidad-detalle/resumen-tab.tsx` + `lib/sse-client.ts` | **Reused pattern, not the code** | On-demand client-fetch-on-button-click pattern (loading/error/result states, no auto-run) is the direct template for `cabida-comercial-tab.tsx`. SSE streaming itself is optional for Cabida Comercial (the payload is structured JSON, not narrated text) — a plain `fetch()` + JSON response is simpler and sufficient; reuse the *state-machine* shape of `ResumenTab`, not its SSE transport. |
+| `app/(dashboard)/mercado-inmobiliario/oportunidades/[id]/informe/page.tsx` | **Modified, later phase** | Print report re-fetches oportunidad data independently server-side (does not receive props from the tab page) — Cabida Comercial's result should be addable here the same way, calling `obtenerAnalisisCabidaComercial()` directly, once the tab itself is stable. Not part of the initial build. |
 
-## Answering the three questions directly
+## Key Decision 1 — Isochrone computation: reuse vs. parallel to zonificación
 
-### (1) Ruta `/oportunidades/[id]` vs. panel/drawer client-side
+**Decision: parallel subsystem, shared primitive only.** Do not add isochrone logic to `lib/zonificacion*.ts` or trigger it from `persistZonificacionParaProyecto()`. Reasons, all verified against the actual code:
 
-**Decisión: ruta `/oportunidades/[id]`, Server Component.** No panel/drawer.
+- Zonificación's cache key is `(comuna_id, lat_r, lng_r)` and its coverage gate (`resolveComunaZonificacion`) is a **comuna allow-list** tied to specific ArcGIS MINVU/OCUC FeatureServers per comuna. An isochrone has no such allow-list — it's computable for any address the geocoder resolves, nationwide (subject to the provider's own routing-network coverage, not a curated comuna registry). Bolting isochrone logic onto `zonificacion-comunas.ts`'s registry pattern would import a constraint that doesn't apply.
+- `zonificacion_cache` snapshots onto `proyectos.zona_*` columns via `persistZonificacionParaProyecto()` — a proyecto-specific side effect (fire-and-forget `after()` trigger on proyecto creation). Cabida Comercial has no equivalent "snapshot onto the owning row" need in v1.7 — the analysis result lives in its own cache table and is fetched on-demand by the tab, not eagerly attached to `mercado_locales_listings`.
+- The one thing that *should* carry over 1:1 is the **`lat`/`lng` override seam** already present in `app/api/zonificacion/lookup/route.ts` (`"cuando el llamador ya tiene coordenadas precisas de otra fuente... se saltan Nominatim por completo"`). The new `app/api/cabida-comercial/analisis/route.ts` should expose the identical override, for the identical reason: a future caller (e.g., a terreno or proyecto that already resolved its own coordinates) shouldn't re-geocode.
 
-Evidencia contra la premisa del brief: `obtenerOportunidadesMercadoLocales()` en `lib/mercado-locales-server.ts:372-521` lee de `mercado_locales_listings` (tabla real, `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`, ver `supabase/migrations/20260802_mercado_locales_listings.sql:13-14`) y ya devuelve ese `listing.id` sin transformar como `OportunidadMercadoLocal.id` (línea 505). Hoy se usa solo como `key` de React en el `.map()` de la página — el id estable **ya existe**, simplemente no está expuesto como ruta.
+**Where it actually lives:** `lib/cabida-comercial-server.ts` calls `geocodeDireccion()` (imported directly from `lib/geocoding.ts`, no wrapper) as its first step when given a raw address, then calls a new isochrone-provider client. That provider client is its own small module (`lib/isocrona-provider.ts` or inlined if small enough — decide during Phase 1) — a sibling of `lib/geocoding.ts`, not a member of the zonificación family, because it talks to a routing service (OpenRouteService or equivalent), a fundamentally different API shape than ArcGIS `query` or Nominatim `search`.
 
-Por qué Server Component (no drawer client-side):
-- `oportunidades/page.tsx` es hoy uno de los pocos Server Components puros del módulo (junto a `macro/`, `cadenas/`, `noticias/`) — sin `"use client"`, `async function`, lee `searchParams`, llama funciones de `lib/*-server.ts` directo. Un detalle en drawer forzaría convertir la página entera a cliente y refetchear todo vía una API route nueva, exactamente el patrón más pesado que usan `mi-cartera/`, `tasacion/`, `pricing/` — páginas que SÍ necesitan ese patrón porque tienen edición/mutación en vivo. Oportunidades no edita nada: es 100% lectura, el ajuste natural es un Server Component, igual que hoy.
-- El proyecto ya tiene el folder-convention `[id]` como Server Component de solo-vista en 7 lugares distintos (`proyectos/[id]`, `terrenos/[id]`, `cadenas/[id]`, `clientes/[id]`, `municipios/[id]`, `prospectos/[id]`, `cadenas-comerciales/[id]`), y el API-route-convention `params: Promise<{ id: string }>` en `app/api/propiedades-portafolio/[id]/route.ts:41-44` — Next.js App Router async-params, mismo patrón a seguir.
-- Reusa exactamente los mismos client chart components que ya cruzan la frontera Server→Client en este módulo hoy: `oportunidades/page.tsx` ya le pasa datos serializables a `<Histograma>` (client component); `macro/page.tsx` hace lo mismo con `<IndicadorMacroChart>`; `cadenas/page.tsx` con `<RankingBarChart>`. El detalle simplemente añade `<GaugeArc>` y `<DesviacionBar>` al mismo patrón — sin componentes nuevos de gráfico.
-- Ventaja práctica sobre un drawer: la ficha es linkeable/compartible (`/oportunidades/{id}`), abre directo desde el informe PDF exportado (el PDF puede incluir la URL de la ficha), y sobrevive a un refresh — nada de esto existe gratis con un drawer.
+## Key Decision 2 — New cache table, analogous to `zonificacion_cache`
 
-Caveat real a manejar (no un bloqueador, pero debe diseñarse explícito): un listing puede pasar a `status = 'dado_de_baja'` en cualquier momento (columna existente, ver migración línea 30). La ficha de detalle **no debe hacer 404 por eso** — debe seguir mostrando la fila (precio, comuna, historial, badges) con un aviso "Este aviso ya no está activo en el portal" cuando `status !== 'activo'`, porque el caso de uso real ("¿por qué esta oportunidad que vi la semana pasada ya no aparece? ¿se vendió?") es información, no un error. Solo el caso "id no existe en absoluto" es un verdadero 404.
+**Yes, a new table is warranted — `cabida_comercial_cache`.** Recommended shape, directly modeled on `zonificacion_cache` (`supabase/migrations/20260730_zonificacion.sql`) but adapted for three independent external calls instead of one:
 
-### (2) Selección para comparar: URL querystring, no Zustand/Context
+```sql
+CREATE TABLE IF NOT EXISTS cabida_comercial_cache (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  lat_r numeric(9,6) NOT NULL,
+  lng_r numeric(9,6) NOT NULL,
+  modo text NOT NULL,              -- 'caminando' | 'auto' — isochrone profile
+  minutos integer NOT NULL,        -- isochrone range, e.g. 10/15
 
-**Decisión: querystring de ids en la ruta `/oportunidades/comparar?ids=uuid1,uuid2,uuid3`**, construida por un client component aislado ("island") en la lista, no un store global.
+  isocrona_status text NOT NULL DEFAULT 'pendiente',   -- explicit 4-state enum, same discipline as proyectos.zona_status
+  isocrona_geometria jsonb,        -- GeoJSON Polygon, NULL until fetched
+  isocrona_proveedor text,         -- e.g. 'openrouteservice' — forward-compat if provider changes
 
-Evidencia revisada:
-- `package.json` no tiene `zustand` ni ninguna librería de estado global — verificado (`grep -rl zustand package.json` sin resultados).
-- **Mi Cartera** (`mi-cartera/page.tsx`) — la página con más estado de todo el módulo — usa `useState` scoped a esa única página cliente (`filas`, `expandido`, `form`, `consultandoSii`), nunca algo compartido entre rutas.
-- **Terrenos** (`app/(dashboard)/terrenos/page.tsx`) tiene 12+ `useState` de filtros, todos locales a la página — sin ningún precedente de selección multi-fila para comparar en ningún punto del código actual (se buscó explícitamente: `grep -rl "seleccionados\|selectedIds"` no encontró nada relacionado a comparación).
-- **El propio `oportunidades/page.tsx` y `reportes/page.tsx`** son los dos casos reales de estado-en-URL en este módulo: el primero via `<form method="GET">` (submit completo), el segundo via `useSearchParams().get("comuna")` leído para pre-poblar un form cliente. La comparación es una extensión natural del segundo patrón: no cada checkbox necesita URL-sync en vivo (eso sí sería un mal fit para un `<form GET>` con muchos checkboxes), pero el resultado final de la selección sí viaja como querystring al navegar a `/oportunidades/comparar`.
+  demografia_status text NOT NULL DEFAULT 'pendiente',
+  demografia jsonb,                -- population intersected at manzana level; shape TBD by Phase 1 findings
+  demografia_fuente_url text,
 
-Implementación concreta recomendada:
-- Nuevo client component `components/mercado-inmobiliario/selector-comparacion.tsx` (`"use client"`), recibe como prop la lista de oportunidades ya renderizadas por el Server Component (`{id, titulo, comuna, precioUfNormalizado}[]` — datos planos, serializables, mismo criterio ya documentado en el comentario de `histograma.tsx` sobre no pasar funciones de Server a Client). Mantiene `useState<string[]>` local con los ids marcados, muestra un botón flotante "Comparar (N)" que aparece solo cuando N ≥ 2, y al click hace `router.push(\`/oportunidades/comparar?ids=${ids.join(",")}\`)`.
-- Tope simple de selección (ej. 5): mismo criterio de guardrail ya usado en `DistribucionDonut` ("nunca más de 5-6 categorías, si hay más un donut deja de comunicar") — una comparación de 8+ oportunidades tampoco comunica nada, cortar en el cliente es una validación de UX, no una limitación técnica.
-- La página `/oportunidades/comparar/page.tsx` (Server Component) parsea `searchParams.ids`, hace `.split(",")`, valida que sean UUIDs (regex simple, descarta basura), y llama a la nueva `obtenerOportunidadesPorIds(ids)`.
-- **No se necesita persistencia de "listas de comparación guardadas"** para este milestone — es explícitamente fuera de alcance (ver Anti-Patterns más abajo). Si se pidiera después, ahí sí haría falta una tabla nueva (`workspace_id`, ids, nombre) — hoy no.
+  competencia_status text NOT NULL DEFAULT 'pendiente',
+  competencia jsonb,               -- array of {formato, nombre, lat, lng, distanciaM, fuente}
+  competencia_fuente text,         -- 'overpass' | 'cadenas_sucursales' | mixed
 
-### (3) Informe exportable: módulo nuevo `lib/informe-oportunidades-pdf.ts`, no extender `informe-pdf.ts`
+  consultado_el timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
-**Decisión: archivo nuevo**, hermano de `lib/informe-pdf.ts`, mismas convenciones de bajo nivel, cero acoplamiento de dominio.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cabida_comercial_cache_geo
+  ON cabida_comercial_cache (lat_r, lng_r, modo, minutos);
 
-Evidencia revisada en `lib/informe-pdf.ts` (689 líneas):
-- Es explícitamente "autocontenido" para un dominio distinto — su propio comentario de cabecera dice "Generación del informe PDF profesional del due diligence (portada con riesgo, estado DOM, hallazgos, próximos pasos y documentos + una página por lámina de plano anotada)". Cada función interna (`drawCoverPage`, `drawCuadroBlock`, `drawLaminaLeyenda`, `burnLamina`, `pdfUrlToImages`) está parametrizada sobre tipos de Due Diligence (`DueDiligenceResult`, `Anotacion`, `CuadroResultado`) — no hay una capa neutra separable sin tocar el archivo.
-- Arrastra `pdfjs-dist` (rasterización de PDFs de planos a canvas) — maquinaria que Oportunidades **no necesita en absoluto** (no hay planos, no hay anotaciones, no hay imágenes que rasterizar). Importar ese módulo solo para reusar 3 helpers de dibujo de 10 líneas cada uno sería net-negative: más código cargado client-side, cero necesidad real.
-- El proyecto ya tiene precedente explícito de **duplicar pequeños helpers puros en vez de forzar un import cruzado de dominio**: `lib/informe-charts.ts` duplica `parsearNumeroChileno` (comentario: "mismo parser que app/api/sii/lookup/route.ts... duplicado acá (función pura de 5 líneas) en vez de importar desde una ruta API"). El mismo criterio aplica acá: los 2-3 helpers realmente genéricos de `informe-pdf.ts` (`sectionRule()`, `hexToRgb()`, `formatGeneradoEl()`) se reescriben en 15 líneas dentro del archivo nuevo — no se factorizan a un tercer módulo compartido, porque el proyecto explícitamente prefiere esa pequeña duplicación sobre una abstracción prematura.
+ALTER TABLE cabida_comercial_cache ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "cabida_comercial_cache_read" ON cabida_comercial_cache
+  FOR SELECT TO authenticated USING (true);
+-- writes only via service role, same as zonificacion_cache and cadenas_sucursales
+```
 
-Estructura recomendada del módulo nuevo (mucho más simple que su hermano):
+**Why per-field status, not one column:** this is a direct, deliberate application of the lesson already documented in this codebase's own zonificación code (`lib/zonificacion-server.ts`'s comment citing "Pitfall 6: estado explícito, nunca solo nullability" and writing `zona_status` on every branch including failure). Cabida Comercial orchestrates **three independent external services** with three independent failure modes (isochrone provider quota, INE ArcGIS availability, Overpass's well-documented 2-slots/IP throttling). A single blanket `status` column would force an all-or-nothing retry and would make "demografía failed, competencia succeeded" indistinguishable from "nothing ran yet" — exactly the bug class Pitfall 6 exists to prevent. Each sub-fetch gets cached and retried independently; the "Actualizar" action (matching `?force=true` on `/api/zonificacion/lookup`) should support refreshing one field or all three, not force an all-three refresh every time (this also reduces isochrone-provider quota burn on retries triggered by an unrelated Overpass hiccup).
+
+**Why one table, not three:** all three pieces are keyed by the *same* location+mode+range tuple and are always read together by the tab — splitting into `cabida_isocrona_cache` / `cabida_demografia_cache` / `cabida_competencia_cache` would require three round-trips and three separate unique-index lookups for what is, from the UI's perspective, a single "analysis." One row per location-lookup matches `zonificacion_cache`'s own philosophy (a single row is "the answer for this point," not decomposed into per-source rows) and is simpler for the "Actualizar" button to reason about even with per-field status inside it.
+
+## Key Decision 3 — Tab integration on the opportunity detail page
+
+**Add a 5th `<TabsTrigger>`/`<TabsContent>` pair, but do not fetch its data eagerly in `page.tsx`.** This is a deliberate deviation from how Posicionamiento/Historial/Comparables/Resumen-context data is currently assembled (all inside the single `Promise.all([...])` at the top of `OportunidadDetallePage`), for a reason verified by the code itself: everything in that `Promise.all` today is a **cheap, already-cached Supabase read** (`mercado_locales_stats_diarias`, `mercado_locales_historial_precio`, `cadenas_sucursales`) — nothing in it makes a live external network call at page-render time. Cabida Comercial's data requires three live external calls (geocoding if not cached, isochrone provider, INE ArcGIS, Overpass) each with real latency and, for Overpass specifically, a documented hard quota (2 slots/IP) shared with the Terrenos module's own usage. Eagerly running this on every oportunidad-detail page view — most of which will never open that tab — would both slow down the page for everyone and burn shared, rate-limited quota for no reason.
+
+The existing precedent for this exact tradeoff already exists on the same page: `ResumenTab` (AI executive summary) is **not** in the `Promise.all` either — it's a `"use client"` component that calls its own API route on button click, with its own loading/streaming/error state. `CabidaComercialTab` should follow that shape exactly: pass it only `{ oportunidadId: oportunidad.id }` (or `{ oportunidadId, comuna: oportunidad.comuna }` for a nicer empty-state label before the user clicks "Analizar"), and let it own its own `fetch()` to `app/api/cabida-comercial/analisis/route.ts` on demand. Cached results (from `cabida_comercial_cache`) mean a second visit to an already-analyzed oportunidad returns instantly without re-hitting any external service — the button becomes "Ver análisis" / "Actualizar" rather than "Analizar" once a cache row exists, mirroring the "Actualizar" button precedent from zonificación (Plan 11-06) rather than any silent background refresh.
+
+## Key Decision 4 — Service-layer interface for "given an oportunidad" now, "given a raw address" later
+
+**This exact split already has a working precedent in this codebase — replicate its shape, not just its spirit.** `app/api/zonificacion/lookup/route.ts` is a generic, entity-agnostic endpoint that takes `direccion`+`comuna` (with an optional `lat`/`lng` override for callers who already have coordinates); `lib/zonificacion-server.ts::persistZonificacionParaProyecto()` is a thin, proyecto-specific adapter that calls it and writes the result onto `proyectos`. The generic route has zero knowledge of "proyecto" as a concept. Cabida Comercial should be structured identically:
+
 ```typescript
-// lib/informe-oportunidades-pdf.ts
-// Informe de Oportunidades de Mercado — a diferencia de lib/informe-pdf.ts
-// (Due Diligence: láminas anotadas + hallazgos normativos), este informe no
-// tiene planos ni anotaciones: es una portada + tabla comparativa sobre
-// datos que la ficha/comparación ya muestran en pantalla. Sin pdfjs-dist.
-
-export async function generarInformeOportunidadPDF(oportunidad: OportunidadDetalle): Promise<void> { ... }
-export async function generarInformeOportunidadesComparadasPDF(oportunidades: OportunidadDetalle[]): Promise<void> { ... }
-```
-Contenido: portada con filtros aplicados + fecha de generación (`formatGeneradoEl`-equivalent) + tabla/grid con, por oportunidad: título, comuna, precio UF, UF/m², reasonCodes traducidos (reusar el `REASON_LABEL` hoy inline en `oportunidades/page.tsx` — moverlo a un export compartido, ver Build Order), variación vs. mediana de cohorte, señales cruzadas (expansión de cadena / tendencia INE) si existen. Nunca fabrica datos que la pantalla no tenga — mismo principio ya aplicado en `informe-pdf.ts` (portada solo muestra `result.resumenEjecutivo` si existe, nunca lo inventa).
-
-Trigger: mismo patrón de botón — un componente cliente (`exportar-informe-oportunidades-button.tsx`, `"use client"`) importado dentro de la página Server Component de detalle y de comparación, que en el `onClick` hace `const mod = await import("jspdf")` (dynamic import, igual que `informe-pdf.ts` línea 658) y llama la función correspondiente con los datos ya recibidos por props (no hace fetch propio — los datos ya están en la página, a diferencia de `generarInformePDF` que sí vuelve a consultar Supabase porque su caller vive en una página cliente separada sin esos datos ya cargados).
-
-## Recommended Project Structure (delta sobre lo existente)
-
-```
-app/(dashboard)/mercado-inmobiliario/oportunidades/
-├── page.tsx                    # MODIFICADO — + Link a detalle, + <SelectorComparacion>
-├── [id]/
-│   └── page.tsx                # NUEVO — Server Component, ficha de detalle
-└── comparar/
-    └── page.tsx                # NUEVO — Server Component, comparación lado a lado
-
-lib/
-├── mercado-locales-server.ts   # MODIFICADO — extrae evaluarOportunidad(), + obtenerOportunidadPorId(), + obtenerOportunidadesPorIds()
-├── informe-oportunidades-pdf.ts # NUEVO — hermano de informe-pdf.ts, sin pdfjs-dist
-└── mercado-locales-reason-labels.ts # NUEVO (pequeño) — REASON_LABEL movido desde oportunidades/page.tsx para reusar en detalle/comparación/PDF
-
-components/mercado-inmobiliario/
-├── selector-comparacion.tsx              # NUEVO — client island, checkbox + botón flotante
-└── exportar-informe-oportunidades-button.tsx # NUEVO — client island, botón que invoca el PDF
-```
-
-### Structure Rationale
-
-- **`[id]/` y `comparar/` como subcarpetas de `oportunidades/`, no rutas top-level**: sigue el mismo anidamiento que `cadenas-comerciales/[id]/centros/[centroId]` ya usa en este proyecto para jerarquías padre-hijo — la URL comunica la relación (`/oportunidades/{id}` es "una oportunidad de la lista de oportunidades").
-- **`mercado-locales-reason-labels.ts` separado en vez de seguir inline en `page.tsx`**: hoy `REASON_LABEL` vive como constante privada dentro de `oportunidades/page.tsx` (líneas 16-20). En cuanto una segunda página (detalle) o un módulo no-React (el PDF) necesitan la misma traducción de código→texto, mantenerla inline deja de ser sostenible — extraerla es el mínimo movimiento necesario, no una reestructuración grande.
-- **PDF module fuera de `components/`, en `lib/`**: seguir la convención exacta de `lib/informe-pdf.ts` (lógica de generación, no JSX) — el componente de botón en `components/` es una capa fina que solo llama a `lib/informe-oportunidades-pdf.ts`, igual que `planos-anotados.tsx` llama a `generarInformePDF`.
-
-## Architectural Patterns
-
-### Pattern 1: Server Component + client chart "islands" (ya establecido, se extiende)
-
-**What:** La página es un Server Component async que hace todo el data-fetching server-side (Supabase vía `createServiceClient()`) y le pasa props planos y serializables a componentes de gráfico marcados `"use client"`. Ningún componente de gráfico acepta funciones como prop.
-**When to use:** Cualquier vista de solo-lectura del módulo Mercado Inmobiliario — es el patrón por defecto de 4 de las 9 páginas (`oportunidades`, `macro`, `cadenas`, `noticias`).
-**Trade-offs:** Sin esto se gana simplicidad (sin loading states, sin API routes intermedias) pero se pierde interactividad fina (no hay "cargar más" sin nueva navegación) — aceptable para detalle/comparación porque son vistas de análisis, no de edición.
-**Example (ya en el código, `histograma.tsx` línea 20-26):**
-```typescript
-// Sin prop de formateo custom a propósito: un `formatTramo?: (n) => string`
-// es una función que un Server Component no puede pasar a este Client
-// Component (rompe la frontera de serialización de RSC — bug ya visto dos
-// veces en este proyecto, en Cadenas y Oportunidades).
-```
-El detalle y la comparación deben respetar la misma regla al pasarle datos a `<GaugeArc>`/`<DesviacionBar>`/`<RankingBarChart>`.
-
-### Pattern 2: Extracción de cálculo puro a `lib/*.ts` testeable (convención explícita del proyecto)
-
-**What:** Cualquier lógica de negocio no trivial (cap rate, estado de obligación, y ahora scoring de oportunidad) vive en una función pura exportada de `lib/`, nunca inline dentro de un componente.
-**When to use:** Siempre que la misma lógica deba producir el mismo resultado en dos lugares — acá, list view y detail/comparison view deben marcar `reasonCodes` de forma idéntica para el mismo listing.
-**Trade-offs:** Un archivo extra de indirección, a cambio de eliminar el riesgo real de que el detalle diga "no es oportunidad" para un listing que la lista sí marcó (o viceversa) por una lógica duplicada que diverge con el tiempo.
-**Example (patrón existente a replicar, `lib/propiedades-portafolio-server.ts:133-139`):**
-```typescript
-export function calcularCapRatePropiedad(prop: PropiedadPortafolio): CapRateResultado | null {
-  if (prop.operacion !== 'arriendo') return null
-  if (prop.precioActualUf === null || prop.precioActualUf === undefined) return null
-  if (prop.siiAvaluoFiscalUf === null || prop.siiAvaluoFiscalUf === undefined) return null
-  return calcularCapRate({ rentaMensual: prop.precioActualUf, precioVenta: prop.siiAvaluoFiscalUf })
+// lib/cabida-comercial.ts — client-safe (mirrors lib/zonificacion.ts)
+export interface UbicacionCabida {
+  lat: number
+  lng: number
+  comuna: string
+  direccionLabel: string   // display string only, not necessarily geocodable itself
 }
-```
-La función nueva `evaluarOportunidad(listing, cohort, historialReciente)` debe seguir la misma forma: entradas explícitas, sin leer nada de Supabase por su cuenta, testeable sin mocks de red.
 
-### Pattern 3: Fetch en lote para evitar N+1 (ya establecido en Mi Cartera)
+// lib/cabida-comercial-server.ts — server-only orchestration
 
-**What:** Cuando se necesita el mismo tipo de dato para varios ids (o varias combinaciones comuna×operación×tipo), se hace **una** consulta agrupada con caché en memoria por el request, no una consulta por fila.
-**When to use:** `obtenerOportunidadesPorIds(ids: string[])` para la vista de comparación — hasta 5 ids, pero el patrón importa igual.
-**Trade-offs:** Un poco más de código de agrupación, a cambio de no repetir N consultas idénticas a `mercado_locales_stats_diarias` cuando varias oportunidades comparadas caen en la misma comuna/operación/tipo.
-**Example (patrón existente a replicar, `lib/propiedades-portafolio-server.ts:88-97`):**
-```typescript
-export async function compararPortafolioConMercado(propiedades: PropiedadPortafolio[]): Promise<Map<string, ComparacionMercado>> {
-  const bandasCache = new Map<string, Promise<BandasMercadoLocal | null>>()
-  function bandasPara(p: PropiedadPortafolio): Promise<BandasMercadoLocal | null> {
-    const key = `${p.comuna}|${p.operacion}|${p.tipoPropiedad}`
-    if (!bandasCache.has(key)) bandasCache.set(key, obtenerBandasMercadoLocales(p.comuna, p.operacion, p.tipoPropiedad))
-    return bandasCache.get(key)!
-  }
-  ...
-}
-```
+// Resolution layer — one function per input shape. Each produces the SAME
+// canonical UbicacionCabida; nothing downstream cares which one ran.
+export async function resolverUbicacionDesdeOportunidad(oportunidadId: string): Promise<UbicacionCabida | null>
+// v1.7: reads mercado_locales_listings, prefers atributos_raw.locationText
+// over titulo as the geocoding input (see Executive Summary finding),
+// falls back to titulo if locationText is absent, geocodes via
+// geocodeDireccion(), returns null (never throws) if geocoding fails —
+// same "explicit non-success, no thrown exception for an expected miss"
+// contract as geocodeDireccion() itself.
 
-## Data Flow
+export async function resolverUbicacionDesdeDireccion(direccion: string, comuna: string): Promise<UbicacionCabida | null>
+// Exists NOW, called by nothing in v1.7 except tests — this is the real seam
+// for the future standalone milestone. It is intentionally almost identical
+// to resolverUbicacionDesdeOportunidad's tail end (both end in the same
+// geocodeDireccion() call) — the duplication is the point: each resolver
+// owns exactly the "how do I get a direccion+comuna out of MY input shape"
+// logic and nothing else.
 
-### Detalle de una oportunidad
-
-```
-Usuario click "Ver detalle" en oportunidades/page.tsx
-    ↓
-GET /oportunidades/{id}
-    ↓
-[id]/page.tsx (Server Component)
-    → obtenerOportunidadPorId(id)          [lib/mercado-locales-server.ts, NUEVO]
-        → SELECT * FROM mercado_locales_listings WHERE id = $1   (createServiceClient, sin filtro workspace)
-        → obtenerBandasMercadoLocales(comuna, operacion, tipoPropiedad)  [existente]
-        → SELECT historial de mercado_locales_historial_precio WHERE listing_id = $1  [tabla existente]
-        → evaluarOportunidad(listing, cohort, historial)   [extraído, NUEVO]
-    → obtenerSenalesExpansionPorComuna([comuna])   [existente, reusado con array de 1]
-    → obtenerTendenciasConstruccionPorComuna([comuna])  [existente, reusado con array de 1]
-    ↓
-Render: KpiCard (precio, UF/m²) + GaugeArc (posición vs. P25/mediana/P75) + DesviacionBar + tabla de historial + badges de señales
-    ↓
-<ExportarInformeOportunidadesButton oportunidad={...}/>  (client island)
-    → onClick → lib/informe-oportunidades-pdf.ts::generarInformeOportunidadPDF()  → jsPDF → download
+// Analysis layer — ONE function, takes ONLY the canonical shape.
+// Never accepts an oportunidadId or a raw address string directly — that
+// would let a caller skip the resolution step and reintroduce
+// entity-specific logic into the analysis itself, the exact coupling this
+// split exists to prevent.
+export async function obtenerAnalisisCabidaComercial(
+  ubicacion: UbicacionCabida,
+  opts?: { modo?: 'caminando' | 'auto'; minutos?: number; force?: boolean },
+): Promise<AnalisisCabidaComercial>
 ```
 
-### Comparación de N oportunidades
+`app/api/cabida-comercial/analisis/route.ts` accepts `{ oportunidadId }` OR `{ direccion, comuna }` OR `{ lat, lng, comuna }` in the request body, calls the matching resolver, then always calls `obtenerAnalisisCabidaComercial()`. **v1.7's UI only ever sends `{ oportunidadId }`** — but the route, the server module, and the cache table already support the other two shapes from day one, so the future standalone-by-address milestone is additive (a new page + a new UI entry point calling the same route with a different body shape), not a rewrite. This directly satisfies the founder's explicit standalone-later requirement, and is not speculative: it's the same pattern this codebase already shipped once for zonificación.
 
-```
-Usuario marca 2-5 checkboxes en oportunidades/page.tsx (SelectorComparacion, client island)
-    ↓
-router.push("/oportunidades/comparar?ids=uuid1,uuid2,uuid3")
-    ↓
-comparar/page.tsx (Server Component)
-    → parsea + valida searchParams.ids
-    → obtenerOportunidadesPorIds(ids)   [lib/mercado-locales-server.ts, NUEVO — fetch en lote, ver Pattern 3]
-    ↓
-Render: tabla comparativa + RankingBarChart (ranking UF/m² entre las N) + DesviacionBar por fila
-    ↓
-<ExportarInformeOportunidadesButton oportunidades={[...]}/>  (client island)
-    → onClick → lib/informe-oportunidades-pdf.ts::generarInformeOportunidadesComparadasPDF()  → jsPDF → download
-```
+One consequence worth flagging for Requirements: because `resolverUbicacionDesdeOportunidad()` geocodes off `atributos_raw.locationText`/`titulo` (sector-level text, not a real street address — see Executive Summary), the `UbicacionCabida` it produces will typically be **less precise** than one produced by `resolverUbicacionDesdeDireccion()` with a real user-typed address in the future standalone flow. The interface doesn't hide this — `AnalisisCabidaComercial` should carry the resolved `direccionLabel` and ideally a `precision: 'exacta' | 'aproximada'` flag so the tab can disclose it, consistent with this module's "never fabricate/hide" data discipline (same discipline already named explicitly in `.planning/PROJECT.md`'s v1.7 goal).
 
-### Key Data Flows
+## The Risky Piece — Data Availability (do this first)
 
-1. **Scoring compartido:** `evaluarOportunidad()` es la única fuente de verdad de "por qué esto es una oportunidad" — list, detail y comparison todos la llaman, ninguno reimplementa el cálculo.
-2. **Sin nueva escritura a Supabase:** todo este milestone es de lectura pura sobre tablas ya existentes (`mercado_locales_listings`, `mercado_locales_historial_precio`, `mercado_locales_stats_diarias`) — no hay migración de schema requerida.
+Ranked by how much it could force a scope change, most dangerous first:
 
-## Scaling Considerations
+### 1. Can an oportunidad be geocoded precisely enough at all? (CONFIRM BEFORE ANYTHING ELSE)
 
-| Concern | Hoy (dataset actual) | Si crece 10x | Si crece 100x |
-|---------|----------------------|----------------|-----------------|
-| Detalle por id | 1 SELECT por PK, trivial | Sin cambios — index en PK ya existe | Sin cambios |
-| Comparación (batch) | ≤5 ids, `.in()` directo | Sin cambios (tope de UX sigue en 5) | Sin cambios |
-| Informe PDF | Generado client-side, ≤5 filas | Sin cambios | Si se pidiera exportar 50+ oportunidades, reconsiderar generación server-side — no es el caso de este milestone |
+**Confidence: LOW — untested against real data.** `mercado_locales_listings` has no `direccion` column (verified: `supabase/migrations/20260802_mercado_locales_listings.sql`). The best available input, `atributos_raw->>'locationText'`, is a scraped card teaser (e.g., "Providencia, Metropolitana") — sector-level at best, sometimes just a comuna name. Feeding that into `geocodeDireccion()` (which builds `"{direccion}, {comuna}, Santiago, Chile"` and takes Nominatim's first result) will often resolve to a comuna centroid or an arbitrary point within the sector, not the actual listing's building. **This directly undermines the founder's stated reason for choosing isócrona over comuna-level ("precisión sobre disponibilidad garantizada")** — a 10-minute walking isochrone drawn from an imprecise point can meaningfully change which competitors and which population fall inside it. Action: before selecting an isochrone provider, pull ~20 real `mercado_locales_listings.atributos_raw.locationText` values and run them through `geocodeDireccion()` to see the actual precision distribution. If it's consistently comuna-centroid-grade, Requirements needs to decide whether v1.7 ships with an explicit "ubicación aproximada" disclosure (cheap) or invests in improving the scraper's address capture first (bigger, likely out of scope for this milestone).
 
-### Scaling Priorities
+### 2. Does INE's ArcGIS census service actually support point/polygon intersection queries at manzana level, live? (VERIFY WITH A REAL REQUEST)
 
-No hay cuello de botella real esperado en este milestone: el volumen relevante (N oportunidades comparadas) está acotado por diseño a un puñado, y el detalle es una sola fila por PK. El único límite real conocido en este módulo (documentado en `obtenerOportunidadesMercadoLocales`) es el corte de paginación de PostgREST a 1000 filas — no aplica acá porque el detalle/comparación consultan por id explícito, no por listado completo.
+**Confidence: MEDIUM — found via web search, not yet verified with a live HTTP call the way `.planning/data-sources.yaml` verified the INE building-permits service.** Sources found: `sig.ine.cl/server/rest/services/Open_Data/Censos/MapServer` and `geoine-ine-chile.opendata.arcgis.com` publish Census 2017 population by manzana. The existing INE building-permits integration (`.planning/data-sources.yaml`, entry investigated 1 ago 2026) confirms the *same account family* (`publicaciones_geodatos`) is real, CC BY-SA 4.0 (commercial use fine, attribution required), and was verified live rather than trusted from docs alone — apply that identical discipline here before committing to it in Requirements: confirm the manzana layer supports a spatial `query` with an isochrone polygon geometry (not just `groupByFieldsForStatistics` by comuna, which is what the permits integration uses), and confirm the polygon-intersect query performs acceptably (isochrone polygons can have complex boundaries; ArcGIS spatial queries against them are heavier than the single-point query zonificación already does).
 
-## Anti-Patterns
+### 3. Consumption/spending data — comuna-level proxy, not isochrone-precise (LOCK THIS INTO SCOPE, DON'T DISCOVER IT LATE)
 
-### Anti-Pattern 1: Persistir la selección de comparación en una tabla nueva desde el día 1
+**Confidence: MEDIUM.** No manzana- or isochrone-level consumption/spend dataset was found for Chile in this research pass. INE's Encuesta de Presupuestos Familiares and similar consumption surveys publish at "área geográfica" granularity (Gran Santiago vs. other regional capitals) — far coarser than population. Realistic design: population is genuinely isochrone-precise; consumption/GSE is a comuna-level (or, at best, a small number of sub-comuna zones if a socioeconomic-segmentation dataset with finer geography turns out to exist — not yet found) figure overlaid on the isochrone-derived population. `AnalisisCabidaComercial`'s `demografia` field should carry its own precision/granularity label per sub-metric (population vs. spend), not one blanket confidence for "demografía y consumo" as a whole — this is the same "per-field status, not one column" discipline as the cache table, applied to the output payload too.
 
-**What people do:** Ver "comparar oportunidades" y asumir que hace falta una tabla `oportunidades_comparaciones` (workspace_id, ids, nombre) para poder "guardar" comparaciones.
-**Why it's wrong:** El caso de uso del milestone es "comparar ahora mismo, lado a lado" — no "guardar una comparación para volver la próxima semana". Una tabla nueva implica migración, RLS, API routes de CRUD, y UI de nombrar/listar comparaciones guardadas: todo eso es trabajo real para un caso de uso que nadie pidió todavía. El proyecto explícitamente prefiere simple sobre prematuro.
-**Do this instead:** Querystring `?ids=...`. Es bookmarkeable/compartible por su cuenta (copiar el link YA es "guardar la comparación" para el caso de uso real de un corredor mandándosela a un colega por WhatsApp). Si más adelante se pide guardar con nombre, ahí sí se justifica la tabla — no antes.
+### 4. Strip center / power center detection has no confirmed automated data source (SCOPE DECISION NEEDED, NOT JUST RESEARCH TIME)
 
-### Anti-Pattern 2: Convertir `oportunidades/page.tsx` entero a `"use client"` para agregar los checkboxes
+**Confidence: LOW that this is automatable within v1.7's public-data constraint.** `supermercado` (`shop=supermarket`) and `minimarket` (`shop=convenience`) map cleanly onto OSM tags Overpass already proved queryable in this codebase. `strip_center` and `power_center` are Chilean commercial-real-estate categories with **no corresponding OSM primary tag** — verified by inspecting the actual Overpass query already in production (`lib/terrenos-ubicacion.ts`, tag whitelist `mall|supermarket|department_store`; no strip/power-center equivalent exists in OSM's tagging scheme). The only lead is the Cámara Chilena de Centros Comerciales count (277 assets, from `.planning/RESEARCH-MERCADO-CENTROS-COMERCIALES.md`) — a marketing-research figure with no confirmed public address list or API behind it. Options for Requirements to choose between, none currently validated: (a) approximate via Overpass `landuse=retail` polygon clusters + node density (heuristic, will have false positives/negatives), (b) manual/curated seed list maintained like `CADENAS_RUT_CONOCIDOS`, (c) explicitly ship `strip_center`/`power_center` verdicts as "sin datos suficientes para automatizar — verificar manualmente" rather than fabricating a count. Do not let this get resolved implicitly during implementation — it changes what "4 formats" means in the milestone goal.
 
-**What people do:** Ver que se necesita estado interactivo (selección) y asumir que toda la página debe volverse cliente, como `mi-cartera/page.tsx`.
-**Why it's wrong:** Perdería el data-fetching directo server-side (habría que mover `obtenerOportunidadesMercadoLocales()` detrás de una API route nueva solo para poder llamarla desde un `useEffect`), duplicando trabajo que hoy no existe y descartando el Server Component que ya funciona bien.
-**Do this instead:** Un client component chico y aislado (`SelectorComparacion`) que recibe los datos ya resueltos como props — exactamente el mismo patrón que `<Histograma>` ya prueba que funciona en esta misma página hoy.
+## Recommended Build Order (risk-first, matches downstream_consumer requirement)
 
-### Anti-Pattern 3: Extender `lib/informe-pdf.ts` con un parámetro `tipo: "due-diligence" | "oportunidades"`
+1. **Spike, no UI, no persistence:** geocode ~20 real `locationText` values (item 1 above) + one live INE ArcGIS manzana-level spatial query against a hand-drawn test polygon (item 2) + one live Overpass query for `shop=supermarket|convenience` returning actual POIs, not counts (extends `lib/terrenos-ubicacion.ts`'s query pattern). Answers: is geocoding precise enough, does INE's spatial query work as expected, does Overpass return usable POI density for at least 2 of 4 formats. This is a few hours of throwaway scripts, not a phase — but it must happen before Requirements locks the "4 formats, isócrona-level" scope, because item 4 above may force a scope renegotiation.
+2. **Isochrone provider decision + `lib/geocoding.ts`-adjacent client:** based on spike results, pick the isochrone provider (OpenRouteService's free tier — 500/day, 20/min, walking+driving profiles, GeoJSON polygon output — is the leading OSM-family candidate consistent with this codebase's existing Nominatim/Overpass choices; confirm Chile network coverage specifically before committing, same "verify against real requests" discipline as every other data source in `.planning/data-sources.yaml`).
+3. **Cache table + service-layer skeleton:** `cabida_comercial_cache` migration, `lib/cabida-comercial-server.ts` with the resolver split (Key Decision 4) wired to real isochrone + demografia + competencia calls behind per-field cache-through, `evaluarCabidaPorFormato()` as a pure function from day one (testable without network).
+4. **API route + tab UI:** `app/api/cabida-comercial/analisis/route.ts`, `CabidaComercialTab` (on-demand fetch, following `ResumenTab`'s state-machine shape), wired into the 5th tab slot on `oportunidades/[id]/page.tsx`.
+5. **Map + polish + informe integration:** Leaflet isochrone/competitor map (pattern from `zonificacion-mapa.tsx`), then (separate, later) wiring into `oportunidades/[id]/informe/page.tsx`'s print report.
 
-**What people do:** Ver dos features de "exportar PDF" y asumir que deben compartir un solo generador parametrizado.
-**Why it's wrong:** Los dos informes no comparten estructura de datos (`DueDiligenceResult` vs. una lista de oportunidades), ni layout (láminas anotadas vs. tabla comparativa), ni dependencias (`pdfjs-dist` vs. nada). Forzar un solo módulo con una rama `if (tipo === ...)` en cada función de dibujo generaría el tipo de acoplamiento que el propio código ya evita hoy (compárese con `lib/informe-charts.ts`, que duplica un parser de 5 líneas antes que importar cruzado).
-**Do this instead:** Módulo hermano nuevo, mismas convenciones de bajo nivel (jsPDF, `"use client"` caller, dynamic import), cero import cruzado de tipos de Due Diligence.
+Steps 1-2 are the course-correction checkpoint: if geocoding precision or INE's spatial-query granularity comes back worse than expected, Requirements should revisit "isócrona, no nivel comuna" before any cache table or UI work is built against an assumption that doesn't hold.
 
-## Integration Points
+## Anti-Patterns to Avoid (grounded in this codebase's own documented pitfalls)
 
-### Internal Boundaries
+### Anti-Pattern 1: One blanket cache-row status for three independent external calls
+Zonificación's own code explicitly documents why a single nullable/status field is wrong when "not yet checked" must stay distinguishable from "checked and failed" (Pitfall 6, cited directly in `lib/zonificacion-server.ts`). Cabida Comercial has three failure domains, not one — replicate the per-field-status shape from Key Decision 2, not a single `status` column.
 
-| Boundary | Communication | Notes |
-|----------|----------------|-------|
-| `oportunidades/page.tsx` ↔ `oportunidades/[id]/page.tsx` | `<Link href={`/oportunidades/${o.id}`}>` (navegación normal, no fetch) | El id ya viaja en el payload de `obtenerOportunidadesMercadoLocales()` hoy — solo falta el link |
-| `oportunidades/page.tsx` ↔ `SelectorComparacion` (client) | Props planos (`{id, titulo, comuna, precioUfNormalizado}[]`) | Sin callbacks del padre — el hijo resuelve su propia navegación con `useRouter()` |
-| `SelectorComparacion` ↔ `oportunidades/comparar/page.tsx` | `router.push()` con querystring | Mismo mecanismo que el `<form method="GET">` ya usado en la lista, solo que construido en cliente en vez de vía submit |
-| `[id]/page.tsx` / `comparar/page.tsx` ↔ `lib/mercado-locales-server.ts` | Llamada directa server-to-server (`createServiceClient()`), igual que hoy | Sin API route intermedia — mismo patrón que `oportunidades/page.tsx` ya usa |
-| `[id]/page.tsx` / `comparar/page.tsx` ↔ `ExportarInformeOportunidadesButton` (client) | Props planos con los datos ya cargados por el Server Component | A diferencia de `generarInformePDF` (que sí vuelve a consultar Supabase porque su caller vive en una página cliente sin esos datos), acá el botón recibe los datos ya resueltos — no hace su propio fetch |
-| `ExportarInformeOportunidadesButton` ↔ `lib/informe-oportunidades-pdf.ts` | Import + `await` directo, dynamic `import("jspdf")` dentro | Mismo patrón que `planos-anotados.tsx` → `generarInformePDF` |
+### Anti-Pattern 2: Eagerly fetching Cabida Comercial data in the oportunidad detail page's `Promise.all`
+Would add three live, quota-constrained external calls to every page view of `/oportunidades/[id]`, most of which never open that tab, and would contend with Terrenos' own Overpass usage for the same shared 2-slots/IP quota. Follow `ResumenTab`'s on-demand pattern instead (Key Decision 3).
 
-### External Services
+### Anti-Pattern 3: Treating "demografía y consumo" as one uniformly isochrone-precise dataset
+Population (manzana-level, INE ArcGIS) and consumption (comuna-level proxy, at best) have genuinely different achievable precision. Presenting both with the same confidence framing would violate this project's own "never fabricate/hide data" discipline (named explicitly in `.planning/PROJECT.md`'s v1.7 goal) by implying a precision the consumption figure doesn't have.
 
-Ninguno nuevo. Todo el dato ya vive en Supabase (`mercado_locales_listings`, `mercado_locales_historial_precio`, `mercado_locales_stats_diarias`) más las dos señales cruzadas ya integradas (`cadenas-sucursales-server.ts`, `ine-permisos-server.ts`). No se agrega ninguna llamada externa nueva.
+### Anti-Pattern 4: Silently degrading strip_center/power_center to "0 competitors found" when no data source actually covers them
+Overpass returning zero results for a tag that doesn't exist in OSM's schema is not the same as "verified: no strip centers nearby" — it's "this format was never actually checked." Any format without a validated data source must surface as an explicit non-finding (matching item 4's option (c) above), never as a silent zero that reads as a positive signal for cabida.
 
-## Build Order (respetando dependencias reales)
-
-1. **Refactor de `lib/mercado-locales-server.ts`**: extraer la lógica de scoring del loop de `obtenerOportunidadesMercadoLocales()` (líneas ~475-517) a una función pura `evaluarOportunidad(listing, cohort, historialReciente)`. Verificar con un test/comparación manual que `obtenerOportunidadesMercadoLocales()` sigue devolviendo exactamente los mismos resultados post-refactor (comportamiento no debe cambiar, solo la forma). **Todo lo demás depende de este paso** — sin scoring reusable, el detalle y la comparación no pueden marcar `reasonCodes` de forma consistente con la lista.
-2. **Mover `REASON_LABEL` a `lib/mercado-locales-reason-labels.ts`** (o similar), actualizar el import en `oportunidades/page.tsx`. Trivial, sin dependencias, se puede hacer en paralelo al paso 1.
-3. **`obtenerOportunidadPorId(id)`** en `lib/mercado-locales-server.ts`, usando `evaluarOportunidad()` del paso 1. Depende del paso 1.
-4. **`app/.../oportunidades/[id]/page.tsx`** (Server Component) + link "Ver detalle" agregado a las cards de `oportunidades/page.tsx`. Depende del paso 3.
-5. **`SelectorComparacion` (client island)** + integrarlo en `oportunidades/page.tsx`. Sin dependencia de los pasos 3-4 — se puede construir en paralelo, ya que solo necesita los ids que la lista ya tiene.
-6. **`obtenerOportunidadesPorIds(ids[])`** en `lib/mercado-locales-server.ts` (fetch en lote, Pattern 3), usando `evaluarOportunidad()` del paso 1. Depende del paso 1.
-7. **`app/.../oportunidades/comparar/page.tsx`** (Server Component). Depende de los pasos 5 (para tener cómo llegar ahí) y 6 (para tener qué mostrar).
-8. **`lib/informe-oportunidades-pdf.ts`** + `ExportarInformeOportunidadesButton`, integrado en los pasos 4 y 7. Se construye último porque su forma de datos depende de qué campos terminen mostrando el detalle y la comparación — construirlo antes arriesga tener que rehacerlo si cambia la forma de los datos en los pasos anteriores.
+### Anti-Pattern 5: Coupling the analysis function to `oportunidadId`
+Would make the future standalone-by-address milestone a rewrite instead of an additive change — the entire point of Key Decision 4's resolver split. `obtenerAnalisisCabidaComercial()` must never accept an `oportunidadId` or a raw address string as a parameter, only the canonical `UbicacionCabida`.
 
 ## Sources
 
-- `supabase/migrations/20260802_mercado_locales_listings.sql` — schema real de `mercado_locales_listings` (id uuid PK, RLS read-open, sin workspace_id) y `mercado_locales_historial_precio`
-- `lib/mercado-locales-server.ts` — `obtenerOportunidadesMercadoLocales()`, `obtenerBandasMercadoLocales()`, patrón de paginación y de fallback citywide
-- `lib/propiedades-portafolio-server.ts` — `calcularCapRatePropiedad()`, `compararPortafolioConMercado()` (precedentes directos de Pattern 2 y Pattern 3)
-- `lib/informe-pdf.ts` — módulo de referencia para convenciones de generación de PDF client-side (dynamic import, `pdf.save()`), y motivo de por qué NO extenderlo
-- `lib/informe-charts.ts` — precedente explícito de duplicar helpers puros pequeños en vez de importar cruzado
-- `app/(dashboard)/mercado-inmobiliario/oportunidades/page.tsx`, `reportes/page.tsx`, `mi-cartera/page.tsx`, `macro/page.tsx`, `cadenas/page.tsx` — precedentes de Server Component vs. Client Component en el módulo
-- `components/mercado-inmobiliario/charts/histograma.tsx`, `kpi-card.tsx`, `ranking-bar-chart.tsx`, `gauge-arc.tsx`, `distribucion-donut.tsx` — librería de gráficos a reusar sin modificar
-- `app/api/propiedades-portafolio/[id]/route.ts` — convención `params: Promise<{ id: string }>` de Next.js App Router usada en este proyecto
+- Direct codebase inspection (see file list under "Based on" above) — HIGH confidence, all integration-surface claims verified against real code, not the milestone brief's assumptions.
+- INE Chile Census 2017 manzana-level ArcGIS services — `sig.ine.cl/server/rest/services/Open_Data/Censos/MapServer`, `geoine-ine-chile.opendata.arcgis.com` — found via web search, MEDIUM confidence (not yet verified with a live spatial-intersect HTTP request the way this project's own `data-sources.yaml` discipline requires before committing).
+- OpenRouteService isochrone API — free tier 500 isochrones/day, 20/min, `foot-walking`/`driving-car`/`cycling-regular` profiles, GeoJSON polygon output, max 120km range / 1hr driving / 20hr walking — found via web search, MEDIUM confidence (Chile-specific coverage/quality not yet spot-checked).
+- OSRM isochrone support — noted as an alternative, self-hostable if OpenRouteService's quota proves insufficient at scale; not evaluated further in this pass.
+- `.planning/data-sources.yaml` (existing project research) — HIGH confidence, confirms the INE ArcGIS account family is real and already integrated for a different dataset (building permits), and documents the verification discipline ("verificado en vivo con consultas HTTP reales, no solo documentación") this milestone's Phase 1 spike should replicate.
+- `.planning/RESEARCH-MERCADO-CENTROS-COMERCIALES.md` (existing project research, sales-focused) — LOW confidence as a data-integration source (no addresses/API, marketing-verified figures only), used here solely to establish that strip/power-center counts exist publicly but lack the geodata Cabida Comercial needs.
+- `.planning/PROJECT.md` (v1.7 milestone definition) — HIGH confidence, primary source for scope/goal/founder decisions quoted above.
 
 ---
-*Architecture research for: PermisoHub — módulo Mercado Inmobiliario, feature Oportunidades (detalle/comparación/informe)*
+*Architecture research for: PermisoHub v1.7 Cabida Comercial*
 *Researched: 2026-08-02*
