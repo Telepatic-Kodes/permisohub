@@ -103,7 +103,12 @@ Plans:
 3. El informe muestra fecha de generación Y fecha de última verificación por dato (nunca un snapshot sin fecha)
 4. Usuario puede personalizar el informe con un campo "preparado por / para" en la portada
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 15-01-PLAN.md — Infraestructura compartida: fix de layout de impresión (sidebar), formatTimestampCorto, PrintButton/PreparadoPorPara/PortadaInforme/MetodologiaInforme
+- [ ] 15-02-PLAN.md — Informe individual `/oportunidades/[id]/informe` (INFO-01/03/04) + entry point desde la ficha
+- [ ] 15-03-PLAN.md — Informe de comparación `/oportunidades/comparar/informe` (INFO-02/03/04, Pitfall 5) + entry point desde comparar
 
 ## Progress
 
