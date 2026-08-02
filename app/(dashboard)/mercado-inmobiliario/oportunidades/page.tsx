@@ -1,23 +1,18 @@
-import Link from "next/link"
-import { TrendingDown, TrendingUp, Radar } from "lucide-react"
+import { TrendingDown } from "lucide-react"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { obtenerOportunidadesMercadoLocales, REASON_LABEL } from "@/lib/mercado-locales-server"
+import { obtenerOportunidadesMercadoLocales } from "@/lib/mercado-locales-server"
 import { obtenerSenalesExpansionPorComuna } from "@/lib/cadenas-sucursales-server"
 import { obtenerTendenciasConstruccionPorComuna } from "@/lib/ine-permisos-server"
 import { TIPO_PROPIEDAD_LABEL, type OperacionMercadoLocal, type TipoPropiedadComercial } from "@/lib/scrapers/mercado-locales-common"
 import { Histograma } from "@/components/mercado-inmobiliario/charts/histograma"
-import { formatFechaCorta } from "@/lib/formato-fecha"
+import { SelectorComparacion } from "@/components/mercado-inmobiliario/selector-comparacion"
 
 const TIPOS_PROPIEDAD_VALIDOS: TipoPropiedadComercial[] = ["local_comercial", "oficina", "bodega", "industrial"]
 
 export const dynamic = "force-dynamic"
-
-function formatUf(n: number): string {
-  return n.toLocaleString("es-CL", { maximumFractionDigits: 2 })
-}
 
 interface OportunidadesPageProps {
   searchParams: Promise<{ comuna?: string; operacion?: string; tipoPropiedad?: string }>
@@ -118,53 +113,11 @@ export default async function OportunidadesPage({ searchParams }: OportunidadesP
             <Histograma titulo="Distribución de precios (UF)" valores={oportunidades.map((o) => o.precioUfNormalizado)} />
           )}
 
-          <div className="space-y-3">
-            {oportunidades.map((o) => (
-              <div key={o.id} className="rounded-lg border border-line-fine bg-card p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <a href={o.url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-primary hover:underline">
-                    {o.titulo}
-                  </a>
-                  <span className="num shrink-0 text-sm font-semibold text-primary">{formatUf(o.precioUfNormalizado)} UF</span>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {o.comuna}
-                  {o.superficieM2 ? ` · ${o.superficieM2} m²` : ""}
-                  {o.precioUfM2Normalizado ? ` · ${formatUf(o.precioUfM2Normalizado)} UF/m²` : ""}
-                </p>
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  {o.reasonCodes.map((code) => (
-                    <span key={code} className="rounded-[3px] border border-[var(--blueprint-soft)] bg-[var(--blueprint-soft)] px-2 py-0.5 text-[10px] text-[var(--blueprint)]">
-                      {REASON_LABEL[code] ?? code}
-                    </span>
-                  ))}
-                  {senalesExpansion.get(o.comuna) && (
-                    <span className="inline-flex items-center gap-1 rounded-[3px] border border-modulo-mercado/20 bg-modulo-mercado-subtle px-2 py-0.5 text-[10px] text-modulo-mercado">
-                      <Radar className="size-2.5" />
-                      {senalesExpansion.get(o.comuna)!.cadena} tiene sucursal en la comuna
-                      {formatFechaCorta(senalesExpansion.get(o.comuna)!.fechaRegistro)
-                        ? ` (registrada ${formatFechaCorta(senalesExpansion.get(o.comuna)!.fechaRegistro)})`
-                        : ""}
-                    </span>
-                  )}
-                  {tendenciasConstruccion.get(o.comuna)?.tendencia === "creciente" && (
-                    <span className="inline-flex items-center gap-1 rounded-[3px] border border-modulo-mercado/20 bg-modulo-mercado-subtle px-2 py-0.5 text-[10px] text-modulo-mercado">
-                      <TrendingUp className="size-2.5" />
-                      Actividad constructiva histórica en alza (INE, {tendenciasConstruccion.get(o.comuna)!.variacionPct?.toFixed(0)}%)
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2.5">
-                  <Link
-                    href={`/mercado-inmobiliario/oportunidades/${o.id}`}
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    Ver ficha completa →
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+          <SelectorComparacion
+            oportunidades={oportunidades}
+            senalesExpansion={Object.fromEntries(senalesExpansion)}
+            tendenciasConstruccion={Object.fromEntries(tendenciasConstruccion)}
+          />
         </div>
       </div>
     </div>
