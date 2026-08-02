@@ -550,4 +550,148 @@ export async function obtenerOportunidadesMercadoLocales(
   return results.slice(0, limit)
 }
 
+export const REASON_LABEL: Record<string, string> = {
+  below_p25_ufm2: "Bajo P25 por m² — entre los más baratos de su comuna",
+  below_p25_uf: "Bajo P25 — entre los más baratos de su comuna",
+  price_drop_7d: "Bajó de precio en los últimos 7 días",
+}
+
+// Versión extendida para la ficha de detalle (DETA-04: "explica en detalle
+// los reason codes") — REASON_LABEL sigue siendo la versión corta para
+// badges en la lista y en las mini-cards de comparables.
+export const REASON_LABEL_DETALLE: Record<string, string> = {
+  below_p25_ufm2:
+    "El precio por m² de este local está en el 25% más barato de su cohorte (misma comuna, tipo de propiedad y operación) — un indicador de que está bajo el rango habitual de mercado.",
+  below_p25_uf:
+    "El precio total (UF) de este local está en el 25% más barato de su cohorte. No se pudo comparar por m² porque el aviso no declara superficie, así que la comparación es por precio total.",
+  price_drop_7d:
+    "El precio de este aviso bajó en los últimos 7 días respecto a su publicación anterior — señal de que el propietario o corredor está ajustando expectativas.",
+}
+
+export interface PuntoHistorialPrecio {
+  precioMonto: number
+  precioMoneda: string
+  capturadoEl: string
+}
+
+/** Historial COMPLETO de precio del listing (DETA-03), no acotado a 7 días — esa ventana es solo para el cálculo de price_drop_7d. */
+export async function obtenerHistorialPrecioListing(listingId: string): Promise<PuntoHistorialPrecio[]> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('mercado_locales_historial_precio')
+    .select('precio_monto, precio_moneda, capturado_el')
+    .eq('listing_id', listingId)
+    .order('capturado_el', { ascending: true })
+
+  if (error || !data) return []
+  return data.map((f) => ({
+    precioMonto: f.precio_monto as number,
+    precioMoneda: f.precio_moneda as string,
+    capturadoEl: f.capturado_el as string,
+  }))
+}
+
+export interface OportunidadDetalle {
+  id: string
+  titulo: string
+  url: string
+  comuna: string
+  tipoPropiedad: TipoPropiedadComercial
+  operacion: OperacionMercadoLocal
+  status: 'activo' | 'dado_de_baja'
+  dadoDeBajaEl: string | null
+  precioValido: boolean
+  precioMonto: number
+  precioMoneda: string
+  superficieM2: number | null
+  precioUfNormalizado: number
+  precioUfM2Normalizado: number | null
+  reasonCodes: string[]
+  primeraVezVistoEl: string
+  ultimaVezVistoEl: string
+  bandas: BandasMercadoLocal | null
+}
+
+/**
+ * A diferencia de obtenerOportunidadesMercadoLocales(), esta función NO
+ * filtra por status='activo' — un aviso dado_de_baja debe poder abrirse
+ * desde su ficha (ej. llegado por link compartido o desde comparables) y
+ * mostrar ese estado explícitamente, nunca un 404 (ver 13-RESEARCH.md).
+ */
+export async function obtenerOportunidadPorId(id: string): Promise<OportunidadDetalle | null> {
+  const supabase = createServiceClient()
+  const { data: listing, error } = await supabase
+    .from('mercado_locales_listings')
+    .select(
+      'id, titulo, url, comuna, tipo_propiedad, operacion, status, dado_de_baja_el, precio_monto, precio_moneda, superficie_m2, primera_vez_visto_el, ultima_vez_visto_el',
+    )
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error || !listing) return null
+
+  const tipoPropiedad = listing.tipo_propiedad as TipoPropiedadComercial
+  const operacion = listing.operacion as OperacionMercadoLocal
+  const bandas = await obtenerBandasMercadoLocales(listing.comuna as string, operacion, tipoPropiedad)
+
+  const precioValido =
+    listing.precio_monto !== null && (listing.precio_moneda === 'UF' || listing.precio_moneda === 'CLP')
+
+  let precioUf = 0
+  let precioUfM2: number | null = null
+  let reasonCodes: string[] = []
+
+  if (precioValido) {
+    const precioMonto = listing.precio_monto as number
+    if (listing.precio_moneda === 'UF') {
+      precioUf = precioMonto
+    } else if (bandas?.ufValorUsado) {
+      precioUf = precioMonto / bandas.ufValorUsado
+    }
+    // si es CLP y no hay banda (ni siquiera citywide) para convertir, precioUf
+    // queda en 0 en vez de fabricar una conversión — caso borde sin
+    // mercado_locales_stats_diarias todavía para esta comuna/tipo/operación.
+
+    const superficieM2 = listing.superficie_m2 as number | null
+    precioUfM2 = superficieM2 && superficieM2 > 0 && precioUf > 0 ? precioUf / superficieM2 : null
+
+    if (precioUf > 0) {
+      const historialCompleto = await obtenerHistorialPrecioListing(id)
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+      const historialReciente = historialCompleto
+        .filter((h) => new Date(h.capturadoEl).getTime() >= sevenDaysAgo)
+        .map((h) => ({ precio_monto: h.precioMonto, capturado_el: h.capturadoEl }))
+
+      reasonCodes = evaluarOportunidad({
+        precioUf,
+        precioUfM2,
+        cohortP25Uf: bandas?.p25Uf ?? null,
+        cohortP25UfM2: bandas?.p25UfM2 ?? null,
+        historialReciente,
+      })
+    }
+  }
+
+  return {
+    id: listing.id as string,
+    titulo: listing.titulo as string,
+    url: listing.url as string,
+    comuna: listing.comuna as string,
+    tipoPropiedad,
+    operacion,
+    status: listing.status as 'activo' | 'dado_de_baja',
+    dadoDeBajaEl: listing.dado_de_baja_el as string | null,
+    precioValido,
+    precioMonto: (listing.precio_monto as number | null) ?? 0,
+    precioMoneda: (listing.precio_moneda as string | null) ?? '',
+    superficieM2: listing.superficie_m2 as number | null,
+    precioUfNormalizado: precioUf,
+    precioUfM2Normalizado: precioUfM2,
+    reasonCodes,
+    primeraVezVistoEl: listing.primera_vez_visto_el as string,
+    ultimaVezVistoEl: listing.ultima_vez_visto_el as string,
+    bandas,
+  }
+}
+
 export { obtenerValorUF }
