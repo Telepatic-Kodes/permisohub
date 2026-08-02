@@ -1,5 +1,7 @@
 import { GaugeArc } from "@/components/mercado-inmobiliario/charts/gauge-arc"
 import { DesviacionBar } from "@/components/mercado-inmobiliario/charts/desviacion-bar"
+import { Badge } from "@/components/ui/badge"
+import { calcularCapRate } from "@/lib/calculadora-inversion"
 import type { OportunidadDetalle, BandasMercadoLocal } from "@/lib/mercado-locales-server"
 
 interface PosicionamientoTabProps {
@@ -17,6 +19,12 @@ function fmt(n: number | null): string {
 export function PosicionamientoTab({ oportunidad, bandasArriendo, bandasVenta }: PosicionamientoTabProps) {
   const bandas = oportunidad.bandas
   const color = "var(--modulo-mercado)"
+
+  const arriendoUfM2 = bandasArriendo?.medianaUfM2 ?? null
+  const ventaUfM2 = bandasVenta?.medianaUfM2 ?? null
+  const rentabilidad = arriendoUfM2 !== null && ventaUfM2 !== null && ventaUfM2 > 0
+    ? calcularCapRate({ rentaMensual: arriendoUfM2, precioVenta: ventaUfM2 })
+    : null
 
   return (
     <div className="space-y-5">
@@ -95,6 +103,48 @@ export function PosicionamientoTab({ oportunidad, bandasArriendo, bandasVenta }:
           </div>
         </div>
       )}
+
+      <div className="rounded-lg border border-line-fine bg-card p-4">
+        <p className="mb-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+          Rentabilidad implícita de zona ({oportunidad.comuna} / {oportunidad.tipoPropiedad})
+        </p>
+
+        {rentabilidad ? (
+          <>
+            <div className="flex items-center gap-2">
+              <p className="num text-2xl font-semibold text-primary">{rentabilidad.capNeto.toFixed(1)}%</p>
+              <Badge className="border border-violet-200 bg-violet-100 text-violet-800">Estimado de zona</Badge>
+            </div>
+            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              Cap rate neto estimado (vacancia 7% / opex 15% genéricos) a partir de la mediana UF/m² de arriendo vs. venta de
+              la zona — NO es la rentabilidad del activo específico de esta ficha, que es {oportunidad.operacion} y no tiene
+              su contraparte real ({oportunidad.operacion === "venta" ? "arriendo" : "venta"}) del mismo inmueble.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <p className="text-muted-foreground">Banda arriendo UF/m²</p>
+                <p className="num font-medium">
+                  {fmt(arriendoUfM2)} (N={bandasArriendo?.muestraN}{bandasArriendo?.usoFallback ? ", metropolitana" : ""})
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Banda venta UF/m²</p>
+                <p className="num font-medium">
+                  {fmt(ventaUfM2)} (N={bandasVenta?.muestraN}{bandasVenta?.usoFallback ? ", metropolitana" : ""})
+                </p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {arriendoUfM2 === null && ventaUfM2 === null
+              ? `Sin datos de arriendo NI de venta suficientes en ${oportunidad.comuna} / ${oportunidad.tipoPropiedad} todavía — no se puede estimar.`
+              : arriendoUfM2 === null
+                ? `Sin datos de arriendo suficientes en ${oportunidad.comuna} / ${oportunidad.tipoPropiedad} — no se puede estimar la rentabilidad de zona.`
+                : `Sin datos de venta suficientes en ${oportunidad.comuna} / ${oportunidad.tipoPropiedad} — no se puede estimar la rentabilidad de zona.`}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
