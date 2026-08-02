@@ -1,6 +1,11 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `a1eb931` feat(13-05): add rentabilidad implicita de zona (DETA-07) to PosicionamientoTab
+- `2026-08-02` `8950c72` feat(13-06): add ComparablesTab with clickable mini-cards
+- `2026-08-02` `6f2b881` feat(13-06): add HistorialTab with price history, reason codes, and cross signals
+- `2026-08-02` `2d02c39` feat(13-05): add PosicionamientoTab banda + banner de muestra chica
+- `2026-08-02` `d120f9f` docs(13-03): complete capa de datos ficha de detalle plan
 - `2026-08-02` `0becbc1` docs(13-04): complete resumen ejecutivo IA plan
 - `2026-08-02` `7f24561` feat(13-03): add obtenerComparablesOportunidad()
 - `2026-08-02` `0530389` feat(13-04): add ResumenTab on-demand executive summary component
@@ -22,17 +27,17 @@ _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, req
 ## Current Position
 
 Phase: 13 of 15 (Refactor de Scoring + Dashboard de Detalle) — ejecución en curso, planes 01-07
-Plan: 04 de 7 completos (wave 2: 13-03 y 13-04 completos, ambos dependientes de wave 1) — 05-07 pendientes
-Status: Plan 13-01 completo (TDD RED→GREEN, 9/9 tests, tsc limpio) — Plan 13-02 completo (3 utilidades compartidas) — Plan 13-03 completo (obtenerOportunidadPorId/obtenerComparablesOportunidad/obtenerHistorialPrecioListing en lib/mercado-locales-server.ts, ver 13-03-SUMMARY.md) — Plan 13-04 completo (POST /api/oportunidades-resumen + ResumenTab, DETA-06 end-to-end salvo wiring de 13-07)
-Last activity: 2026-08-02 — `/gsd:execute-phase 13` ejecutó plan 13-04: `app/api/oportunidades-resumen/route.ts` (ruta SSE flat, mismo orden de guardas que app/api/tasacion/route.ts, streamConContexto sin búsqueda web) + `components/mercado-inmobiliario/oportunidad-detalle/resumen-tab.tsx` (client component sin useEffect de auto-disparo — botón explícito → streaming → InformeEjecutivo). Ningún archivo existente modificado. Ver 13-04-SUMMARY.md.
+Plan: 06 de 7 completos (wave 3: 13-05 y 13-06 completos, ejecutados en paralelo, ambos dependientes de 13-02/13-03) — solo 07 (integración final) pendiente
+Status: Plan 13-01 completo (TDD RED→GREEN, 9/9 tests, tsc limpio) — Plan 13-02 completo (3 utilidades compartidas) — Plan 13-03 completo (obtenerOportunidadPorId/obtenerComparablesOportunidad/obtenerHistorialPrecioListing en lib/mercado-locales-server.ts, ver 13-03-SUMMARY.md) — Plan 13-04 completo (POST /api/oportunidades-resumen + ResumenTab, DETA-06 end-to-end salvo wiring de 13-07) — Plan 13-05 completo (PosicionamientoTab: banda de precio + banner amber + rentabilidad implícita de zona, DETA-02/DETA-07, ver 13-05-SUMMARY.md) — Plan 13-06 completo (HistorialTab + ComparablesTab, DETA-03/DETA-04/DETA-05, ver 13-06-SUMMARY.md)
+Last activity: 2026-08-02 — `/gsd:execute-phase 13` ejecutó plan 13-06: `components/mercado-inmobiliario/oportunidad-detalle/historial-tab.tsx` (días publicado + historial de precio completo + reasonCodes en detalle vía REASON_LABEL_DETALLE + señales cruzadas de expansión/tendencia constructiva) + `components/mercado-inmobiliario/oportunidad-detalle/comparables-tab.tsx` (mini-cards clickeables hacia /mercado-inmobiliario/oportunidades/[id], siempre visible, mensaje explícito + card real coexisten cuando hay 1 comparable). Ejecutado en paralelo con 13-05 (PosicionamientoTab), sin conflicto de archivos. Ningún archivo existente modificado. Ver 13-06-SUMMARY.md.
 
-Progress: [█████░░░░░] ~57% (4/7 planes de la fase 13 completos)
+Progress: [████████░░] ~86% (6/7 planes de la fase 13 completos) — solo falta 13-07 (integración final de la ficha de detalle)
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
-| 13 | Refactor de Scoring + Dashboard de Detalle | En curso (4/7 planes) — 13-01 ✅ (evaluarOportunidad() extraída y testeada en lib/mercado-locales-server.ts, fuente única de verdad de scoring — ver 13-01-SUMMARY.md) 13-02 ✅ (lib/formato-fecha.ts + streamConContexto() en lib/ai.ts sin tool web_search_preview + lib/resumen-oportunidad-prompts.ts — ver 13-02-SUMMARY.md) 13-03 ✅ (obtenerOportunidadPorId/obtenerComparablesOportunidad/obtenerHistorialPrecioListing + REASON_LABEL_DETALLE en lib/mercado-locales-server.ts — ver 13-03-SUMMARY.md) 13-04 ✅ (POST /api/oportunidades-resumen + ResumenTab, DETA-06 sin auto-disparo — ver 13-04-SUMMARY.md) |
+| 13 | Refactor de Scoring + Dashboard de Detalle | En curso (6/7 planes) — 13-01 ✅ (evaluarOportunidad() extraída y testeada en lib/mercado-locales-server.ts, fuente única de verdad de scoring — ver 13-01-SUMMARY.md) 13-02 ✅ (lib/formato-fecha.ts + streamConContexto() en lib/ai.ts sin tool web_search_preview + lib/resumen-oportunidad-prompts.ts — ver 13-02-SUMMARY.md) 13-03 ✅ (obtenerOportunidadPorId/obtenerComparablesOportunidad/obtenerHistorialPrecioListing + REASON_LABEL_DETALLE en lib/mercado-locales-server.ts — ver 13-03-SUMMARY.md) 13-04 ✅ (POST /api/oportunidades-resumen + ResumenTab, DETA-06 sin auto-disparo — ver 13-04-SUMMARY.md) 13-05 ✅ (PosicionamientoTab: banda de precio vs. cohorte + banner amber de advertencia + rentabilidad implícita de zona, DETA-02/DETA-07 — ver 13-05-SUMMARY.md) 13-06 ✅ (HistorialTab + ComparablesTab, DETA-03/DETA-04/DETA-05 — ver 13-06-SUMMARY.md) |
 | 14 | Comparación Lado a Lado | Not started — COMPA-01..04 |
 | 15 | Informe Exportable | Not started — INFO-01..04 |
 | 10 | Motor de Zonificación | ✅ Completa — 10-01 ✅ (migración zonificacion_cache + proyectos.zona_* aplicada vía Supabase MCP) 10-02 ✅ (lib/zonificacion-comunas.ts, registro 4 comunas) 10-03 ✅ (lib/geocoding.ts, Nominatim geocoder) 10-04 ✅ (lib/zonificacion.ts + ruta GET /api/zonificacion/lookup, orquestación completa) 10-05 ✅ (lib/zonificacion-server.ts + after() en POST/PATCH /api/proyectos, persistencia automática de zona_* sin UI) |
@@ -135,10 +140,14 @@ See: .planning/PROJECT.md (updated 2026-08-02 al iniciar milestone v1.6)
 
 - [13-04] **DETA-06 completo end-to-end salvo wiring final (2026-08-02, commits `8ed59c6`/`0530389`)** — `app/api/oportunidades-resumen/route.ts` (ruta SSE flat POST, mismo orden de guardas que `app/api/tasacion/route.ts`: `aiAuthGuard` → `checkRateLimit` → `recordUsage` antes de streamear, usa `streamConContexto` de 13-02 exclusivamente — confirmado sin rastro de `streamConBusquedaWeb`, sin sección avaluoFiscal/SII). `components/mercado-inmobiliario/oportunidad-detalle/resumen-tab.tsx` (`<ResumenTab contexto={...}>` client component, sin `useEffect` de auto-disparo — el resumen ejecutivo IA SOLO se genera con click explícito en "Generar resumen ejecutivo", por decisión bloqueada en `13-CONTEXT.md`; streamea vía `leerEventosSSE`, renderiza con `InformeEjecutivo`, error/loading aislados sin afectar el resto de la ficha). Sin deviations. Falta solo que 13-07 arme el `ResumenOportunidadContexto` real (con datos de 13-01/13-03) y lo pase a `<ResumenTab>` desde la página de detalle. Ver 13-04-SUMMARY.md.
 
+- [13-05] **PosicionamientoTab construido (2026-08-02, commits `2d02c39`/`a1eb931`)** — componente presentacional puro (DETA-02 + DETA-07): banda de precio vs. cohorte con banner amber prominente (markup reutilizado literal de `app/(dashboard)/patentes/page.tsx`) cuando falta banda o hay fallback citywide, `muestra_n` declarada en texto visible, y rentabilidad implícita de zona con badge violet "Estimado de zona" (usa `calcularCapRate()` de `lib/calculadora-inversion.ts` tal cual, mismos supuestos de vacancia 7%/opex 15%) — se renderiza siempre, incondicional a `operacion`. Ningún archivo existente modificado. Desbloquea 13-07. Ver 13-05-SUMMARY.md.
+
+- [13-06] **HistorialTab + ComparablesTab construidos (2026-08-02, commits `6f2b881`/`8950c72`)** — `historial-tab.tsx` (DETA-03 + DETA-04): días publicado, historial de precio completo o mensaje explícito si vacío, cada `reasonCode` explicado en detalle vía `REASON_LABEL_DETALLE`, señales cruzadas de expansión de cadenas y tendencia constructiva INE cuando existen (degradan omitiendo el bloque, sin mensaje explícito de "sin señal" — a diferencia de comparables/rentabilidad, no son dato central de la ficha). `comparables-tab.tsx` (DETA-05): mini-cards clickeables hacia `/mercado-inmobiliario/oportunidades/[id]`, SIEMPRE visible — mensaje de insuficiencia y grilla real coexisten cuando hay exactamente 1 comparable, nunca se oculta un dato real ni se rellena con datos fuera de criterio. Ejecutado en paralelo con 13-05, sin conflicto de archivos. Ningún archivo existente modificado. Sin deviations. Desbloquea 13-07 (última tab pendiente de integrar en la página real). Ver 13-06-SUMMARY.md.
+
 ## Session Continuity
 
 Last session: 2026-08-02
-Stopped at: Completados 13-01-PLAN.md, 13-02-PLAN.md, 13-03-PLAN.md y 13-04-PLAN.md (waves 1 y 2 de la fase 13 — ver SUMMARYs respectivos). Fase 13 en ejecución — quedan 13-05..13-07.
+Stopped at: Completados 13-05-PLAN.md y 13-06-PLAN.md (wave 3 de la fase 13, ejecutados en paralelo — ver 13-05-SUMMARY.md y 13-06-SUMMARY.md). Fase 13 en ejecución — solo queda 13-07 (integración final de la ficha de detalle en la página real).
 Resume file: None
 
 ---
