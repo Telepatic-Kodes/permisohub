@@ -18,4 +18,15 @@ describe('destinoSiiCoincideConTipo', () => {
     expect(destinoSiiCoincideConTipo('SITIO NO EDIFICADO', 'oficina')).toBeNull()
     expect(destinoSiiCoincideConTipo('HABITACION PARTICULAR', 'local_comercial')).toBeNull()
   })
+
+  it('devuelve null (no fabrica un match) cuando el destino calza con el tipo declarado Y con otro a la vez', () => {
+    // "BODEGA Y LOCAL COMERCIAL" calza con bodega Y con local_comercial —
+    // afirmar "coincide" acá ocultaría un mismatch real posible.
+    expect(destinoSiiCoincideConTipo('BODEGA Y LOCAL COMERCIAL', 'local_comercial')).toBeNull()
+    expect(destinoSiiCoincideConTipo('BODEGA Y LOCAL COMERCIAL', 'bodega')).toBeNull()
+  })
+
+  it('no coincide cuando el destino calza con dos tipos y NINGUNO es el declarado', () => {
+    expect(destinoSiiCoincideConTipo('BODEGA Y LOCAL COMERCIAL', 'oficina')).toBe(false)
+  })
 })

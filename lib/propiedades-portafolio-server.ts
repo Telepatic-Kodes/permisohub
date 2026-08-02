@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service'
-import { obtenerBandasMercadoLocales } from '@/lib/mercado-locales-server'
+import { obtenerBandasMercadoLocales, type BandasMercadoLocal } from '@/lib/mercado-locales-server'
 import { buscarDatosSIIPorRol } from '@/lib/sii-lookup-server'
 import type { OperacionMercadoLocal, TipoPropiedadComercial } from '@/lib/scrapers/mercado-locales-common'
 import { obligacionesAplicables, calcularEstadoObligacion, type ObligacionConEstado } from '@/lib/obligaciones-regulatorias'
@@ -40,13 +40,20 @@ const UMBRAL_A_MERCADO_PCT = 10 // dentro de ±10% se considera "a mercado", no 
  * "¿mi arriendo/precio YA vigente está desalineado del mercado?". Requiere
  * superficie_m2 para poder comparar en UF/m² (la única unidad comparable
  * entre propiedades de tamaños distintos).
+ *
+ * `bandasPrefetch` permite que el caller (`compararPortafolioConMercado`)
+ * comparta una sola consulta de bandas entre propiedades con la misma
+ * comuna+operación+tipo, en vez de repetirla por cada propiedad.
  */
-export async function compararConMercado(prop: PropiedadPortafolio): Promise<ComparacionMercado> {
+export async function compararConMercado(
+  prop: PropiedadPortafolio,
+  bandasPrefetch?: BandasMercadoLocal | null,
+): Promise<ComparacionMercado> {
   if (!prop.superficieM2 || !prop.precioActualUf) {
     return { medianaUfM2: null, muestraN: 0, usoFallback: false, variacionPct: null, veredicto: 'sin_dato' }
   }
 
-  const bandas = await obtenerBandasMercadoLocales(prop.comuna, prop.operacion, prop.tipoPropiedad)
+  const bandas = bandasPrefetch !== undefined ? bandasPrefetch : await obtenerBandasMercadoLocales(prop.comuna, prop.operacion, prop.tipoPropiedad)
   if (!bandas || bandas.medianaUfM2 === null) {
     return { medianaUfM2: null, muestraN: bandas?.muestraN ?? 0, usoFallback: bandas?.usoFallback ?? false, variacionPct: null, veredicto: 'sin_dato' }
   }
@@ -65,6 +72,34 @@ export async function compararConMercado(prop: PropiedadPortafolio): Promise<Com
     variacionPct,
     veredicto,
   }
+}
+
+/**
+ * Versión en lote de compararConMercado: una sola consulta de bandas por
+ * cada combinación distinta de comuna+operación+tipo presente en el
+ * portafolio, en vez de una por propiedad — un fondo con 30 propiedades en
+ * 3 comunas hacía hasta 60 consultas a mercado_locales_stats_diarias donde
+ * bastan 3.
+ */
+export async function compararPortafolioConMercado(propiedades: PropiedadPortafolio[]): Promise<Map<string, ComparacionMercado>> {
+  const bandasCache = new Map<string, Promise<BandasMercadoLocal | null>>()
+
+  function bandasPara(p: PropiedadPortafolio): Promise<BandasMercadoLocal | null> {
+    const key = `${p.comuna}|${p.operacion}|${p.tipoPropiedad}`
+    if (!bandasCache.has(key)) {
+      bandasCache.set(key, obtenerBandasMercadoLocales(p.comuna, p.operacion, p.tipoPropiedad))
+    }
+    return bandasCache.get(key)!
+  }
+
+  const resultado = new Map<string, ComparacionMercado>()
+  await Promise.all(
+    propiedades.map(async (p) => {
+      const bandas = p.superficieM2 && p.precioActualUf ? await bandasPara(p) : null
+      resultado.set(p.id, await compararConMercado(p, bandas))
+    }),
+  )
+  return resultado
 }
 
 export async function obtenerPropiedadesPortafolio(workspaceId: string): Promise<PropiedadPortafolio[]> {
@@ -112,14 +147,18 @@ const KEYWORDS_POR_TIPO: Record<TipoPropiedadComercial, string[]> = {
 
 export function destinoSiiCoincideConTipo(destinoSii: string, tipo: TipoPropiedadComercial): boolean | null {
   const destino = destinoSii.toUpperCase()
-  const coincideEsteTipo = KEYWORDS_POR_TIPO[tipo].some((kw) => destino.includes(kw))
-  if (coincideEsteTipo) return true
+  const tiposQueCoinciden = (Object.keys(KEYWORDS_POR_TIPO) as TipoPropiedadComercial[]).filter((t) =>
+    KEYWORDS_POR_TIPO[t].some((kw) => destino.includes(kw)),
+  )
 
-  const coincideOtroTipo = (Object.keys(KEYWORDS_POR_TIPO) as TipoPropiedadComercial[])
-    .filter((t) => t !== tipo)
-    .some((t) => KEYWORDS_POR_TIPO[t].some((kw) => destino.includes(kw)))
+  if (tiposQueCoinciden.length === 0) return null // ambiguo — ningún tipo conocido calza
+  if (tiposQueCoinciden.length === 1) return tiposQueCoinciden[0] === tipo
 
-  return coincideOtroTipo ? false : null
+  // El destino calza con MÁS de un tipo (ej. "BODEGA Y LOCAL COMERCIAL"): si
+  // el tipo declarado es uno de ellos, es genuinamente ambiguo — declarar
+  // "coincide" acá sería ocultar un posible mismatch real. Si el tipo
+  // declarado no está entre los que calzan, sí es una señal de mismatch.
+  return tiposQueCoinciden.includes(tipo) ? null : false
 }
 
 export interface EnriquecimientoSII {
@@ -151,23 +190,40 @@ export async function consultarSII(
 }
 
 /**
- * Estado de cada obligación regulatoria aplicable a una propiedad (filtradas
- * por tieneAscensor/tieneGas), cruzada con lo que el usuario haya registrado
- * en propiedad_obligaciones. Una propiedad sin ningún registro aún devuelve
- * todas sus obligaciones aplicables en estado 'sin_registro', nunca vacío —
- * el punto del checklist es precisamente mostrar lo que falta declarar.
+ * Estado de cada obligación regulatoria aplicable a cada propiedad del
+ * portafolio (filtradas por tieneAscensor/tieneGas), cruzada con lo que el
+ * usuario haya registrado en propiedad_obligaciones. Una propiedad sin
+ * ningún registro aún devuelve todas sus obligaciones aplicables en estado
+ * 'sin_registro', nunca vacío — el punto del checklist es precisamente
+ * mostrar lo que falta declarar.
+ *
+ * Una sola consulta con `.in('propiedad_id', ...)` para todo el portafolio
+ * en vez de una por propiedad — un fondo con 30 propiedades hacía 30
+ * consultas idénticas en forma.
  */
-export async function obtenerObligacionesPropiedad(propiedadId: string, tieneAscensor: boolean, tieneGas: boolean): Promise<ObligacionConEstado[]> {
+export async function obtenerObligacionesPortafolio(propiedades: PropiedadPortafolio[]): Promise<Map<string, ObligacionConEstado[]>> {
+  const resultado = new Map<string, ObligacionConEstado[]>()
+  if (propiedades.length === 0) return resultado
+
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('propiedad_obligaciones')
-    .select('obligacion_slug, fecha_ultimo_cumplimiento')
-    .eq('propiedad_id', propiedadId)
+    .select('propiedad_id, obligacion_slug, fecha_ultimo_cumplimiento')
+    .in('propiedad_id', propiedades.map((p) => p.id))
 
-  const registrado = new Map((data ?? []).map((r) => [r.obligacion_slug, r.fecha_ultimo_cumplimiento as string | null]))
+  const registradoPorPropiedad = new Map<string, Map<string, string | null>>()
+  for (const row of data ?? []) {
+    if (!registradoPorPropiedad.has(row.propiedad_id)) registradoPorPropiedad.set(row.propiedad_id, new Map())
+    registradoPorPropiedad.get(row.propiedad_id)!.set(row.obligacion_slug, row.fecha_ultimo_cumplimiento)
+  }
+
   const hoy = new Date()
-
-  return obligacionesAplicables(tieneAscensor, tieneGas).map((o) =>
-    calcularEstadoObligacion(o, registrado.get(o.slug) ?? null, hoy),
-  )
+  for (const p of propiedades) {
+    const registrado = registradoPorPropiedad.get(p.id) ?? new Map<string, string | null>()
+    resultado.set(
+      p.id,
+      obligacionesAplicables(p.tieneAscensor, p.tieneGas).map((o) => calcularEstadoObligacion(o, registrado.get(o.slug) ?? null, hoy)),
+    )
+  }
+  return resultado
 }

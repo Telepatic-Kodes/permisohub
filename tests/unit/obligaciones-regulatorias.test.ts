@@ -54,4 +54,12 @@ describe('calcularEstadoObligacion', () => {
     const r = calcularEstadoObligacion(gas, '2024-01-01', hoy) // vence 2026-01-01
     expect(r.estado).toBe('vencido')
   })
+
+  it('el día exacto de vencimiento es "por_vencer" sin importar la hora del día', () => {
+    // extintores: 12 meses. Último cumplimiento 2025-08-02 → vence 2026-08-02.
+    const temprano = calcularEstadoObligacion(extintores, '2025-08-02', new Date('2026-08-02T09:00:00'))
+    const tarde = calcularEstadoObligacion(extintores, '2025-08-02', new Date('2026-08-02T23:30:00'))
+    expect(temprano.estado).toBe('por_vencer')
+    expect(tarde.estado).toBe('por_vencer')
+  })
 })

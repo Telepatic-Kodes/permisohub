@@ -57,8 +57,13 @@ export async function PATCH(
     }
     updates.updated_at = new Date().toISOString()
 
-    const { error } = await supabase.from('propiedades_portafolio').update(updates).eq('id', id)
+    // .select('id') para distinguir "actualizó 1 fila" de "RLS filtró todo
+    // en silencio" (Postgres no lanza error cuando 0 filas calzan el USING
+    // de la policy — sin esto, actualizar el id de otro workspace devolvía
+    // 200 ok:true sin haber tocado nada).
+    const { data, error } = await supabase.from('propiedades_portafolio').update(updates).eq('id', id).select('id')
     if (error) return apiError('Error al actualizar la propiedad', 500, error)
+    if (!data || data.length === 0) return Response.json({ error: 'Propiedad no encontrada' }, { status: 404 })
 
     return Response.json({ ok: true })
   } catch (err) {
@@ -80,8 +85,9 @@ export async function DELETE(
     const rateLimit = await checkRateLimit(`general:${user.id}`)
     if (rateLimit) return rateLimit
 
-    const { error } = await supabase.from('propiedades_portafolio').delete().eq('id', id)
+    const { data, error } = await supabase.from('propiedades_portafolio').delete().eq('id', id).select('id')
     if (error) return apiError('Error al eliminar la propiedad', 500, error)
+    if (!data || data.length === 0) return Response.json({ error: 'Propiedad no encontrada' }, { status: 404 })
 
     return Response.json({ ok: true })
   } catch (err) {

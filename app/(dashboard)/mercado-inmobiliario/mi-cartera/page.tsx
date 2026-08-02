@@ -74,6 +74,7 @@ interface FilaPortafolio {
   senalExpansion: SenalExpansion | null
   tendenciaConstruccion: TendenciaConstruccion | null
   obligaciones: ObligacionConEstado[]
+  coincideTipoSii: boolean | null
 }
 
 const ESTADO_OBLIGACION_CONFIG: Record<EstadoObligacion, { label: string; color: string }> = {
@@ -289,6 +290,53 @@ function ObligacionesToggle({ obligaciones, expandido, onToggle }: { obligacione
   )
 }
 
+function FilaObligacion({
+  propiedadId,
+  item,
+  onRegistrar,
+}: {
+  propiedadId: string
+  item: ObligacionConEstado
+  onRegistrar: (propiedadId: string, slug: string, fecha: string) => void
+}) {
+  const { obligacion, fechaUltimoCumplimiento, proximaFecha, estado } = item
+  const cfg = ESTADO_OBLIGACION_CONFIG[estado]
+
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div className="min-w-0">
+        <p className="font-medium text-foreground">{obligacion.nombre}</p>
+        <p className="text-[10px] text-muted-foreground">
+          {obligacion.baseLegal} · {obligacion.certificador}
+          {obligacion.periodicidad.tipo === "variable" && ` · ${obligacion.periodicidad.nota}`}
+        </p>
+        {proximaFecha && <p className="text-[10px] text-muted-foreground">Próximo vencimiento: {proximaFecha}</p>}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="rounded-[3px] border px-1.5 py-0.5 text-[10px] font-medium" style={{ color: cfg.color, borderColor: cfg.color }}>
+          {cfg.label}
+        </span>
+        {/*
+          key + defaultValue (no controlado) + guardado en onBlur, no
+          onChange: un <input type="date"> dispara onChange con cada
+          segmento que se completa mientras se escribe (ej. el primer
+          dígito del año ya arma una fecha "válida" pero incompleta) — eso
+          antes disparaba un PATCH por cada dígito y competía con el remount
+          por `key`. Guardar recién en onBlur significa que el remount solo
+          ocurre DESPUÉS de terminar de editar, nunca a mitad de tipeo.
+        */}
+        <Input
+          key={fechaUltimoCumplimiento ?? "sin-registro"}
+          type="date"
+          defaultValue={fechaUltimoCumplimiento ?? ""}
+          onBlur={(e) => e.target.value && e.target.value !== fechaUltimoCumplimiento && onRegistrar(propiedadId, obligacion.slug, e.target.value)}
+          className="h-7 w-[130px] text-[11px]"
+        />
+      </div>
+    </li>
+  )
+}
+
 function ChecklistObligaciones({
   propiedadId,
   obligaciones,
@@ -300,33 +348,9 @@ function ChecklistObligaciones({
 }) {
   return (
     <ul className="mt-2.5 space-y-2 rounded-lg border border-line-fine bg-muted/20 p-3">
-      {obligaciones.map(({ obligacion, fechaUltimoCumplimiento, proximaFecha, estado }) => {
-        const cfg = ESTADO_OBLIGACION_CONFIG[estado]
-        return (
-          <li key={obligacion.slug} className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="min-w-0">
-              <p className="font-medium text-foreground">{obligacion.nombre}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {obligacion.baseLegal} · {obligacion.certificador}
-                {obligacion.periodicidad.tipo === "variable" && ` · ${obligacion.periodicidad.nota}`}
-              </p>
-              {proximaFecha && <p className="text-[10px] text-muted-foreground">Próximo vencimiento: {proximaFecha}</p>}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <span className="rounded-[3px] border px-1.5 py-0.5 text-[10px] font-medium" style={{ color: cfg.color, borderColor: cfg.color }}>
-                {cfg.label}
-              </span>
-              <Input
-                key={fechaUltimoCumplimiento ?? "sin-registro"}
-                type="date"
-                defaultValue={fechaUltimoCumplimiento ?? ""}
-                onChange={(e) => e.target.value && onRegistrar(propiedadId, obligacion.slug, e.target.value)}
-                className="h-7 w-[130px] text-[11px]"
-              />
-            </div>
-          </li>
-        )
-      })}
+      {obligaciones.map((item) => (
+        <FilaObligacion key={item.obligacion.slug} propiedadId={propiedadId} item={item} onRegistrar={onRegistrar} />
+      ))}
     </ul>
   )
 }
@@ -337,7 +361,6 @@ export default function MiCarteraPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consultandoSii, setConsultandoSii] = useState<string | null>(null)
-  const [mismatchSii, setMismatchSii] = useState<Record<string, boolean | null>>({})
 
   const resumen = useMemo(() => calcularResumen(filas), [filas])
 
@@ -424,10 +447,11 @@ export default function MiCarteraPage() {
 
   async function handleDelete(id: string) {
     try {
-      await fetch(`/api/propiedades-portafolio/${id}`, { method: "DELETE" })
+      const res = await fetch(`/api/propiedades-portafolio/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("No se pudo eliminar la propiedad")
       setFilas((prev) => prev.filter((f) => f.propiedad.id !== id))
-    } catch {
-      setError("No se pudo eliminar la propiedad")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo eliminar la propiedad")
     }
   }
 
@@ -469,10 +493,13 @@ export default function MiCarteraPage() {
         prev.map((f) =>
           f.propiedad.id !== propiedadId
             ? f
-            : { ...f, propiedad: { ...f.propiedad, siiDestino: json.destino ?? null, siiAvaluoFiscalUf: json.avaluoFiscalUf ?? null, siiConsultadoEl: json.consultadoEl ?? null } },
+            : {
+                ...f,
+                propiedad: { ...f.propiedad, siiDestino: json.destino ?? null, siiAvaluoFiscalUf: json.avaluoFiscalUf ?? null, siiConsultadoEl: json.consultadoEl ?? null },
+                coincideTipoSii: json.coincideTipo ?? null,
+              },
         ),
       )
-      setMismatchSii((prev) => ({ ...prev, [propiedadId]: json.coincideTipo ?? null }))
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo consultar el SII")
     } finally {
@@ -596,7 +623,7 @@ export default function MiCarteraPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {filas.map(({ propiedad, comparacion, senalExpansion, tendenciaConstruccion, obligaciones }) => (
+              {filas.map(({ propiedad, comparacion, senalExpansion, tendenciaConstruccion, obligaciones, coincideTipoSii }) => (
                 <div key={propiedad.id} className="rounded-lg border border-line-fine bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -656,7 +683,7 @@ export default function MiCarteraPage() {
                             SII: {propiedad.siiDestino}
                             {propiedad.siiAvaluoFiscalUf !== null ? ` · avalúo fiscal ${formatUf(propiedad.siiAvaluoFiscalUf)} UF` : ""}
                           </span>
-                          {mismatchSii[propiedad.id] === false && (
+                          {coincideTipoSii === false && (
                             <span className="inline-flex items-center gap-1 rounded-[3px] border px-2 py-0.5 text-[10px] font-medium" style={{ color: "var(--state-warn, #d97706)", borderColor: "var(--state-warn, #d97706)" }}>
                               El destino SII no coincide con el tipo declarado
                             </span>

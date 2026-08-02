@@ -36,6 +36,17 @@ export async function PATCH(
     const ws = await getWorkspaceActual(supabase, user.id)
     if (!ws) return Response.json({ error: 'Sin workspace activo' }, { status: 400 })
 
+    // Verifica que la propiedad realmente pertenezca al workspace del
+    // caller ANTES de escribir — la RLS de propiedad_obligaciones ya lo
+    // exige (fix 20260802_fix_propiedad_obligaciones_rls.sql), pero validar
+    // acá da un 404 limpio en vez de un error crudo de Postgres.
+    const { data: propiedad } = await supabase
+      .from('propiedades_portafolio')
+      .select('id')
+      .eq('id', propiedadId)
+      .maybeSingle()
+    if (!propiedad) return Response.json({ error: 'Propiedad no encontrada' }, { status: 404 })
+
     const { error } = await supabase
       .from('propiedad_obligaciones')
       .upsert(

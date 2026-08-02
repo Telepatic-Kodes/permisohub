@@ -5,9 +5,14 @@ import { createClient } from '@/lib/supabase/server'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { asegurarWorkspace, getWorkspaceActual } from '@/lib/workspace'
-import { obtenerPropiedadesPortafolio, compararConMercado, obtenerObligacionesPropiedad } from '@/lib/propiedades-portafolio-server'
-import { obtenerSenalesExpansionPorComuna } from '@/lib/cadenas-sucursales-server'
-import { obtenerTendenciasConstruccionPorComuna } from '@/lib/ine-permisos-server'
+import {
+  obtenerPropiedadesPortafolio,
+  compararPortafolioConMercado,
+  obtenerObligacionesPortafolio,
+  destinoSiiCoincideConTipo,
+} from '@/lib/propiedades-portafolio-server'
+import { obtenerSenalesExpansionPorComuna, type SenalExpansionComuna } from '@/lib/cadenas-sucursales-server'
+import { obtenerTendenciasConstruccionPorComuna, type TendenciaConstruccionComuna } from '@/lib/ine-permisos-server'
 
 const NuevaPropiedadSchema = z.object({
   direccion: z.string().min(1),
@@ -37,20 +42,21 @@ export async function GET() {
 
     const propiedades = await obtenerPropiedadesPortafolio(ws.id)
     const comunas = Array.from(new Set(propiedades.map((p) => p.comuna)))
-    const [senalesExpansion, tendenciasConstruccion] = await Promise.all([
-      obtenerSenalesExpansionPorComuna(comunas).catch(() => new Map()),
-      obtenerTendenciasConstruccionPorComuna(comunas).catch(() => new Map()),
+    const [senalesExpansion, tendenciasConstruccion, comparaciones, obligaciones] = await Promise.all([
+      obtenerSenalesExpansionPorComuna(comunas).catch(() => new Map<string, SenalExpansionComuna>()),
+      obtenerTendenciasConstruccionPorComuna(comunas).catch(() => new Map<string, TendenciaConstruccionComuna>()),
+      compararPortafolioConMercado(propiedades),
+      obtenerObligacionesPortafolio(propiedades),
     ])
 
-    const conComparacion = await Promise.all(
-      propiedades.map(async (p) => ({
-        propiedad: p,
-        comparacion: await compararConMercado(p),
-        senalExpansion: senalesExpansion.get(p.comuna) ?? null,
-        tendenciaConstruccion: tendenciasConstruccion.get(p.comuna) ?? null,
-        obligaciones: await obtenerObligacionesPropiedad(p.id, p.tieneAscensor, p.tieneGas),
-      })),
-    )
+    const conComparacion = propiedades.map((p) => ({
+      propiedad: p,
+      comparacion: comparaciones.get(p.id)!,
+      senalExpansion: senalesExpansion.get(p.comuna) ?? null,
+      tendenciaConstruccion: tendenciasConstruccion.get(p.comuna) ?? null,
+      obligaciones: obligaciones.get(p.id) ?? [],
+      coincideTipoSii: p.siiDestino ? destinoSiiCoincideConTipo(p.siiDestino, p.tipoPropiedad) : null,
+    }))
 
     return Response.json({ data: conComparacion })
   } catch (err) {

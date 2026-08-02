@@ -94,6 +94,17 @@ export interface ObligacionConEstado {
 
 const DIAS_ALERTA_POR_VENCER = 30
 
+// Formatea en calendario LOCAL (no toISOString(), que convierte a UTC y
+// puede correr la fecha un día para cualquier huso horario UTC+ — `proxima`
+// abajo se construye con aritmética 100% local, así que se lee de vuelta
+// con los mismos campos locales para no dar una vuelta innecesaria por UTC).
+function formatFechaLocal(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function calcularEstadoObligacion(
   obligacion: ObligacionRegulatoria,
   fechaUltimoCumplimiento: string | null,
@@ -107,17 +118,23 @@ export function calcularEstadoObligacion(
     return { obligacion, fechaUltimoCumplimiento, proximaFecha: null, estado: 'verificar' }
   }
 
+  // hoy se normaliza a medianoche local acá (en vez de exigírselo a cada
+  // caller) — de lo contrario el estado cambia de "vencido" a "por_vencer"
+  // a media tarde del día de vencimiento, según la hora en que se calcule.
+  const hoyMedianoche = new Date(hoy)
+  hoyMedianoche.setHours(0, 0, 0, 0)
+
   const ultima = new Date(`${fechaUltimoCumplimiento}T00:00:00`)
   const proxima = new Date(ultima)
   proxima.setMonth(proxima.getMonth() + obligacion.periodicidad.meses)
 
-  const diasHastaProxima = Math.round((proxima.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
+  const diasHastaProxima = Math.round((proxima.getTime() - hoyMedianoche.getTime()) / (1000 * 60 * 60 * 24))
   const estado: EstadoObligacion = diasHastaProxima < 0 ? 'vencido' : diasHastaProxima <= DIAS_ALERTA_POR_VENCER ? 'por_vencer' : 'al_dia'
 
   return {
     obligacion,
     fechaUltimoCumplimiento,
-    proximaFecha: proxima.toISOString().slice(0, 10),
+    proximaFecha: formatFechaLocal(proxima),
     estado,
   }
 }
