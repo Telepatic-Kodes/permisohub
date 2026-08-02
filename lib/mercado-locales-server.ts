@@ -612,27 +612,38 @@ export interface OportunidadDetalle {
   bandas: BandasMercadoLocal | null
 }
 
+type ListingParaDetalle = {
+  id: string
+  titulo: string
+  url: string
+  comuna: string
+  tipo_propiedad: string
+  operacion: string
+  status: string
+  dado_de_baja_el: string | null
+  precio_monto: number | null
+  precio_moneda: string | null
+  superficie_m2: number | null
+  primera_vez_visto_el: string
+  ultima_vez_visto_el: string
+}
+
 /**
- * A diferencia de obtenerOportunidadesMercadoLocales(), esta función NO
- * filtra por status='activo' — un aviso dado_de_baja debe poder abrirse
- * desde su ficha (ej. llegado por link compartido o desde comparables) y
- * mostrar ese estado explícitamente, nunca un 404 (ver 13-RESEARCH.md).
+ * Cálculo puro (sin I/O) de un OportunidadDetalle a partir de un listing ya
+ * traído + sus bandas + su historial reciente ya filtrado a 7 días — extraído
+ * de obtenerOportunidadPorId() (Open Question 4 de 14-RESEARCH.md) para que
+ * obtenerOportunidadesPorIds() pueda reusar exactamente la misma lógica de
+ * cálculo sin reintroducir el N+1 que resultaría de llamar
+ * obtenerOportunidadPorId() en loop (esta última hace su propio fetch de
+ * historial por id).
  */
-export async function obtenerOportunidadPorId(id: string): Promise<OportunidadDetalle | null> {
-  const supabase = createServiceClient()
-  const { data: listing, error } = await supabase
-    .from('mercado_locales_listings')
-    .select(
-      'id, titulo, url, comuna, tipo_propiedad, operacion, status, dado_de_baja_el, precio_monto, precio_moneda, superficie_m2, primera_vez_visto_el, ultima_vez_visto_el',
-    )
-    .eq('id', id)
-    .maybeSingle()
-
-  if (error || !listing) return null
-
+function construirOportunidadDetalle(
+  listing: ListingParaDetalle,
+  bandas: BandasMercadoLocal | null,
+  historialReciente: { precio_monto: number; capturado_el: string }[],
+): OportunidadDetalle {
   const tipoPropiedad = listing.tipo_propiedad as TipoPropiedadComercial
   const operacion = listing.operacion as OperacionMercadoLocal
-  const bandas = await obtenerBandasMercadoLocales(listing.comuna as string, operacion, tipoPropiedad)
 
   const precioValido =
     listing.precio_monto !== null && (listing.precio_moneda === 'UF' || listing.precio_moneda === 'CLP')
@@ -656,12 +667,6 @@ export async function obtenerOportunidadPorId(id: string): Promise<OportunidadDe
     precioUfM2 = superficieM2 && superficieM2 > 0 && precioUf > 0 ? precioUf / superficieM2 : null
 
     if (precioUf > 0) {
-      const historialCompleto = await obtenerHistorialPrecioListing(id)
-      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-      const historialReciente = historialCompleto
-        .filter((h) => new Date(h.capturadoEl).getTime() >= sevenDaysAgo)
-        .map((h) => ({ precio_monto: h.precioMonto, capturado_el: h.capturadoEl }))
-
       reasonCodes = evaluarOportunidad({
         precioUf,
         precioUfM2,
@@ -673,25 +678,56 @@ export async function obtenerOportunidadPorId(id: string): Promise<OportunidadDe
   }
 
   return {
-    id: listing.id as string,
-    titulo: listing.titulo as string,
-    url: listing.url as string,
-    comuna: listing.comuna as string,
+    id: listing.id,
+    titulo: listing.titulo,
+    url: listing.url,
+    comuna: listing.comuna,
     tipoPropiedad,
     operacion,
     status: listing.status as 'activo' | 'dado_de_baja',
-    dadoDeBajaEl: listing.dado_de_baja_el as string | null,
+    dadoDeBajaEl: listing.dado_de_baja_el,
     precioValido,
-    precioMonto: (listing.precio_monto as number | null) ?? 0,
-    precioMoneda: (listing.precio_moneda as string | null) ?? '',
-    superficieM2: listing.superficie_m2 as number | null,
+    precioMonto: listing.precio_monto ?? 0,
+    precioMoneda: listing.precio_moneda ?? '',
+    superficieM2: listing.superficie_m2,
     precioUfNormalizado: precioUf,
     precioUfM2Normalizado: precioUfM2,
     reasonCodes,
-    primeraVezVistoEl: listing.primera_vez_visto_el as string,
-    ultimaVezVistoEl: listing.ultima_vez_visto_el as string,
+    primeraVezVistoEl: listing.primera_vez_visto_el,
+    ultimaVezVistoEl: listing.ultima_vez_visto_el,
     bandas,
   }
+}
+
+/**
+ * A diferencia de obtenerOportunidadesMercadoLocales(), esta función NO
+ * filtra por status='activo' — un aviso dado_de_baja debe poder abrirse
+ * desde su ficha (ej. llegado por link compartido o desde comparables) y
+ * mostrar ese estado explícitamente, nunca un 404 (ver 13-RESEARCH.md).
+ */
+export async function obtenerOportunidadPorId(id: string): Promise<OportunidadDetalle | null> {
+  const supabase = createServiceClient()
+  const { data: listing, error } = await supabase
+    .from('mercado_locales_listings')
+    .select(
+      'id, titulo, url, comuna, tipo_propiedad, operacion, status, dado_de_baja_el, precio_monto, precio_moneda, superficie_m2, primera_vez_visto_el, ultima_vez_visto_el',
+    )
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error || !listing) return null
+
+  const tipoPropiedad = listing.tipo_propiedad as TipoPropiedadComercial
+  const operacion = listing.operacion as OperacionMercadoLocal
+  const bandas = await obtenerBandasMercadoLocales(listing.comuna as string, operacion, tipoPropiedad)
+
+  const historialCompleto = await obtenerHistorialPrecioListing(id)
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+  const historialReciente = historialCompleto
+    .filter((h) => new Date(h.capturadoEl).getTime() >= sevenDaysAgo)
+    .map((h) => ({ precio_monto: h.precioMonto, capturado_el: h.capturadoEl }))
+
+  return construirOportunidadDetalle(listing as ListingParaDetalle, bandas, historialReciente)
 }
 
 export interface ComparableOportunidad {
