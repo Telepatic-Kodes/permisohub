@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `3e6a533` docs(13-01): complete evaluarOportunidad extraction plan
 - `2026-08-02` `182dd0e` feat(13-02): add resumen ejecutivo IA prompt builders
 - `2026-08-02` `c3e920a` feat(13-02): add streamConContexto without web search tool
 - `2026-08-02` `017fc96` feat(13-02): add shared formatFechaCorta date formatter
@@ -122,10 +123,12 @@ See: .planning/PROJECT.md (updated 2026-08-02 al iniciar milestone v1.6)
 
 - [13-01] **`evaluarOportunidad()` extraída (2026-08-02, commits `e97818d` test / `025e3f0` feat)** — función pura exportada desde `lib/mercado-locales-server.ts`, fuente única de verdad del scoring de `reasonCodes` (`below_p25_ufm2`/`below_p25_uf` mutuamente excluyentes vía `else if`, `price_drop_7d` comparando solo las últimas dos entradas de `historialReciente`, no el mínimo/máximo de la ventana de 7 días — comportamiento preservado byte a byte del código inline que reemplaza). Cubierta por `tests/unit/evaluar-oportunidad.test.ts` (9/9 casos). `obtenerOportunidadesMercadoLocales()` sin cambio de firma ni comportamiento — confirmado en sus 5 call sites (`oportunidades/page.tsx`, `reportes-mercado/route.ts`, `dashboard/page.tsx` ×2, `mercado-inmobiliario-copiloto.ts`). Desbloquea planes 13-03 en adelante (ficha de detalle y comparables reutilizan esta función en vez de reimplementar el cálculo). Sin deviations. Ver 13-01-SUMMARY.md.
 
+- [13-02] **3 utilidades compartidas construidas (2026-08-02, commits `017fc96`/`c3e920a`/`182dd0e`)** — `lib/formato-fecha.ts` (`formatFechaCorta`, movida verbatim desde `oportunidades/page.tsx:26-31`, esa página NO fue tocada — 13-07 hará el swap al import compartido). `streamConContexto(instructions, input)` agregada a `lib/ai.ts` junto a `streamConBusquedaWeb`, pero **sin** el `tools: [{type: 'web_search_preview'}]` — estructuralmente imposible que el modelo busque en vivo (no es solo instrucción de prompt), `max_output_tokens: 3000` (vs 12000 de la versión con búsqueda). `lib/resumen-oportunidad-prompts.ts` (`ResumenOportunidadContexto` + `buildSystemResumenOportunidad()` + `buildUserQueryResumenOportunidad()`) — narra bandas P25/mediana/P75, comparables e historial ya calculados server-side, marca explícitamente "no disponible" en vez de fabricar cualquier campo `null`. Ningún archivo existente fuera de `lib/ai.ts` modificado. Sin deviations (único hallazgo: error de tsc preexistente en `tests/unit/evaluar-oportunidad.test.ts`, ajeno a este plan, de la ejecución paralela de 13-01 — fuera de alcance, no corregido acá). Desbloquea 13-04 (resumen IA) y 13-05/13-06/13-07 (formateo de fecha). Ver 13-02-SUMMARY.md.
+
 ## Session Continuity
 
 Last session: 2026-08-02
-Stopped at: Completado 13-01-PLAN.md (evaluarOportunidad() extraída, 9/9 tests, tsc limpio, ver 13-01-SUMMARY.md). Fase 13 en ejecución — quedan 13-02..13-07.
+Stopped at: Completados 13-01-PLAN.md y 13-02-PLAN.md (wave 1 de la fase 13, sin dependencias entre sí — ver 13-01-SUMMARY.md y 13-02-SUMMARY.md). Fase 13 en ejecución — quedan 13-03..13-07.
 Resume file: None
 
 ---
