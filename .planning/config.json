@@ -1,7 +1,7 @@
 {
   "project": "permisohub",
-  "version": "1.5",
-  "milestone": "Fusión PROPRA·BI",
+  "version": 1.6,
+  "milestone": "Reportes Profesionales de Oportunidades",
   "workflow": {
     "research": true
   }
