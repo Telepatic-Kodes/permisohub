@@ -18,3 +18,17 @@ export function formatFechaCorta(iso: string | null): string | null {
     new Date(`${iso}T00:00:00`)
   )
 }
+
+/**
+ * Formateador compartido de timestamp corto (día+mes+año, es-CL) — hermano
+ * de `formatFechaCorta` de arriba, pero para campos `timestamptz` que YA
+ * incluyen hora real (ej. `primera_vez_visto_el`, `ultima_vez_visto_el`,
+ * `capturado_el`, `dado_de_baja_el`). Ver el comentario de `formatFechaCorta`
+ * arriba para la distinción date-only vs. timestamptz — no la repitas acá.
+ */
+export function formatTimestampCorto(iso: string | null): string | null {
+  if (!iso) return null
+  return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Santiago" }).format(
+    new Date(iso)
+  )
+}

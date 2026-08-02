@@ -189,7 +189,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "group/sidebar fixed inset-y-0 left-0 z-30 flex flex-col transition-[width] duration-200 ease-in-out",
+        "group/sidebar fixed inset-y-0 left-0 z-30 flex flex-col transition-[width] duration-200 ease-in-out print:hidden",
         "bg-[oklch(0.28_0.055_158)] border-r border-white/8",
         collapsed ? "w-14" : "w-60"
       )}

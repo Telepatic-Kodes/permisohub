@@ -3,7 +3,7 @@ import type { OportunidadDetalle, PuntoHistorialPrecio } from "@/lib/mercado-loc
 import { REASON_LABEL_DETALLE } from "@/lib/mercado-locales-server"
 import type { SenalExpansionComuna } from "@/lib/cadenas-sucursales-server"
 import type { TendenciaConstruccionComuna } from "@/lib/ine-permisos-server"
-import { formatFechaCorta } from "@/lib/formato-fecha"
+import { formatFechaCorta, formatTimestampCorto } from "@/lib/formato-fecha"
 
 interface HistorialTabProps {
   oportunidad: OportunidadDetalle
@@ -16,16 +16,6 @@ function formatMonto(precioMonto: number, precioMoneda: string): string {
   return `${precioMonto.toLocaleString("es-CL", { maximumFractionDigits: precioMoneda === "UF" ? 2 : 0 })} ${precioMoneda}`
 }
 
-// primera_vez_visto_el/ultima_vez_visto_el/capturado_el son timestamptz — se
-// formatean con new Date(iso) directo, SIN el sufijo T00:00:00 que usa
-// formatFechaCorta (esa función es solo para campos date-only como
-// stats_date). Ver lib/formato-fecha.ts.
-function formatTimestamp(iso: string): string {
-  return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Santiago" }).format(
-    new Date(iso),
-  )
-}
-
 export function HistorialTab({ oportunidad, historial, senalExpansion, tendenciaConstruccion }: HistorialTabProps) {
   const diasPublicado = Math.floor((Date.now() - new Date(oportunidad.primeraVezVistoEl).getTime()) / 86400000)
 
@@ -35,10 +25,10 @@ export function HistorialTab({ oportunidad, historial, senalExpansion, tendencia
         <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Publicado hace</p>
         <p className="num text-xl font-semibold text-primary">{diasPublicado} {diasPublicado === 1 ? "día" : "días"}</p>
         <p className="mt-1 text-[11px] text-muted-foreground">
-          Primera vez visto: {formatTimestamp(oportunidad.primeraVezVistoEl)} · Última actualización: {formatTimestamp(oportunidad.ultimaVezVistoEl)}
+          Primera vez visto: {formatTimestampCorto(oportunidad.primeraVezVistoEl)} · Última actualización: {formatTimestampCorto(oportunidad.ultimaVezVistoEl)}
         </p>
         {oportunidad.status === "dado_de_baja" && oportunidad.dadoDeBajaEl && (
-          <p className="mt-1 text-[11px] font-medium text-red-700">Dado de baja el {formatTimestamp(oportunidad.dadoDeBajaEl)}</p>
+          <p className="mt-1 text-[11px] font-medium text-red-700">Dado de baja el {formatTimestampCorto(oportunidad.dadoDeBajaEl)}</p>
         )}
       </div>
 
@@ -50,7 +40,7 @@ export function HistorialTab({ oportunidad, historial, senalExpansion, tendencia
           <ul className="space-y-1.5">
             {historial.map((p, i) => (
               <li key={`${p.capturadoEl}-${i}`} className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{formatTimestamp(p.capturadoEl)}</span>
+                <span className="text-muted-foreground">{formatTimestampCorto(p.capturadoEl)}</span>
                 <span className="num font-medium text-primary">{formatMonto(p.precioMonto, p.precioMoneda)}</span>
               </li>
             ))}

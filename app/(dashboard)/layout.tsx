@@ -43,7 +43,7 @@ export default function DashboardLayout({
 
       <main
         className={cn(
-          "flex min-h-screen flex-col overflow-auto transition-[padding-left] duration-200 ease-in-out bg-dot-grid",
+          "flex min-h-screen flex-col overflow-auto transition-[padding-left] duration-200 ease-in-out bg-dot-grid print:pl-0",
           collapsed ? "pl-14" : "pl-60"
         )}
       >
