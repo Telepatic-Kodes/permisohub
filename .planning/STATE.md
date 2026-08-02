@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `0becbc1` docs(13-04): complete resumen ejecutivo IA plan
 - `2026-08-02` `7f24561` feat(13-03): add obtenerComparablesOportunidad()
 - `2026-08-02` `0530389` feat(13-04): add ResumenTab on-demand executive summary component
 - `2026-08-02` `8ed59c6` feat(13-04): add POST /api/oportunidades-resumen SSE route
