@@ -14,6 +14,7 @@ import { DistribucionDonut } from "@/components/mercado-inmobiliario/charts/dist
 import { DesviacionBar } from "@/components/mercado-inmobiliario/charts/desviacion-bar"
 import { RankingBarChart } from "@/components/mercado-inmobiliario/charts/ranking-bar-chart"
 import { calcularEstadoObligacion, type EstadoObligacion, type ObligacionRegulatoria } from "@/lib/obligaciones-regulatorias"
+import type { CapRateResultado, Semaforo } from "@/lib/calculadora-inversion"
 
 const TIPOS_PROPIEDAD: TipoPropiedadComercial[] = ["local_comercial", "oficina", "bodega", "industrial"]
 
@@ -75,6 +76,7 @@ interface FilaPortafolio {
   tendenciaConstruccion: TendenciaConstruccion | null
   obligaciones: ObligacionConEstado[]
   coincideTipoSii: boolean | null
+  capRate: CapRateResultado | null
 }
 
 const ESTADO_OBLIGACION_CONFIG: Record<EstadoObligacion, { label: string; color: string }> = {
@@ -90,6 +92,12 @@ const VEREDICTO_CONFIG: Record<Comparacion["veredicto"], { label: string; color:
   a_mercado: { label: "A mercado", color: "var(--state-ok, #16a34a)" },
   sobre_mercado: { label: "Sobre mercado", color: "var(--blueprint)" },
   sin_dato: { label: "Sin dato suficiente para comparar", color: "var(--muted-foreground)" },
+}
+
+const CAP_RATE_SEMAFORO_COLOR: Record<Semaforo, string> = {
+  verde: "var(--state-ok, #16a34a)",
+  amarillo: "var(--state-warn, #d97706)",
+  rojo: "var(--state-error, #dc2626)",
 }
 
 function formatUf(n: number): string {
@@ -151,6 +159,23 @@ function VeredictoMercado({ comparacion }: { comparacion: Comparacion }) {
   )
 }
 
+// Cap rate solo se muestra cuando existe (operación arriendo + avalúo
+// fiscal SII ya consultado) — si es null, no se muestra ningún placeholder
+// ruidoso para esta propiedad (mismo criterio que VeredictoMercado, que sí
+// siempre tiene algo que mostrar porque "sin_dato" es un veredicto válido).
+function CapRateBadge({ capRate }: { capRate: CapRateResultado }) {
+  const color = CAP_RATE_SEMAFORO_COLOR[capRate.semaforo]
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-[3px] border px-2 py-0.5 text-[11px] font-medium"
+      style={{ color, borderColor: color }}
+    >
+      <span className="size-1.5 rounded-full" style={{ background: color }} />
+      Cap rate {capRate.capBruto.toFixed(1)}% bruto · {capRate.capNeto.toFixed(1)}% neto
+    </span>
+  )
+}
+
 interface ResumenPortafolio {
   total: number
   superficieTotalM2: number
@@ -164,6 +189,8 @@ interface ResumenPortafolio {
   obligacionesPorVencer: number
   porComuna: Record<string, number>
   porTipo: Record<TipoPropiedadComercial, number>
+  capRateNetoPromedio: number | null
+  propiedadesConCapRate: number
 }
 
 function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
@@ -180,9 +207,13 @@ function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
     obligacionesPorVencer: 0,
     porComuna: {},
     porTipo: { local_comercial: 0, oficina: 0, bodega: 0, industrial: 0 },
+    capRateNetoPromedio: null,
+    propiedadesConCapRate: 0,
   }
 
-  for (const { propiedad, comparacion, obligaciones } of filas) {
+  let sumaCapNeto = 0
+
+  for (const { propiedad, comparacion, obligaciones, capRate } of filas) {
     if (propiedad.superficieM2) resumen.superficieTotalM2 += propiedad.superficieM2
     if (propiedad.operacion === "arriendo" && propiedad.precioActualUf) resumen.rentaMensualTotalUf += propiedad.precioActualUf
     if (comparacion.veredicto === "bajo_mercado") resumen.bajoMercado++
@@ -199,7 +230,16 @@ function calcularResumen(filas: FilaPortafolio[]): ResumenPortafolio {
     }
     resumen.porComuna[propiedad.comuna] = (resumen.porComuna[propiedad.comuna] ?? 0) + 1
     resumen.porTipo[propiedad.tipoPropiedad] += 1
+    if (capRate) {
+      resumen.propiedadesConCapRate++
+      sumaCapNeto += capRate.capNeto
+    }
   }
+
+  // Promedio simple (no ponderado por renta ni superficie) sobre las
+  // propiedades con cap rate calculable — si ninguna lo tiene, queda null
+  // en vez de forzar un 0 engañoso.
+  resumen.capRateNetoPromedio = resumen.propiedadesConCapRate > 0 ? sumaCapNeto / resumen.propiedadesConCapRate : null
 
   return resumen
 }
@@ -209,9 +249,18 @@ function ResumenPortafolioStrip({ resumen }: { resumen: ResumenPortafolio }) {
   const obligacionesEnRiesgo = resumen.obligacionesVencidas + resumen.obligacionesPorVencer
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <KpiCard label="Propiedades" valor={String(resumen.total)} contexto={`${resumen.superficieTotalM2.toLocaleString("es-CL")} m² en total`} />
         <KpiCard label="Renta mensual" valor={`${formatUf(resumen.rentaMensualTotalUf)} UF`} contexto="solo activos arrendados" />
+        <KpiCard
+          label="Cap rate neto (promedio)"
+          valor={resumen.capRateNetoPromedio !== null ? `${resumen.capRateNetoPromedio.toFixed(1)}%` : "—"}
+          contexto={
+            resumen.capRateNetoPromedio !== null
+              ? `promedio simple sobre ${resumen.propiedadesConCapRate} propiedad${resumen.propiedadesConCapRate === 1 ? "" : "es"} con avalúo SII`
+              : "sin propiedades con renta y avalúo fiscal SII para calcular"
+          }
+        />
         <DistribucionDonut
           titulo="Vs. mercado"
           size={56}
@@ -623,7 +672,7 @@ export default function MiCarteraPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {filas.map(({ propiedad, comparacion, senalExpansion, tendenciaConstruccion, obligaciones, coincideTipoSii }) => (
+              {filas.map(({ propiedad, comparacion, senalExpansion, tendenciaConstruccion, obligaciones, coincideTipoSii, capRate }) => (
                 <div key={propiedad.id} className="rounded-lg border border-line-fine bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -646,6 +695,7 @@ export default function MiCarteraPage() {
 
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     <VeredictoMercado comparacion={comparacion} />
+                    {capRate && <CapRateBadge capRate={capRate} />}
                     {propiedad.fechaVencimientoContrato && <VencimientoBadge fecha={propiedad.fechaVencimientoContrato} />}
                     <ObligacionesToggle
                       obligaciones={obligaciones}

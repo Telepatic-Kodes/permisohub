@@ -3,6 +3,7 @@ import { obtenerBandasMercadoLocales, type BandasMercadoLocal } from '@/lib/merc
 import { buscarDatosSIIPorRol } from '@/lib/sii-lookup-server'
 import type { OperacionMercadoLocal, TipoPropiedadComercial } from '@/lib/scrapers/mercado-locales-common'
 import { obligacionesAplicables, calcularEstadoObligacion, type ObligacionConEstado } from '@/lib/obligaciones-regulatorias'
+import { calcularCapRate, type CapRateResultado } from '@/lib/calculadora-inversion'
 
 export interface PropiedadPortafolio {
   id: string
@@ -100,6 +101,38 @@ export async function compararPortafolioConMercado(propiedades: PropiedadPortafo
     }),
   )
   return resultado
+}
+
+/**
+ * Cap Rate de una propiedad del portafolio, delegando la fórmula (ya
+ * probada en la Calculadora de Mercado Inmobiliario) a `calcularCapRate` de
+ * lib/calculadora-inversion.ts — acá solo se resuelven los dos datos que ya
+ * vive Mi Cartera:
+ *
+ * - `precioActualUf` como renta mensual: solo aplica a propiedades en
+ *   `arriendo` (en `venta` ese campo es un precio de referencia, no una
+ *   renta, así que no hay NOI que calcular).
+ * - `siiAvaluoFiscalUf` como proxy del "precio de venta"/valorización: el
+ *   portafolio no tiene un campo propio de "valor de mercado" de la
+ *   propiedad, así que se usa el avalúo fiscal SII ya enriquecido (mismo
+ *   dato que ya se muestra en la ficha tras "Consultar SII").
+ *
+ * Ambos montos están en UF y NO se convierten a CLP: el cap rate es un
+ * ratio (renta/precio), así que es unit-invariant — el resultado es el
+ * mismo si ambos números están en UF, en CLP o en cualquier otra unidad
+ * consistente entre sí.
+ *
+ * Si falta cualquiera de los dos datos, devuelve null — nunca se fabrica
+ * un cap rate con un supuesto por default (ej. asumir un avalúo o una
+ * renta): una propiedad en venta, o sin avalúo SII consultado aún, simplemente
+ * no tiene cap rate mostrable todavía.
+ */
+export function calcularCapRatePropiedad(prop: PropiedadPortafolio): CapRateResultado | null {
+  if (prop.operacion !== 'arriendo') return null
+  if (prop.precioActualUf === null || prop.precioActualUf === undefined) return null
+  if (prop.siiAvaluoFiscalUf === null || prop.siiAvaluoFiscalUf === undefined) return null
+
+  return calcularCapRate({ rentaMensual: prop.precioActualUf, precioVenta: prop.siiAvaluoFiscalUf })
 }
 
 export async function obtenerPropiedadesPortafolio(workspaceId: string): Promise<PropiedadPortafolio[]> {

@@ -10,6 +10,7 @@ import {
   compararPortafolioConMercado,
   obtenerObligacionesPortafolio,
   destinoSiiCoincideConTipo,
+  calcularCapRatePropiedad,
 } from '@/lib/propiedades-portafolio-server'
 import { obtenerSenalesExpansionPorComuna, type SenalExpansionComuna } from '@/lib/cadenas-sucursales-server'
 import { obtenerTendenciasConstruccionPorComuna, type TendenciaConstruccionComuna } from '@/lib/ine-permisos-server'
@@ -56,6 +57,7 @@ export async function GET() {
       tendenciaConstruccion: tendenciasConstruccion.get(p.comuna) ?? null,
       obligaciones: obligaciones.get(p.id) ?? [],
       coincideTipoSii: p.siiDestino ? destinoSiiCoincideConTipo(p.siiDestino, p.tipoPropiedad) : null,
+      capRate: calcularCapRatePropiedad(p),
     }))
 
     return Response.json({ data: conComparacion })
