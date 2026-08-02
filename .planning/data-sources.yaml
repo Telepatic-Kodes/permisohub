@@ -173,8 +173,8 @@
   last_verified: 2026-08-01
   monitoring: console-only
   duplicate_of: null
-  status: needs-decision
-  notes: "DECISIÓN (1 ago 2026): no invertir en bypass de anti-bot (headless browser evasivo — fráil, cuestionable, y muchos sistemas anti-bot detectan headless igual). datos_gob_cl (ver arriba) ahora funciona de verdad (bug de dedup corregido, 67 registros reales) y es la fuente pública oficial equivalente — no hay gap real de datos que justifique el esfuerzo. Se mantiene el código (degrada a [] con gracia, no rompe nada), pero sin plan de invertir más acá. Revisar solo si datos_gob_cl deja de cubrir algún municipio específico que el founder necesite."
+  status: active
+  notes: "DECISIÓN (1 ago 2026), cerrada (2 ago 2026): no invertir en bypass de anti-bot (headless browser evasivo — fráil, cuestionable, y muchos sistemas anti-bot detectan headless igual). datos_gob_cl (ver arriba) ahora funciona de verdad (bug de dedup corregido, 67 registros reales) y es la fuente pública oficial equivalente — no hay gap real de datos que justifique el esfuerzo. Se mantiene el código (degrada a [] con gracia, no rompe nada), pero sin plan de invertir más acá. Reclasificado de needs-decision a active porque la decisión YA está tomada y es el estado final esperado, no un pendiente. Revisar solo si datos_gob_cl deja de cubrir algún municipio específico que el founder necesite."
 
 - id: sii-lookup-get
   name: "SII avalúo fiscal — /api/sii/lookup (GET)"
@@ -194,13 +194,13 @@
   type: api-endpoint
   owner_files: ["app/api/enrich/rut/route.ts"]
   trigger: manual
-  called_from: []
+  called_from: ["app/(dashboard)/cadenas-comerciales/page.tsx"]
   freshness_sla_days: null
-  last_verified: 2026-08-01
+  last_verified: 2026-08-02
   monitoring: none
   duplicate_of: null
-  status: needs-decision
-  notes: "No es un scraper real — valida dígito verificador y busca en un diccionario hardcodeado de 5 RUTs conocidos (KNOWN_COMPANIES). Cualquier otro RUT → 502. Placeholder, no fuente real todavía."
+  status: active
+  notes: "DECISIÓN (2 ago 2026): los 5 RUTs hardcodeados (KNOWN_COMPANIES: Parque Arauco, Mall Plaza, Cencosud Shopping, Mall Viña, Plaza Vespucio) son los 5 grandes operadores de malls y se aceptan como la lista final para este feature — sin plan de construir una fuente real de RUT→razón social (ej. SII) para cadenas más chicas. Corregido de paso: called_from decía [] (huérfano) pero SÍ tiene un caller real — el formulario de alta/edición de cadena en cadenas-comerciales/page.tsx llama esto en el blur del campo RUT para autocompletar razón social/giro. Cualquier RUT fuera de la lista → 502 con mensaje honesto (no fabrica una razón social falsa), la UI lo trata como 'RUT no reconocido' sin romper el formulario."
 
 - id: macro-uf-fallback-constant
   name: "UF — constante de respaldo (lib/uf.ts)"
@@ -212,8 +212,8 @@
   last_verified: 2026-07-30
   monitoring: none
   duplicate_of: null
-  status: needs-decision
-  notes: "UF_FALLBACK_CLP requiere actualización manual periódica. Sigue pendiente — no se tocó en la resolución de deuda del 1 ago 2026 (ver macro-uf-endpoint-legacy/macro-indicadores-cron abajo, ya resueltos)."
+  status: active
+  notes: "CORREGIDO (2 ago 2026): la nota anterior decía 'sigue pendiente, no se tocó' pero freshness_sla_days ya estaba en 30 con last_verified reciente — el monitoreo automático de check-data-sources.mjs YA está activo (avisará cuando pasen 30 días desde la última vez que alguien actualice UF_FALLBACK_CLP y refresque last_verified), mismo patrón que lguc/oguc/circulares-ddu. Reclasificado de needs-decision a active: el proceso de actualización manual periódica + aviso automático de vencimiento ES la solución aceptada, no un pendiente. UF_FALLBACK_CLP requiere edición manual en lib/uf.ts cuando el valor real se desactualice demasiado — usado solo cuando mindicador.cl no responde."
 
 - id: macro-uf-endpoint-legacy
   name: "UF — /api/utils/uf (endpoint legacy)"
@@ -261,11 +261,11 @@
   trigger: none
   called_from: []
   freshness_sla_days: null
-  last_verified: 2026-08-01
+  last_verified: 2026-08-02
   monitoring: none
   duplicate_of: null
-  status: needs-decision
-  notes: "Migración pgvector y backfill completos, pero NO cableado al runtime (comentario propio en el código). Decidir: ¿terminar de conectarlo y retirar normativa-retrieval-keywords, o eliminar este pipeline muerto?"
+  status: active
+  notes: "DECISIÓN (2 ago 2026): no cablear por ahora. Base curada muy chica para justificar el costo (40 artículos: 15 OGUC + 10 LGUC + 15 DDU; solo 37 embeddeados — el backfill ya estaba 1 desincronizado por fuente al momento de esta revisión) — a esta escala el matching por keywords con keywords[] curados a mano ya cubre bien el espacio, y RAG semántico suma latencia/costo de embeddings por consulta más un problema de sincronización permanente (cada edición de oguc-knowledge/lguc-knowledge/circulares-ddu exige re-correr el backfill o los embeddings quedan mudos en silencio). Revisar si la base curada crece a 200+ artículos, o si el founder pide mejor recall semántico específicamente. Mientras tanto, lib/rag.ts queda como scaffolding listo-para-activar, sin tocar."
 
 - id: lguc-knowledge
   name: "LGUC — base de conocimiento curada a mano"
@@ -324,13 +324,13 @@
   type: static-kb
   owner_files: [lib/mapa-formularios.ts]
   trigger: none
-  called_from: []
-  freshness_sla_days: null
+  called_from: ["app/(dashboard)/herramientas/formularios-minvu/page.tsx", components/proyecto/familia-formulario.tsx, components/herramientas/explorador-mapa-formularios.tsx]
+  freshness_sla_days: 90
   last_verified: 2026-07-31
   monitoring: none
   duplicate_of: null
   status: stale-kb
-  notes: "Transcripción literal de 5 PDF oficiales pasados a mano. Depende de retranscripción manual si MINVU actualiza los PDF."
+  notes: "CORREGIDO (2 ago 2026): called_from decía [] (huérfano) pero tiene 3 callers reales. Agregado freshness_sla_days: 90 (no estaba seteado) para igualar el mismo monitoreo automático trimestral ya activo en lguc-knowledge/oguc-knowledge/circulares-ddu — antes de esto, esta fuente podía quedar desactualizada indefinidamente sin ningún aviso. Transcripción literal de 5 PDF oficiales pasados a mano. Depende de retranscripción manual si MINVU actualiza los PDF."
 
 - id: zonificacion-comunas-registry
   name: "Zonificación PRC — registro de endpoints ArcGIS por comuna"
@@ -352,11 +352,11 @@
   trigger: none
   called_from: ["app/api/zonificacion/lookup/route.ts", "app/(dashboard)/proyectos/page.tsx", "app/(dashboard)/proyectos/nuevo/page.tsx", "app/(dashboard)/municipios/page.tsx", "app/(dashboard)/municipios/[id]/page.tsx", "app/(dashboard)/herramientas/compliance-check/page.tsx", "app/(dashboard)/herramientas/calculadora/page.tsx", "app/(dashboard)/terrenos/nuevo/page.tsx", "app/(dashboard)/onboarding/page.tsx", lib/instrumentos-ipt-server.ts, lib/zonificacion-comunas.ts, lib/scrapers/noticias-common.ts, lib/scrapers/terrenos-common.ts]
   freshness_sla_days: null
-  last_verified: 2023-09-01
+  last_verified: 2026-08-02
   monitoring: none
   duplicate_of: null
   status: needs-decision
-  notes: "INVESTIGADO (1 ago 2026), sigue needs-decision — no hay forma confiable de refrescar esto hoy: domenlinea.minvu.cl no publica ningún listado ni checker de qué comunas participan actualmente (verificado en vivo — la página solo dice que está 'a disposición de todas las comunas del país', sin directorio). Confirmar el estado real de las 346 comunas requeriría contactar a MINVU directamente o revisar cada municipio individualmente — fuera de alcance de una sesión. A diferencia de los demás needs-decision resueltos hoy, este no tiene una fuente automatizable esperando ser conectada; es investigación manual genuina. 13 callers reales confirmados (el registro tenía 0 documentados). Universo de comunas #1 de 3, deliberadamente no sincronizado con zonificacion-comunas-registry ni con MERCADO_LOCALES_COMUNA_SLUGS. Recomendación: spot-check manual de una muestra (ej. las 20 comunas más grandes) en vez de intentar las 346, la próxima vez que alguien tenga tiempo de investigación dedicado."
+  notes: "SPOT-CHECK MANUAL (2 ago 2026) sobre las 23 comunas más grandes/relevantes (santiago, puente-alto, maipu, la-florida, antofagasta, vina-del-mar, valparaiso, san-bernardo, temuco, concepcion, rancagua, talca, arica, iquique, coquimbo, la-serena, osorno, puerto-montt, punta-arenas, chillan, providencia, las-condes, nunoa), vía WebSearch de noticias/comunicados municipales + fetch directo de sitios oficiales — no vía domenlinea.minvu.cl (sigue sin directorio público, confirmado de nuevo). Resultado: 2 correcciones reales aplicadas en lib/comunas-chile.ts con evidencia directa — puente-alto 'presencial'→'probable' (confirmadas 2 plataformas propias operativas: puentealto.filedom.cl y puentealto.smartdom.cl, ya no aplica 'sin plataforma digital conocida') y nunoa 'dom_en_linea'→'presencial' (el propio sitio oficial nunoa.cl dice explícitamente que 'Entrega de permisos para obras' es presencial en el mesón de DOM, sin mención de domenlinea.minvu.cl ni plataforma propia — contradice el valor anterior). 18 comunas se dejaron sin cambio por falta de evidencia que contradijera el valor 2023: 12 con evidencia ambigua o confirmatoria del valor actual (santiago, maipu, la-florida, antofagasta, vina-del-mar, valparaiso, san-bernardo, temuco, concepcion, rancagua, talca, iquique, coquimbo, la-serena, puerto-montt, providencia, las-condes — la mayoría con plataforma DOM Digital/Smart DOM/filedom propia operativa, consistente con 'dom_en_linea' aunque no siempre confirmado explícitamente contra domenlinea.minvu.cl) y 5 confirmadas sin cambio en 'probable' con evidencia nueva que respalda ese valor (arica sin evidencia nueva; osorno, punta-arenas y chillan con lanzamientos de plataforma propia 'DOM Digital' documentados en 2019-2026, que siguen encajando en la definición de 'probable' — no hay confirmación de que sea específicamente domenlinea.minvu.cl). Universo de comunas #1 de 3, deliberadamente no sincronizado con zonificacion-comunas-registry ni con MERCADO_LOCALES_COMUNA_SLUGS. Sigue sin existir una fuente automatizable para las 345 comunas restantes — próximo spot-check recomendado en 6-12 meses o cuando MINVU publique un directorio público."
 
 - id: dias-habiles-feriados
   name: "Días hábiles / feriados — tabla estática"
@@ -389,13 +389,13 @@
   type: api-endpoint
   owner_files: ["app/api/dom-digital/consulta/route.ts"]
   trigger: manual
-  called_from: []
+  called_from: [components/cadenas/dom-digital-badge.tsx]
   freshness_sla_days: null
-  last_verified: 2026-08-01
+  last_verified: 2026-08-02
   monitoring: none
   duplicate_of: null
-  status: needs-decision
-  notes: "No es una integración real — producción devuelve 503 siempre; dev devuelve mock determinista. Placeholder honesto, no fuente de datos real todavía."
+  status: active
+  notes: "DECISIÓN (2 ago 2026): cerrado como 'no ahora', tras investigar viabilidad real (WebSearch + verificación en vivo) en los 6 municipios de mayor volumen (Santiago, Providencia, Las Condes, Ñuñoa, Maipú, Puente Alto). domenlinea.minvu.cl confirmado sin ningún endpoint público (exige Clave Única tanto al solicitante como al municipio). De los 6: Ñuñoa niega explícitamente poder consultar estado de expediente; Providencia/Santiago exigen login; Puente Alto (FileDOM) es para pedir certificados ya emitidos, no rastrear trámites en curso; Maipú no tiene portal propio. Único hallazgo real — Las Condes (lascondesonline.cl/Permisos Obras) — sí permite consulta pública sin login por RUT del propietario, pero es tecnología ASP legacy sin API (requeriría scraping HTML frágil), cubre 1 de 6 municipios, y exige un dato (RUT del propietario) que PermisoHub no siempre tiene. No justifica construir ni una integración general ni un piloto de un solo municipio. El endpoint se mantiene como placeholder honesto (503 explícito en producción, nunca datos fabricados) — corregido de paso: called_from decía [] (huérfano) pero SÍ tiene un caller real, DomDigitalBadge en la vista de cadenas comerciales, que trata el 503 como 'no disponible' sin mostrar nada. Revisar solo si un cliente enterprise específico necesita Las Condes puntualmente y tiene el RUT del propietario a mano — ahí evaluar un scraper aislado, no una plataforma general."
 
 - id: geocoding-nominatim
   name: "Nominatim (OpenStreetMap) — geocoding"
