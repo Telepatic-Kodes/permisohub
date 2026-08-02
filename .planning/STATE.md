@@ -101,7 +101,7 @@ See: .planning/PROJECT.md (updated 2026-07-30 tras milestone v1.4)
 ## Session Continuity
 
 Last session: 2026-08-01
-Stopped at: Torre de Control + rollout de InformeEjecutivo + las 3 decisiones de founder, todo resuelto y mergeado a `main`/`origin/main`. **La migración `20260807_data_source_runs.sql` SÍ está aplicada** (verificado en vivo vía `mcp__supabase__list_tables`: tabla real con RLS, 13 filas) — una nota anterior decía "pendiente" por error y quedó sin corregir hasta ahora. No queda ningún pendiente técnico. TocToc queda abierto pero no bloqueante — founder pidió más información antes de decidir, no es una acción mía por ahora.
+Stopped at: Torre de Control + rollout de InformeEjecutivo + las 3 decisiones de founder, todo resuelto y mergeado a `main`/`origin/main`. **La migración `20260807_data_source_runs.sql` SÍ está aplicada** (verificado en vivo vía `mcp__supabase__list_tables`: tabla real con RLS, 13 filas) — una nota anterior decía "pendiente" por error y quedó sin corregir hasta ahora. No queda ningún pendiente técnico. **TocToc actualizado (2026-08-01): política confirmada de no pagar por ninguna fuente/aplicación de terceros por ahora — diferido explícitamente, no es un "necesito más info", aplica también a cualquier otro vendor pago que aparezca en la investigación de mercado en curso.**
 Resume file: None
 
 ---
