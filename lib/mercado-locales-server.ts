@@ -359,6 +359,42 @@ export interface OportunidadMercadoLocal {
 }
 
 /**
+ * Fuente única de verdad para el scoring de "oportunidad" — extraída del
+ * loop de obtenerOportunidadesMercadoLocales() para que la ficha de detalle
+ * (Fase 13) y los comparables sugeridos puedan reproducir EXACTAMENTE los
+ * mismos reasonCodes que la lista, en vez de reimplementar esta lógica y
+ * arriesgar que ambas vistas diverjan con el tiempo.
+ *
+ * below_p25_ufm2 y below_p25_uf son mutuamente excluyentes a propósito
+ * (else if, no dos ifs independientes) — preservado tal cual del código
+ * original, NO "corregido" a checks independientes.
+ */
+export function evaluarOportunidad(params: {
+  precioUf: number
+  precioUfM2: number | null
+  cohortP25Uf: number | null
+  cohortP25UfM2: number | null
+  historialReciente: { precio_monto: number; capturado_el: string }[]
+}): string[] {
+  const { precioUf, precioUfM2, cohortP25Uf, cohortP25UfM2, historialReciente } = params
+  const reasonCodes: string[] = []
+
+  if (precioUfM2 !== null && cohortP25UfM2 !== null && precioUfM2 <= cohortP25UfM2) {
+    reasonCodes.push('below_p25_ufm2')
+  } else if (cohortP25Uf !== null && precioUf <= cohortP25Uf) {
+    reasonCodes.push('below_p25_uf')
+  }
+
+  if (historialReciente.length >= 2) {
+    const last = historialReciente[historialReciente.length - 1]
+    const prev = historialReciente[historialReciente.length - 2]
+    if (last.precio_monto < prev.precio_monto) reasonCodes.push('price_drop_7d')
+  }
+
+  return reasonCodes
+}
+
+/**
  * Detección de oportunidades a tiempo de lectura (sin tabla precomputada) —
  * compara cada listing activo contra la banda P25 ya persistida de su
  * cohorte, más un escaneo de bajas de precio en los últimos 7 días sobre
@@ -486,19 +522,13 @@ export async function obtenerOportunidadesMercadoLocales(
     const superficieM2 = listing.superficie_m2 as number | null
     const precioUfM2 = superficieM2 && superficieM2 > 0 ? precioUf / superficieM2 : null
 
-    const reasonCodes: string[] = []
-    if (precioUfM2 !== null && cohort.p25_uf_m2 !== null && precioUfM2 <= cohort.p25_uf_m2) {
-      reasonCodes.push('below_p25_ufm2')
-    } else if (cohort.p25_uf !== null && precioUf <= cohort.p25_uf) {
-      reasonCodes.push('below_p25_uf')
-    }
-
-    const historial = historyByListing.get(listing.id as string) ?? []
-    if (historial.length >= 2) {
-      const last = historial[historial.length - 1]
-      const prev = historial[historial.length - 2]
-      if (last.precio_monto < prev.precio_monto) reasonCodes.push('price_drop_7d')
-    }
+    const reasonCodes = evaluarOportunidad({
+      precioUf,
+      precioUfM2,
+      cohortP25Uf: cohort.p25_uf,
+      cohortP25UfM2: cohort.p25_uf_m2,
+      historialReciente: historyByListing.get(listing.id as string) ?? [],
+    })
 
     if (reasonCodes.length > 0) {
       results.push({
