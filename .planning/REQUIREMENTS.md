@@ -9,13 +9,13 @@ Elevar `/mercado-inmobiliario/oportunidades` (hoy una lista plana + un histogram
 
 ### DETA — Dashboard de Detalle por Oportunidad
 
-- [ ] **DETA-01**: Usuario puede ver una ficha de detalle de una oportunidad individual en su propia ruta (no solo la card de la lista)
-- [ ] **DETA-02**: La ficha muestra el posicionamiento de precio vs. la banda de mercado real de su cohorte (P25/mediana/P75), con la muestra (`muestra_n`) declarada explícitamente
-- [ ] **DETA-03**: La ficha muestra el historial de precio del listing y hace cuántos días está publicado
-- [ ] **DETA-04**: La ficha explica en detalle los reason codes y muestra las señales cruzadas (expansión de cadenas, tendencia constructiva) ya usadas en la lista
-- [ ] **DETA-05**: La ficha sugiere automáticamente otras oportunidades comparables (misma comuna/tipo)
-- [ ] **DETA-06**: La ficha incluye un resumen ejecutivo narrado por IA (mismo patrón `InformeEjecutivo` ya usado en Tasación/Due Diligence)
-- [ ] **DETA-07**: La ficha muestra una rentabilidad implícita de zona (estimado de zona, nunca del activo específico), solo cuando hay cobertura real de datos para calcularla
+- [x] **DETA-01**: Usuario puede ver una ficha de detalle de una oportunidad individual en su propia ruta (no solo la card de la lista)
+- [x] **DETA-02**: La ficha muestra el posicionamiento de precio vs. la banda de mercado real de su cohorte (P25/mediana/P75), con la muestra (`muestra_n`) declarada explícitamente
+- [x] **DETA-03**: La ficha muestra el historial de precio del listing y hace cuántos días está publicado
+- [x] **DETA-04**: La ficha explica en detalle los reason codes y muestra las señales cruzadas (expansión de cadenas, tendencia constructiva) ya usadas en la lista
+- [x] **DETA-05**: La ficha sugiere automáticamente otras oportunidades comparables (misma comuna/tipo)
+- [x] **DETA-06**: La ficha incluye un resumen ejecutivo narrado por IA (mismo patrón `InformeEjecutivo` ya usado en Tasación/Due Diligence)
+- [x] **DETA-07**: La ficha muestra una rentabilidad implícita de zona (estimado de zona, nunca del activo específico), solo cuando hay cobertura real de datos para calcularla
 
 ### COMPA — Comparación Lado a Lado
 
@@ -50,13 +50,13 @@ Elevar `/mercado-inmobiliario/oportunidades` (hoy una lista plana + un histogram
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| DETA-01 | 13 | Pending |
-| DETA-02 | 13 | Pending |
-| DETA-03 | 13 | Pending |
-| DETA-04 | 13 | Pending |
-| DETA-05 | 13 | Pending |
-| DETA-06 | 13 | Pending |
-| DETA-07 | 13 | Pending |
+| DETA-01 | 13 | Complete |
+| DETA-02 | 13 | Complete |
+| DETA-03 | 13 | Complete |
+| DETA-04 | 13 | Complete |
+| DETA-05 | 13 | Complete |
+| DETA-06 | 13 | Complete |
+| DETA-07 | 13 | Complete |
 | COMPA-01 | 14 | Pending |
 | COMPA-02 | 14 | Pending |
 | COMPA-03 | 14 | Pending |

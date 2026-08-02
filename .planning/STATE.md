@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `cf3e8cf` docs(13-07): complete integración final de la ficha de detalle plan
 - `2026-08-02` `0e0b1e3` feat(13-07): wire lista de oportunidades hacia la ficha completa
 - `2026-08-02` `006e428` feat(13-07): add oportunidad detalle Server Component page
 - `2026-08-02` `e1ad70c` docs(13-05): complete tab de posicionamiento plan

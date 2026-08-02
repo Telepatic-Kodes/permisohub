@@ -32,7 +32,7 @@ Full details archived: `.planning/milestones/1.4-ROADMAP.md`
 
 ## Phases
 
-- [ ] **Phase 13: Refactor de Scoring + Dashboard de Detalle** — Ficha de detalle por oportunidad en su propia ruta, con posicionamiento vs. cohorte, historial de precio, señales y resumen ejecutivo IA
+- [x] **Phase 13: Refactor de Scoring + Dashboard de Detalle** — Ficha de detalle por oportunidad en su propia ruta, con posicionamiento vs. cohorte, historial de precio, señales y resumen ejecutivo IA (completed 2026-08-02)
 - [ ] **Phase 14: Comparación Lado a Lado** — Selección de 2-5 oportunidades del mismo tipo/operación, comparadas en tabla vía estado-en-URL
 - [ ] **Phase 15: Informe Exportable** — Vista imprimible/exportable de una oportunidad o comparación, con portada, metodología y personalización
 
@@ -53,7 +53,7 @@ Full details archived: `.planning/milestones/1.4-ROADMAP.md`
 4. La ficha sugiere automáticamente otras oportunidades comparables de la misma comuna/tipo
 5. La ficha incluye un resumen ejecutivo narrado por IA (patrón `InformeEjecutivo`) y, solo cuando hay cobertura real de datos para calcularla, una rentabilidad implícita de zona etiquetada explícitamente como estimado
 
-**Plans:** 7 plans
+**Plans:** 7/7 plans complete
 
 Plans:
 - [ ] 13-01-PLAN.md — Extraer evaluarOportunidad() (TDD, prerequisito de scoring)
@@ -104,7 +104,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 13. Refactor de Scoring + Dashboard de Detalle | 0/7 | Planned | - |
+| 13. Refactor de Scoring + Dashboard de Detalle | 0/7 | Complete    | 2026-08-02 |
 | 14. Comparación Lado a Lado | 0/TBD | Not started | - |
 | 15. Informe Exportable | 0/TBD | Not started | - |
 
