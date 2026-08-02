@@ -48,7 +48,28 @@ Elevar `/mercado-inmobiliario/oportunidades` (hoy una lista plana + un histogram
 
 ### Traceability
 
-_(Vacío — se llena al crear el roadmap)_
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| DETA-01 | 13 | Pending |
+| DETA-02 | 13 | Pending |
+| DETA-03 | 13 | Pending |
+| DETA-04 | 13 | Pending |
+| DETA-05 | 13 | Pending |
+| DETA-06 | 13 | Pending |
+| DETA-07 | 13 | Pending |
+| COMPA-01 | 14 | Pending |
+| COMPA-02 | 14 | Pending |
+| COMPA-03 | 14 | Pending |
+| COMPA-04 | 14 | Pending |
+| INFO-01 | 15 | Pending |
+| INFO-02 | 15 | Pending |
+| INFO-03 | 15 | Pending |
+| INFO-04 | 15 | Pending |
+
+**Coverage:**
+- v1.6 requirements: 15 total
+- Mapped to phases: 15/15 ✓
+- Unmapped: 0
 
 ---
 

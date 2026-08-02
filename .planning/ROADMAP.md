@@ -3,6 +3,8 @@
 ## Milestones
 
 - ✅ **v1.4 Zonificación** — Phases 10-12 (shipped 2026-07-30) — [full detail](milestones/1.4-ROADMAP.md)
+- ✅ **v1.5 Fusión PROPRA·BI** — ad-hoc, sin fases GSD (shipped 2026-08-01) — ver `.planning/MILESTONES.md`
+- 🚧 **v1.6 Reportes Profesionales de Oportunidades** — Phases 13-15 (in progress)
 
 <details>
 <summary>✅ v1.4 Zonificación (Phases 10-12) — SHIPPED 2026-07-30</summary>
@@ -18,6 +20,84 @@ Full details archived: `.planning/milestones/1.4-ROADMAP.md`
 ---
 
 **Note (2026-07-30):** This is the first time `/gsd:complete-milestone` has run for this project. Milestones v1.1 ("Cumplir la Promesa"), v1.2 ("Dashboard Clarity"), and v1.3 ("Army of Skills") were already shipped previously but were never separately archived — their full phase details remain below, un-collapsed, exactly as they were before this milestone close. Deliberately left them in place rather than retroactively archiving them (out of scope for closing v1.4; do this properly in a future `/gsd:cleanup` pass if desired, extracting each into its own `.planning/milestones/v{X.Y}-ROADMAP.md`).
+
+---
+
+# Roadmap: Milestone v1.6 — Reportes Profesionales de Oportunidades
+
+**Started:** 2026-08-02
+**Phases:** 3 (numbered 13-15, continues from v1.4 — v1.5 and the ad-hoc sessions since did not use GSD phase numbering, see `.planning/MILESTONES.md` and PROJECT.md Key Decisions)
+
+**Goal:** Elevar `/mercado-inmobiliario/oportunidades` (hoy lista plana + histograma) a un producto de reporting profesional — dashboard de detalle por oportunidad, comparación lado a lado, e informe exportable — informado por investigación real de cómo reportan CBRE/JLL/Colliers y CoStar/LoopNet/Crexi. Alcance confirmado con la founder: solo Oportunidades, Reportes de Mercado queda fuera (ver Backlog en PROJECT.md).
+
+## Phases
+
+- [ ] **Phase 13: Refactor de Scoring + Dashboard de Detalle** — Ficha de detalle por oportunidad en su propia ruta, con posicionamiento vs. cohorte, historial de precio, señales y resumen ejecutivo IA
+- [ ] **Phase 14: Comparación Lado a Lado** — Selección de 2-5 oportunidades del mismo tipo/operación, comparadas en tabla vía estado-en-URL
+- [ ] **Phase 15: Informe Exportable** — Vista imprimible/exportable de una oportunidad o comparación, con portada, metodología y personalización
+
+## Phase Details
+
+### Phase 13: Refactor de Scoring + Dashboard de Detalle
+
+**Goal:** El arquitecto/inversionista puede abrir la ficha de una oportunidad individual y ver, en una sola pantalla, todo lo que hoy solo existe repartido entre la card de la lista y el histograma — posicionamiento real vs. mercado, historial, señales explicadas, comparables sugeridos y un resumen ejecutivo narrado por IA.
+
+**Depends on:** Nothing (first phase of milestone)
+
+**Requirements:** DETA-01, DETA-02, DETA-03, DETA-04, DETA-05, DETA-06, DETA-07
+
+**Success Criteria** (what must be TRUE):
+1. Usuario puede abrir la ficha de detalle de una oportunidad individual en su propia ruta (`/mercado-inmobiliario/oportunidades/[id]`), no solo la card de la lista
+2. La ficha muestra el posicionamiento de precio vs. la banda de mercado real de su cohorte (P25/mediana/P75), con la muestra (`muestra_n`) declarada explícitamente
+3. La ficha muestra el historial de precio del listing, hace cuántos días está publicado, y explica en detalle los reason codes junto con las señales cruzadas (expansión de cadenas, tendencia constructiva) ya usadas en la lista
+4. La ficha sugiere automáticamente otras oportunidades comparables de la misma comuna/tipo
+5. La ficha incluye un resumen ejecutivo narrado por IA (patrón `InformeEjecutivo`) y, solo cuando hay cobertura real de datos para calcularla, una rentabilidad implícita de zona etiquetada explícitamente como estimado
+
+**Plans:** TBD
+
+---
+
+### Phase 14: Comparación Lado a Lado
+
+**Goal:** El arquitecto/inversionista puede poner 2 a 5 oportunidades comparables una al lado de la otra y ver de inmediato cuál conviene más por atributo, sin poder mezclar por error tipos de propiedad u operaciones distintas.
+
+**Depends on:** Phase 13 (reusa `evaluarOportunidad()`, `obtenerOportunidadPorId()` y los widgets ya resueltos por listing)
+
+**Requirements:** COMPA-01, COMPA-02, COMPA-03, COMPA-04
+
+**Success Criteria** (what must be TRUE):
+1. Usuario puede seleccionar entre 2 y 5 oportunidades del mismo tipo de propiedad y misma operación para comparar
+2. La comparación se muestra en tabla (columnas=propiedades, filas=atributos), con el mejor valor resaltado por fila
+3. El sistema previene estructuralmente (checkbox/selección deshabilitada, no solo una advertencia) seleccionar oportunidades de tipo/operación distintos en la misma comparación
+4. La selección de comparación persiste en la URL (`?ids=`) — compartible y recargable
+
+**Plans:** TBD
+
+---
+
+### Phase 15: Informe Exportable
+
+**Goal:** El arquitecto/inversionista puede generar una vista exportable/imprimible — de una oportunidad individual o de una comparación — para compartir externamente con cliente o inversionista, con la misma disciplina de fuentes y fechas que ya rige el resto del proyecto.
+
+**Depends on:** Phase 13 (informe de oportunidad individual) y Phase 14 (informe de comparación)
+
+**Requirements:** INFO-01, INFO-02, INFO-03, INFO-04
+
+**Success Criteria** (what must be TRUE):
+1. Usuario puede exportar/imprimir un informe de una oportunidad individual con portada, cuerpo y sección de metodología/fuentes
+2. Usuario puede exportar/imprimir un informe de una comparación de oportunidades con la misma disciplina de fuentes
+3. El informe muestra fecha de generación Y fecha de última verificación por dato (nunca un snapshot sin fecha)
+4. Usuario puede personalizar el informe con un campo "preparado por / para" en la portada
+
+**Plans:** TBD
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 13. Refactor de Scoring + Dashboard de Detalle | 0/TBD | Not started | - |
+| 14. Comparación Lado a Lado | 0/TBD | Not started | - |
+| 15. Informe Exportable | 0/TBD | Not started | - |
 
 ---
 
