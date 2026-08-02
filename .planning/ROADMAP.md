@@ -80,7 +80,12 @@ Plans:
 3. El sistema previene estructuralmente (checkbox/selección deshabilitada, no solo una advertencia) seleccionar oportunidades de tipo/operación distintos en la misma comparación
 4. La selección de comparación persiste en la URL (`?ids=`) — compartible y recargable
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — Capa de datos: obtenerOportunidadesPorIds() batched + construirOportunidadDetalle() extraído
+- [ ] 14-02-PLAN.md — SelectorComparacion (checkbox + tope 5 + botón flotante) wireado en la lista
+- [ ] 14-03-PLAN.md — TablaComparacion + /oportunidades/comparar con validación server-side de homogeneidad (defensa real de COMPA-03) + checkpoint humano end-to-end
 
 ---
 
@@ -105,7 +110,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 13. Refactor de Scoring + Dashboard de Detalle | 0/7 | Complete    | 2026-08-02 |
-| 14. Comparación Lado a Lado | 0/TBD | Not started | - |
+| 14. Comparación Lado a Lado | 0/3 | Not started | - |
 | 15. Informe Exportable | 0/TBD | Not started | - |
 
 ---
