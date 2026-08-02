@@ -19,10 +19,10 @@ Elevar `/mercado-inmobiliario/oportunidades` (hoy una lista plana + un histogram
 
 ### COMPA — Comparación Lado a Lado
 
-- [ ] **COMPA-01**: Usuario puede seleccionar 2 a 5 oportunidades del mismo tipo de propiedad y misma operación para comparar
-- [ ] **COMPA-02**: La comparación se muestra en tabla (columnas=propiedades, filas=atributos), con el mejor valor resaltado por fila
-- [ ] **COMPA-03**: El sistema previene estructuralmente (no solo advierte) seleccionar oportunidades de tipo/operación distintos en la misma comparación
-- [ ] **COMPA-04**: La selección de comparación persiste en la URL (compartible/recargable)
+- [x] **COMPA-01**: Usuario puede seleccionar 2 a 5 oportunidades del mismo tipo de propiedad y misma operación para comparar
+- [x] **COMPA-02**: La comparación se muestra en tabla (columnas=propiedades, filas=atributos), con el mejor valor resaltado por fila
+- [x] **COMPA-03**: El sistema previene estructuralmente (no solo advierte) seleccionar oportunidades de tipo/operación distintos en la misma comparación
+- [x] **COMPA-04**: La selección de comparación persiste en la URL (compartible/recargable)
 
 ### INFO — Informe Exportable
 
@@ -57,10 +57,10 @@ Elevar `/mercado-inmobiliario/oportunidades` (hoy una lista plana + un histogram
 | DETA-05 | 13 | Complete |
 | DETA-06 | 13 | Complete |
 | DETA-07 | 13 | Complete |
-| COMPA-01 | 14 | Pending |
-| COMPA-02 | 14 | Pending |
-| COMPA-03 | 14 | Pending |
-| COMPA-04 | 14 | Pending |
+| COMPA-01 | 14 | Complete |
+| COMPA-02 | 14 | Complete |
+| COMPA-03 | 14 | Complete |
+| COMPA-04 | 14 | Complete |
 | INFO-01 | 15 | Pending |
 | INFO-02 | 15 | Pending |
 | INFO-03 | 15 | Pending |
