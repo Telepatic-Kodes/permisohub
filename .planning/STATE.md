@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `785c891` chore: complete v1.6 milestone
 - `2026-08-02` `d8ed8ed` docs: record commit log entry
 - `2026-08-02` `48b1d44` docs(phase-15): complete phase execution, close milestone v1.6
 - `2026-08-02` `706452c` docs(15-03): complete informe de comparación plan
