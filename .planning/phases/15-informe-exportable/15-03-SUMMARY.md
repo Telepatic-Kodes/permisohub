@@ -107,3 +107,7 @@ None - no external service configuration required.
 ---
 *Phase: 15-informe-exportable*
 *Completed: 2026-08-02*
+
+## Self-Check: PASSED
+
+Both created/modified files verified present on disk: `app/(dashboard)/mercado-inmobiliario/oportunidades/comparar/informe/page.tsx` and `app/(dashboard)/mercado-inmobiliario/oportunidades/comparar/page.tsx`. Both task commits (`eab3286`, `9805c8b`) verified present in `git log`. Task 3 checkpoint approved live by the user ("aprobado", 9 steps including Pitfall 5 hand-built URL defense). Verification greps re-confirmed: homogeneity re-validated independently, `TablaComparacion` imported and rendered (not reimplemented), entry-point link wired with already-fetched ids. `npx tsc --noEmit` clean.
