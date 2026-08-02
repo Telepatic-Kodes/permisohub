@@ -730,6 +730,64 @@ export async function obtenerOportunidadPorId(id: string): Promise<OportunidadDe
   return construirOportunidadDetalle(listing as ListingParaDetalle, bandas, historialReciente)
 }
 
+/**
+ * Versión en lote de obtenerOportunidadPorId() (COMPA-01..04, Fase 14) —
+ * trae hasta 5 oportunidades para la comparación lado a lado con un número
+ * de queries acotado: 1 de listings + 1 de historial de precio + como mucho
+ * 1 de bandas por combinación distinta de comuna×tipoPropiedad×operación
+ * presente (nunca 1 query por oportunidad). Mismo patrón que
+ * compararPortafolioConMercado() en lib/propiedades-portafolio-server.ts.
+ *
+ * No valida homogeneidad de tipo/operación ni longitud de `ids` — es pura
+ * capa de datos, esa validación vive en /oportunidades/comparar (Plan
+ * 14-03). Tampoco filtra por status: un id de un aviso dado_de_baja sigue
+ * resolviendo acá (mismo criterio que obtenerOportunidadPorId), la exclusión
+ * visual es decisión de UI.
+ */
+export async function obtenerOportunidadesPorIds(ids: string[]): Promise<OportunidadDetalle[]> {
+  const supabase = createServiceClient()
+
+  const { data: listings, error } = await supabase
+    .from('mercado_locales_listings')
+    .select(
+      'id, titulo, url, comuna, tipo_propiedad, operacion, status, dado_de_baja_el, precio_monto, precio_moneda, superficie_m2, primera_vez_visto_el, ultima_vez_visto_el',
+    )
+    .in('id', ids)
+
+  if (error || !listings) return []
+
+  const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: historyRows } = await supabase
+    .from('mercado_locales_historial_precio')
+    .select('listing_id, precio_monto, capturado_el')
+    .in('listing_id', ids)
+    .gte('capturado_el', sevenDaysAgoIso)
+
+  const historyByListing = new Map<string, { precio_monto: number; capturado_el: string }[]>()
+  for (const row of historyRows ?? []) {
+    const arr = historyByListing.get(row.listing_id as string) ?? []
+    arr.push({ precio_monto: row.precio_monto as number, capturado_el: row.capturado_el as string })
+    historyByListing.set(row.listing_id as string, arr)
+  }
+
+  const bandasCache = new Map<string, Promise<BandasMercadoLocal | null>>()
+  function bandasPara(comuna: string, tipoPropiedad: TipoPropiedadComercial, operacion: OperacionMercadoLocal) {
+    const key = `${comuna}|${tipoPropiedad}|${operacion}`
+    if (!bandasCache.has(key)) bandasCache.set(key, obtenerBandasMercadoLocales(comuna, operacion, tipoPropiedad))
+    return bandasCache.get(key)!
+  }
+
+  return Promise.all(
+    (listings as ListingParaDetalle[]).map(async (listing) => {
+      const tipoPropiedad = listing.tipo_propiedad as TipoPropiedadComercial
+      const operacion = listing.operacion as OperacionMercadoLocal
+      const bandas = await bandasPara(listing.comuna, tipoPropiedad, operacion)
+      const historialReciente = historyByListing.get(listing.id) ?? []
+      return construirOportunidadDetalle(listing, bandas, historialReciente)
+    }),
+  )
+}
+
 export interface ComparableOportunidad {
   id: string
   titulo: string
