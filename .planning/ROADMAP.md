@@ -33,7 +33,7 @@ Full details archived: `.planning/milestones/1.4-ROADMAP.md`
 ## Phases
 
 - [x] **Phase 13: Refactor de Scoring + Dashboard de Detalle** — Ficha de detalle por oportunidad en su propia ruta, con posicionamiento vs. cohorte, historial de precio, señales y resumen ejecutivo IA (completed 2026-08-02)
-- [ ] **Phase 14: Comparación Lado a Lado** — Selección de 2-5 oportunidades del mismo tipo/operación, comparadas en tabla vía estado-en-URL
+- [x] **Phase 14: Comparación Lado a Lado** — Selección de 2-5 oportunidades del mismo tipo/operación, comparadas en tabla vía estado-en-URL (completed 2026-08-02)
 - [ ] **Phase 15: Informe Exportable** — Vista imprimible/exportable de una oportunidad o comparación, con portada, metodología y personalización
 
 ## Phase Details
@@ -80,7 +80,7 @@ Plans:
 3. El sistema previene estructuralmente (checkbox/selección deshabilitada, no solo una advertencia) seleccionar oportunidades de tipo/operación distintos en la misma comparación
 4. La selección de comparación persiste en la URL (`?ids=`) — compartible y recargable
 
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 14-01-PLAN.md — Capa de datos: obtenerOportunidadesPorIds() batched + construirOportunidadDetalle() extraído
@@ -110,7 +110,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 13. Refactor de Scoring + Dashboard de Detalle | 0/7 | Complete    | 2026-08-02 |
-| 14. Comparación Lado a Lado | 0/3 | Not started | - |
+| 14. Comparación Lado a Lado | 0/3 | Complete    | 2026-08-02 |
 | 15. Informe Exportable | 0/TBD | Not started | - |
 
 ---

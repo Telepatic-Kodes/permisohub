@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `2f128b2` docs(14-03): complete ruta y tabla de comparación plan
 - `2026-08-02` `70e7482` docs(14-03): record checkpoint progress (Tasks 1-2 done, Task 3 human-verify pending)
 - `2026-08-02` `0d2a10b` feat(14-03): add /oportunidades/comparar route with server-side homogeneity validation
 - `2026-08-02` `07a5a06` feat(14-03): add TablaComparacion component
