@@ -48,12 +48,15 @@ export async function POST(request: Request) {
   const rateLimit = await checkRateLimit(`general:${user.id}`)
   if (rateLimit) return rateLimit
 
+  // RLS de `proyectos` ya es workspace-scoped (es_miembro(workspace_id) OR
+  // user_id = auth.uid()) — el `.eq("user_id", user.id)` extra era más
+  // estricto que la RLS real y le devolvía 403 a un compañero de workspace
+  // legítimo en cada upload.
   const { data: proyecto } = await supabase
     .from("proyectos")
     .select("id")
     .eq("id", proyectoId)
-    .eq("user_id", user.id)
-    .single()
+    .maybeSingle()
 
   if (!proyecto) {
     return Response.json({ error: "Proyecto no encontrado." }, { status: 403 })

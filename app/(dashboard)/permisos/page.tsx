@@ -345,7 +345,7 @@ export default function PermisosPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          expediente: permiso.numero_expediente,
+          expedienteNumero: permiso.numero_expediente,
           municipio: permiso.municipio,
         }),
       })

@@ -120,12 +120,25 @@ export async function GET(request: Request) {
         if (!p.numero_expediente || !p.municipio) continue
         try {
           const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+          // expedienteNumero, no "expediente" — el nombre real que exige
+          // /api/scraper/dom-en-linea (ver los otros 2 callers,
+          // check-status/[proyectoId] y permisos/page.tsx). Con el nombre
+          // equivocado la ruta siempre devolvía 400 "expedienteNumero is
+          // required", `!scraperRes.ok` caía en el `continue` de abajo, y
+          // todo el loop de tracking DOM + WhatsApp corría en silencio sin
+          // hacer nada — nunca se contaba como error en `results.errors`.
           const scraperRes = await fetch(`${baseUrl}/api/scraper/dom-en-linea`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ expediente: p.numero_expediente, municipio: p.municipio }),
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.CRON_SECRET ?? ''}`,
+            },
+            body: JSON.stringify({ expedienteNumero: p.numero_expediente, municipio: p.municipio }),
           })
-          if (!scraperRes.ok) continue
+          if (!scraperRes.ok) {
+            results.errors.push(`scraper ${p.numero_expediente}: HTTP ${scraperRes.status}`)
+            continue
+          }
           const scraperData = await scraperRes.json() as {
             ok: boolean
             estado?: string
@@ -134,8 +147,12 @@ export async function GET(request: Request) {
           if (!scraperData.ok || !scraperData.estado) continue
           const estadoNuevo = scraperData.estado
           if (estadoNuevo === p.estado) continue
-          results.domStatusChanges++
-          await supabase
+          // .select('id') para saber si el update REALMENTE afectó una fila
+          // — sin esto, dos invocaciones del cron superpuestas (retry de
+          // Vercel, disparo manual) leen el mismo `p.estado` viejo, ambas
+          // pasan el chequeo de arriba, y ambas mandan el WhatsApp aunque
+          // solo una haya escrito de verdad.
+          const { data: actualizados } = await supabase
             .from('proyectos')
             .update({
               estado: estadoNuevo,
@@ -144,6 +161,10 @@ export async function GET(request: Request) {
             })
             .eq('id', p.id)
             .neq('estado', estadoNuevo)
+            .select('id')
+
+          if (!actualizados || actualizados.length === 0) continue
+          results.domStatusChanges++
           if (isWhatsAppAvailable()) {
             const telefono = p.clientes?.telefono
             if (!telefono) continue

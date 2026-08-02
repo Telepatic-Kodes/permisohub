@@ -23,10 +23,21 @@ export type ProyectoConVigencia = Proyecto & {
   dias_restantes: number | null
 }
 
-// Fecha "hoy" normalizada a medianoche (timezone del servidor)
+// Fecha "hoy" anclada al día calendario vigente en America/Santiago, no al
+// huso horario del runtime (Vercel corre en UTC) — entre las 21:00 y las
+// 24:00 hora de Chile, "hoy" en UTC ya es mañana, y esta ruta calcula
+// vigencia de patentes/permisos en días restantes.
 function hoyMedianoche(): Date {
-  const ahora = new Date()
-  return new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Santiago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const y = partes.find((p) => p.type === 'year')!.value
+  const m = partes.find((p) => p.type === 'month')!.value
+  const d = partes.find((p) => p.type === 'day')!.value
+  return new Date(`${y}-${m}-${d}T00:00:00`)
 }
 
 function parseFecha(fecha: string): Date | null {

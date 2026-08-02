@@ -6,6 +6,7 @@ import { isAIAvailable, aiCompleteWithImages } from '@/lib/ai'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { reportWarning } from '@/lib/observability'
 import { getContextoNormativo, flagUnverifiedCita, REGLAS_CITACION } from '@/lib/normativa-retrieval'
 import type { Anotacion, LaminaAnotada } from '@/lib/anotacion-convenciones'
 import {
@@ -325,11 +326,23 @@ async function recortarADataUrl(
 
 function parseAnotaciones(text: string, laminaId: string): Anotacion[] {
   const match = text.match(/\{[\s\S]*\}/)
-  if (!match) return []
+  if (!match) {
+    // Antes esto degradaba a [] sin ningún rastro — indistinguible de
+    // "la IA revisó el recorte y genuinamente no encontró nada que anotar".
+    reportWarning('anotacion-plano: la respuesta de la IA no trae JSON — sin anotaciones para esta lámina', {
+      scope: 'ai.anotacion-plano',
+      extra: { laminaId, largoRespuesta: text.length },
+    })
+    return []
+  }
   let raw: { anotaciones?: unknown[] }
   try {
     raw = JSON.parse(match[0]) as { anotaciones?: unknown[] }
-  } catch {
+  } catch (err) {
+    reportWarning('anotacion-plano: JSON no parseable — sin anotaciones para esta lámina', {
+      scope: 'ai.anotacion-plano',
+      extra: { laminaId, error: err instanceof Error ? err.message : String(err) },
+    })
     return []
   }
   const list = Array.isArray(raw.anotaciones) ? raw.anotaciones : []

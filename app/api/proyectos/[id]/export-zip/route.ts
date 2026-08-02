@@ -20,6 +20,13 @@ function isAllowedStorageUrl(url: string): boolean {
   }
 }
 
+// Un expediente con cientos de documentos grandes puede agotar la memoria
+// del serverless function o exceder su tiempo máximo antes de terminar el
+// zip — se acota cantidad de documentos y bytes totales descargados, dejando
+// constancia en el índice si algo se omitió (nunca se trunca en silencio).
+const MAX_DOCUMENTOS = 200
+const MAX_BYTES_TOTAL = 200 * 1024 * 1024
+
 // DOM file naming convention: DOC_NNN_nombre-descriptivo.ext
 function sanitize(str: string) {
   return str
@@ -71,12 +78,22 @@ export async function GET(
         'Sube documentos desde la ficha del proyecto en PermisoHub.',
       ].join('\n'))
     } else {
+      const truncadoPorCantidad = documentos.length > MAX_DOCUMENTOS
+      const documentosAIncluir = documentos.slice(0, MAX_DOCUMENTOS)
+      let bytesDescargados = 0
+      let truncadoPorTamaño = false
+
       // Download each file from Supabase Storage and add to zip
       await Promise.allSettled(
-        documentos.map(async (doc, idx) => {
+        documentosAIncluir.map(async (doc, idx) => {
           const ext = doc.url.split('.').pop() ?? 'pdf'
           const filename = `DOC_${String(idx + 1).padStart(3, '0')}_${sanitize(doc.tipo)}.${ext}`
           try {
+            if (bytesDescargados >= MAX_BYTES_TOTAL) {
+              truncadoPorTamaño = true
+              folder.file(filename.replace(`.${ext}`, '.error.txt'), `Omitido: se alcanzó el límite de tamaño del ZIP (${Math.round(MAX_BYTES_TOTAL / 1024 / 1024)} MB)`)
+              return
+            }
             // SSRF guard: reject URLs that don't point to our Supabase Storage bucket
             if (!isAllowedStorageUrl(doc.url)) {
               folder.file(filename.replace(`.${ext}`, '.error.txt'), `URL no permitida: ${doc.nombre}`)
@@ -85,6 +102,7 @@ export async function GET(
             const res = await fetch(doc.url)
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const buffer = await res.arrayBuffer()
+            bytesDescargados += buffer.byteLength
             folder.file(filename, buffer)
           } catch {
             // If download fails, add a placeholder txt
@@ -100,7 +118,14 @@ export async function GET(
         `Municipio: ${proyectoRes.data.municipio}`,
         `Tipo: ${proyectoRes.data.tipo}`,
         '',
-        ...documentos.map((d, i) => `${i + 1}. ${d.nombre} (${d.tipo})`),
+        ...documentosAIncluir.map((d, i) => `${i + 1}. ${d.nombre} (${d.tipo})`),
+        '',
+        ...(truncadoPorCantidad
+          ? [`ADVERTENCIA: el expediente tiene ${documentos.length} documentos; solo se incluyeron los primeros ${MAX_DOCUMENTOS}.`]
+          : []),
+        ...(truncadoPorTamaño
+          ? [`ADVERTENCIA: se alcanzó el límite de tamaño del ZIP (${Math.round(MAX_BYTES_TOTAL / 1024 / 1024)} MB) — algunos documentos no se incluyeron.`]
+          : []),
         '',
         `Generado por PermisoHub — ${new Date().toLocaleDateString('es-CL')}`,
       ].join('\n'))

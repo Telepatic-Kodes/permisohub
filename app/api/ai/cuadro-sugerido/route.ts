@@ -6,6 +6,7 @@ import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { createServiceClient } from '@/lib/supabase/service'
+import { reportWarning } from '@/lib/observability'
 import type { DueDiligenceResult } from '@/lib/due-diligence'
 import { cuadroVacio, type CuadroInput, type NivelSuperficie } from '@/lib/cuadros-calculo'
 
@@ -69,7 +70,17 @@ Responde SOLO con JSON válido (sin markdown), con esta forma EXACTA:
 function parseSugerido(text: string): CuadroInput {
   const base = cuadroVacio()
   const match = text.match(/\{[\s\S]*\}/)
-  if (!match) return base
+  if (!match) {
+    // Antes esto degradaba a cuadroVacio() sin dejar ningún rastro — el
+    // arquitecto veía el cuadro vacío y no había forma de saber si la IA
+    // realmente no encontró superficies en el expediente o si simplemente
+    // falló en silencio.
+    reportWarning('cuadro-sugerido: la respuesta de la IA no trae JSON — cae a cuadro vacío', {
+      scope: 'ai.cuadro-sugerido',
+      extra: { largoRespuesta: text.length },
+    })
+    return base
+  }
 
   try {
     const raw = JSON.parse(match[0]) as {
@@ -99,7 +110,11 @@ function parseSugerido(text: string): CuadroInput {
       alturaMaxM: undefined,
       alturaProyectoM: undefined,
     }
-  } catch {
+  } catch (err) {
+    reportWarning('cuadro-sugerido: JSON no parseable — cae a cuadro vacío', {
+      scope: 'ai.cuadro-sugerido',
+      extra: { error: err instanceof Error ? err.message : String(err) },
+    })
     return base
   }
 }

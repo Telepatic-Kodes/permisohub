@@ -3,6 +3,8 @@ import { InviteBodySchema } from '@/lib/schemas'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { asegurarWorkspace } from '@/lib/workspace'
+import { getUserPlan } from '@/lib/subscription'
+import { getLimits } from '@/lib/plan-limits'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +35,30 @@ export async function POST(request: Request) {
     const ws = await asegurarWorkspace(supabase, user.id, perfil?.nombre)
     if (ws.rol !== 'admin') {
       return Response.json({ error: 'Solo un administrador puede invitar' }, { status: 403 })
+    }
+
+    // `seats` en PLAN_LIMITS nunca se revisaba en ningún lado (confirmado
+    // por grep en todo el repo) — un workspace free (seats:1) podía invitar
+    // y aceptar miembros sin límite. Cuenta miembros activos + invitaciones
+    // pendientes sin vencer, para que no se pueda esquivar el tope mandando
+    // varias invitaciones antes de que la primera se acepte.
+    const plan = await getUserPlan(user.id)
+    const seatLimit = getLimits(plan).seats
+    const [{ count: miembrosActuales }, { count: invitesPendientes }] = await Promise.all([
+      supabase.from('workspace_members').select('*', { count: 'exact', head: true }).eq('workspace_id', ws.id),
+      supabase
+        .from('workspace_invites')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', ws.id)
+        .is('accepted_at', null)
+        .gt('expires_at', new Date().toISOString()),
+    ])
+    const ocupados = (miembrosActuales ?? 0) + (invitesPendientes ?? 0)
+    if (ocupados >= seatLimit) {
+      return Response.json(
+        { error: `Tu plan (${plan}) permite ${seatLimit} usuario${seatLimit === 1 ? '' : 's'} por workspace. Actualiza tu plan para invitar a más.` },
+        { status: 402 },
+      )
     }
 
     const rol = body.role ?? 'viewer'

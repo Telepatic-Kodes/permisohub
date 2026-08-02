@@ -21,7 +21,23 @@ export interface EscalaPlano {
   fuente: string | null
 }
 
-const RE_ESCALA = /ESC(?:ALA)?\.?\s*1\s*[:/]\s*(\d{1,4})/i
+// El denominador puede traer separador de miles ("ESC. 1:1.000") — capturar
+// solo \d{1,4} cortaba en el primer punto y leía "1" en vez de "1.000",
+// dando una escala 1000× más chica y por lo tanto una distanciaRealM()
+// 1000× más chica que la real (con una confianza "detectada", no
+// degradando a null). La escala siempre es un entero, así que se aceptan
+// dígitos + separadores y se limpian después.
+const RE_ESCALA = /ESC(?:ALA)?\.?\s*1\s*[:/]\s*(\d[\d.,]*)/i
+
+// Extraído como función pura (testeable sin pdfjs/DOM) del loop de
+// detectarEscalasPdf de abajo.
+export function parsearEscalaDeTexto(str: string): { escala: number; fuente: string } | null {
+  const match = RE_ESCALA.exec(str)
+  if (!match) return null
+  const n = Number(match[1].replace(/[.,]/g, ''))
+  if (!Number.isFinite(n) || n <= 0) return null
+  return { escala: n, fuente: str.trim() }
+}
 
 // Recorre TODAS las páginas de un PDF en una sola apertura (mismo patrón de
 // iteración que pdfUrlToImages en lib/informe-pdf.ts) y devuelve la escala
@@ -44,14 +60,11 @@ export async function detectarEscalasPdf(url: string): Promise<EscalaPlano[]> {
       const content = await page.getTextContent()
       for (const item of content.items) {
         const str = "str" in item ? item.str : ""
-        const match = RE_ESCALA.exec(str)
-        if (match) {
-          const n = Number(match[1])
-          if (Number.isFinite(n) && n > 0) {
-            escala = n
-            fuente = str.trim()
-            break
-          }
+        const resultado = parsearEscalaDeTexto(str)
+        if (resultado) {
+          escala = resultado.escala
+          fuente = resultado.fuente
+          break
         }
       }
     } catch {

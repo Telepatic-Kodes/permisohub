@@ -1,6 +1,24 @@
 import { describe, expect, it } from 'vitest'
 
-import { distanciaRealM, extraerCotasDeTexto, type EscalaPlano } from '@/lib/plano-escala'
+import { distanciaRealM, extraerCotasDeTexto, parsearEscalaDeTexto, type EscalaPlano } from '@/lib/plano-escala'
+
+describe('parsearEscalaDeTexto', () => {
+  it('parsea una escala simple sin separador de miles', () => {
+    expect(parsearEscalaDeTexto('ESCALA 1:50')).toEqual({ escala: 50, fuente: 'ESCALA 1:50' })
+  })
+
+  it('bug real: "ESC. 1:1.000" — el separador de miles no trunca a 1', () => {
+    expect(parsearEscalaDeTexto('ESC. 1:1.000')).toEqual({ escala: 1000, fuente: 'ESC. 1:1.000' })
+  })
+
+  it('acepta coma como separador de miles también', () => {
+    expect(parsearEscalaDeTexto('ESCALA 1:1,250')).toEqual({ escala: 1250, fuente: 'ESCALA 1:1,250' })
+  })
+
+  it('devuelve null (no fabrica una escala) si el texto no matchea', () => {
+    expect(parsearEscalaDeTexto('Plano de emplazamiento')).toBeNull()
+  })
+})
 
 // Plano A1 apaisado a escala 1:50 — dimensiones reales de referencia para
 // verificar la conversión punto→mm→metro sin depender de pdfjs ni del DOM.

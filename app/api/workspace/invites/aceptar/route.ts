@@ -63,13 +63,31 @@ export async function POST(request: Request) {
       )
     }
 
+    // El upsert de acá abajo pisaba el `role` de una membresía YA existente
+    // sin condición — un segundo admin podía crear una invitación 'viewer'
+    // para el email del dueño del workspace, y aceptarla (o reaceptar una
+    // invitación vieja que quedó dando vueltas) lo degradaba de 'admin' a
+    // 'viewer' en su propio workspace, sin forma de revertirlo (solo un
+    // admin puede invitar). Ahora: si ya existe membresía, se conserva su
+    // rol actual — aceptar una invitación nunca DEGRADA a nadie, solo puede
+    // sumar a alguien nuevo o (en el mejor caso) subir de rol explícitamente
+    // vía la gestión de equipo, no vía un link de invitación reciclado.
+    const { data: miembroExistente } = await admin
+      .from('workspace_members')
+      .select('role')
+      .eq('workspace_id', invite.workspace_id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    const rolFinal = miembroExistente ? miembroExistente.role : (invite.rol ?? 'viewer')
+
     const { error: errMiembro } = await admin
       .from('workspace_members')
       .upsert(
         {
           workspace_id: invite.workspace_id,
           user_id: user.id,
-          role: invite.rol ?? 'viewer',
+          role: rolFinal,
         },
         { onConflict: 'workspace_id,user_id' },
       )
@@ -90,7 +108,7 @@ export async function POST(request: Request) {
       ok: true,
       workspace_id: invite.workspace_id,
       workspace: ws?.nombre ?? null,
-      rol: invite.rol ?? 'viewer',
+      rol: rolFinal,
     })
   } catch (err) {
     return apiError('Error interno', 500, err)

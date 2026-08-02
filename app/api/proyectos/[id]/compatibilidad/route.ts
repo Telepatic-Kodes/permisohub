@@ -29,7 +29,7 @@ async function ownedProject(id: string) {
   }
   const { data: proyecto } = await supabase
     .from('proyectos')
-    .select('id, user_id, zona_uperm, zona_uproh, zona_usos_disponibles')
+    .select('id, user_id, zona_status, zona_uperm, zona_uproh, zona_usos_disponibles')
     .eq('id', id)
     .maybeSingle()
   if (!proyecto || proyecto.user_id !== user.id) {
@@ -57,11 +57,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // C6 (auditoría 2026-07-30): zona_uperm/zona_uproh vienen crudos de ArcGIS
     // y 87-99% de los usos de Providencia/Vitacura llevan mojibake. Sin este
     // fix la IA razona sobre texto corrupto mientras la UI muestra texto limpio.
+    //
+    // Guardia compuesta (auditoría 2026-08-02): zona_status !== 'encontrado'
+    // ahora también fuerza usosDisponibles=false acá — antes esta ruta era
+    // la única del proyecto que leía zona_uperm/zona_uproh/
+    // zona_usos_disponibles SIN revisar zona_status primero. persistZonifica-
+    // ciónParaProyecto ya limpia esos campos en sin_cobertura/error, pero
+    // esta guardia es la defensa real: nunca confiar en datos de zona sin
+    // confirmar que la lookup que los produjo fue exitosa.
+    const usosDisponibles = proyecto.zona_status === 'encontrado' && (proyecto.zona_usos_disponibles ?? false)
     const result = await verificarCompatibilidadUso(
       usoPretendido,
       fixMojibakeArcGIS(proyecto.zona_uperm),
       fixMojibakeArcGIS(proyecto.zona_uproh),
-      proyecto.zona_usos_disponibles ?? false,
+      usosDisponibles,
     )
     return Response.json({ ok: true, ...result })
   } catch (err) {

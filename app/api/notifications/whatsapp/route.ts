@@ -2,6 +2,8 @@ import { enviarWhatsApp, isWhatsAppAvailable } from '@/lib/whatsapp'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getUserPlan } from '@/lib/subscription'
+import { getLimits } from '@/lib/plan-limits'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +37,19 @@ export async function POST(request: Request) {
 
   const rateLimit = await checkRateLimit(`notify:${user.id}`)
   if (rateLimit) return rateLimit
+
+  // PLAN_LIMITS.whatsapp es false para free/starter, pero esta ruta nunca
+  // lo revisaba — cualquier usuario autenticado, sin importar su plan,
+  // podía mandar mensajes de WhatsApp desde la cuenta de Twilio de la
+  // empresa a cualquier teléfono, sin límite (tampoco se llamaba
+  // recordUsage en ningún lado — quedaba 100% sin contar, no solo tarde).
+  const userPlan = await getUserPlan(user.id)
+  if (!getLimits(userPlan).whatsapp) {
+    return Response.json(
+      { error: 'WhatsApp no está disponible en tu plan actual', plan: userPlan },
+      { status: 402 },
+    )
+  }
 
   if (!isWhatsAppAvailable()) {
     return Response.json(

@@ -171,13 +171,16 @@ export async function POST(request: Request) {
     })
 
     // M5: parseo validado con zod (antes: regex + JSON.parse + cast `as` sin
-    // validación de runtime). En fallo, degrada al mismo fallback que existía.
-    const parsed = parseAiJson(text, ActaSchema, 'pre-revision') ?? {
-      riesgoGlobal: 'MEDIO',
-      probabilidadAprobacion: 50,
-      resumen: text,
-      observaciones: [],
-      veredicto: '',
+    // validación de runtime). El fallback anterior devolvía "MEDIO"/50%/0
+    // observaciones como si fuera un acta real — el arquitecto decide si
+    // ingresar el expediente en base a esto, así que un parseo fallido debe
+    // ser un error explícito, no una acta fabricada que parece "va bien".
+    const parsed = parseAiJson(text, ActaSchema, 'pre-revision')
+    if (!parsed) {
+      return Response.json(
+        { error: 'La IA no devolvió un acta con formato válido — intenta de nuevo' },
+        { status: 502 },
+      )
     }
 
     const riesgoGlobal: ActaResult['riesgoGlobal'] =

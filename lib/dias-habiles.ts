@@ -259,13 +259,33 @@ export interface EstadoPlazoLey21718 {
  *   both tiers, so the 60-day tier is halved to 30 just like 30→15 — this
  *   was confirmed by two independent secondary sources, not primary BCN text.
  */
+// Vercel corre en UTC, no en la hora de Chile — `new Date()` a secas entre
+// las 21:00 y las 24:00 hora de Santiago (UTC-3/-4) ya cae en el día
+// calendario SIGUIENTE en UTC. Con un plazo legal contado en días hábiles,
+// eso sobre-contaba un día durante esa ventana y un proyecto podía
+// mostrarse "VENCIDO" un día antes de lo real. Se ancla explícitamente al
+// día calendario vigente en America/Santiago, no al del huso horario del
+// runtime.
+function hoyEnSantiago(): Date {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Santiago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const y = partes.find((p) => p.type === 'year')!.value
+  const m = partes.find((p) => p.type === 'month')!.value
+  const d = partes.find((p) => p.type === 'day')!.value
+  return new Date(`${y}-${m}-${d}T00:00:00`)
+}
+
 export function getEstadoPlazoLey21718(
   fechaIngreso: Date,
   tieneRevisorIndependiente: boolean,
   hoy?: Date,
   plazoExtendido60 = false
 ): EstadoPlazoLey21718 {
-  const today = hoy ?? new Date()
+  const today = hoy ?? hoyEnSantiago()
   const plazoBase = plazoExtendido60 ? 60 : 30
   const plazoTotal = tieneRevisorIndependiente ? plazoBase / 2 : plazoBase
 

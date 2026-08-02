@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { SLA_METAS } from "@/lib/sla-config"
+import { esAdminPlataforma } from "@/lib/admin-plataforma"
 
 export const dynamic = "force-dynamic"
 
@@ -130,9 +131,17 @@ function mockSLA(): CadenaSLA[] {
 }
 
 export async function GET() {
-  try {
-    const supabase = await createClient()
+  const supabase = await createClient()
 
+  // Mismo gap que salud-datos: la página en app/(admin)/ está protegida por
+  // su layout, pero esta API no tenía ningún chequeo propio — cualquier
+  // usuario autenticado podía leer el estado de SLA por cadena enterprise.
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user || !esAdminPlataforma(user.email)) {
+    return Response.json({ error: "Forbidden" }, { status: 403 })
+  }
+
+  try {
     const { data: proyectos, error } = await supabase
       .from("proyectos")
       .select("cadena_id, fecha_inicio, numero_expediente, fecha_expediente, cadena:cadenas(nombre)")
@@ -173,7 +182,14 @@ export async function GET() {
       return Response.json({ cadenas: mockSLA(), source: "mock" })
     }
     return Response.json({ cadenas, source: "db" })
-  } catch {
-    return Response.json({ cadenas: mockSLA(), source: "mock" })
+  } catch (err) {
+    // Antes esto caía a mockSLA() ante CUALQUIER falla (caída de DB, drift
+    // de esquema en `proyectos`) — el board mostraba "Falabella Retail —
+    // SLA ok" con números inventados, indistinguible a simple vista de un
+    // estado real (el campo `source:"mock"` existe pero nadie lo mira en
+    // una conversación de SLA con un cliente enterprise). Una consulta que
+    // falla debe fallar visible, no disfrazarse de dato real.
+    const msg = err instanceof Error ? err.message : "Error desconocido"
+    return Response.json({ error: `No se pudo calcular el SLA: ${msg}` }, { status: 500 })
   }
 }

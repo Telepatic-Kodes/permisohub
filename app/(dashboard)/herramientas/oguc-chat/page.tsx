@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Num } from "@/components/arch/dato"
 import { TextoConCitas } from "@/components/arch/cita"
+import { leerEventosSSE } from "@/lib/sse-client"
 
 interface Message {
   role: 'user' | 'assistant'
@@ -83,29 +84,14 @@ function OgucChatPageInner() {
         throw new Error(err.error ?? 'Error del servidor')
       }
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No stream')
-
-      const decoder = new TextDecoder()
       let accumulated = ""
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n').filter(l => l.startsWith('data: '))
-
-        for (const line of lines) {
-          const data = line.slice(6)
-          if (data === '[DONE]') break
-          try {
-            const parsed = JSON.parse(data) as { text?: string; error?: string }
-            if (parsed.text) {
-              accumulated += parsed.text
-              setStreamingText(accumulated)
-            }
-          } catch {}
+      for await (const data of leerEventosSSE(response)) {
+        const parsed = JSON.parse(data) as { text?: string; error?: string }
+        if (parsed.error) throw new Error(parsed.error)
+        if (parsed.text) {
+          accumulated += parsed.text
+          setStreamingText(accumulated)
         }
       }
 

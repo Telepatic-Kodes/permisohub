@@ -24,12 +24,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   } = await supabase.auth.getUser()
   if (authError || !user) return Response.json({ error: 'No autenticado' }, { status: 401 })
 
+  // RLS de `proyectos` ya es workspace-scoped — ver via-tramitacion/route.ts.
   const { data: proyecto } = await supabase
     .from('proyectos')
     .select('id, user_id')
     .eq('id', id)
     .maybeSingle()
-  if (!proyecto || proyecto.user_id !== user.id) {
+  if (!proyecto) {
     return Response.json({ error: 'Proyecto no encontrado' }, { status: 404 })
   }
 

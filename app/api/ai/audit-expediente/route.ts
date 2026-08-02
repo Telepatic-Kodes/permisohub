@@ -1,32 +1,46 @@
+import { z } from 'zod'
 import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { parseAiJson } from '@/lib/ai-parse'
 
 export const dynamic = 'force-dynamic'
 
-interface DocumentoAuditado {
-  nombre: string
-  tipoInferido: string
-  estado: 'OK' | 'FALTA' | 'INCOMPLETO' | 'VERIFICAR'
-  observaciones: string[]
-  recomendacion: string
-}
+// Sin este tope, un cliente puede adjuntar cientos de archivos en el
+// formData — el prompt (lista de nombres) y el costo/latencia de la llamada
+// a OpenAI escalan con la cantidad sin ningún límite hoy.
+const MAX_ARCHIVOS = 30
+
+// M5 (mismo patrón que copiloto/route.ts y cuadro-sugerido/route.ts): antes
+// esto era un `JSON.parse(...) as ClaudeAuditPayload` sin validación de
+// runtime — un cambio de forma del modelo pasaba directo a la UI.
+const DocumentoAuditadoSchema = z
+  .object({
+    nombre: z.string().default(''),
+    tipoInferido: z.string().default(''),
+    estado: z.enum(['OK', 'FALTA', 'INCOMPLETO', 'VERIFICAR']).default('VERIFICAR'),
+    observaciones: z.array(z.string()).default([]),
+    recomendacion: z.string().default(''),
+  })
+  .passthrough()
+
+const AuditPayloadSchema = z
+  .object({
+    documentos: z.array(DocumentoAuditadoSchema).default([]),
+    documentosFaltantes: z.array(z.string()).default([]),
+    puntaje: z.number().default(0),
+    aptoParaIngreso: z.boolean().default(false),
+    resumen: z.string().default(''),
+  })
+  .passthrough()
 
 interface AuditResult {
   ok: boolean
   municipio: string
   tipoObra: string
-  documentos: DocumentoAuditado[]
-  documentosFaltantes: string[]
-  puntaje: number
-  aptoParaIngreso: boolean
-  resumen: string
-}
-
-interface ClaudeAuditPayload {
-  documentos: DocumentoAuditado[]
+  documentos: z.infer<typeof DocumentoAuditadoSchema>[]
   documentosFaltantes: string[]
   puntaje: number
   aptoParaIngreso: boolean
@@ -60,6 +74,9 @@ export async function POST(request: Request): Promise<Response> {
     const files = formData.getAll('files') as File[]
     if (files.length === 0) {
       return Response.json({ error: 'Se requiere al menos un archivo' }, { status: 400 })
+    }
+    if (files.length > MAX_ARCHIVOS) {
+      return Response.json({ error: `Máximo ${MAX_ARCHIVOS} archivos por auditoría` }, { status: 400 })
     }
 
     fileNames = files.map((f) => f.name)
@@ -113,26 +130,27 @@ Responde SOLO con JSON válido (sin markdown, sin texto adicional):
 }`
 
   try {
-    // 3000 → 4500: el array "documentos" escala con la cantidad de PDFs
-    // subidos al expediente, no es un tamaño fijo — un expediente con varios
-    // documentos podía truncar el JSON a medias (falla visible, no silenciosa,
-    // porque JSON.parse abajo lanza y el catch devuelve 500 — pero mejor
-    // evitarlo con más margen que depender del error).
-    const text = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 4500 })
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('No JSON en respuesta')
+    // El array "documentos" escala con la cantidad de PDFs subidos al
+    // expediente, no es un tamaño fijo — 4500 alcanza para pocos archivos
+    // pero no para el máximo permitido (MAX_ARCHIVOS). Se escala con la
+    // cantidad de archivos en vez de dejar un tope plano.
+    const maxTokens = Math.min(8000, 3000 + fileNames.length * 150)
+    const text = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: maxTokens })
 
-    const parsed = JSON.parse(jsonMatch[0]) as ClaudeAuditPayload
+    const parsed = parseAiJson(text, AuditPayloadSchema, 'audit-expediente')
+    if (!parsed) {
+      return Response.json({ error: 'La IA no devolvió un resultado válido — intenta de nuevo' }, { status: 502 })
+    }
 
     const result: AuditResult = {
       ok: true,
       municipio,
       tipoObra,
-      documentos: parsed.documentos ?? [],
-      documentosFaltantes: parsed.documentosFaltantes ?? [],
-      puntaje: parsed.puntaje ?? 0,
-      aptoParaIngreso: parsed.aptoParaIngreso ?? false,
-      resumen: parsed.resumen ?? '',
+      documentos: parsed.documentos,
+      documentosFaltantes: parsed.documentosFaltantes,
+      puntaje: parsed.puntaje,
+      aptoParaIngreso: parsed.aptoParaIngreso,
+      resumen: parsed.resumen,
     }
 
     recordUsage(auth.userId, 'ai_chats').catch(console.error)

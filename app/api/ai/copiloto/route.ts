@@ -68,7 +68,13 @@ const ChecklistItemSchema = z
     nombre: z.string().default(''),
     articulo_normativo: z.string().default(''),
     descripcion: z.string().default(''),
-    obligatorio: z.boolean().default(false),
+    // Un item sin `obligatorio` en la respuesta del modelo (parseo parcial,
+    // campo omitido) NO es lo mismo que "no obligatorio" — pero
+    // `.default(false)` los volvía indistinguibles y el item se guardaba
+    // como opcional en document_checklist_items sin que nadie lo notara. Ante
+    // un dato faltante en un checklist de cumplimiento, el sesgo seguro es
+    // tratarlo como obligatorio (el arquitecto lo revisa de más, no de menos).
+    obligatorio: z.boolean().default(true),
   })
   .passthrough()
 
@@ -281,7 +287,12 @@ export async function POST(request: Request) {
   // para que TabEstimacion pueda mostrar el mismo aviso.
   let ufFallback = true
   try {
-    const ufRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'}/api/utils/uf`)
+    // Sin timeout, un self-request colgado se comía el maxDuration completo
+    // de esta ruta (90s) antes de caer al fallback — mismo fix ya aplicado en
+    // lib/scrapers/terrenos-common.ts:obtenerValorUF() para el mismo self-fetch.
+    const ufRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'}/api/utils/uf`, {
+      signal: AbortSignal.timeout(12_000),
+    })
     const ufData = await ufRes.json() as { valor?: number; fallback?: boolean }
     if (ufData.valor) {
       ufValor = ufData.valor
@@ -299,6 +310,12 @@ export async function POST(request: Request) {
     'patente_comercial': 'obra_nueva',
     'desarchivo': 'obra_nueva',
   }
+  // Sin avalúo fiscal real, el presupuesto que alimenta el cálculo de
+  // derechos es una PURA suposición (800.000 CLP/m² sin fuente citada, o un
+  // monto plano de 50M si ni siquiera hay superficie) — el monto resultante
+  // se ve tan específico como uno real ($XXX.XXX) y sin este flag el
+  // arquitecto no tiene forma de saber que el insumo fue inventado.
+  const presupuestoEsReal = typeof p.avaluo_fiscal_clp === 'number' && p.avaluo_fiscal_clp > 0
   const presupuesto = p.avaluo_fiscal_clp ?? (p.superficie_construida_m2 ? p.superficie_construida_m2 * 800_000 : 50_000_000)
   const tipoObra = (TIPO_PERMISO_TO_OBRA[p.tipo] ?? 'obra_nueva') as TipoObra
   const derechos = calcularDerechosMunicipales(
@@ -309,6 +326,13 @@ export async function POST(request: Request) {
     p.municipio,
     ufValor,
   )
+  if (!presupuestoEsReal) {
+    derechos.advertencias.push(
+      p.superficie_construida_m2
+        ? `Sin avalúo fiscal registrado: el presupuesto de obra se estimó en $800.000/m² × ${p.superficie_construida_m2} m² (valor referencial, no informado por el proyecto) — el monto de derechos es una aproximación.`
+        : 'Sin avalúo fiscal ni superficie construida registrados: el presupuesto de obra se asumió en $50.000.000 (valor genérico) — el monto de derechos es solo referencial hasta que se cargue un dato real.'
+    )
+  }
   const derechosInfo = [
     ...derechos.detalle,
     `En UF: ${(derechos.montoDerechos / ufValor).toFixed(2)} UF`,
@@ -345,10 +369,17 @@ export async function POST(request: Request) {
       articulos: ogucParsed.articulos.map((a) => ({ ...a, numero: flagUnverifiedCita(a.numero) })),
     }
 
+    // Este endpoint combina 4 secciones en una sola respuesta — fallar toda
+    // la request porque SOLO "observaciones" no parseó descartaría oguc/
+    // checklist/estimacion que sí llegaron bien. Pero el fallback anterior
+    // ("MEDIO" + 0 predicciones) es indistinguible de un diagnóstico real sin
+    // riesgos — como no hay un estado "desconocido" en el badge de riesgo
+    // (BAJO/MEDIO/ALTO), se degrada a ALTO con un resumen explícito: mejor
+    // que el arquitecto revise de más a que confíe en un "va bien" fabricado.
     const observaciones = parseAiJson(observacionesText, ObservacionesSchema, 'copiloto:observaciones') ?? {
-      riesgoGlobal: 'MEDIO',
+      riesgoGlobal: 'ALTO',
       predicciones: [],
-      resumen: observacionesText,
+      resumen: 'No se pudo generar el diagnóstico de observaciones — la respuesta de la IA no tuvo el formato esperado. Vuelve a intentar o revisa manualmente.',
     }
 
     let checklist: { items: Array<{ id?: string; item_key: string; nombre: string; articulo_normativo: string; descripcion: string; obligatorio: boolean; estado: string }> }
@@ -369,8 +400,12 @@ export async function POST(request: Request) {
       // M5: parseo validado con zod (antes: regex + JSON.parse + cast `as`).
       const parsed = parseAiJson(checklistText, ChecklistSchema, 'copiloto:checklist') ?? { items: [] }
 
-      if (parsed.items.length > 0) {
-        const rows = parsed.items.map((item) => ({
+      // item_key/nombre en blanco (defaults de zod ante un campo omitido) no
+      // describen ningún documento real — insertarlos deja una fila vacía en
+      // el checklist del arquitecto en vez de simplemente omitir ese item.
+      const itemsValidos = parsed.items.filter((item) => item.item_key.trim() && item.nombre.trim())
+      if (itemsValidos.length > 0) {
+        const rows = itemsValidos.map((item) => ({
           proyecto_id: body.proyectoId,
           item_key: item.item_key,
           nombre: item.nombre,

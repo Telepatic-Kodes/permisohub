@@ -214,7 +214,7 @@ export default function ProyectoDetallePage({
   const estadoCfg = ESTADO_CONFIG[proyecto?.estado ?? "borrador"]
 
   const diasDesdeInicio = proyecto
-    ? Math.floor((Date.now() - new Date(proyecto.fecha_inicio).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor((Date.now() - new Date(`${proyecto.fecha_inicio}T00:00:00`).getTime()) / (1000 * 60 * 60 * 24))
     : 0
   const plazoLegalExcedido =
     !!proyecto &&

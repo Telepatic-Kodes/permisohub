@@ -24,6 +24,21 @@ interface CompleteOptions {
   json?: boolean
 }
 
+// Se descartaba `finish_reason` y se devolvía el texto igual — para salidas
+// JSON, un corte a medias normalmente ya fallaba en JSON.parse/parseAiJson
+// (visible), pero para PROSA (memoria descriptiva, declaración jurada,
+// respuesta a observación) un corte a media frase es texto sintácticamente
+// válido: nada lo detectaba y la ruta devolvía `ok:true` con un documento
+// legal incompleto. Lanzar en vez de devolver silencioso hace que TODO
+// caller (los ~17 de este archivo, todos con try/catch → 500 con el
+// mensaje) trate un corte por longitud como la falla real que es.
+export class AITruncationError extends Error {
+  constructor() {
+    super('La respuesta de la IA se cortó por límite de tokens (finish_reason=length)')
+    this.name = 'AITruncationError'
+  }
+}
+
 export async function aiComplete(
   messages: Message[],
   options?: CompleteOptions
@@ -36,6 +51,7 @@ export async function aiComplete(
     ...(options?.json ? { response_format: { type: 'json_object' as const } } : {}),
     messages,
   })
+  if (response.choices[0].finish_reason === 'length') throw new AITruncationError()
   return response.choices[0].message.content ?? ''
 }
 
@@ -132,6 +148,7 @@ export async function aiCompleteWithPDF(
     ...(options?.json ? { response_format: { type: 'json_object' as const } } : {}),
     messages: [{ role: 'user', content: content as OpenAI.Chat.ChatCompletionContentPart[] }],
   })
+  if (response.choices[0].finish_reason === 'length') throw new AITruncationError()
   return response.choices[0].message.content ?? ''
 }
 
@@ -193,5 +210,6 @@ export async function aiCompleteWithImages(
     ...(options?.json ? { response_format: { type: 'json_object' as const } } : {}),
     messages: [{ role: 'user', content }],
   })
+  if (response.choices[0].finish_reason === 'length') throw new AITruncationError()
   return response.choices[0].message.content ?? ''
 }

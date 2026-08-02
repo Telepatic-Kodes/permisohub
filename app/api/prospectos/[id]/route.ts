@@ -76,14 +76,20 @@ export async function PATCH(
     if (body.proximo_contacto !== undefined) updates.proximo_contacto = body.proximo_contacto
 
     if (Object.keys(updates).length > 0) {
-      const { error: updateError } = await supabase
+      // Sin `.eq('user_id', ...)`: mismo bug que clientes/[id] — la RLS de
+      // `prospectos` ya scopea por workspace, el filtro extra hacía que un
+      // compañero de workspace recibiera {ok:true} sin escribir nada.
+      const { data: actualizados, error: updateError } = await supabase
         .from('prospectos')
         .update(updates)
         .eq('id', id)
-        .eq('user_id', user.id)
+        .select('id')
 
       if (updateError) {
         return apiError('Error interno', 500, updateError)
+      }
+      if (!actualizados || actualizados.length === 0) {
+        return Response.json({ error: 'Prospecto no encontrado' }, { status: 404 })
       }
     }
 

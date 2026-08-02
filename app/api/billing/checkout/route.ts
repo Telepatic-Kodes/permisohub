@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { getStripe, isStripeAvailable } from "@/lib/stripe"
+import { getStripe, isStripeAvailable, PLAN_PRICES } from "@/lib/stripe"
 import { CheckoutBodySchema } from "@/lib/schemas"
 import { checkRateLimit } from "@/lib/rate-limit"
 
@@ -44,6 +44,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "Datos inválidos", issues: parsed.error.issues }, { status: 400 })
   }
   const { priceId, successUrl, cancelUrl } = parsed.data
+
+  // priceId no es secreto (viaja en el bundle del cliente) — sin validarlo
+  // contra el catálogo real de planes, un usuario podía suscribirse a
+  // cualquier price id que exista en la cuenta de Stripe (legacy, de
+  // prueba, interno). El webhook luego resuelve PLAN_PRICES[priceId] ??
+  // "free", así que el resultado era una suscripción "active" pagada pero
+  // con plan "free" — cobro sin beneficio, o un estado inconsistente.
+  if (!(priceId in PLAN_PRICES)) {
+    return Response.json({ error: "priceId inválido" }, { status: 400 })
+  }
 
   const origin =
     request.headers.get("origin") ??

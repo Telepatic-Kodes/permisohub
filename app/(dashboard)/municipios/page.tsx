@@ -482,6 +482,18 @@ export default function MunicipiosPage() {
                           <span className="flex items-center gap-2">
                             <Clock className="size-4" />
                             Plazo típico: <span className="num text-foreground/80">{info.plazo_tipico_dias}</span> días
+                            <span
+                              className="inline-flex items-center gap-1 rounded-[3px] border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide"
+                              style={{
+                                color: "var(--state-warn)",
+                                borderColor: "var(--state-warn)",
+                                background: "color-mix(in oklch, var(--state-warn) 12%, transparent)",
+                              }}
+                              title="Dato sintético (referencia general), no una medición real de esta comuna — Inteligencia DOM arriba en esta misma página usa una fuente distinta y puede no coincidir."
+                            >
+                              <AlertTriangle className="size-2.5" />
+                              Estimado
+                            </span>
                           </span>
                         )}
                       </div>

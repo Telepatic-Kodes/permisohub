@@ -79,12 +79,16 @@ const ESTADO_BADGE: Record<EstadoDesarchivo, { label: string; className: string 
   rechazado: { label: "Rechazado", className: "bg-red-100 text-red-700 border-red-200" },
 }
 
-// Día hábil transcurrido desde la fecha de solicitud hasta hoy
+// Día hábil transcurrido desde la fecha de solicitud hasta hoy.
+// `fechaInicio` es un YYYY-MM-DD — sin forzar medianoche LOCAL (mismo
+// idiom que el resto de las páginas hermanas), `new Date(fechaInicio)` lo
+// trata como medianoche UTC y puede correr la fecha un día según el huso
+// del runtime.
 function diasHabilesTranscurridos(fechaInicio: string): number {
   try {
-    return contarDiasHabiles(new Date(fechaInicio), new Date())
+    return contarDiasHabiles(new Date(`${fechaInicio}T00:00:00`), new Date())
   } catch {
-    const d1 = new Date(fechaInicio)
+    const d1 = new Date(`${fechaInicio}T00:00:00`)
     const d2 = new Date()
     return Math.floor((d2.getTime() - d1.getTime()) / 86400000)
   }
@@ -96,7 +100,7 @@ function ordenEstado(estado: EstadoDesarchivo): number {
 }
 
 function fechaLegible(fecha: string): string {
-  const d = new Date(fecha)
+  const d = new Date(`${fecha}T00:00:00`)
   if (Number.isNaN(d.getTime())) return fecha
   return d.toLocaleDateString("es-CL", { day: "2-digit", month: "long", year: "numeric" })
 }

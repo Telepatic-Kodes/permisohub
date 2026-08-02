@@ -76,6 +76,19 @@ export function calcularDerechosMunicipales(
   const detalle: string[] = []
   const advertencias: string[] = []
 
+  // presupuestoObra puede llegar NaN/negativo desde un caller que no validó
+  // (ej. un dato del expediente que aún no se cargó) — sin este guard, NaN se
+  // propaga silenciosamente a través de todo el cálculo (incluso salta el
+  // mínimo municipal, porque `NaN < minimoCLP` es `false`) y termina en
+  // `montoDerechos: NaN`, mostrado como "$NaN" sin ninguna advertencia.
+  const presupuestoValido = Number.isFinite(presupuestoObra) && presupuestoObra > 0
+  const presupuestoCalculo = presupuestoValido ? presupuestoObra : 0
+  if (!presupuestoValido) {
+    advertencias.push(
+      'Presupuesto de obra no válido o no informado — no se pudo calcular el derecho proporcional; el monto mostrado es solo el mínimo municipal referencial.'
+    )
+  }
+
   const porcentaje = PORCENTAJE_POR_TIPO[tipoObra]
 
   // DFL2: la evidencia disponible indica que el beneficio del 50% aplica a
@@ -95,10 +108,10 @@ export function calcularDerechosMunicipales(
       'La base legal aplicable a regularizaciones puede diferir del Art. 130 LGUC (régimen Ley 20.898) — la DOM debe confirmar la tasa y eventual multa adicional de hasta 100% de los derechos por obra sin permiso.'
     )
   } else {
-    detalle.push(`${(porcentaje * 100).toFixed(2)}% × $${presupuestoObra.toLocaleString('es-CL')} = $${(presupuestoObra * porcentaje).toLocaleString('es-CL')}`)
+    detalle.push(`${(porcentaje * 100).toFixed(2)}% × $${presupuestoCalculo.toLocaleString('es-CL')} = $${(presupuestoCalculo * porcentaje).toLocaleString('es-CL')}`)
   }
 
-  let montoCalculado = presupuestoObra * porcentaje
+  let montoCalculado = presupuestoCalculo * porcentaje
 
   // Art. 116 bis LGUC: revisor independiente reduce el derecho en 30%.
   // TODO(Art. 131): unidades repetidas (10-50% de reducción) no se

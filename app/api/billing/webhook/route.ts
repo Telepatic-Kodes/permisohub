@@ -51,6 +51,7 @@ function periodEndIso(subscription: Stripe.Subscription): string | null {
 
 async function upsertFromSubscription(
   subscription: Stripe.Subscription,
+  eventCreated: number,
   statusOverride?: string,
 ) {
   const supabase = getAdminClient()
@@ -61,6 +62,24 @@ async function upsertFromSubscription(
   const userId = subscription.metadata?.user_id ?? null
   const { plan, interval } = planFromSubscription(subscription)
 
+  // Stripe no garantiza el orden de entrega de webhooks (ni descarta
+  // reintentos) — sin este guard, un customer.subscription.updated más
+  // viejo reentregado DESPUÉS de uno más nuevo pisaba silenciosamente
+  // plan/current_period_end con el estado anterior. Se lee el timestamp del
+  // último evento aplicado y se descarta cualquier evento más viejo; un
+  // evento igual o más nuevo (incluida la misma entrega repetida) se
+  // reaplica sin problema porque el resultado es idéntico.
+  const filtro = userId ? { column: "user_id", value: userId } : { column: "stripe_customer_id", value: customerId }
+  const { data: actual } = await supabase
+    .from("subscriptions")
+    .select("stripe_event_created_at")
+    .eq(filtro.column, filtro.value)
+    .maybeSingle()
+
+  if (actual && typeof actual.stripe_event_created_at === "number" && actual.stripe_event_created_at > eventCreated) {
+    return
+  }
+
   const row: Record<string, unknown> = {
     stripe_customer_id: customerId,
     stripe_subscription_id: subscription.id,
@@ -68,6 +87,7 @@ async function upsertFromSubscription(
     billing_interval: interval,
     status: statusOverride ?? subscription.status,
     current_period_end: periodEndIso(subscription),
+    stripe_event_created_at: eventCreated,
     updated_at: new Date().toISOString(),
   }
 
@@ -119,12 +139,12 @@ export async function POST(request: Request) {
       case "customer.subscription.updated":
       case "customer.subscription.created": {
         const subscription = event.data.object as Stripe.Subscription
-        await upsertFromSubscription(subscription)
+        await upsertFromSubscription(subscription, event.created)
         break
       }
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription
-        await upsertFromSubscription(subscription, "canceled")
+        await upsertFromSubscription(subscription, event.created, "canceled")
         break
       }
       case "invoice.payment_succeeded": {
@@ -133,7 +153,7 @@ export async function POST(request: Request) {
         if (subscriptionId) {
           const subscription =
             await getStripe().subscriptions.retrieve(subscriptionId)
-          await upsertFromSubscription(subscription, "active")
+          await upsertFromSubscription(subscription, event.created, "active")
         }
         break
       }

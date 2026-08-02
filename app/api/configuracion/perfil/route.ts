@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { esAdminPlataforma } from '@/lib/admin-plataforma'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,12 @@ export async function GET() {
 
     if (error) throw error
 
-    return Response.json({ perfil: data ?? {}, email: user.email, is_admin: user.email === process.env.ADMIN_EMAIL })
+    // Antes comparaba contra ADMIN_EMAIL (singular, case-sensitive) — un
+    // gate distinto del que usa el resto de la app (esAdminPlataforma,
+    // que unifica ADMIN_EMAIL/ADMIN_EMAILS y normaliza mayúsculas). Si en
+    // producción solo está seteado ADMIN_EMAILS, esto devolvía is_admin:false
+    // para un admin real.
+    return Response.json({ perfil: data ?? {}, email: user.email, is_admin: esAdminPlataforma(user.email) })
   } catch {
     return Response.json({ error: 'Error al obtener perfil' }, { status: 500 })
   }

@@ -29,12 +29,25 @@ interface NominatimResult {
 let lastRequestAt = 0
 const MIN_INTERVAL_MS = 1100
 
-async function throttle(): Promise<void> {
-  const elapsed = Date.now() - lastRequestAt
-  if (elapsed < MIN_INTERVAL_MS) {
-    await new Promise((resolve) => setTimeout(resolve, MIN_INTERVAL_MS - elapsed))
-  }
-  lastRequestAt = Date.now()
+// Encadenado sobre una promesa module-level en vez de leer/escribir
+// `lastRequestAt` directamente: con llamadas concurrentes, todas leían el
+// mismo `lastRequestAt` antes de que ninguna lo actualizara, dormían el
+// mismo resto de intervalo, y disparaban su fetch simultáneamente — el
+// throttle producía una ráfaga sincronizada en vez de espaciar las
+// llamadas. Encadenar hace que cada llamada espere a que la anterior
+// termine de calcular su propio turno antes de calcular el suyo.
+let cola: Promise<void> = Promise.resolve()
+
+function throttle(): Promise<void> {
+  const turno = cola.then(async () => {
+    const espera = MIN_INTERVAL_MS - (Date.now() - lastRequestAt)
+    if (espera > 0) {
+      await new Promise((resolve) => setTimeout(resolve, espera))
+    }
+    lastRequestAt = Date.now()
+  })
+  cola = turno.catch(() => {})
+  return turno
 }
 
 /**

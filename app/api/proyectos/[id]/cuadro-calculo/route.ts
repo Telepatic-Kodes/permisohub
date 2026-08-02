@@ -23,12 +23,16 @@ async function ownedProject(id: string) {
     return { error: Response.json({ error: 'No autenticado' }, { status: 401 }) }
   }
 
+  // Ver via-tramitacion/route.ts: la RLS de `proyectos` ya es workspace-scoped
+  // (es_miembro(workspace_id) OR user_id = auth.uid()) — el chequeo extra
+  // `proyecto.user_id !== user.id` era más estricto que la RLS real y le
+  // devolvía 404 a un compañero de workspace legítimo.
   const { data: proyecto } = await supabase
     .from('proyectos')
     .select('id, user_id')
     .eq('id', id)
     .maybeSingle()
-  if (!proyecto || proyecto.user_id !== user.id) {
+  if (!proyecto) {
     return { error: Response.json({ error: 'Proyecto no encontrado' }, { status: 404 }) }
   }
 

@@ -47,7 +47,9 @@ export async function pdfUrlToImages(
     "pdfjs-dist/build/pdf.worker.min.mjs",
     import.meta.url,
   ).toString()
-  const buf = await (await fetch(url)).arrayBuffer()
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`No se pudo descargar el plano (HTTP ${res.status}): ${url}`)
+  const buf = await res.arrayBuffer()
   const doc = await pdfjs.getDocument({ data: buf }).promise
   const out: { nombre: string; dataUrl: string }[] = []
   for (let i = 1; i <= doc.numPages; i++) {
@@ -137,8 +139,11 @@ function sectionRule(pdf: JsPDF, x: number, y: number, w: number): void {
 async function burnLamina(l: Lamina): Promise<{ dataUrl: string; w: number; h: number }> {
   const img = new Image()
   img.src = l.dataUrl
-  await new Promise((r) => {
-    img.onload = r
+  // Sin onerror, una lámina con dataUrl corrupta deja la promesa pendiente
+  // para siempre y el informe entero se cuelga a mitad de generación.
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve()
+    img.onerror = () => reject(new Error(`No se pudo cargar la lámina: ${l.documentoId}`))
   })
   const canvas = document.createElement("canvas")
   canvas.width = img.naturalWidth
@@ -623,12 +628,22 @@ export async function generarInformePDF(
     if (!r.incompleto) cuadro = r
   }
 
+  // El informe solo usa las primeras 6 láminas (`recorte` abajo) — cortar acá,
+  // antes de rasterizar, evita gastar CPU/memoria rasterizando el resto de un
+  // expediente con muchos planos que nunca van a imprimirse.
   const laminas: Lamina[] = []
   for (const p of planos) {
+    if (laminas.length >= 6) break
     const base = p.nombre.replace(/\.pdf$/i, "")
-    const imgs = /\.pdf$/i.test(p.nombre)
-      ? await pdfUrlToImages(p.url, base)
-      : [{ nombre: base, dataUrl: p.url }]
+    let imgs: { nombre: string; dataUrl: string }[]
+    try {
+      imgs = /\.pdf$/i.test(p.nombre)
+        ? await pdfUrlToImages(p.url, base)
+        : [{ nombre: base, dataUrl: p.url }]
+    } catch {
+      // Plano no descargable/corrupto — se omite en vez de colgar el informe entero.
+      continue
+    }
     imgs.forEach((im, i) =>
       laminas.push({
         dataUrl: im.dataUrl,
@@ -644,7 +659,15 @@ export async function generarInformePDF(
   const pdf = new mod.jsPDF({ orientation: "portrait", unit: "px", format: [COVER_W, COVER_H] })
   drawCoverPage(pdf, result, info)
   for (const [idx, l] of recorte.entries()) {
-    const { dataUrl, w, h } = await burnLamina(l)
+    let burned: { dataUrl: string; w: number; h: number }
+    try {
+      burned = await burnLamina(l)
+    } catch {
+      // Lámina no cargable (dataUrl corrupta) — se omite esa página, el resto
+      // del informe (portada + demás láminas) igual se genera.
+      continue
+    }
+    const { dataUrl, w, h } = burned
     // Banda de leyenda bajo el dibujo (no tapa la lámina): convención + lista
     // numerada de marcas, en dos columnas.
     const fs = Math.max(9, w * 0.011)

@@ -166,13 +166,16 @@ Ordena predicciones de mayor a menor probabilidad. Máximo 6 predicciones. Sé e
     const text = await aiComplete([{ role: 'user', content: prompt }], { max_tokens: 2000 })
 
     // M5: parseo validado con zod (antes: regex + JSON.parse + cast `as` sin
-    // validación de runtime). En fallo, degrada al mismo fallback que existía.
-    const validated = parseAiJson(text, PredictSchema, 'predict-observations') ?? {
-      municipio: body.municipio,
-      riesgoGlobal: 'MEDIO',
-      mesOptimo: stats?.mesesMasAgiles[0] ?? 'Enero',
-      predicciones: [],
-      resumen: text,
+    // validación de runtime). El fallback anterior devolvía "MEDIO"/0
+    // predicciones como si fuera un diagnóstico real — el arquitecto decide
+    // en base a esto si su proyecto tiene riesgo de observaciones, así que un
+    // parseo fallido debe ser un error explícito, no un "sin riesgos" fabricado.
+    const validated = parseAiJson(text, PredictSchema, 'predict-observations')
+    if (!validated) {
+      return Response.json(
+        { error: 'La IA no devolvió una predicción con formato válido — intenta de nuevo' },
+        { status: 502 },
+      )
     }
 
     const riesgoGlobal: PredictResult['riesgoGlobal'] =

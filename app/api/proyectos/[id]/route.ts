@@ -112,14 +112,23 @@ export async function PATCH(
       return Response.json({ ok: true })
     }
 
-    const { error } = await supabase
+    // Sin `.eq('user_id', ...)`: la RLS de `proyectos` ya es workspace-scoped
+    // (es_miembro(workspace_id) OR user_id = auth.uid()) — ese filtro extra
+    // hacía que un compañero de workspace editara un proyecto, recibiera
+    // {ok:true}, y nada se escribiera de verdad (Supabase no marca error en
+    // un update sin match). `.select('id')` + chequeo de longitud para un
+    // 404 real en vez de un 200 falso.
+    const { data: actualizados, error } = await supabase
       .from('proyectos')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', user.id)
+      .select('id')
 
     if (error) {
       return apiError('Error interno', 500, error)
+    }
+    if (!actualizados || actualizados.length === 0) {
+      return Response.json({ error: 'Proyecto no encontrado' }, { status: 404 })
     }
 
     // Zonificación: si la dirección o el municipio cambiaron, re-dispara el

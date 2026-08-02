@@ -51,10 +51,30 @@ export async function persistZonificacionParaProyecto(
       return
     }
 
+    // sin_cobertura/error de acá para abajo: se limpian explícitamente los
+    // campos zona_* de una lookup ANTERIOR exitosa — sin esto, si un
+    // proyecto ya tenía zona_uperm/zona_uproh/zona_usos_disponibles de una
+    // dirección previa (ej. Providencia) y se re-geocodifica a una comuna
+    // sin cobertura, esos valores quedaban huérfanos en la fila. Cualquier
+    // consumidor que leyera solo esos campos sin también revisar
+    // zona_status (el bug real que esto corrige, ver /compatibilidad)
+    // razonaría sobre zonificación de una dirección que ya no es la vigente.
+    const camposZonaVacios = {
+      zona_codigo: null,
+      zona_sector: null,
+      zona_nombre: null,
+      zona_uperm: null,
+      zona_uproh: null,
+      zona_usos_disponibles: null,
+      zona_cache_id: null,
+      zona_fuente_url: null,
+    }
+
     if (json.status === 'sin_cobertura') {
       await admin.from('proyectos').update({
         zona_status: 'sin_cobertura',
         zona_consultada_el: nowIso,
+        ...camposZonaVacios,
       }).eq('id', proyectoId)
       return
     }
@@ -65,12 +85,21 @@ export async function persistZonificacionParaProyecto(
     await admin.from('proyectos').update({
       zona_status: 'error',
       zona_consultada_el: nowIso,
+      ...camposZonaVacios,
     }).eq('id', proyectoId)
   } catch (err) {
     console.error(`[zonificacion] Excepción no capturada al enriquecer proyecto ${proyectoId}:`, err instanceof Error ? err.message : err)
     await admin.from('proyectos').update({
       zona_status: 'error',
       zona_consultada_el: nowIso,
+      zona_codigo: null,
+      zona_sector: null,
+      zona_nombre: null,
+      zona_uperm: null,
+      zona_uproh: null,
+      zona_usos_disponibles: null,
+      zona_cache_id: null,
+      zona_fuente_url: null,
     }).eq('id', proyectoId)
   }
 }

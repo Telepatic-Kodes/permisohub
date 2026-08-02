@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { esAdminPlataforma } from "@/lib/admin-plataforma"
 
 export const dynamic = "force-dynamic"
 
@@ -23,6 +24,16 @@ const LIMITE_FILAS = 200
 
 export async function GET() {
   const supabase = await createClient()
+
+  // La RLS de data_source_runs es `using (true)` para cualquier usuario
+  // autenticado — sin este chequeo explícito, esta ruta devolvía el estado
+  // interno de scrapers/crons (incluyendo error_message) a CUALQUIER
+  // cliente con sesión, no solo a la founder. El layout de app/(admin)/
+  // protege la página, pero la API detrás no tenía ningún gate propio.
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user || !esAdminPlataforma(user.email)) {
+    return Response.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const { data, error } = await supabase
     .from("data_source_runs")

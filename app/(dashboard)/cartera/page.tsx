@@ -254,7 +254,7 @@ export default function CarteraPage() {
                           {p.fecha_estimada && (
                             <p className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
                               <Clock className="size-3" />
-                              Est. {new Date(p.fecha_estimada).toLocaleDateString("es-CL", { month: "short", year: "numeric" })}
+                              Est. {new Date(`${p.fecha_estimada}T00:00:00`).toLocaleDateString("es-CL", { month: "short", year: "numeric" })}
                             </p>
                           )}
                         </div>

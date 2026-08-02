@@ -3,7 +3,10 @@ import {
   extractBetween,
   stripTags,
   mapDomEstado,
+  validateCronSecret,
 } from '@/lib/scraper'
+import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,6 +68,23 @@ async function queryDomEnLinea(
 }
 
 export async function POST(request: Request) {
+  // No tenía ninguna protección propia: cualquiera en internet podía
+  // usarla como proxy de volumen arbitrario contra domenlinea.minvu.cl con
+  // un numero_expediente elegido por el atacante. Se llama de dos formas
+  // reales: server-a-server (cron daily-check, check-status/[proyectoId])
+  // con el CRON_SECRET, y directo desde el navegador (botón "Verificar en
+  // DOM" de app/(dashboard)/permisos/page.tsx) con una sesión real — se
+  // acepta cualquiera de las dos, nunca ninguna.
+  if (!validateCronSecret(request)) {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const rateLimit = await checkRateLimit(`general:${user.id}`)
+    if (rateLimit) return rateLimit
+  }
+
   const body = (await request.json().catch(() => ({}))) as Record<
     string,
     string

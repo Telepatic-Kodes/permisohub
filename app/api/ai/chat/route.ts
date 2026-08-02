@@ -32,10 +32,18 @@ Siempre:
 
 NUNCA inventes artículos de la LGUC/OGUC, números de circular DDU ni valores normativos que no existan.`
 
-export async function POST(request: Request) {
-  const body = await request.json() as { messages: Array<{ role: string; content: string }> }
-  const { messages } = body
+// El rol y el contenido de cada mensaje vienen del cliente — antes se
+// casteaba con `as` sin validar, así que un body {"role":"system","content":
+// "..."} podía colarse después del system prompt real y competir con él
+// ante el modelo (mismo riesgo ya corregido en
+// app/api/mercado-inmobiliario/copiloto/route.ts). Se filtra a
+// user/assistant con content string, y se acota historial + largo para no
+// dejar pasar un prompt arbitrariamente grande (max_tokens solo acota la
+// salida, no la entrada).
+const MAX_MENSAJES_HISTORIAL = 20
+const MAX_LARGO_MENSAJE = 4000
 
+export async function POST(request: Request) {
   if (!isAIAvailable()) {
     return Response.json(
       { error: 'OPENAI_API_KEY no configurado' },
@@ -43,13 +51,20 @@ export async function POST(request: Request) {
     )
   }
 
-  const ai = getAI()!
-
   const auth = await aiAuthGuard()
   if (auth instanceof Response) return auth
 
   const rateLimit = await checkRateLimit(`ai:${auth.userId}`)
   if (rateLimit) return rateLimit
+
+  const ai = getAI()!
+
+  const body = (await request.json().catch(() => ({}))) as { messages?: Array<{ role: string; content: string }> }
+  const historialCrudo = body.messages ?? []
+  const messages = historialCrudo
+    .filter((m): m is { role: 'user' | 'assistant'; content: string } => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+    .slice(-MAX_MENSAJES_HISTORIAL)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_LARGO_MENSAJE) }))
 
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content ?? ''
   const normativaContext = getContextoNormativo(lastUserMsg)
@@ -71,10 +86,7 @@ ${normativaContext}`
           stream: true,
           messages: [
             { role: 'system', content: systemWithContext },
-            ...messages.map((m) => ({
-              role: m.role as 'user' | 'assistant',
-              content: m.content,
-            })),
+            ...messages,
           ],
         })
 

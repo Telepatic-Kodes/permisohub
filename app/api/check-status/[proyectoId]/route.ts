@@ -45,7 +45,10 @@ export async function GET(
     new URL('/api/scraper/dom-en-linea', request.url).toString(),
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.CRON_SECRET ?? ''}`,
+      },
       body: JSON.stringify({
         expedienteNumero: proyecto.numero_expediente,
         municipio: proyecto.municipio,

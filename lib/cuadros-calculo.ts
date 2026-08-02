@@ -263,7 +263,23 @@ export function calcularCuadro(input: CuadroInput): CuadroResultado {
         : `${f.concepto}: ${f.valor}${f.unidad} excede el máximo ${f.limite}${f.unidad}`
     })
 
-  const incompleto = predio <= 0 || superficieTotalEdificada <= 0
+  // Un nivel con edificada > 0 pero ocupadaSuelo sin reportar no es "0 m² de
+  // ocupación" — es un dato que falta. num() no distingue "no reportado" de
+  // "genuinamente cero", así que sin este chequeo el cuadro imprime un % de
+  // ocupación de suelo artificialmente bajo con veredicto "cumple" en verde
+  // aunque la ocupación real pueda exceder el máximo del PRC.
+  const faltaOcupadaSuelo = niveles.some(
+    (n) => num(n.edificada) > 0 && (n.ocupadaSuelo === undefined || n.ocupadaSuelo === null),
+  )
+  // Mismo riesgo con la altura: si el PRC fija un límite pero no se cargó la
+  // altura proyectada, alturaProyecto cae a 0 vía num() y veredictoDe(0,
+  // alturaMax) da "cumple" — falso cumplimiento por dato faltante, no por
+  // holgura real.
+  const faltaAlturaProyecto =
+    alturaMax !== null && !(typeof input.alturaProyectoM === 'number' && input.alturaProyectoM > 0)
+
+  const incompleto =
+    predio <= 0 || superficieTotalEdificada <= 0 || faltaOcupadaSuelo || faltaAlturaProyecto
 
   return {
     superficieTotalEdificada,
