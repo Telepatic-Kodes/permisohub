@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `f1fb3a9` docs(13-06): complete tabs historial y comparables plan
 - `2026-08-02` `a1eb931` feat(13-05): add rentabilidad implicita de zona (DETA-07) to PosicionamientoTab
 - `2026-08-02` `8950c72` feat(13-06): add ComparablesTab with clickable mini-cards
 - `2026-08-02` `6f2b881` feat(13-06): add HistorialTab with price history, reason codes, and cross signals
