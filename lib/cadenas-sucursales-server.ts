@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { recordSourceRun } from '@/lib/observability'
 import { descargarSucursalesCadenas, CADENAS_RUT_CONOCIDOS } from '@/lib/scrapers/sii-nomina-sucursales'
 import { normalizarNombreComuna } from '@/lib/scrapers/instrumentos-ipt'
+import { geocodeDireccion } from '@/lib/geocoding'
 
 export interface ResultadoIngestaCadenas {
   totalEncontradas: number
@@ -221,5 +222,67 @@ export async function obtenerSenalesExpansionPorComuna(
     resultado.set(comunaOriginal, { cadena: fila.cadena, fechaRegistro: fila.fecha_registro })
   }
 
+  return resultado
+}
+
+export interface CadenaGeocodificada {
+  cadena: string
+  lat: number
+  lng: number
+  direccionLabel: string
+}
+
+/**
+ * Geocodifica on-demand las sucursales VIGENTES de una comuna que todavía no
+ * tienen lat/lng, persiste el resultado en la fila (cache-through — NUNCA
+ * vuelve a geocodificar una fila con lat/lng ya poblados), y retorna todas
+ * las filas de la comuna con coordenadas (ya cacheadas + recién geocodificadas
+ * en esta llamada). Nunca lanza — una fila que falla su geocoding simplemente
+ * no aparece en el resultado, mismo contrato que geocodeDireccion().
+ *
+ * Nota de diseño: usa normalizarNombreComuna() en JS después de traer todas
+ * las filas activas, mismo patrón ya aceptado en obtenerSenalesExpansionPorComuna()
+ * — no un `.eq('comuna', ...)` directo, porque `cadenas_sucursales.comuna`
+ * viene en MAYÚSCULAS sin tildes del SII.
+ */
+export async function obtenerCadenasGeocodificadasPorComuna(
+  comuna: string
+): Promise<CadenaGeocodificada[]> {
+  const supabase = createServiceClient()
+  const cadenasActivas = CADENAS_RUT_CONOCIDOS.filter((c) => c.estado === 'activo').map((c) => c.cadena)
+
+  const { data: filas, error } = await supabase
+    .from('cadenas_sucursales')
+    .select('id, cadena, calle, numero, comuna, lat, lng')
+    .eq('vigente', true)
+    .in('cadena', cadenasActivas)
+
+  if (error || !filas) return []
+
+  const comunaNormalizada = normalizarNombreComuna(comuna)
+  const filasDeLaComuna = filas.filter((f) => normalizarNombreComuna(f.comuna) === comunaNormalizada)
+
+  const resultado: CadenaGeocodificada[] = []
+  for (const fila of filasDeLaComuna) {
+    if (fila.lat != null && fila.lng != null) {
+      resultado.push({ cadena: fila.cadena, lat: fila.lat, lng: fila.lng, direccionLabel: `${fila.calle} ${fila.numero}` })
+      continue
+    }
+    // No geocodificada todavía — geocodificar UNA vez, persistir, luego usar.
+    const geo = await geocodeDireccion(`${fila.calle} ${fila.numero}`, fila.comuna)
+    if (!geo.ok || geo.lat === undefined || geo.lng === undefined) continue
+
+    await supabase
+      .from('cadenas_sucursales')
+      .update({ lat: geo.lat, lng: geo.lng, geocodificado_el: new Date().toISOString() })
+      .eq('id', fila.id)
+
+    resultado.push({
+      cadena: fila.cadena,
+      lat: geo.lat,
+      lng: geo.lng,
+      direccionLabel: geo.displayName ?? `${fila.calle} ${fila.numero}`,
+    })
+  }
   return resultado
 }
