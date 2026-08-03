@@ -67,7 +67,13 @@ Plans:
   1. El tab muestra población estimada dentro del área de influencia, calculada por intersección geoespacial con manzanas del Censo 2017, con disclaimer de antigüedad del dato
   2. El tab muestra capacidad de gasto estimada por categoría de consumo (ingreso/pobreza comunal vía CASEN + share de categoría vía EPF), etiquetada explícitamente como "estimado agregado a nivel macro-zona, no medido en el área específica"
   3. Cada cifra demográfica/de consumo muestra su fuente y año/vintage de forma visible, sin mezclar vintages censales (2017 vs. 2024) sin declararlo
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — lib/censo-manzana-server.ts (ArcGIS Manzanas_censo_2017 correcto, services9) + migración aditiva demografia_* + tests + checkpoint humano en vivo
+- [ ] 17-02-PLAN.md — lib/consumo-macro-zona.ts: EPF (parcial, honesto) + CASEN (36 comunas RM, checkpoint humano de transcripción) + obtenerConsumoEstimado()
+- [ ] 17-03-PLAN.md — [GATEADO por Phase 16] Wiring final en obtenerAnalisisCabidaComercial() — campo demografia
+- [ ] 17-04-PLAN.md — [GATEADO por Phase 16 (16-05) y 17-03] Sección de demografía/consumo en CabidaComercialTab (DEMO-01/02/03 user-facing)
 
 #### Phase 18: Competencia por Formato
 **Goal**: Dentro del área de influencia, el usuario ve cuántos y cuáles competidores existen por formato objetivo, con nombre de cadena real cuando es identificable, y con el nivel de confianza degradado explícitamente cuando la cobertura de la fuente es conocida como incompleta.
