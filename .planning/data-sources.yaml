@@ -448,3 +448,16 @@
   duplicate_of: null
   status: active
   notes: "RESUELTO (1 ago 2026, misma sesión): se identificaron las razones sociales operativas reales cruzando la nómina de razones sociales del SII contra las marcas públicas de cada grupo. Walmart Chile: 'Administradora de Supermercados Hiper/Express Limitada' (76134941-4 / 76134946-5) — alta confianza, ambas registradas el mismo día (reestructuración corporativa post-compra de D&S), 211 direcciones vigentes, distribución nacional real. Ya activos en CADENAS_RUT_CONOCIDOS. SMU: 'Alvi Supermercado Mayorista S.A.' (76029743-7) y 'Super 10 S.A.' (76012833-3) — confianza media-alta (smu.cl/inversionistas confirma 'filiales Unimarc, Alvi y Super10' por nombre pero no publica RUT oficial para confirmar 1:1). Unimarc — la marca más grande de SMU, mayoría de sus ~300 tiendas — no aparece como razón social propia en la nómina; indicios de que opera bajo RUTs regionales ('Mayorista 10 <ciudad> Limitada') en vez de uno nacional único. **Decisión founder (1 ago 2026): NO seguir invirtiendo tiempo de agente en encontrar el RUT de Unimarc — cobertura parcial de SMU (Alvi + Super10) es aceptable por ahora.** Reabrir solo si la founder consigue el dato por otra vía (no vale la pena más búsqueda automatizada)."
+
+- id: strip-power-centers-chile-seed
+  name: "Lista curada a mano — strip centers y power centers en Chile (RM)"
+  type: static-kb
+  owner_files: [lib/strip-power-centers-chile.ts]
+  trigger: none
+  called_from: []
+  freshness_sla_days: null
+  last_verified: 2026-08-02
+  monitoring: none
+  duplicate_of: null
+  status: active
+  notes: "COMPE-04 — no existe tag OSM ni fuente pública con direcciones para strip/power center en Chile. Seed manual (.planning/research/SEED-STRIP-POWER-CENTERS-CHILE.md, investigación 2 ago 2026) con 25 filas RM (18 con lat/lng geocodificados una vez vía scripts/geocode-strip-power-seed.mjs contra Nominatim real; 7 con direccion/lat/lng: null porque la fuente no dio ni siquiera una dirección aproximada). GAP CONOCIDO: Grupo Patio (~91-158 propiedades, líder del mercado ~15% share) y Más Center/IFB Inversiones (~30 strip centers activos en RM) no tienen NINGÚN activo nombrado en esta lista — sus sitios corporativos bloquearon el scraping automatizado (403) o no publican listado propiedad-por-propiedad. Un conteo de 0 competidores strip_center/power_center en una comuna donde alguno de estos dos operadores podría tener presencia NO debe leerse como 'confirmado: sin competencia' — ver lib/competencia-formato.ts (Plan 18-05) que cita este id explícitamente."
