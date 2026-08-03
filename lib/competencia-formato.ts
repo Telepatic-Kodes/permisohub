@@ -11,16 +11,22 @@ const TOPE_CONFIANZA_GLOBAL: NivelConfianza = 'media' // v1.7: coberturaConocida
 const ES_FORMATO_SUPER_MINI = (formato: FormatoComercial) =>
   formato === 'supermercado' || formato === 'minimarket'
 
+// Fragmentos de disclosure citando explícitamente el id de la entrada de
+// data-sources.yaml correspondiente — grep-eables, un solo lugar para editar
+// si el gap alguna vez se resuelve (ej. Unimarc entra al roster SII).
+const DISCLOSURE_GAP_SUPER_MINI =
+  'Unimarc no está en el roster SII (ver data-sources.yaml → sii-nomina-sucursales-holdings-sin-tiendas)'
+const DISCLOSURE_GAP_STRIP_POWER =
+  'Grupo Patio y Más Center no tienen ningún activo nombrado en la lista curada (ver data-sources.yaml → strip-power-centers-chile-seed)'
+
 function construirDisclosure(formato: FormatoComercial, count: number): string {
   const prefijo =
     count === 0
       ? 'No se encontraron competidores en el área de influencia, pero'
       : `Se encontraron ${count} competidor${count === 1 ? '' : 'es'} en el área de influencia, pero`
 
-  if (ES_FORMATO_SUPER_MINI(formato)) {
-    return `${prefijo} la cobertura de la fuente es parcial: Unimarc no está en el roster SII (ver data-sources.yaml → sii-nomina-sucursales-holdings-sin-tiendas). Un conteo bajo o cero NO confirma ausencia de competencia.`
-  }
-  return `${prefijo} la cobertura de la fuente es parcial: Grupo Patio y Más Center no tienen ningún activo nombrado en la lista curada (ver data-sources.yaml → strip-power-centers-chile-seed). Un conteo bajo o cero NO confirma ausencia de competencia.`
+  const gap = ES_FORMATO_SUPER_MINI(formato) ? DISCLOSURE_GAP_SUPER_MINI : DISCLOSURE_GAP_STRIP_POWER
+  return `${prefijo} la cobertura de la fuente es parcial: ${gap}. Un conteo bajo o cero NO confirma ausencia de competencia.`
 }
 
 /**
