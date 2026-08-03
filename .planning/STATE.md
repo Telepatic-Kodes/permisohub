@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `b310d93` docs(16-02): complete geocoding de centroide de comuna plan
 - `2026-08-02` `436aa6d` feat(16-03): add cabida_comercial_cache migration
 - `2026-08-02` `9816e4c` test(16-02): add geocodeComunaCentroide unit tests
 - `2026-08-02` `60f8aba` feat(16-02): add lib/cabida-comercial.ts client-safe types + fetch helper
@@ -72,17 +73,17 @@ _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, req
 ## Current Position
 
 Phase: 16 of 19 (Ubicación e Isócrona — Motor Desacoplado)
-Plan: 02 of 5 (16-02 completo; wave 1 también incluye 16-01, posiblemente en ejecución paralela)
+Plan: 03 of 5 (16-03 completo; wave 1 también incluye 16-01, posiblemente en ejecución paralela)
 Status: In progress
-Last activity: 2026-08-03 — Plan 16-02 (geocodeComunaCentroide + lib/cabida-comercial.ts tipos client-safe) completo, 3/3 tasks, sin deviations
+Last activity: 2026-08-03 — Plan 16-03 (migración cabida_comercial_cache escrita y aplicada en vivo vía Supabase MCP) completo, 2/2 tasks, sin deviations
 
-Progress: [█░░░░░░░░░] 10% (milestone v1.7 — Fase 16, 1/5 planes ejecutados)
+Progress: [██░░░░░░░░] 20% (milestone v1.7 — Fase 16, 2/5 planes ejecutados)
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
-| 16 | Ubicación e Isócrona (Motor Desacoplado) | 🔄 En progreso (1/5 planes) — 16-02 ✅ (geocodeComunaCentroide() en lib/geocoding.ts, fallback de centroide de comuna con parámetros Nominatim estructurados city=/country=Chile + lib/cabida-comercial.ts con los tipos client-safe canónicos UbicacionCabida/IsocronaResultado/FormatoComercial y consultarCabidaComercial() fetch helper — ver 16-02-SUMMARY.md) |
+| 16 | Ubicación e Isócrona (Motor Desacoplado) | 🔄 En progreso (2/5 planes) — 16-02 ✅ (geocodeComunaCentroide() en lib/geocoding.ts, fallback de centroide de comuna con parámetros Nominatim estructurados city=/country=Chile + lib/cabida-comercial.ts con los tipos client-safe canónicos UbicacionCabida/IsocronaResultado/FormatoComercial y consultarCabidaComercial() fetch helper — ver 16-02-SUMMARY.md) 16-03 ✅ (migración cabida_comercial_cache — tabla angosta, índice único lat_r/lng_r/modo/minutos, RLS de solo lectura, 3 CHECK constraints — escrita y aplicada en vivo vía Supabase MCP, checkpoint humano confirmado — ver 16-03-SUMMARY.md) |
 | 17 | Demografía y Consumo | ⬜ No iniciada |
 | 18 | Competencia por Formato | ⬜ No iniciada |
 | 19 | Veredicto, Metodología, Mapa y Tab | ⬜ No iniciada |
@@ -203,10 +204,12 @@ See: .planning/PROJECT.md (updated 2026-08-02 al iniciar milestone v1.7)
 
 - [16-02] **geocodeComunaCentroide() + lib/cabida-comercial.ts tipos client-safe (2026-08-03, commits `f2f771b`/`60f8aba`/`9816e4c`)** — `lib/geocoding.ts`: nueva `geocodeComunaCentroide(comuna)` junto a `geocodeDireccion()` (mismo archivo, comparte el throttle module-level de 1.1s y `fetchWithTimeout` — 16-RESEARCH.md confirmó que no existía ninguna fuente de coordenadas de comuna en el repo y que reusar `geocodeDireccion` con `direccion=''` producía una query con coma colgante); usa parámetros Nominatim ESTRUCTURADOS (`city=`/`country=Chile`), no el `q=` de texto libre pensado para direcciones calle+número — verificado por test que `has('q')` es `false`. `lib/cabida-comercial.ts` (nuevo, mirror client-safe de `lib/zonificacion.ts`): tipos canónicos `UbicacionCabida`/`UbicacionPrecision`/`IsocronaMetodo`/`IsocronaResultado`/`FormatoComercial`/`AnalisisCabidaComercial`/`CabidaComercialAnalisisResponse` + `consultarCabidaComercial()` fetch helper hacia `/api/cabida-comercial/analisis`; `UbicacionPrecision` deja la unión abierta (`'aproximada' | 'centroide_comuna'`, sin `'exacta'` todavía) para no cerrar a 2 valores hardcodeados algo que un futuro modo standalone por dirección (CABI-03) necesitará extender. Nombre `consultarCabidaComercial` (no `obtenerAnalisisCabidaComercial`, reservado para la función pura server-only de Plan 16-04) sigue el precedente `lookupZonificacion()`/`persistZonificacionParaProyecto()`. Sin deviations, `npx tsc --noEmit` limpio, 2/2 tests en verde. Desbloquea Plan 16-04 (server orchestration) y 16-05 (ruta + UI). Ver 16-02-SUMMARY.md.
 
+- [16-03] **cabida_comercial_cache migración escrita y aplicada en vivo (2026-08-03, commit `436aa6d`)** — `supabase/migrations/20260809_cabida_comercial_cache.sql`: tabla ANGOSTA a propósito (id, lat_r/lng_r `numeric(9,6)`, modo, minutos, isocrona_status/metodo/geometria/proveedor, consultado_el, created_at) — deliberadamente SIN columnas `demografia_*`/`competencia_*` que Fase 17/18 todavía no llenan; se agregarán vía migración ADITIVA cuando corresponda, mismo patrón que `20260730_zonificacion.sql`→`20260730_zonificacion_v2.sql`. Índice único `(lat_r, lng_r, modo, minutos)` para upsert determinista (Plan 16-04). RLS de solo lectura para `authenticated` (`cabida_comercial_cache_read`), sin política de INSERT/UPDATE — escrituras solo vía `createServiceClient()`. 3 CHECK constraints: `isocrona_status IN ('pendiente','encontrado','error')`, `isocrona_metodo IS NULL OR IN ('red_vial','circulo_equivalente')` (nunca indistinguible a nivel de fila entre isócrona real y degradada — evita el bug del Pitfall 1 de 16-RESEARCH.md persistido en DB), `modo IN ('caminando','auto')`. Task 2 (checkpoint human-verify, aplicar la migración) resuelto por el orquestador vía `mcp__supabase__apply_migration` — el agente ejecutor de Task 1 no tenía tools MCP/browser/DATABASE_URL bound en su sesión, mismo fallback ya documentado en `10-01-SUMMARY.md`. Verificado con `SELECT * FROM cabida_comercial_cache LIMIT 1;` sin error "relation does not exist". Sin deviations. Desbloquea Plan 16-04 (upsert contra esta tabla). Ver 16-03-SUMMARY.md.
+
 ## Session Continuity
 
 Last session: 2026-08-03
-Stopped at: Plan 16-02 (geocodeComunaCentroide + lib/cabida-comercial.ts) completo — 3/3 tasks, sin deviations, tsc/vitest limpios. Wave 1 de Fase 16 también incluye 16-01 y 16-03 (posiblemente en ejecución paralela por otros agentes — ver commits `436aa6d` en "Commits sin procesar"). Próximo paso: confirmar que 16-01/16-03 estén completos antes de pasar a wave 2 (16-04/16-05, que dependen de los tipos de 16-02). Ver 16-02-SUMMARY.md.
+Stopped at: Plan 16-03 (migración cabida_comercial_cache, tabla angosta + índice único + RLS + 3 CHECK constraints) completo — 2/2 tasks, checkpoint de aplicación confirmado en vivo por el orquestador vía Supabase MCP, sin deviations. Wave 1 de Fase 16 también incluye 16-01 (posiblemente en ejecución paralela por otros agentes). Próximo paso: confirmar que 16-01 esté completo antes de pasar a wave 2 (16-04/16-05, que dependen de los tipos de 16-02 y de la tabla de 16-03). Ver 16-03-SUMMARY.md.
 Resume file: None
 
 ---
