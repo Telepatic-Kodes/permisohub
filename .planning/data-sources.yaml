@@ -449,6 +449,19 @@
   status: active
   notes: "RESUELTO (1 ago 2026, misma sesión): se identificaron las razones sociales operativas reales cruzando la nómina de razones sociales del SII contra las marcas públicas de cada grupo. Walmart Chile: 'Administradora de Supermercados Hiper/Express Limitada' (76134941-4 / 76134946-5) — alta confianza, ambas registradas el mismo día (reestructuración corporativa post-compra de D&S), 211 direcciones vigentes, distribución nacional real. Ya activos en CADENAS_RUT_CONOCIDOS. SMU: 'Alvi Supermercado Mayorista S.A.' (76029743-7) y 'Super 10 S.A.' (76012833-3) — confianza media-alta (smu.cl/inversionistas confirma 'filiales Unimarc, Alvi y Super10' por nombre pero no publica RUT oficial para confirmar 1:1). Unimarc — la marca más grande de SMU, mayoría de sus ~300 tiendas — no aparece como razón social propia en la nómina; indicios de que opera bajo RUTs regionales ('Mayorista 10 <ciudad> Limitada') en vez de uno nacional único. **Decisión founder (1 ago 2026): NO seguir invirtiendo tiempo de agente en encontrar el RUT de Unimarc — cobertura parcial de SMU (Alvi + Super10) es aceptable por ahora.** Reabrir solo si la founder consigue el dato por otra vía (no vale la pena más búsqueda automatizada)."
 
+- id: ine-censo-2017-manzana
+  name: "INE Censo 2017 — manzana censal (ArcGIS FeatureServer)"
+  type: api-endpoint
+  owner_files: [lib/censo-manzana-server.ts]
+  trigger: manual
+  called_from: []
+  freshness_sla_days: null
+  last_verified: 2026-08-03
+  monitoring: none
+  duplicate_of: null
+  status: active
+  notes: "DEMO-01 — CORRECCIÓN CRÍTICA (17-RESEARCH.md): usa services9.arcgis.com/kKJR3Qt68ohAWuet (158.927 manzanas nacionales, 49.974 en RM), NUNCA services3.arcgis.com/cTnMkBRk4HWkUCRo (citado en STACK.md/ARCHITECTURE.md a nivel de milestone — cubre SOLO 8 comunas de Atacama, cero cobertura RM, falla silenciosamente con features:[] en vez de error). Consulta POST en vivo, cache-through pendiente de Plan 17-03 (columnas demografia_* en cabida_comercial_cache). called_from queda vacío hasta que Plan 17-03 (gateado por Phase 16) wiree obtenerPoblacionEnPoligono() dentro de obtenerAnalisisCabidaComercial() — no es un huérfano, es la secuencia esperada de un plan independiente ejecutado antes del wiring final."
+
 - id: strip-power-centers-chile-seed
   name: "Lista curada a mano — strip centers y power centers en Chile (RM)"
   type: static-kb
