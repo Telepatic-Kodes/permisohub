@@ -98,14 +98,14 @@ None - plan ejecutado exactamente como estaba escrito ante este resultado: se re
 - Ningún código fue tocado por este plan hasta ahora, así que no hay riesgo de deuda técnica o mocks a limpiar — cuando ORS responda 200, Task 2 y Task 3 pueden ejecutarse desde cero exactamente como están escritas en `16-01-PLAN.md`.
 - Recomendación: no relanzar el ejecutor de este plan hasta tener confirmación manual (fuera de esta sesión) de un 200 real contra la API de ORS/HeiGIT.
 
-## Self-Check: PASSED
-
-- `.env.local.example` con la sección ORS: presente (commit `c50cc6f`, verificado con `git log --oneline -- .env.local.example`).
-- `scripts/verify-ors-isochrone.mjs`: MISSING — por diseño, no se creó (ver justificación arriba).
-- `lib/isocrona-server.ts`: MISSING — por diseño, no se creó.
-- `tests/unit/isocrona-server.test.ts`: MISSING — por diseño, no se creó.
-- Reverificación en vivo de ORS: ejecutada en esta sesión, 403 confirmado en 3/3 combinaciones probadas (ver tabla arriba).
-
 ---
 *Phase: 16-ubicacion-e-isocrona-motor-desacoplado*
 *Completed: 2026-08-03*
+
+## Self-Check: PASSED
+
+- `.env.local.example` ORS section: FOUND (commit `c50cc6f`, confirmed via `git log --oneline -- .env.local.example`)
+- `scripts/verify-ors-isochrone.mjs`: confirmed MISSING (by design)
+- `lib/isocrona-server.ts`: confirmed MISSING (by design)
+- `tests/unit/isocrona-server.test.ts`: confirmed MISSING (by design)
+- Final doc commit `3b3318e`: FOUND via `git log --oneline --all`
