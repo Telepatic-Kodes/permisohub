@@ -1,6 +1,8 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-03` `67570af` docs(16-01): dedupe self-check section in SUMMARY.md
+- `2026-08-03` `3b3318e` docs(16-01): reintento bloqueado — ORS/HeiGIT sigue en 403 tras horas
 - `2026-08-03` `17cf1e1` docs(19-03): plan bloqueado por prerequisito de tres vías (Phase 16/17-03/18-07), sin fabricar código
 - `2026-08-03` `c12cd94` docs(19-01): complete núcleo puro de veredicto de cabida comercial plan
 - `2026-08-03` `2cd20f7` refactor(19-01): extraer textos de motivo a funciones nombradas
