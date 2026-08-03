@@ -14,7 +14,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { enriquecerTerreno } from '@/lib/terrenos-server'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 800
+export const maxDuration = 300
 
 const DEFAULT_LIMIT = 20
 
