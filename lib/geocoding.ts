@@ -117,3 +117,68 @@ export async function geocodeDireccion(direccion: string, comuna: string): Promi
     return { ok: false, error: err instanceof Error ? err.message : 'Error de geocoding' }
   }
 }
+
+/**
+ * Resuelve el centroide (punto representativo) de una comuna completa, vía
+ * Nominatim con parámetros ESTRUCTURADOS (city=/country=), no el q= de texto
+ * libre que usa geocodeDireccion(). Una query estructurada de área
+ * administrativa es más confiable para resolver a un punto representativo de
+ * la comuna que un texto libre pensado para direcciones tipo calle+número.
+ *
+ * Usado como fallback cuando geocodeDireccion(locationText, comuna) falla
+ * outright (geo.ok === false) — NUNCA como heurística de "coarse vs fine"
+ * (locationText de mercado_locales_listings ya es sector-level, sin
+ * house_number/road que distinguir — ver 16-RESEARCH.md, Anti-Pattern 2).
+ */
+export async function geocodeComunaCentroide(comuna: string): Promise<GeocodeResult> {
+  await throttle()
+
+  const params = new URLSearchParams({
+    city: comuna,
+    country: 'Chile',
+    format: 'json',
+    limit: '1',
+    addressdetails: '1',
+    countrycodes: 'cl',
+  })
+
+  try {
+    const res = await fetchWithTimeout(
+      `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+      {
+        headers: {
+          'User-Agent': 'PermisoHub/1.0 (+https://permisohub.cl; contacto@permisohub.cl)',
+          'Accept': 'application/json',
+        },
+      },
+      10_000,
+    )
+
+    if (!res.ok) {
+      return { ok: false, error: `Nominatim HTTP ${res.status}` }
+    }
+
+    const results = (await res.json()) as NominatimResult[]
+    if (!Array.isArray(results) || results.length === 0) {
+      return { ok: false, error: `Comuna "${comuna}" no encontrada` }
+    }
+
+    const best = results[0]
+    const lat = parseFloat(best.lat)
+    const lng = parseFloat(best.lon)
+
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      return { ok: false, error: 'Coordenadas inválidas en la respuesta de Nominatim' }
+    }
+
+    return {
+      ok: true,
+      lat,
+      lng,
+      comunaDetectada: best.address?.suburb ?? best.address?.city,
+      displayName: best.display_name,
+    }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Error de geocoding de comuna' }
+  }
+}
