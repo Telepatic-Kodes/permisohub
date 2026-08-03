@@ -106,7 +106,13 @@ Plans:
   3. El gap score se presenta explícitamente como proxy de densidad de oferta vs. demanda estimada — nunca como índice de fuga de ventas (leakage/surplus) real
   4. El tab muestra un mapa Leaflet con el polígono del área de influencia (isócrona o radio) y pines de los competidores detectados
   5. El tab "Cabida Comercial" aparece como 5ª pestaña en la ficha de detalle de oportunidad, junto a posicionamiento/historial/comparables/resumen, con carga bajo demanda (no eager) siguiendo el patrón de `ResumenTab`
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 19-01-PLAN.md — [TDD, ungateado] calcularVeredictoCabida() puro en lib/veredicto-cabida.ts (3 estados + confianza + gapScore proxy)
+- [ ] 19-02-PLAN.md — [ungateado] CabidaComercialMapa (Leaflet: polígono + pines), checkpoint humano contra fixture
+- [ ] 19-03-PLAN.md — [GATEADO por Phase 16/17-03/18-07, three-way check] Wiring final en obtenerAnalisisCabidaComercial() — campo veredicto
+- [ ] 19-04-PLAN.md — [GATEADO por Phase 16 (16-05) + 19-03, four-way check] Sección de veredicto + metodología + mapa en CabidaComercialTab, checkpoint humano en vivo (VERE-01 a 04/MAPA-01 user-facing, CABI-02 verificación de no-regresión)
 
 #### Progress
 
@@ -115,7 +121,7 @@ Plans:
 | 16. Ubicación e Isócrona (Motor Desacoplado) | 0/TBD | Not started | - |
 | 17. Demografía y Consumo | 0/TBD | Not started | - |
 | 18. Competencia por Formato | 0/8 | Not started | - |
-| 19. Veredicto, Metodología, Mapa y Tab | 0/TBD | Not started | - |
+| 19. Veredicto, Metodología, Mapa y Tab | 0/4 | Not started | - |
 
 ---
 
