@@ -1,9 +1,14 @@
 import type {
+  UbicacionCabida,
   CompetidorDetectado,
   ResultadoCompetenciaFormato,
   FormatoComercial,
   NivelConfianza,
 } from '@/lib/cabida-comercial'
+import { obtenerCompetidoresOverpass } from '@/lib/overpass-competencia'
+import { obtenerCadenasGeocodificadasPorComuna } from '@/lib/cadenas-sucursales-server'
+import { obtenerCompetidoresSeedList } from '@/lib/strip-power-centers-chile'
+import * as turf from '@turf/turf'
 
 const NIVEL_ORDEN: Record<NivelConfianza, number> = { baja: 0, media: 1, alta: 2 }
 const TOPE_CONFIANZA_GLOBAL: NivelConfianza = 'media' // v1.7: coberturaConocida es SIEMPRE false — nunca 'alta' a nivel global
@@ -58,4 +63,66 @@ export function calcularResultadoCompetencia(
     disclosure: construirDisclosure(formato, competidores.length),
     consultadoEl: new Date().toISOString(),
   }
+}
+
+const RADIO_COMPETENCIA_DEFAULT_M = 3000
+const RADIO_MATCH_CADENA_SII_M = 150 // distancia máxima para considerar que un POI OSM y una fila SII geocodificada son la MISMA tienda física
+
+/**
+ * Orquestador ASYNC (Plan 18-06) — compone las 3 fuentes ya construidas en
+ * waves anteriores (Overpass, seed list strip/power, geocoding SII) en un
+ * único ResultadoCompetenciaFormato por formato. Standalone: no depende de
+ * lib/cabida-comercial-server.ts (todavía no existe, Fase 16), a propósito —
+ * es la pieza que un futuro obtenerAnalisisCabidaComercial() simplemente va
+ * a importar y llamar (ver Plan 18-07).
+ *
+ * NOTA throttle: obtenerCompetidoresOverpass() (este archivo) y
+ * lib/terrenos-ubicacion.ts mantienen instancias de throttle INDEPENDIENTES
+ * a propósito — tradeoff aceptado, ver comentario de cabecera en
+ * lib/overpass-competencia.ts (Pitfall 2, 18-RESEARCH.md).
+ */
+export async function obtenerCompetenciaPorFormato(
+  ubicacion: UbicacionCabida,
+  formato: FormatoComercial,
+  isocronaGeometria?: GeoJSON.Polygon | GeoJSON.MultiPolygon | null,
+  radioM: number = RADIO_COMPETENCIA_DEFAULT_M
+): Promise<ResultadoCompetenciaFormato> {
+  let competidores: CompetidorDetectado[]
+
+  if (formato === 'strip_center' || formato === 'power_center') {
+    competidores = obtenerCompetidoresSeedList(formato, ubicacion, radioM, isocronaGeometria)
+  } else {
+    // supermercado / minimarket — Overpass y geocoding SII son DOS recursos
+    // externos independientes (Overpass API vs Nominatim) con throttles
+    // independientes: correrlos en paralelo, no secuencial (anti-patrón
+    // documentado en 18-RESEARCH.md, mismo criterio que
+    // app/api/zonificacion/lookup/route.ts ya usa).
+    const [todosOsm, cadenasGeocodificadas] = await Promise.all([
+      obtenerCompetidoresOverpass(ubicacion.lat, ubicacion.lng, isocronaGeometria),
+      obtenerCadenasGeocodificadasPorComuna(ubicacion.comuna),
+    ])
+
+    const deEsteFormato = todosOsm.filter((c) => c.formato === formato)
+
+    // Cruce espacial: para cada POI OSM, buscar la sucursal SII geocodificada
+    // más cercana dentro de RADIO_MATCH_CADENA_SII_M — si hay match, sustituir
+    // el nombre/tag genérico por el nombre real de cadena y subir confianza
+    // individual a 'alta' (corroboración independiente, ver Pitfall 3 de
+    // PITFALLS.md: "exigir corroboración con al menos una señal independiente
+    // antes de alcanzar confianza ALTA").
+    competidores = deEsteFormato.map((poi) => {
+      const puntoPoi = turf.point([poi.lng, poi.lat])
+      let mejorMatch: { cadena: string; distanciaM: number } | null = null
+      for (const c of cadenasGeocodificadas) {
+        const d = turf.distance(puntoPoi, turf.point([c.lng, c.lat]), { units: 'meters' })
+        if (d <= RADIO_MATCH_CADENA_SII_M && (!mejorMatch || d < mejorMatch.distanciaM)) {
+          mejorMatch = { cadena: c.cadena, distanciaM: d }
+        }
+      }
+      if (!mejorMatch) return poi
+      return { ...poi, nombre: mejorMatch.cadena, fuente: 'sii_geocodificado' as const, confianza: 'alta' as const }
+    })
+  }
+
+  return calcularResultadoCompetencia(competidores, formato)
 }
