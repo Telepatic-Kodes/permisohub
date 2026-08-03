@@ -51,7 +51,13 @@ Full details archived: `.planning/milestones/v1.6-ROADMAP.md`
   2. El área de influencia se muestra como isócrona real (caminata/auto) cuando el servicio de ruteo responde correctamente, o como radio equivalente con el método señalado explícitamente (`red_vial` vs. `círculo_equivalente`) cuando el cálculo de isócrona falla — nunca de forma silenciosa
   3. El usuario puede forzar un recálculo explícito con un botón "Actualizar", sin refresco silencioso en background — mismo patrón que zonificación
   4. El análisis de cabida comercial es invocable como función pura `(lat, lng, formato) → resultado`, sin requerir `oportunidadId`, verificable de forma independiente (unit test o llamada directa)
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 16-01-PLAN.md — Cuenta ORS + verificación en vivo del payload + lib/isocrona-server.ts (Zod desde payload real) + test de orden de ejes
+- [ ] 16-02-PLAN.md — geocodeComunaCentroide() + lib/cabida-comercial.ts (tipos client-safe)
+- [ ] 16-03-PLAN.md — Migración cabida_comercial_cache (tabla angosta) + aplicación en vivo
+- [ ] 16-04-PLAN.md — lib/cabida-comercial-server.ts: resolvers + obtenerIsocrona (cache-through, degradación explícita) + obtenerAnalisisCabidaComercial (CABI-01)
+- [ ] 16-05-PLAN.md — Ruta /api/cabida-comercial/analisis + 5ª pestaña "Cabida Comercial" + checkpoint humano en vivo
 
 #### Phase 17: Demografía y Consumo
 **Goal**: Dentro del área de influencia resuelta en la Fase 16, el usuario ve población y capacidad de gasto estimadas, cada cifra con su fuente y vintage visibles, sin mezclar escalas geográficas distintas sin declararlo.
