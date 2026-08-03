@@ -1,6 +1,13 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `436aa6d` feat(16-03): add cabida_comercial_cache migration
+- `2026-08-02` `9816e4c` test(16-02): add geocodeComunaCentroide unit tests
+- `2026-08-02` `60f8aba` feat(16-02): add lib/cabida-comercial.ts client-safe types + fetch helper
+- `2026-08-02` `f2f771b` feat(16-02): add geocodeComunaCentroide() fallback en lib/geocoding.ts
+- `2026-08-02` `b9080e7` docs(16): apply plan-checker revision (naming collision, mock chain, key_link fix)
+- `2026-08-02` `e542cdd` docs(16): create phase plan
+- `2026-08-02` `163c9fc` docs: create milestone v1.7 roadmap (4 phases)
 - `2026-08-02` `81df899` docs: define milestone v1.7 requirements
 - `2026-08-02` `0550c80` docs: complete project research
 - `2026-08-02` `f56b13c` docs: start milestone v1.7 Cabida Comercial
@@ -65,17 +72,17 @@ _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, req
 ## Current Position
 
 Phase: 16 of 19 (Ubicación e Isócrona — Motor Desacoplado)
-Plan: — (roadmap created, not yet planned)
-Status: Ready to plan
-Last activity: 2026-08-02 — ROADMAP.md v1.7 creado (Fases 16-19), 21/21 requirements mapeados, STATE.md y REQUIREMENTS.md actualizados
+Plan: 02 of 5 (16-02 completo; wave 1 también incluye 16-01, posiblemente en ejecución paralela)
+Status: In progress
+Last activity: 2026-08-03 — Plan 16-02 (geocodeComunaCentroide + lib/cabida-comercial.ts tipos client-safe) completo, 3/3 tasks, sin deviations
 
-Progress: [░░░░░░░░░░] 0% (milestone v1.7 — roadmap listo, ejecución no iniciada)
+Progress: [█░░░░░░░░░] 10% (milestone v1.7 — Fase 16, 1/5 planes ejecutados)
 
 ## Phases Status
 
 | Phase | Title | Status |
 |---|---|---|
-| 16 | Ubicación e Isócrona (Motor Desacoplado) | ⬜ No iniciada |
+| 16 | Ubicación e Isócrona (Motor Desacoplado) | 🔄 En progreso (1/5 planes) — 16-02 ✅ (geocodeComunaCentroide() en lib/geocoding.ts, fallback de centroide de comuna con parámetros Nominatim estructurados city=/country=Chile + lib/cabida-comercial.ts con los tipos client-safe canónicos UbicacionCabida/IsocronaResultado/FormatoComercial y consultarCabidaComercial() fetch helper — ver 16-02-SUMMARY.md) |
 | 17 | Demografía y Consumo | ⬜ No iniciada |
 | 18 | Competencia por Formato | ⬜ No iniciada |
 | 19 | Veredicto, Metodología, Mapa y Tab | ⬜ No iniciada |
@@ -194,10 +201,12 @@ See: .planning/PROJECT.md (updated 2026-08-02 al iniciar milestone v1.7)
 
 - [15-02/15-03] **Fase 15 y milestone v1.6 COMPLETOS — informe individual y de comparación (2026-08-02, commits `eab3286`/`c7132ff`/`9805c8b`)** — 15-02: `app/(dashboard)/mercado-inmobiliario/oportunidades/[id]/informe/page.tsx` (Server Component nuevo, re-invoca `obtenerOportunidadPorId`/`obtenerComparablesOportunidad` directamente sin API route intermedia — mejora explícita sobre los 2 precedentes `@media print` existentes) + link "Exportar informe" en `[id]/page.tsx` junto a "Ver aviso original". Cierra INFO-01 y las porciones de INFO-03 (vigencia dual: "Generado el" en portada vs. "Última verificación de este dato" visible en el cuerpo junto al precio, Pitfall 4)/INFO-04 (campo "preparado por/para" editable) correspondientes al informe individual. 15-03: `comparar/informe/page.tsx` (re-valida rango 2-5/existencia/homogeneidad tipoPropiedad-operación de forma independiente — Pitfall 5, la ruta es bookmarkable sin pasar por `comparar/page.tsx` — y reutiliza `TablaComparacion` de Fase 14 sin reconstruirla) + link "Exportar informe" en `comparar/page.tsx` usando el set de ids ya-fetcheado. Cierra INFO-02 y las porciones de INFO-03/INFO-04 del informe de comparación. Ambos checkpoints humanos (Task 3) aprobados en vivo por el usuario sin hallazgos — 15-02: navegación completa, portada, guard `precioValido`, vigencia por fila, metodología, Cmd+P sin sidebar/toolbar; 15-03: defensa de Pitfall 5 verificada con URL armada a mano. **Nota de ejecución paralela (sin worktree/branch aislado, `branching_strategy: none`):** el commit `eab3286` quedó atribuido solo al mensaje de 15-02 pero su diff incluye ambos archivos nuevos (`[id]/informe/page.tsx` de 15-02 y `comparar/informe/page.tsx` de 15-03) por un `git add` de la ejecución concurrente — contenido verificado idéntico byte a byte contra lo que cada plan especificaba, sin pérdida de datos, solo atribución cosmética del mensaje de commit. `npx tsc --noEmit` limpio. INFO-01 a INFO-04 completos — Fase 15 y milestone v1.6 (Reportes Profesionales de Oportunidades) cerrados. Ver 15-02-SUMMARY.md y 15-03-SUMMARY.md.
 
+- [16-02] **geocodeComunaCentroide() + lib/cabida-comercial.ts tipos client-safe (2026-08-03, commits `f2f771b`/`60f8aba`/`9816e4c`)** — `lib/geocoding.ts`: nueva `geocodeComunaCentroide(comuna)` junto a `geocodeDireccion()` (mismo archivo, comparte el throttle module-level de 1.1s y `fetchWithTimeout` — 16-RESEARCH.md confirmó que no existía ninguna fuente de coordenadas de comuna en el repo y que reusar `geocodeDireccion` con `direccion=''` producía una query con coma colgante); usa parámetros Nominatim ESTRUCTURADOS (`city=`/`country=Chile`), no el `q=` de texto libre pensado para direcciones calle+número — verificado por test que `has('q')` es `false`. `lib/cabida-comercial.ts` (nuevo, mirror client-safe de `lib/zonificacion.ts`): tipos canónicos `UbicacionCabida`/`UbicacionPrecision`/`IsocronaMetodo`/`IsocronaResultado`/`FormatoComercial`/`AnalisisCabidaComercial`/`CabidaComercialAnalisisResponse` + `consultarCabidaComercial()` fetch helper hacia `/api/cabida-comercial/analisis`; `UbicacionPrecision` deja la unión abierta (`'aproximada' | 'centroide_comuna'`, sin `'exacta'` todavía) para no cerrar a 2 valores hardcodeados algo que un futuro modo standalone por dirección (CABI-03) necesitará extender. Nombre `consultarCabidaComercial` (no `obtenerAnalisisCabidaComercial`, reservado para la función pura server-only de Plan 16-04) sigue el precedente `lookupZonificacion()`/`persistZonificacionParaProyecto()`. Sin deviations, `npx tsc --noEmit` limpio, 2/2 tests en verde. Desbloquea Plan 16-04 (server orchestration) y 16-05 (ruta + UI). Ver 16-02-SUMMARY.md.
+
 ## Session Continuity
 
-Last session: 2026-08-02
-Stopped at: Fase 15 (Informe Exportable) y milestone v1.6 (Reportes Profesionales de Oportunidades) COMPLETOS — Plan 15-02 (informe individual) cerró su checkpoint humano ("aprobado", 8 pasos sin hallazgos); Plan 15-03 (informe de comparación) ya había cerrado el suyo en paralelo. INFO-01 a INFO-04 verificados en vivo. Próximo paso: verificar si quedan fases en ROADMAP.md para v1.6 o correr `/gsd:complete-milestone`. Ver 15-02-SUMMARY.md y 15-03-SUMMARY.md.
+Last session: 2026-08-03
+Stopped at: Plan 16-02 (geocodeComunaCentroide + lib/cabida-comercial.ts) completo — 3/3 tasks, sin deviations, tsc/vitest limpios. Wave 1 de Fase 16 también incluye 16-01 y 16-03 (posiblemente en ejecución paralela por otros agentes — ver commits `436aa6d` en "Commits sin procesar"). Próximo paso: confirmar que 16-01/16-03 estén completos antes de pasar a wave 2 (16-04/16-05, que dependen de los tipos de 16-02). Ver 16-02-SUMMARY.md.
 Resume file: None
 
 ---
