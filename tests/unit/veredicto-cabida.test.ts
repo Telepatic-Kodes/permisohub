@@ -24,8 +24,10 @@ function demografiaFixture(totalPersonas: number, overrides?: Partial<Demografia
       ...overrides,
     },
     consumo: {
-      categorias: [{ nombre: 'Alimentos', participacionPct: 30 }], categoriasPendientes: [],
-      tasaPobrezaComunal: 8.5, disclosure: 'estimado agregado a nivel macro-zona', epfAno: 2022, casenAno: 2024,
+      comuna: 'Providencia', categorias: [{ nombre: 'Alimentos', participacionPct: 30 }], categoriasPendientes: [],
+      tasaPobrezaComunal: 8.5, nivelGeografico: 'macro_zona_gran_santiago',
+      disclosure: 'estimado agregado a nivel macro-zona', epfAno: 2022, casenAno: 2024,
+      fuente: 'IX EPF (INE, 2022) + CASEN 2024 SAE (Ministerio de Desarrollo Social y Familia)',
     },
   }
 }
