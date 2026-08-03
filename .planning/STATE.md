@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `23a3a99` docs(18-02,18-03): complete overpass extension and strip/power seed list plans
 - `2026-08-02` `512a835` feat(18-03): add lib/strip-power-centers-chile.ts seed list + data-sources.yaml entry
 - `2026-08-02` `3924cc1` feat(18-02): implement obtenerCompetidoresOverpass con parseo y filtro de isócrona
 - `2026-08-02` `3eae0aa` docs(18-05): complete núcleo puro de degradación de confianza plan
@@ -93,12 +94,12 @@ _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, req
 
 Phase: 18 of 19 (Competencia por Formato)
 Plan: 05 de 8 completo (18-01, 18-04, 18-05) — Fase 16 en paralelo: 03 de 5 completo (16-02, 16-03), 16-01 PAUSADO (checkpoint human-action, no bloqueante)
-Status: En progreso — 18-05 (núcleo puro de degradación de confianza, TDD RED→GREEN→REFACTOR) completo, sin deviations. Fase 16 sigue paused esperando `ORS_API_KEY` en `.env.local` (registro gratuito en openrouteservice.org/dev/#/login, ver 16-01 checkpoint); Wave 2/3 de Fase 16 (16-04, 16-05) NO pueden ejecutarse hasta que 16-01 cierre.
+Status: En progreso — 18-05 (núcleo puro de degradación de confianza, TDD RED→GREEN→REFACTOR) completo, sin deviations. Fase 16 sigue paused: `ORS_API_KEY` ya seteada en `.env.local` (2026-08-03, cuenta HeiGIT creada, "Basic Key" activa con cupo completo 500/500 en Isochrones V2 según el dashboard), pero las llamadas reales devuelven 403 `"Access to this API has been disallowed"` tanto en `api.openrouteservice.org` (dominio legacy, en deprecación según el propio dashboard) como en `api.heigit.org` (dominio nuevo, ruta `/openrouteservice/v2/isochrones/{profile}` sí resuelve — no 404 — pero mismo 403). Probado con header raw y `Bearer`, y con `api_key` en query param (da un error distinto, "Authorization field missing", confirmando que el nuevo gateway exige el header). Hipótesis: delay de propagación de una key creada hoy mismo (00:10) durante la migración de dominio — decisión del usuario: esperar y reintentar más tarde, no seguir debuggeando ahora. Wave 2/3 de Fase 16 (16-04, 16-05) NO pueden ejecutarse hasta que 16-01 cierre.
 Last activity: 2026-08-03 — Plan 18-05 (calcularResultadoCompetencia() pura en lib/competencia-formato.ts, tope duro de confianzaGlobal en 'media', coberturaConocida siempre false) completo. Plan 18-06 (orquestador async que compone Overpass + seed list + SII geocodificado + esta función) queda desbloqueado.
 
 Progress: [███░░░░░░░] 26% (milestone v1.7 — Fase 16, 2/5 planes ejecutados (1 pausado); Fase 18, 3/8 planes ejecutados)
 
-**Para retomar:** setear `ORS_API_KEY` en `.env.local` + `.env.local.example`, luego `/gsd:execute-phase 16` (retoma automáticamente desde 16-01).
+**Para retomar:** `ORS_API_KEY` ya seteada — falta que HeiGIT deje de devolver 403 en `api.heigit.org/openrouteservice/v2/isochrones/{profile}` (probable delay de propagación). Reintentar con `curl` directo antes de re-lanzar el agente ejecutor; si sigue en 403 después de un rato, revisar el forum announcement de HeiGIT sobre la migración de dominio o contactar soporte. Una vez responda 200, `/gsd:execute-phase 16` retoma desde 16-01.
 
 ## Phases Status
 
