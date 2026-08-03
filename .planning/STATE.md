@@ -1,6 +1,7 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `dbbda8c` docs(16-03): complete migración de cabida_comercial_cache plan
 - `2026-08-02` `b310d93` docs(16-02): complete geocoding de centroide de comuna plan
 - `2026-08-02` `436aa6d` feat(16-03): add cabida_comercial_cache migration
 - `2026-08-02` `9816e4c` test(16-02): add geocodeComunaCentroide unit tests
@@ -73,11 +74,13 @@ _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, req
 ## Current Position
 
 Phase: 16 of 19 (Ubicación e Isócrona — Motor Desacoplado)
-Plan: 03 of 5 (16-03 completo; wave 1 también incluye 16-01, posiblemente en ejecución paralela)
-Status: In progress
-Last activity: 2026-08-03 — Plan 16-03 (migración cabida_comercial_cache escrita y aplicada en vivo vía Supabase MCP) completo, 2/2 tasks, sin deviations
+Plan: 03 de 5 completo (16-02, 16-03) — 16-01 PAUSADO (checkpoint human-action, no bloqueante para el resto del trabajo del usuario)
+Status: Paused — esperando `ORS_API_KEY` en `.env.local` (registro gratuito en openrouteservice.org/dev/#/login, ver 16-01 checkpoint). Wave 2 (16-04) y Wave 3 (16-05) NO pueden ejecutarse hasta que 16-01 cierre — 16-04 depende explícitamente de `lib/isocrona-server.ts` que construye 16-01.
+Last activity: 2026-08-03 — Plan 16-03 (migración cabida_comercial_cache aplicada en vivo vía Supabase MCP) y 16-02 (geocoding de centroide de comuna) completos, 2/5 planes. Usuario pidió dejar 16-01 pendiente y avanzar a otra cosa.
 
-Progress: [██░░░░░░░░] 20% (milestone v1.7 — Fase 16, 2/5 planes ejecutados)
+Progress: [██░░░░░░░░] 20% (milestone v1.7 — Fase 16, 2/5 planes ejecutados, 1 pausado por dependencia externa)
+
+**Para retomar:** setear `ORS_API_KEY` en `.env.local` + `.env.local.example`, luego `/gsd:execute-phase 16` (retoma automáticamente desde 16-01).
 
 ## Phases Status
 
