@@ -1,52 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/daily-check",
-      "schedule": "0 11 * * *"
-    },
-    {
-      "path": "/api/cron/weekly-summary",
-      "schedule": "0 11 * * 1"
-    },
-    {
-      "path": "/api/scraper/mercado-locales",
-      "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/scraper/mercado-locales-tipos-adicionales",
-      "schedule": "30 10 * * *"
-    },
-    {
-      "path": "/api/cron/noticias-macro",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/scraper/instrumentos-ipt",
-      "schedule": "0 8 * * 1"
-    },
-    {
-      "path": "/api/scraper/sii-nomina-sucursales",
-      "schedule": "0 7 2 * *"
-    },
-    {
-      "path": "/api/cron/terrenos-portalinmobiliario",
-      "schedule": "0 6 * * 2"
-    },
-    {
-      "path": "/api/cron/terrenos-yapo",
-      "schedule": "40 6 * * 2"
-    },
-    {
-      "path": "/api/cron/terrenos-doomos",
-      "schedule": "20 7 * * 2"
-    },
-    {
-      "path": "/api/cron/terrenos-chilepropiedades",
-      "schedule": "0 8 * * 2"
-    },
-    {
-      "path": "/api/cron/terrenos-portalterreno",
-      "schedule": "40 8 * * 2"
+      "path": "/api/cron/dispatch",
+      "schedule": "0 6 * * *"
     }
   ]
 }
