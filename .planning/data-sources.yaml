@@ -474,3 +474,16 @@
   duplicate_of: null
   status: active
   notes: "COMPE-04 — no existe tag OSM ni fuente pública con direcciones para strip/power center en Chile. Seed manual (.planning/research/SEED-STRIP-POWER-CENTERS-CHILE.md, investigación 2 ago 2026) con 25 filas RM (18 con lat/lng geocodificados una vez vía scripts/geocode-strip-power-seed.mjs contra Nominatim real; 7 con direccion/lat/lng: null porque la fuente no dio ni siquiera una dirección aproximada). GAP CONOCIDO: Grupo Patio (~91-158 propiedades, líder del mercado ~15% share) y Más Center/IFB Inversiones (~30 strip centers activos en RM) no tienen NINGÚN activo nombrado en esta lista — sus sitios corporativos bloquearon el scraping automatizado (403) o no publican listado propiedad-por-propiedad. Un conteo de 0 competidores strip_center/power_center en una comuna donde alguno de estos dos operadores podría tener presencia NO debe leerse como 'confirmado: sin competencia' — ver lib/competencia-formato.ts (Plan 18-05) que cita este id explícitamente."
+
+- id: epf-casen-consumo-estimado
+  name: "EPF (INE) + CASEN (MDS) — capacidad de gasto y pobreza comunal estimada"
+  type: static-kb
+  owner_files: [lib/consumo-macro-zona.ts]
+  trigger: none
+  called_from: []
+  freshness_sla_days: null
+  last_verified: 2026-08-03
+  monitoring: none
+  duplicate_of: null
+  status: active
+  notes: "DEMO-02/DEMO-03 — EPF: solo 3 de 12-13 categorías CCIF 2018.CL con cifra confirmada (Alimentación 21.2%, Vivienda 16.0%, Transporte 15.0%, IX EPF INE oct2021-sept2022) — resto explícitamente 'pendiente de transcripción' (categoriasPendientes), nunca inventado. Ni INE ni datasocial.ministeriodesarrollosocial.gob.cl exponen archivo descargable machine-fetchable (el segundo dominio ni siquiera resuelve DNS desde este entorno). CASEN: tabla acotada a las 36 comunas RM con oportunidades reales en mercado_locales_listings (no las ~335 comunas nacionales) — descargada y parseada en vivo (curl + openpyxl) desde el XLSX oficial 'Estimaciones de Tasa de Pobreza por ingresos por Comuna, SAE 2024' de observatorio.ministeriodesarrollosocial.gob.cl (metodología SAE, CASEN 2024); las 36 comunas están todas presentes en la fuente, ninguna faltante ni interpolada. called_from queda vacío hasta el wiring gateado de Plan 17-03/17-04 — mismo criterio que ine-censo-2017-manzana (Plan 17-01), no es un huérfano."
