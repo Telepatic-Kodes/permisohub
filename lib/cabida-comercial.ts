@@ -37,9 +37,41 @@ export interface IsocronaResultado {
 // aunque todavía no lo use para ramificar ningún cálculo.
 export type FormatoComercial = 'supermercado' | 'minimarket' | 'strip_center' | 'power_center'
 
+// ADVERTENCIA: lib/terrenos-comercial.ts TAMBIÉN exporta un tipo llamado
+// FormatoComercial ('local' | 'strip_center' | 'power_center') para una
+// feature no relacionada (potencial de desarrollo de terrenos por
+// superficie). Tiene un value-set DISTINTO y PARCIALMENTE solapado con el
+// FormatoComercial de este archivo ('supermercado' | 'minimarket' |
+// 'strip_center' | 'power_center'). CUALQUIER archivo de Fase 18 debe
+// importar FormatoComercial SOLO desde '@/lib/cabida-comercial' — nunca
+// desde '@/lib/terrenos-comercial'. Ver tests/unit/cabida-comercial-tipos.test.ts.
+export type FuenteCompetidor = 'osm' | 'seed_list' | 'sii_geocodificado'
+export type NivelConfianza = 'alta' | 'media' | 'baja'
+
+export interface CompetidorDetectado {
+  nombre: string // nombre real de cadena (seed_list / sii_geocodificado) o tag crudo de OSM (osm)
+  formato: FormatoComercial // reusa el FormatoComercial YA definido en ESTE archivo — nunca importar el de terrenos-comercial.ts
+  fuente: FuenteCompetidor
+  lat: number
+  lng: number
+  distanciaM: number
+  confianza: NivelConfianza // por-competidor: ej. una fila seed_list con direccion:null nunca llega a 'alta'
+  direccionLabel?: string
+}
+
+export interface ResultadoCompetenciaFormato {
+  formato: FormatoComercial
+  competidores: CompetidorDetectado[]
+  coberturaConocida: boolean // false = la(s) fuente(s) subyacentes para ESTE formato son conocidas como incompletas
+  confianzaGlobal: NivelConfianza // NUNCA derivar solo de competidores.length (COMPE-05) — ver Plan 18-05
+  disclosure: string // línea human-readable, renderizada siempre junto al conteo — nunca omitida
+  consultadoEl: string
+}
+
 export interface AnalisisCabidaComercial {
   formato: FormatoComercial
   isocrona: IsocronaResultado
+  competencia?: ResultadoCompetenciaFormato // NUEVO (Fase 18) — opcional hasta que Plan 18-07 lo pueble
   generadoEl: string
 }
 
