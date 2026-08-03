@@ -1,6 +1,12 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-02` `d03774a` feat(18-03): add geocode-strip-power-seed script auditable
+- `2026-08-02` `26256fe` feat(18-02): scaffold lib/overpass-competencia.ts (query, throttle, tipos)
+- `2026-08-02` `51b4f36` refactor(18-05): extraer textos de disclosure a constantes nombradas
+- `2026-08-02` `2b2048c` feat(18-05): implement calcularResultadoCompetencia() con degradación de confianza
+- `2026-08-02` `3286596` test(18-05): add failing test for calcularResultadoCompetencia()
+- `2026-08-02` `7f924c4` docs(18-04): complete geocoding on-demand de cadenas SII plan
 - `2026-08-02` `35eeea8` feat(18-04): add obtenerCadenasGeocodificadasPorComuna con cache-through
 - `2026-08-02` `396d2c3` docs(18-01): complete tipos de competencia por formato plan
 - `2026-08-02` `e88ca70` feat(18-04): add cadenas_sucursales geocoding migration
@@ -82,12 +88,12 @@ _(Ninguno pendiente — los 4 commits de inicio de milestone v1.6 (research, req
 
 ## Current Position
 
-Phase: 16 of 19 (Ubicación e Isócrona — Motor Desacoplado)
-Plan: 03 de 5 completo (16-02, 16-03) — 16-01 PAUSADO (checkpoint human-action, no bloqueante para el resto del trabajo del usuario)
-Status: Paused — esperando `ORS_API_KEY` en `.env.local` (registro gratuito en openrouteservice.org/dev/#/login, ver 16-01 checkpoint). Wave 2 (16-04) y Wave 3 (16-05) NO pueden ejecutarse hasta que 16-01 cierre — 16-04 depende explícitamente de `lib/isocrona-server.ts` que construye 16-01.
-Last activity: 2026-08-03 — Plan 16-03 (migración cabida_comercial_cache aplicada en vivo vía Supabase MCP) y 16-02 (geocoding de centroide de comuna) completos, 2/5 planes. Usuario pidió dejar 16-01 pendiente y avanzar a otra cosa.
+Phase: 18 of 19 (Competencia por Formato)
+Plan: 05 de 8 completo (18-01, 18-04, 18-05) — Fase 16 en paralelo: 03 de 5 completo (16-02, 16-03), 16-01 PAUSADO (checkpoint human-action, no bloqueante)
+Status: En progreso — 18-05 (núcleo puro de degradación de confianza, TDD RED→GREEN→REFACTOR) completo, sin deviations. Fase 16 sigue paused esperando `ORS_API_KEY` en `.env.local` (registro gratuito en openrouteservice.org/dev/#/login, ver 16-01 checkpoint); Wave 2/3 de Fase 16 (16-04, 16-05) NO pueden ejecutarse hasta que 16-01 cierre.
+Last activity: 2026-08-03 — Plan 18-05 (calcularResultadoCompetencia() pura en lib/competencia-formato.ts, tope duro de confianzaGlobal en 'media', coberturaConocida siempre false) completo. Plan 18-06 (orquestador async que compone Overpass + seed list + SII geocodificado + esta función) queda desbloqueado.
 
-Progress: [██░░░░░░░░] 20% (milestone v1.7 — Fase 16, 2/5 planes ejecutados, 1 pausado por dependencia externa)
+Progress: [███░░░░░░░] 26% (milestone v1.7 — Fase 16, 2/5 planes ejecutados (1 pausado); Fase 18, 3/8 planes ejecutados)
 
 **Para retomar:** setear `ORS_API_KEY` en `.env.local` + `.env.local.example`, luego `/gsd:execute-phase 16` (retoma automáticamente desde 16-01).
 
@@ -97,7 +103,7 @@ Progress: [██░░░░░░░░] 20% (milestone v1.7 — Fase 16, 2/5 
 |---|---|---|
 | 16 | Ubicación e Isócrona (Motor Desacoplado) | 🔄 En progreso (2/5 planes) — 16-02 ✅ (geocodeComunaCentroide() en lib/geocoding.ts, fallback de centroide de comuna con parámetros Nominatim estructurados city=/country=Chile + lib/cabida-comercial.ts con los tipos client-safe canónicos UbicacionCabida/IsocronaResultado/FormatoComercial y consultarCabidaComercial() fetch helper — ver 16-02-SUMMARY.md) 16-03 ✅ (migración cabida_comercial_cache — tabla angosta, índice único lat_r/lng_r/modo/minutos, RLS de solo lectura, 3 CHECK constraints — escrita y aplicada en vivo vía Supabase MCP, checkpoint humano confirmado — ver 16-03-SUMMARY.md) |
 | 17 | Demografía y Consumo | ⬜ No iniciada |
-| 18 | Competencia por Formato | 🔄 En progreso (2/8 planes) — 18-01 ✅ (lib/cabida-comercial.ts extendido con CompetidorDetectado/ResultadoCompetenciaFormato/FuenteCompetidor/NivelConfianza + AnalisisCabidaComercial.competencia? opcional + guard de tipos contra colisión de nombres con lib/terrenos-comercial.ts — ver 18-01-SUMMARY.md) 18-04 ✅ (migración aditiva lat/lng/geocodificado_el en cadenas_sucursales aplicada en vivo + obtenerCadenasGeocodificadasPorComuna() con cache-through en lib/cadenas-sucursales-server.ts, verificado en vivo dos veces con coordenadas reales de Maipú — ver 18-04-SUMMARY.md) |
+| 18 | Competencia por Formato | 🔄 En progreso (3/8 planes) — 18-01 ✅ (lib/cabida-comercial.ts extendido con CompetidorDetectado/ResultadoCompetenciaFormato/FuenteCompetidor/NivelConfianza + AnalisisCabidaComercial.competencia? opcional + guard de tipos contra colisión de nombres con lib/terrenos-comercial.ts — ver 18-01-SUMMARY.md) 18-04 ✅ (migración aditiva lat/lng/geocodificado_el en cadenas_sucursales aplicada en vivo + obtenerCadenasGeocodificadasPorComuna() con cache-through en lib/cadenas-sucursales-server.ts, verificado en vivo dos veces con coordenadas reales de Maipú — ver 18-04-SUMMARY.md) 18-05 ✅ (calcularResultadoCompetencia() pura en lib/competencia-formato.ts, TDD RED→GREEN→REFACTOR, tope duro de confianzaGlobal en 'media' y coberturaConocida siempre false verificados por test — ver 18-05-SUMMARY.md) |
 | 19 | Veredicto, Metodología, Mapa y Tab | ⬜ No iniciada |
 | 13 | Refactor de Scoring + Dashboard de Detalle | ✅ Completa (7/7 planes) — 13-01 ✅ (evaluarOportunidad() extraída y testeada en lib/mercado-locales-server.ts, fuente única de verdad de scoring — ver 13-01-SUMMARY.md) 13-02 ✅ (lib/formato-fecha.ts + streamConContexto() en lib/ai.ts sin tool web_search_preview + lib/resumen-oportunidad-prompts.ts — ver 13-02-SUMMARY.md) 13-03 ✅ (obtenerOportunidadPorId/obtenerComparablesOportunidad/obtenerHistorialPrecioListing + REASON_LABEL_DETALLE en lib/mercado-locales-server.ts — ver 13-03-SUMMARY.md) 13-04 ✅ (POST /api/oportunidades-resumen + ResumenTab, DETA-06 sin auto-disparo — ver 13-04-SUMMARY.md) 13-05 ✅ (PosicionamientoTab: banda de precio vs. cohorte + banner amber de advertencia + rentabilidad implícita de zona, DETA-02/DETA-07 — ver 13-05-SUMMARY.md) 13-06 ✅ (HistorialTab + ComparablesTab, DETA-03/DETA-04/DETA-05 — ver 13-06-SUMMARY.md) 13-07 ✅ (Server Component [id]/page.tsx integra las 4 tabs con datos reales + wiring de la lista, checkpoint humano end-to-end aprobado, DETA-01 a DETA-07 completos — ver 13-07-SUMMARY.md) |
 | 14 | Comparación Lado a Lado | ✅ Completa (3/3 planes) — 14-01 ✅ (obtenerOportunidadesPorIds batched en lib/mercado-locales-server.ts — ver 14-01-SUMMARY.md) 14-02 ✅ (SelectorComparacion client island: checkbox + tope 5 + botón "Comparar (N)" + wireado en oportunidades/page.tsx — ver 14-02-SUMMARY.md) 14-03 ✅ (TablaComparacion + /oportunidades/comparar con validación server-side de rango/existencia/homogeneidad, checkpoint humano aprobado en vivo — COMPA-01 a COMPA-04 completos, ver 14-03-SUMMARY.md) |
@@ -222,10 +228,12 @@ See: .planning/PROJECT.md (updated 2026-08-02 al iniciar milestone v1.7)
 
 - [18-04] **Geocoding on-demand de cadenas_sucursales con cache-through (2026-08-03, commits `e88ca70`/`35eeea8`)** — migración aditiva `lat`/`lng`/`geocodificado_el` (nullable) aplicada en vivo contra Supabase; `obtenerCadenasGeocodificadasPorComuna(comuna)` agregada a `lib/cadenas-sucursales-server.ts`, reusa `geocodeDireccion()` de Fase 16 verbatim (mismo throttle/contrato `{ ok: false }`). Cache-through directo en la fila (no tabla dedicada como `cabida_comercial_cache`) porque cada dirección SII se geocodifica como máximo una vez en su vida útil. `normalizarNombreComuna()` aplicado en JS post-fetch, mismo patrón que `obtenerSenalesExpansionPorComuna()` — `cadenas_sucursales.comuna` viene en MAYÚSCULAS sin tildes del SII. Checkpoint humano verificado en vivo DOS veces (agente ejecutor + orquestador independiente vía queries directas a Supabase): coordenadas reales de Maipú dentro de rango geográfico de Chile, cache-hit instantáneo en la segunda consulta, 3 direcciones no geocodificables excluidas limpiamente sin excepciones. Usuario aprobó "aprobado". Sin deviations. Desbloquea Plan 18-06 (composición con cadenas SII — sustituye tag OSM genérico por nombre real de cadena, "Líder Express"). Ver 18-04-SUMMARY.md.
 
+- [18-05] **Núcleo puro de degradación de confianza — calcularResultadoCompetencia() (2026-08-03, commits `3286596`/`2b2048c`/`51b4f36`)** — TDD RED→GREEN→REFACTOR sobre `lib/competencia-formato.ts`, cierra el pitfall más peligroso de la fase (Pitfall 1 de 18-RESEARCH.md / Pitfall 3 de PITFALLS.md): `competidores.length === 0` NUNCA se lee como "sin competencia confirmada" — `confianzaGlobal` es siempre `'baja'` en ese caso. Tope duro `TOPE_CONFIANZA_GLOBAL = 'media'` en código (constante explícita, no solo comentario) porque `coberturaConocida` es siempre `false` en v1.7 — verificado por el test más importante del plan (competidor con confianza individual `'alta'` nunca produce `confianzaGlobal: 'alta'`). Disclosure construido con constantes nombradas (`DISCLOSURE_GAP_SUPER_MINI`/`DISCLOSURE_GAP_STRIP_POWER`, extraídas en el REFACTOR) que citan el id exacto de `data-sources.yaml` (`sii-nomina-sucursales-holdings-sin-tiendas` para super/mini, `strip-power-centers-chile-seed` para strip/power) y mencionan Unimarc / Grupo Patio / Más Center explícitamente. Función 100% pura (sin fetch/I/O), 9/9 tests y `tsc --noEmit` limpios. Sin deviations. Desbloquea Plan 18-06 (orquestador async que resuelve `CompetidorDetectado[]` desde Overpass/seed list/SII geocodificado y llama a esta función como paso final). Ver 18-05-SUMMARY.md.
+
 ## Session Continuity
 
 Last session: 2026-08-03
-Stopped at: Plan 16-03 (migración cabida_comercial_cache, tabla angosta + índice único + RLS + 3 CHECK constraints) completo — 2/2 tasks, checkpoint de aplicación confirmado en vivo por el orquestador vía Supabase MCP, sin deviations. Wave 1 de Fase 16 también incluye 16-01 (posiblemente en ejecución paralela por otros agentes). Próximo paso: confirmar que 16-01 esté completo antes de pasar a wave 2 (16-04/16-05, que dependen de los tipos de 16-02 y de la tabla de 16-03). Ver 16-03-SUMMARY.md.
+Stopped at: Plan 18-05 (núcleo puro de degradación de confianza de competencia por formato, `calcularResultadoCompetencia()` en `lib/competencia-formato.ts`) completo — 3/3 tasks (RED/GREEN/REFACTOR), 9/9 tests en verde, `tsc --noEmit` limpio, sin deviations. Fase 16 sigue paused esperando `ORS_API_KEY` (ver 16-01 checkpoint) — no bloquea Fase 18. Próximo paso disponible: Plan 18-06 (orquestador async de competencia por formato) o Plan 18-02/18-03 (waves paralelas de Fase 18 aún no ejecutadas). Ver 18-05-SUMMARY.md.
 Resume file: None
 
 ---
