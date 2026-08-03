@@ -106,3 +106,12 @@ None - no external service configuration required (el FeatureServer de ArcGIS es
 ---
 *Phase: 17-demografia-y-consumo*
 *Completed: 2026-08-03*
+
+## Self-Check: PASSED
+
+- FOUND: `lib/censo-manzana-server.ts`
+- FOUND: `supabase/migrations/20260811_cabida_comercial_cache_demografia.sql`
+- FOUND: `tests/unit/censo-manzana-server.test.ts`
+- FOUND: commit `7789fdf`
+- FOUND: commit `3128360`
+- FOUND: commit `5a68662` (docs: complete plan)
