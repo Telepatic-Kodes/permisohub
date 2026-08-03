@@ -78,7 +78,7 @@ Plans:
   2. El tab muestra el conteo de competidores existentes por formato dentro del área de influencia, con nombre/tag y distancia — usando tags OSM estándar para supermercado/minimarket y la lista curada a mano para strip/power center
   3. El usuario puede ver el nombre real de cadena de cada competidor detectado (ej. "Líder Express"), cruzando OSM con la nómina SII geocodificada on-demand por comuna
   4. Un conteo de 0 competidores nunca se muestra como "confirmado: no hay competencia" cuando la cobertura de la fuente es conocida como incompleta (ej. roster SII sin Unimarc) — el nivel de confianza se degrada explícitamente en ese caso
-**Plans**: 7 plans
+**Plans**: 8 plans
 
 Plans:
 - [ ] 18-01-PLAN.md — Tipos CompetidorDetectado/ResultadoCompetenciaFormato en lib/cabida-comercial.ts + guard de colisión FormatoComercial
@@ -88,6 +88,7 @@ Plans:
 - [ ] 18-05-PLAN.md — [TDD] calcularResultadoCompetencia(): degradación de confianza COMPE-05
 - [ ] 18-06-PLAN.md — obtenerCompetenciaPorFormato(): orquestador que compone Overpass + seed list + SII geocoding
 - [ ] 18-07-PLAN.md — [GATEADO por Phase 16] Wiring final en obtenerAnalisisCabidaComercial()
+- [ ] 18-08-PLAN.md — [GATEADO por Phase 16 (16-05) y 18-07] Selector de formato + lista de competidores en CabidaComercialTab (COMPE-01/02/06 user-facing)
 
 #### Phase 19: Veredicto, Metodología, Mapa y Tab
 **Goal**: El usuario ve, en una 5ª pestaña de la ficha de oportunidad cargada bajo demanda, un veredicto honesto de 3 estados por formato con su confianza, la metodología/fuentes usadas, y un mapa visual del área de influencia con los competidores — cerrando el ciclo de síntesis de las Fases 17 y 18.
@@ -107,7 +108,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 16. Ubicación e Isócrona (Motor Desacoplado) | 0/TBD | Not started | - |
 | 17. Demografía y Consumo | 0/TBD | Not started | - |
-| 18. Competencia por Formato | 0/7 | Not started | - |
+| 18. Competencia por Formato | 0/8 | Not started | - |
 | 19. Veredicto, Metodología, Mapa y Tab | 0/TBD | Not started | - |
 
 ---
