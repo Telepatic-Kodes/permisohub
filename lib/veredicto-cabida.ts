@@ -79,6 +79,26 @@ function insuficiente(gapScore: number | null, razon: RazonInsuficiencia, motivo
   return { estado: 'evidencia_insuficiente', confianza: 'baja', gapScore, razonInsuficiencia: razon, explicacion: motivo, generadoEl: new Date().toISOString() }
 }
 
+// Textos de `explicacion` extraídos a funciones nombradas — mismo criterio
+// que Task 3 de Plan 18-05 (constantes de disclosure grep-eables en
+// lib/competencia-formato.ts), acá como funciones porque interpolan valores
+// calculados (gapScore, muestra, terciles) en vez de ser texto fijo.
+function motivoConfianzaDegradada(isocronaDegradada: boolean, confianzaCruda: NivelConfianza, gapScore: number): string {
+  const proxy = `Proxy de densidad: ${gapScore.toFixed(2)} competidores por cada 1.000 habitantes.`
+  return isocronaDegradada
+    ? `Área de influencia calculada como círculo aproximado (no red vial real) — confianza insuficiente para concluir. ${proxy}`
+    : `La confianza combinada de competencia (${confianzaCruda}) es demasiado baja para concluir. ${proxy}`
+}
+
+function motivoMuestraComparativaInsuficiente(formato: FormatoComercial, percentiles: PercentilesGapScore | null, gapScore: number): string {
+  const muestraTexto = percentiles ? String(percentiles.muestraN) : '0'
+  return (
+    `Todavía no hay suficientes análisis comparables de formato ${formato} (muestra: ${muestraTexto}, mínimo requerido: ${MUESTRA_MINIMA}) ` +
+    `para ubicar este gap score (${gapScore.toFixed(2)} competidores por cada 1.000 habitantes) contra una distribución real — ` +
+    `el veredicto no puede concluir sin inventar un corte.`
+  )
+}
+
 /**
  * Función PURA — no hace fetch/I/O. Compone demografia + competencia + isocrona
  * (ya resueltos por otro código) + terciles de gap score YA calculados por el
@@ -114,10 +134,7 @@ export function calcularVeredictoCabida(
       : confianzaCruda
 
   if (confianza === 'baja') {
-    const motivo = isocronaDegradada
-      ? `Área de influencia calculada como círculo aproximado (no red vial real) — confianza insuficiente para concluir. Proxy de densidad: ${gapScore.toFixed(2)} competidores por cada 1.000 habitantes.`
-      : `La confianza combinada de competencia (${confianzaCruda}) es demasiado baja para concluir. Proxy de densidad: ${gapScore.toFixed(2)} competidores por cada 1.000 habitantes.`
-    return insuficiente(gapScore, 'confianza_degradada', motivo)
+    return insuficiente(gapScore, 'confianza_degradada', motivoConfianzaDegradada(isocronaDegradada, confianzaCruda, gapScore))
   }
 
   // Cold-start / muestra comparativa insuficiente — NUNCA un corte absoluto
@@ -127,12 +144,7 @@ export function calcularVeredictoCabida(
   // corre ANTES del banding por terciles — nunca comparar gapScore contra
   // p33/p66 si la muestra que los originó no alcanza el mínimo.
   if (!percentiles || percentiles.muestraN < MUESTRA_MINIMA) {
-    const muestraTexto = percentiles ? String(percentiles.muestraN) : '0'
-    const motivo =
-      `Todavía no hay suficientes análisis comparables de formato ${formato} (muestra: ${muestraTexto}, mínimo requerido: ${MUESTRA_MINIMA}) ` +
-      `para ubicar este gap score (${gapScore.toFixed(2)} competidores por cada 1.000 habitantes) contra una distribución real — ` +
-      `el veredicto no puede concluir sin inventar un corte.`
-    return insuficiente(gapScore, 'muestra_comparativa_insuficiente', motivo)
+    return insuficiente(gapScore, 'muestra_comparativa_insuficiente', motivoMuestraComparativaInsuficiente(formato, percentiles, gapScore))
   }
 
   // Banding por terciles REALES (Plan 19-03) — nunca un corte absoluto
