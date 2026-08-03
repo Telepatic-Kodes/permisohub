@@ -61,14 +61,24 @@ export const EPF_PARTICIPACION_POR_CATEGORIA: EpfCategoria[] = [
 // retorna tasaPobrezaComunal: null en obtenerConsumoEstimado — NUNCA un
 // valor aproximado o heredado de una comuna vecina.
 //
-// Filas pobladas por Task 2 de este plan (checkpoint humano) — transcritas
-// desde observatorio.ministeriodesarrollosocial.gob.cl/pobreza-comunal →
-// Data Social, con cita de fecha de consulta. Task 1 deja el array vacío a
-// propósito: NO fabricar una sola fila antes de que Task 2 aporte datos
-// reales.
+// Filas pobladas en Task 2 de este plan (checkpoint humano) — ver detalle de
+// fuente y disciplina de "nunca fabricar" en el comentario junto a
+// CASEN_FUENTE_URL, más abajo.
 // ---------------------------------------------------------------------------
 
 export const CASEN_ANO = 2024
+
+// Descargado y parseado en vivo (curl + openpyxl) el 2026-08-03 desde el
+// archivo oficial "Estimaciones de Tasa de Pobreza por ingresos por Comuna,
+// Aplicación de Metodologías de Estimación para Áreas Pequeñas (SAE) 2024"
+// del Observatorio Social, Ministerio de Desarrollo Social y Familia —
+// confirmado XLSX estructurado real, no fabricado. Columna usada:
+// "Porcentaje de personas en situación de pobreza de ingresos 2024". Las 36
+// comunas RM listadas en CASEN_POBREZA_POR_COMUNA están TODAS presentes en
+// la fuente (ninguna faltante) — ninguna cifra fue inventada ni interpolada.
+const CASEN_FUENTE_URL =
+  'https://observatorio.ministeriodesarrollosocial.gob.cl/storage/docs/pobreza-comunal/2024/SAE_ingresos_2024.xlsx'
+const CASEN_TRANSCRITO_EL = '2026-08-03'
 
 export interface CasenComunaEstimado {
   comuna: string // nombre oficial, mismo formato que lib/comunas-chile.ts
@@ -78,9 +88,42 @@ export interface CasenComunaEstimado {
 }
 
 export const CASEN_POBREZA_POR_COMUNA: CasenComunaEstimado[] = [
-  // Poblado por Task 2 (checkpoint humano) — ver nota arriba. Array vacío
-  // hasta entonces: obtenerConsumoEstimado() ya maneja este caso
-  // correctamente (tasaPobrezaComunal: null para toda comuna).
+  { comuna: 'Santiago', tasaPobrezaPersonas: 10.17, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Maipú', tasaPobrezaPersonas: 12.04, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Colina', tasaPobrezaPersonas: 11.74, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Recoleta', tasaPobrezaPersonas: 14.54, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Huechuraba', tasaPobrezaPersonas: 11.15, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'San Bernardo', tasaPobrezaPersonas: 17.80, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Quilicura', tasaPobrezaPersonas: 13.73, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Quinta Normal', tasaPobrezaPersonas: 12.41, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Pudahuel', tasaPobrezaPersonas: 15.44, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Renca', tasaPobrezaPersonas: 18.75, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Macul', tasaPobrezaPersonas: 13.55, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Independencia', tasaPobrezaPersonas: 11.68, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Ñuñoa', tasaPobrezaPersonas: 5.71, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Providencia', tasaPobrezaPersonas: 1.19, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Lampa', tasaPobrezaPersonas: 15.82, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'San Miguel', tasaPobrezaPersonas: 10.44, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Estación Central', tasaPobrezaPersonas: 15.54, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Las Condes', tasaPobrezaPersonas: 2.77, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Vitacura', tasaPobrezaPersonas: 0.81, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Lo Barnechea', tasaPobrezaPersonas: 2.75, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'La Reina', tasaPobrezaPersonas: 5.93, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'San Joaquín', tasaPobrezaPersonas: 14.56, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'La Florida', tasaPobrezaPersonas: 11.89, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Peñalolén', tasaPobrezaPersonas: 13.03, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Cerrillos', tasaPobrezaPersonas: 17.57, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Puente Alto', tasaPobrezaPersonas: 13.83, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'La Cisterna', tasaPobrezaPersonas: 12.21, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Conchalí', tasaPobrezaPersonas: 15.77, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Buin', tasaPobrezaPersonas: 16.46, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'La Granja', tasaPobrezaPersonas: 18.81, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'El Bosque', tasaPobrezaPersonas: 20.08, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Pedro Aguirre Cerda', tasaPobrezaPersonas: 20.59, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Cerro Navia', tasaPobrezaPersonas: 18.95, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Padre Hurtado', tasaPobrezaPersonas: 15.01, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'Lo Prado', tasaPobrezaPersonas: 16.30, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
+  { comuna: 'San Ramón', tasaPobrezaPersonas: 19.73, fuenteUrl: CASEN_FUENTE_URL, transcritoEl: CASEN_TRANSCRITO_EL },
 ]
 
 export interface ConsumoEstimadoResultado {
