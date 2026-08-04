@@ -4,6 +4,7 @@ import { REASON_LABEL_DETALLE } from "@/lib/mercado-locales-server"
 import type { SenalExpansionComuna } from "@/lib/cadenas-sucursales-server"
 import type { TendenciaConstruccionComuna } from "@/lib/ine-permisos-server"
 import { formatFechaCorta, formatTimestampCorto } from "@/lib/formato-fecha"
+import { DemografiaConsumoCard } from "@/components/proyecto/demografia-consumo-card"
 
 interface HistorialTabProps {
   oportunidad: OportunidadDetalle
@@ -82,6 +83,11 @@ export function HistorialTab({ oportunidad, historial, senalExpansion, tendencia
             )}
           </div>
         )}
+      </div>
+
+      <div className="rounded-lg border border-line-fine bg-card p-4">
+        <p className="mb-2 text-[10px] uppercase tracking-wide text-muted-foreground">Demografía y consumo</p>
+        <DemografiaConsumoCard comuna={oportunidad.comuna} />
       </div>
     </div>
   )
