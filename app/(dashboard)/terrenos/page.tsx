@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ListFilter, MapPin, Plus, TrendingDown, X } from "lucide-react"
+import { ChevronDown, ListFilter, MapPin, Plus, SlidersHorizontal, Store, Tag, TrendingDown, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 import { fixMojibakeArcGIS } from "@/lib/zonificacion-format"
 import { formatoComercial, FORMATO_COMERCIAL_LABEL, type FormatoComercial } from "@/lib/terrenos-comercial"
 import {
@@ -137,6 +138,7 @@ export default function TerrenosPage() {
   const [soloOportunidadPrecio, setSoloOportunidadPrecio] = useState(false)
   const [soloBajoDePrecio, setSoloBajoDePrecio] = useState(false)
   const [soloCercaAvenida, setSoloCercaAvenida] = useState(false)
+  const [mostrarMasFiltros, setMostrarMasFiltros] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -160,10 +162,23 @@ export default function TerrenosPage() {
     [terrenos],
   )
 
-  const hayFiltrosActivos = filtroComuna !== "todas" || filtroEstado !== "todos" || filtroFuente !== "todas"
-    || filtroFormato !== "todos" || filtroUsoComercial !== "todos"
-    || precioMin !== "" || precioMax !== "" || superficieMin !== "" || superficieMax !== ""
-    || soloOportunidadPrecio || soloBajoDePrecio || soloCercaAvenida
+  // Filtros "secundarios": los que viven detrás de "Más filtros". Comuna,
+  // estado de viabilidad y orden se dejan siempre visibles porque son los
+  // que se usan en casi toda sesión; el resto son refinamientos ocasionales.
+  const filtrosSecundariosActivos = [
+    filtroFuente !== "todas",
+    filtroFormato !== "todos",
+    filtroUsoComercial !== "todos",
+    precioMin !== "",
+    precioMax !== "",
+    superficieMin !== "",
+    superficieMax !== "",
+    soloOportunidadPrecio,
+    soloBajoDePrecio,
+    soloCercaAvenida,
+  ].filter(Boolean).length
+
+  const hayFiltrosActivos = filtroComuna !== "todas" || filtroEstado !== "todos" || filtrosSecundariosActivos > 0
 
   function limpiarFiltros() {
     setFiltroComuna("todas")
@@ -263,40 +278,6 @@ export default function TerrenosPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Fuente</Label>
-              <Select value={filtroFuente} onValueChange={(v) => setFiltroFuente(v as string)}>
-                <SelectTrigger className="w-44"><SelectValue placeholder="Fuente" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas las fuentes</SelectItem>
-                  {fuentesPresentes.map((f) => <SelectItem key={f} value={f}>{FUENTE_LABEL[f]}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Formato comercial</Label>
-              <Select value={filtroFormato} onValueChange={(v) => setFiltroFormato(v as string)}>
-                <SelectTrigger className="w-48"><SelectValue placeholder="Formato comercial" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos los formatos</SelectItem>
-                  {(Object.keys(FORMATO_COMERCIAL_LABEL) as FormatoComercial[]).map((f) => (
-                    <SelectItem key={f} value={f}>{FORMATO_COMERCIAL_LABEL[f]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Uso comercial</Label>
-              <Select value={filtroUsoComercial} onValueChange={(v) => setFiltroUsoComercial(v as string)}>
-                <SelectTrigger className="w-48"><SelectValue placeholder="Uso comercial" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  {(Object.keys(USO_COMERCIAL_LABEL) as UsoComercialStatus[]).map((s) => (
-                    <SelectItem key={s} value={s}>{USO_COMERCIAL_LABEL[s]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Ordenar por</Label>
               <Select value={orden} onValueChange={(v) => setOrden(v as Orden)}>
                 <SelectTrigger className="w-56"><SelectValue placeholder="Ordenar por" /></SelectTrigger>
@@ -307,6 +288,21 @@ export default function TerrenosPage() {
                 </SelectContent>
               </Select>
             </div>
+            <Button
+              variant={mostrarMasFiltros ? "secondary" : "outline"}
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setMostrarMasFiltros((v) => !v)}
+            >
+              <SlidersHorizontal className="size-3.5" />
+              Más filtros
+              {filtrosSecundariosActivos > 0 && (
+                <span className="ml-0.5 inline-flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                  {filtrosSecundariosActivos}
+                </span>
+              )}
+              <ChevronDown className={cn("size-3.5 transition-transform", mostrarMasFiltros && "rotate-180")} />
+            </Button>
             {hayFiltrosActivos && (
               <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={limpiarFiltros}>
                 <X className="size-3.5" /> Limpiar filtros
@@ -314,56 +310,97 @@ export default function TerrenosPage() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex items-end gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Precio mín. (CLP)</Label>
-                <Input type="number" value={precioMin} onChange={(e) => setPrecioMin(e.target.value)} placeholder="0" className="h-8 w-32 text-xs" />
+          {mostrarMasFiltros && (
+            <div className="space-y-3 rounded-lg border border-dashed border-border p-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Fuente</Label>
+                  <Select value={filtroFuente} onValueChange={(v) => setFiltroFuente(v as string)}>
+                    <SelectTrigger className="w-44"><SelectValue placeholder="Fuente" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas las fuentes</SelectItem>
+                      {fuentesPresentes.map((f) => <SelectItem key={f} value={f}>{FUENTE_LABEL[f]}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Formato comercial</Label>
+                  <Select value={filtroFormato} onValueChange={(v) => setFiltroFormato(v as string)}>
+                    <SelectTrigger className="w-48"><SelectValue placeholder="Formato comercial" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos los formatos</SelectItem>
+                      {(Object.keys(FORMATO_COMERCIAL_LABEL) as FormatoComercial[]).map((f) => (
+                        <SelectItem key={f} value={f}>{FORMATO_COMERCIAL_LABEL[f]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Uso comercial</Label>
+                  <Select value={filtroUsoComercial} onValueChange={(v) => setFiltroUsoComercial(v as string)}>
+                    <SelectTrigger className="w-48"><SelectValue placeholder="Uso comercial" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      {(Object.keys(USO_COMERCIAL_LABEL) as UsoComercialStatus[]).map((s) => (
+                        <SelectItem key={s} value={s}>{USO_COMERCIAL_LABEL[s]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Precio máx. (CLP)</Label>
-                <Input type="number" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} placeholder="Sin tope" className="h-8 w-32 text-xs" />
-              </div>
-            </div>
-            <div className="flex items-end gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Superficie mín. (m²)</Label>
-                <Input type="number" value={superficieMin} onChange={(e) => setSuperficieMin(e.target.value)} placeholder="0" className="h-8 w-32 text-xs" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Superficie máx. (m²)</Label>
-                <Input type="number" value={superficieMax} onChange={(e) => setSuperficieMax(e.target.value)} placeholder="Sin tope" className="h-8 w-32 text-xs" />
-              </div>
-            </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">Oportunidad:</span>
-            <Button
-              variant={soloOportunidadPrecio ? "default" : "outline"}
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => setSoloOportunidadPrecio((v) => !v)}
-            >
-              Precio bajo mercado (comuna)
-            </Button>
-            <Button
-              variant={soloBajoDePrecio ? "default" : "outline"}
-              size="sm"
-              className="h-7 gap-1 text-xs"
-              onClick={() => setSoloBajoDePrecio((v) => !v)}
-            >
-              <TrendingDown className="size-3.5" /> Bajó de precio
-            </Button>
-            <Button
-              variant={soloCercaAvenida ? "default" : "outline"}
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => setSoloCercaAvenida((v) => !v)}
-            >
-              Cerca de avenida principal
-            </Button>
-          </div>
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex items-end gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Precio mín. (CLP)</Label>
+                    <Input type="number" value={precioMin} onChange={(e) => setPrecioMin(e.target.value)} placeholder="0" className="h-8 w-32 text-xs" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Precio máx. (CLP)</Label>
+                    <Input type="number" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} placeholder="Sin tope" className="h-8 w-32 text-xs" />
+                  </div>
+                </div>
+                <div className="flex items-end gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Superficie mín. (m²)</Label>
+                    <Input type="number" value={superficieMin} onChange={(e) => setSuperficieMin(e.target.value)} placeholder="0" className="h-8 w-32 text-xs" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Superficie máx. (m²)</Label>
+                    <Input type="number" value={superficieMax} onChange={(e) => setSuperficieMax(e.target.value)} placeholder="Sin tope" className="h-8 w-32 text-xs" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground">Oportunidad:</span>
+                <Button
+                  variant={soloOportunidadPrecio ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setSoloOportunidadPrecio((v) => !v)}
+                >
+                  Precio bajo mercado (comuna)
+                </Button>
+                <Button
+                  variant={soloBajoDePrecio ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  onClick={() => setSoloBajoDePrecio((v) => !v)}
+                >
+                  <TrendingDown className="size-3.5" /> Bajó de precio
+                </Button>
+                <Button
+                  variant={soloCercaAvenida ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setSoloCercaAvenida((v) => !v)}
+                >
+                  Cerca de avenida principal
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -385,7 +422,6 @@ export default function TerrenosPage() {
                   <TableHead>Dirección</TableHead>
                   <TableHead>Comuna</TableHead>
                   <TableHead>Zona</TableHead>
-                  <TableHead>Estado</TableHead>
                   <TableHead>Formato</TableHead>
                   <TableHead>Uso comercial</TableHead>
                   <TableHead>Precio</TableHead>
@@ -393,7 +429,6 @@ export default function TerrenosPage() {
                   <TableHead>$/m² aprox.</TableHead>
                   <TableHead>Oportunidad</TableHead>
                   <TableHead>Ubicación</TableHead>
-                  <TableHead>Fuente</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -402,6 +437,7 @@ export default function TerrenosPage() {
                   const usoComercial = t.uso_comercial_status ?? "pendiente"
                   const formato = formatoComercial(t.superficie_lote_m2)
                   const clpPorM2 = precioPorM2(t)
+                  const zonaNombreCompleto = fixMojibakeArcGIS(t.zona_nombre)
                   return (
                     <TableRow key={t.id} className="cursor-pointer">
                       <TableCell>
@@ -409,13 +445,19 @@ export default function TerrenosPage() {
                           <MapPin className="size-3.5 shrink-0 text-muted-foreground" />
                           {t.direccion}
                         </Link>
+                        <span className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Tag className="size-2.5" /> {FUENTE_LABEL[t.fuente]}
+                        </span>
                       </TableCell>
                       <TableCell>{t.comuna}</TableCell>
                       <TableCell className="text-sm">
-                        {status === "encontrado" ? (fixMojibakeArcGIS(t.zona_nombre) ?? "—") : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <EstadoNormativo estado={ZONA_STATUS_VEREDICTO[status]} label={ZONA_STATUS_LABEL[status]} />
+                        {status === "encontrado" ? (
+                          <span className="num" title={zonaNombreCompleto ?? undefined}>
+                            {t.zona_codigo ?? zonaNombreCompleto ?? "—"}
+                          </span>
+                        ) : (
+                          <EstadoNormativo estado={ZONA_STATUS_VEREDICTO[status]} label={ZONA_STATUS_LABEL[status]} />
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formato ? FORMATO_COMERCIAL_LABEL[formato] : "—"}
@@ -449,13 +491,24 @@ export default function TerrenosPage() {
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {t.ubicacion_status === "resuelto" ? (
-                          <div className="flex flex-col gap-0.5">
-                            <span>{t.cerca_avenida_principal ? "Cerca de avenida" : "Sin avenida cercana"}</span>
-                            <span>{t.anchors_comerciales_cercanos ?? 0} anchor(s) a 1km</span>
+                          <div className="flex items-center gap-1.5">
+                            {t.cerca_avenida_principal && (
+                              <span
+                                title="Cerca de avenida principal"
+                                className="inline-flex size-5 items-center justify-center rounded-[3px] border border-line-med text-[9px] font-medium"
+                              >
+                                Av
+                              </span>
+                            )}
+                            <span
+                              title={`${t.anchors_comerciales_cercanos ?? 0} anchor(s) comercial(es) a 1km`}
+                              className="num inline-flex items-center gap-1"
+                            >
+                              <Store className="size-3" /> {t.anchors_comerciales_cercanos ?? 0}
+                            </span>
                           </div>
                         ) : "—"}
                       </TableCell>
-                      <TableCell className="text-xs capitalize text-muted-foreground">{FUENTE_LABEL[t.fuente]}</TableCell>
                     </TableRow>
                   )
                 })}
