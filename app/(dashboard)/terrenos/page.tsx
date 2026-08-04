@@ -146,6 +146,9 @@ export default function TerrenosPage() {
   const [reintentando, setReintentando] = useState(false)
   const [progresoReintento, setProgresoReintento] = useState<{ procesados: number; resueltos: number } | null>(null)
   const reintentoCancelado = useRef(false)
+  const [reintentandoUbicacion, setReintentandoUbicacion] = useState(false)
+  const [progresoReintentoUbicacion, setProgresoReintentoUbicacion] = useState<{ procesados: number; resueltos: number } | null>(null)
+  const reintentoUbicacionCancelado = useRef(false)
 
   const cargarTerrenos = useCallback(async () => {
     const r = await fetch("/api/terrenos")
@@ -186,6 +189,10 @@ export default function TerrenosPage() {
     () => terrenos.filter((t) => (t.zona_status ?? "pendiente") === "pendiente").length,
     [terrenos],
   )
+  const pendientesUbicacionCount = useMemo(
+    () => terrenos.filter((t) => t.zona_status === "encontrado" && (t.ubicacion_status ?? "pendiente") === "pendiente").length,
+    [terrenos],
+  )
 
   // Reintenta en lotes de 20 (mismo tope que el cron de descubrimiento) hasta
   // que no queden "pendiente" o el usuario navegue fuera de la página. Nunca
@@ -217,6 +224,36 @@ export default function TerrenosPage() {
   }, [cargarTerrenos])
 
   useEffect(() => () => { reintentoCancelado.current = true }, [])
+
+  // Mismo patrón que reintentarPendientes, para el backlog de señales de
+  // ubicación (Overpass) — 427 de 703 terrenos con zona resuelta, 04-08.
+  // Lotes de 10 (no 20): cada ítem pasa por Overpass con throttle real, un
+  // lote grande tarda varios minutos (ver reintentar-ubicacion/route.ts).
+  const reintentarUbicacion = useCallback(async () => {
+    reintentoUbicacionCancelado.current = false
+    setReintentandoUbicacion(true)
+    setProgresoReintentoUbicacion({ procesados: 0, resueltos: 0 })
+    try {
+      let restantes = Infinity
+      let totalProcesados = 0
+      let totalResueltos = 0
+      while (restantes > 0 && !reintentoUbicacionCancelado.current) {
+        const res = await fetch("/api/terrenos/reintentar-ubicacion?limit=10", { method: "POST" })
+        if (!res.ok) break
+        const data = (await res.json()) as { procesados: number; resueltos: number; restantes: number }
+        if (data.procesados === 0) break
+        totalProcesados += data.procesados
+        totalResueltos += data.resueltos
+        restantes = data.restantes
+        setProgresoReintentoUbicacion({ procesados: totalProcesados, resueltos: totalResueltos })
+        await cargarTerrenos()
+      }
+    } finally {
+      setReintentandoUbicacion(false)
+    }
+  }, [cargarTerrenos])
+
+  useEffect(() => () => { reintentoUbicacionCancelado.current = true }, [])
 
   // Filtros "secundarios": los que viven detrás de "Más filtros". Comuna,
   // estado de viabilidad y orden se dejan siempre visibles porque son los
@@ -494,6 +531,35 @@ export default function TerrenosPage() {
                     </>
                   ) : (
                     <>Reintentar {pendientesCount} pendiente(s)</>
+                  )}
+                </Button>
+              </div>
+            )}
+            {(pendientesUbicacionCount > 0 || reintentandoUbicacion) && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-border bg-muted/30 p-3 text-xs">
+                <div className="text-muted-foreground">
+                  {reintentandoUbicacion && progresoReintentoUbicacion ? (
+                    <>
+                      Reintentando señales de ubicación… {progresoReintentoUbicacion.procesados} procesados,{" "}
+                      {progresoReintentoUbicacion.resueltos} resueltos.
+                    </>
+                  ) : (
+                    <>{pendientesUbicacionCount} terreno(s) sin señales de ubicación (avenida/anchors) todavía.</>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={() => void reintentarUbicacion()}
+                  disabled={reintentandoUbicacion || pendientesUbicacionCount === 0}
+                >
+                  {reintentandoUbicacion ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" /> Reintentando…
+                    </>
+                  ) : (
+                    <>Reintentar {pendientesUbicacionCount} sin ubicación</>
                   )}
                 </Button>
               </div>
