@@ -53,6 +53,11 @@ export const TAREAS_CRON: TareaCron[] = [
   { path: '/api/cron/noticias-macro', horarioOriginal: '0 9 * * *', debidaHoy: DIARIA, staggerMs: 5_000 },
   { path: '/api/scraper/mercado-locales', horarioOriginal: '0 10 * * *', debidaHoy: DIARIA, staggerMs: 5_000 },
   { path: '/api/scraper/mercado-locales-tipos-adicionales', horarioOriginal: '30 10 * * *', debidaHoy: DIARIA, staggerMs: 5_000 },
+  // Segunda fuente de mercado_locales_listings (04-08) — mismo criterio de
+  // stagger que el resto de "sin conflicto documentado", Doomos no comparte
+  // ningún rate-limit conocido con Overpass ni con Portalinmobiliario.
+  { path: '/api/scraper/mercado-locales-doomos', horarioOriginal: 'nuevo — 04-08', debidaHoy: DIARIA, staggerMs: 5_000 },
+  { path: '/api/scraper/mercado-locales-doomos-tipos-adicionales', horarioOriginal: 'nuevo — 04-08', debidaHoy: DIARIA, staggerMs: 5_000 },
   { path: '/api/cron/daily-check', horarioOriginal: '0 11 * * *', debidaHoy: DIARIA, staggerMs: 5_000 },
   { path: '/api/cron/weekly-summary', horarioOriginal: '0 11 * * 1', debidaHoy: LUNES, staggerMs: 0 },
 ]

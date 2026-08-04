@@ -101,7 +101,7 @@ export const MERCADO_LOCALES_COMUNA_SLUGS: Record<string, string> = {
 }
 
 export interface MercadoLocalListadoRaw {
-  fuente: 'portalinmobiliario'
+  fuente: 'portalinmobiliario' | 'doomos'
   fuenteId: string
   url: string
   titulo: string
@@ -187,13 +187,23 @@ export async function upsertMercadoLocalesDesdeListado(
   }
   if (items.length === 0) return summary
 
+  // Todos los items de una misma llamada vienen del mismo scraper (el
+  // caller siempre invoca UNA función buscarLocalesComerciales() por
+  // fuente) — se deriva de items[0] en vez de recibir un parámetro
+  // separado que podría desincronizarse del contenido real de `items`.
+  // Antes hardcodeaba 'portalinmobiliario' acá y en la baja de abajo: con
+  // una segunda fuente, eso habría hecho que TODO item de esa fuente
+  // contara siempre como "nuevo" (el filtro "before" nunca matcheaba) y
+  // que nunca se diera de baja nada (04-08).
+  const fuente = items[0].fuente
+
   const supabase = createServiceClient()
   const scrapedIds = new Set(items.map((i) => i.fuenteId))
 
   const { data: before, error: beforeError } = await supabase
     .from('mercado_locales_listings')
     .select('fuente_id, status')
-    .eq('fuente', 'portalinmobiliario')
+    .eq('fuente', fuente)
     .eq('comuna', comuna)
     .eq('operacion', operacion)
     .eq('tipo_propiedad', tipoPropiedad)
@@ -221,7 +231,11 @@ export async function upsertMercadoLocalesDesdeListado(
 
   const { error: upsertError } = await supabase
     .from('mercado_locales_listings')
-    .upsert(rows, { onConflict: 'fuente,fuente_id', ignoreDuplicates: false })
+    // onConflict incluye tipo_propiedad (04-08, corrige gap de integridad):
+    // un mismo fuente_id puede aparecer legítimamente en más de una
+    // categoría de la fuente — antes se pisaban entre sí en vez de
+    // coexistir como filas separadas.
+    .upsert(rows, { onConflict: 'fuente,fuente_id,tipo_propiedad', ignoreDuplicates: false })
 
   if (upsertError) throw new Error(`upsert de mercado_locales_listings falló: ${upsertError.message}`)
 
@@ -243,7 +257,7 @@ export async function upsertMercadoLocalesDesdeListado(
     const { error: delistError } = await supabase
       .from('mercado_locales_listings')
       .update({ status: 'dado_de_baja', dado_de_baja_el: new Date().toISOString() })
-      .eq('fuente', 'portalinmobiliario')
+      .eq('fuente', fuente)
       .eq('comuna', comuna)
       .eq('operacion', operacion)
       .eq('tipo_propiedad', tipoPropiedad)

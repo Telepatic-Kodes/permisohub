@@ -9,7 +9,7 @@ const MARTES = new Date('2026-08-04T12:00:00Z')
 const DIA_2_DEL_MES_VIERNES = new Date('2026-01-02T12:00:00Z') // 2 ene 2026 fue viernes
 
 describe('tareasDebidasHoy', () => {
-  it('un miércoles normal solo corren las 4 tareas diarias', () => {
+  it('un miércoles normal solo corren las 6 tareas diarias', () => {
     const tareas = tareasDebidasHoy(MIERCOLES)
     const paths = tareas.map((t) => t.path).sort()
     expect(paths).toEqual(
@@ -18,6 +18,8 @@ describe('tareasDebidasHoy', () => {
         '/api/cron/noticias-macro',
         '/api/scraper/mercado-locales',
         '/api/scraper/mercado-locales-tipos-adicionales',
+        '/api/scraper/mercado-locales-doomos',
+        '/api/scraper/mercado-locales-doomos-tipos-adicionales',
       ].sort()
     )
   })
@@ -27,7 +29,7 @@ describe('tareasDebidasHoy', () => {
     const paths = tareas.map((t) => t.path)
     expect(paths).toContain('/api/cron/weekly-summary')
     expect(paths).toContain('/api/scraper/instrumentos-ipt')
-    expect(paths).toHaveLength(6)
+    expect(paths).toHaveLength(8)
   })
 
   it('un martes corren las 5 fuentes de terrenos además de las diarias, nunca weekly-summary', () => {
@@ -39,7 +41,7 @@ describe('tareasDebidasHoy', () => {
     expect(paths).toContain('/api/cron/terrenos-chilepropiedades')
     expect(paths).toContain('/api/cron/terrenos-portalterreno')
     expect(paths).not.toContain('/api/cron/weekly-summary')
-    expect(paths).toHaveLength(9)
+    expect(paths).toHaveLength(11)
   })
 
   it('el día 2 del mes suma sii-nomina-sucursales, sin importar el día de la semana', () => {
@@ -62,7 +64,7 @@ describe('tareasDebidasHoy', () => {
     expect(new Set(paths).size).toBe(paths.length)
   })
 
-  it('hay exactamente 12 tareas registradas (las mismas que vercel.json tenía antes de consolidar)', () => {
-    expect(TAREAS_CRON).toHaveLength(12)
+  it('hay exactamente 14 tareas registradas (12 de vercel.json + 2 de mercado-locales-doomos, 04-08)', () => {
+    expect(TAREAS_CRON).toHaveLength(14)
   })
 })
