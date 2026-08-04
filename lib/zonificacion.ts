@@ -28,6 +28,11 @@ export interface ZonaData {
   comunaFuente: string | null
   lat: number
   lng: number
+  // 'centroide_comuna' cuando la dirección/título del aviso no geocodificó y
+  // se cayó al centroide administrativo de la comuna (geocodeComunaCentroide,
+  // lib/geocoding.ts) — la zona puede NO ser la del predio exacto en comunas
+  // con más de una zona PRC. Nunca tratar igual que 'exacta' en la UI.
+  precision: 'exacta' | 'centroide_comuna'
   cacheHit: boolean
   consultadoEl: string
 }

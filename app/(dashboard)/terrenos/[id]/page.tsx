@@ -280,6 +280,17 @@ export default function TerrenoDetailPage() {
                     )}
                   </div>
 
+                  {terreno.zona_precision === "centroide_comuna" && (
+                    <p className="flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800">
+                      <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                      <span>
+                        Zona aproximada: la dirección de este terreno no se pudo geocodificar con precisión, así
+                        que se usó el centroide de la comuna. En comunas con más de una zona PRC, esta puede no
+                        ser la zona real del predio — verifica contra el CIP oficial.
+                      </span>
+                    </p>
+                  )}
+
                   <ZonificacionMapa lat={geo?.lat ?? null} lng={geo?.lng ?? null} geometria={geo?.geometria ?? null} />
 
                   <div className="space-y-1 rounded-lg border border-line-strong p-3">

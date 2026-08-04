@@ -101,6 +101,7 @@ export async function enriquecerTerreno(terrenoId: string, options?: { force?: b
         zona_usos_disponibles: json.data.usosDisponibles,
         zona_fuente_url: json.data.fuenteUrl,
         zona_consultada_el: json.data.consultadoEl,
+        zona_precision: json.data.precision,
         lat: json.data.lat,
         lng: json.data.lng,
         updated_at: nowIso,

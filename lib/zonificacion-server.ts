@@ -47,6 +47,7 @@ export async function persistZonificacionParaProyecto(
         zona_usos_disponibles: json.data.usosDisponibles,
         zona_fuente_url: json.data.fuenteUrl,
         zona_consultada_el: json.data.consultadoEl,
+        zona_precision: json.data.precision,
       }).eq('id', proyectoId)
       return
     }
@@ -68,6 +69,7 @@ export async function persistZonificacionParaProyecto(
       zona_usos_disponibles: null,
       zona_cache_id: null,
       zona_fuente_url: null,
+      zona_precision: null,
     }
 
     if (json.status === 'sin_cobertura') {
@@ -100,6 +102,7 @@ export async function persistZonificacionParaProyecto(
       zona_usos_disponibles: null,
       zona_cache_id: null,
       zona_fuente_url: null,
+      zona_precision: null,
     }).eq('id', proyectoId)
   }
 }

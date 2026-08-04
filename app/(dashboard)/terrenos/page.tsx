@@ -543,8 +543,18 @@ export default function TerrenosPage() {
                       <TableCell>{t.comuna}</TableCell>
                       <TableCell className="text-sm">
                         {status === "encontrado" ? (
-                          <span className="num" title={zonaNombreCompleto ?? undefined}>
-                            {t.zona_codigo ?? zonaNombreCompleto ?? "—"}
+                          <span className="inline-flex items-center gap-1">
+                            <span className="num" title={zonaNombreCompleto ?? undefined}>
+                              {t.zona_codigo ?? zonaNombreCompleto ?? "—"}
+                            </span>
+                            {t.zona_precision === "centroide_comuna" && (
+                              <span
+                                title="Zona aproximada: la dirección no se pudo geocodificar con precisión, se usó el centroide de la comuna — puede no ser la zona real de este predio. Verifica contra el CIP oficial."
+                                className="rounded-[3px] border border-amber-300 px-1 text-[9px] font-medium text-amber-700"
+                              >
+                                aprox.
+                              </span>
+                            )}
                           </span>
                         ) : (
                           <EstadoNormativo estado={ZONA_STATUS_VEREDICTO[status]} label={ZONA_STATUS_LABEL[status]} />

@@ -125,6 +125,7 @@ export interface Proyecto {
   zona_consultada_el?: string
   zona_origen?: 'automatico' | 'manual'
   zona_comuna_manual?: string          // comuna real seleccionada en el fallback manual (ZONE-05) — distinta de municipio
+  zona_precision?: 'exacta' | 'centroide_comuna' // 'centroide_comuna' = la dirección no geocodificó, se usó el centroide de la comuna — la zona puede no ser la del predio exacto
   // Campos enterprise (cadena comercial)
   local_id?: string
   centro_id?: string
@@ -169,6 +170,7 @@ export interface Terreno {
   zona_usos_disponibles?: boolean
   zona_fuente_url?: string
   zona_consultada_el?: string
+  zona_precision?: 'exacta' | 'centroide_comuna' // 'centroide_comuna' = la dirección/título no geocodificó, se usó el centroide de la comuna
   // Potencial de desarrollo comercial (local / strip center / power center)
   uso_comercial_status?: 'pendiente' | 'permitido' | 'no_permitido' | 'no_especificado'
   uso_comercial_justificacion?: string

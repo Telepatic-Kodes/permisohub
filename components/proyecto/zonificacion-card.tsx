@@ -187,6 +187,17 @@ export function ZonificacionCard({ proyecto, onUpdated }: ZonificacionCardProps)
               )}
             </div>
 
+            {proyecto.zona_precision === "centroide_comuna" && (
+              <p className="flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800">
+                <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                <span>
+                  Zona aproximada: la dirección no se pudo geocodificar con precisión, así que se usó el
+                  centroide de la comuna. En comunas con más de una zona PRC, esta puede no ser la zona real
+                  del predio — verifica contra el CIP oficial antes de usarla en un trámite.
+                </span>
+              </p>
+            )}
+
             {comunaMismatch && (
               <p className="flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800">
                 <AlertTriangle className="mt-0.5 size-3 shrink-0" />

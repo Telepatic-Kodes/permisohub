@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { resolveComunaZonificacion } from '@/lib/zonificacion-comunas'
-import { geocodeDireccion } from '@/lib/geocoding'
+import { geocodeDireccion, geocodeComunaCentroide } from '@/lib/geocoding'
 import { ArcGISQueryResponseSchema, type ZonaData, type ZonaLookupResponse } from '@/lib/zonificacion'
 import { esriRingsToGeoJSON } from '@/lib/zonificacion-geo'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -113,9 +113,28 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     // 2. Geocode — salvo que el llamador ya traiga coordenadas precisas (ver tieneOverride arriba).
-    const geo = tieneOverride
+    let precision: 'exacta' | 'centroide_comuna' = 'exacta'
+    let geo = tieneOverride
       ? { ok: true as const, lat: latOverride as number, lng: lngOverride as number, comunaDetectada: undefined, displayName: undefined }
       : await geocodeDireccion(direccion, comuna)
+
+    if (!tieneOverride && (!geo.ok || geo.lat === undefined || geo.lng === undefined)) {
+      // Fallback (04-08): la dirección/título del aviso no geocodificó por
+      // texto libre — antes esto era 'error' sin salida. En vez de rendirse,
+      // se resuelve al centroide administrativo de la comuna
+      // (geocodeComunaCentroide, query ESTRUCTURADA city=/country=, más
+      // confiable para un área completa que un texto libre pensado para
+      // calle+número). NUNCA se trata como equivalente a una resolución
+      // exacta — la zona puede no ser la del predio real en una comuna con
+      // más de una zona PRC. `precision` se propaga hasta zona_precision en
+      // proyectos/terrenos y la UI debe mostrarlo siempre, nunca ocultarlo.
+      const centroide = await geocodeComunaCentroide(comuna)
+      if (centroide.ok && centroide.lat !== undefined && centroide.lng !== undefined) {
+        geo = centroide
+        precision = 'centroide_comuna'
+      }
+    }
+
     if (!geo.ok || geo.lat === undefined || geo.lng === undefined) {
       return Response.json(
         { ok: false, status: 'error', error: geo.error ?? 'No se pudo geocodificar la dirección' } satisfies ZonaLookupResponse,
@@ -150,7 +169,12 @@ export async function GET(request: Request): Promise<Response> {
           usosDisponibles: cached.usos_disponibles, fuenteUrl: cached.fuente_url,
           fuenteActualizadaEl: cached.fuente_actualizada_el,
           comunaFuente: comunaDesdeRaw(cached.raw, comunaConfig.fieldMap.comuna),
-          lat, lng, cacheHit: true,
+          lat, lng,
+          // precision de la fila cacheada, no del intento de geocoding de
+          // ESTA request — el punto cacheado puede venir de un fallback de
+          // centroide resuelto en una request anterior.
+          precision: cached.precision === 'centroide_comuna' ? 'centroide_comuna' : 'exacta',
+          cacheHit: true,
           consultadoEl: cached.consultado_el,
         }
         return Response.json({ ok: true, status: 'encontrado', data } satisfies ZonaLookupResponse, { status: 200 })
@@ -255,6 +279,7 @@ export async function GET(request: Request): Promise<Response> {
           geometria,
           raw: attrs,
           consultado_el: nowIso,
+          precision,
         },
         { onConflict: 'comuna_id,lat_r,lng_r' },
       )
@@ -270,7 +295,7 @@ export async function GET(request: Request): Promise<Response> {
         sector: get(comunaConfig.fieldMap.sector), zona, nombreZona,
         uperm: get(comunaConfig.fieldMap.uperm), uproh: get(comunaConfig.fieldMap.uproh),
         usosDisponibles: comunaConfig.usosDisponibles, fuenteUrl: get(comunaConfig.fieldMap.url),
-        fuenteActualizadaEl, comunaFuente: comunaArcgis, lat, lng, cacheHit: false, consultadoEl: nowIso,
+        fuenteActualizadaEl, comunaFuente: comunaArcgis, lat, lng, precision, cacheHit: false, consultadoEl: nowIso,
       }
       return Response.json({ ok: true, status: 'encontrado', data } satisfies ZonaLookupResponse, { status: 200 })
     }
@@ -281,7 +306,9 @@ export async function GET(request: Request): Promise<Response> {
       usosDisponibles: inserted.usos_disponibles, fuenteUrl: inserted.fuente_url,
       fuenteActualizadaEl: inserted.fuente_actualizada_el,
       comunaFuente: comunaDesdeRaw(inserted.raw, comunaConfig.fieldMap.comuna),
-      lat, lng, cacheHit: false,
+      lat, lng,
+      precision: inserted.precision === 'centroide_comuna' ? 'centroide_comuna' : 'exacta',
+      cacheHit: false,
       consultadoEl: inserted.consultado_el,
     }
     return Response.json({ ok: true, status: 'encontrado', data } satisfies ZonaLookupResponse, { status: 200 })
