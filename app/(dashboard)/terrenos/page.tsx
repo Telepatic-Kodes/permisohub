@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/dashboard/page-header"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { UF_FALLBACK_CLP, type UfData } from "@/lib/uf"
 import { fixMojibakeArcGIS } from "@/lib/zonificacion-format"
 import { formatoComercial, FORMATO_COMERCIAL_LABEL, type FormatoComercial } from "@/lib/terrenos-comercial"
 import {
@@ -84,6 +85,8 @@ const ORDEN_LABEL: Record<Orden, string> = {
 
 const CLP = new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 })
 const CLP_COMPACTO = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 1 })
+const UF_PRECIO = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 0 })
+const UF_M2 = new Intl.NumberFormat("es-CL", { maximumFractionDigits: 1 })
 
 function precioPorM2(t: Terreno): number | null {
   if (!t.precio_clp || !t.superficie_lote_m2 || t.superficie_lote_m2 <= 0) return null
@@ -139,6 +142,7 @@ export default function TerrenosPage() {
   const [soloBajoDePrecio, setSoloBajoDePrecio] = useState(false)
   const [soloCercaAvenida, setSoloCercaAvenida] = useState(false)
   const [mostrarMasFiltros, setMostrarMasFiltros] = useState(false)
+  const [ufActual, setUfActual] = useState<UfData>({ valor: UF_FALLBACK_CLP, fecha: null, fallback: true })
 
   useEffect(() => {
     let cancelled = false
@@ -150,6 +154,18 @@ export default function TerrenosPage() {
       })
       .catch(() => undefined)
       .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  // Mismo patrón que /mercado-inmobiliario/calculadora y /herramientas/
+  // calculadora: fetch una vez, fallback explícito (UF_FALLBACK_CLP) nunca
+  // silencioso — ufActual.fallback se muestra en la UI, no se oculta.
+  useEffect(() => {
+    let cancelled = false
+    fetch("/api/utils/uf")
+      .then((r) => r.json() as Promise<UfData & { ok: boolean }>)
+      .then((data) => { if (!cancelled) setUfActual({ valor: data.valor, fecha: data.fecha, fallback: data.fallback ?? false }) })
+      .catch(() => { if (!cancelled) setUfActual({ valor: UF_FALLBACK_CLP, fecha: null, fallback: true }) })
     return () => { cancelled = true }
   }, [])
 
@@ -413,8 +429,14 @@ export default function TerrenosPage() {
           </div>
         ) : (
           <>
-            <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <ListFilter className="size-3.5" /> {filtrados.length} de {terrenos.length} terrenos
+            <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <ListFilter className="size-3.5" /> {filtrados.length} de {terrenos.length} terrenos
+              </span>
+              <span>
+                UF {ufActual.fallback ? "referencial" : "vigente"}: {UF_PRECIO.format(ufActual.valor)} CLP
+                {ufActual.fallback && " — mindicador.cl no disponible"}
+              </span>
             </p>
             <Table>
               <TableHeader>
@@ -466,13 +488,25 @@ export default function TerrenosPage() {
                         <EstadoNormativo estado={USO_COMERCIAL_VEREDICTO[usoComercial]} label={USO_COMERCIAL_LABEL[usoComercial]} />
                       </TableCell>
                       <TableCell className="text-sm">
-                        {t.precio_clp ? CLP.format(t.precio_clp) : "—"}
+                        {t.precio_clp ? (
+                          <>
+                            <div>{CLP.format(t.precio_clp)}</div>
+                            <div className="num text-[11px] text-muted-foreground">
+                              {UF_PRECIO.format(t.precio_clp / ufActual.valor)} UF
+                            </div>
+                          </>
+                        ) : "—"}
                       </TableCell>
                       <TableCell className="text-sm">
                         {t.superficie_lote_m2 ? `${t.superficie_lote_m2.toLocaleString("es-CL")} m²` : "—"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {clpPorM2 ? `$${CLP_COMPACTO.format(clpPorM2)}` : "—"}
+                        {clpPorM2 ? (
+                          <>
+                            <div>${CLP_COMPACTO.format(clpPorM2)}</div>
+                            <div className="num text-[11px]">{UF_M2.format(clpPorM2 / ufActual.valor)} UF/m²</div>
+                          </>
+                        ) : "—"}
                       </TableCell>
                       <TableCell className="text-xs">
                         <div className="flex flex-col gap-1">
