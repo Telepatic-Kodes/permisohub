@@ -551,6 +551,11 @@ CREATE TABLE IF NOT EXISTS document_checklist_items (
   item_key      text NOT NULL,
   label         text NOT NULL,
   articulo_oguc text,
+  -- Agregadas en 20260813_checklist_items_descripcion_obligatorio.sql: el
+  -- insert original las escribía sin que existieran (fallaba en silencio,
+  -- 0 filas en prod hasta esa migración).
+  descripcion   text,
+  obligatorio   boolean NOT NULL DEFAULT true,
   estado        text NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'ok')),
   source        text NOT NULL DEFAULT 'ai'       CHECK (source IN ('ai', 'manual')),
   created_at    timestamptz DEFAULT now(),

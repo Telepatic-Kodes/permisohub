@@ -1,16 +1,17 @@
 "use client"
 
 import { useState } from 'react'
-import { CheckSquare, Square } from 'lucide-react'
+import { AlertTriangle, CheckSquare, Square } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ChecklistResult } from '@/components/copiloto/tipos'
 
 interface TabChecklistProps {
   data: ChecklistResult
   onToggle: (itemKey: string, newEstado: 'pendiente' | 'ok') => void
+  onRegenerar: () => void
 }
 
-export function TabChecklist({ data, onToggle }: TabChecklistProps) {
+export function TabChecklist({ data, onToggle, onRegenerar }: TabChecklistProps) {
   const [toggling, setToggling] = useState<string | null>(null)
 
   const doneCount = data.items.filter(it => it.estado === 'ok').length
@@ -44,6 +45,25 @@ export function TabChecklist({ data, onToggle }: TabChecklistProps) {
 
   return (
     <div className="space-y-4">
+      {data.desactualizadoPorZonificacion && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <p className="flex items-center gap-1.5 font-medium">
+            <AlertTriangle className="size-3.5" /> La zonificación se cargó después de este checklist
+          </p>
+          <p className="mt-1">
+            Puede faltar el contexto de usos permitidos/prohibidos de la zona. Los documentos ya
+            marcados como listos se conservan al regenerar.
+          </p>
+          <button
+            type="button"
+            onClick={onRegenerar}
+            className="mt-2 font-medium underline hover:no-underline"
+          >
+            Regenerar checklist
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
           {doneCount} de {data.items.length} documentos listos

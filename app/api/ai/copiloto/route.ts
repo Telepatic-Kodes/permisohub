@@ -20,6 +20,11 @@ import type { Proyecto } from '@/types'
 
 interface CopilotoRequest {
   proyectoId: string
+  // Acción explícita del arquitecto (nunca automática/silenciosa, mismo
+  // patrón que "Actualizar" en zonificación ZONE-04): descarta el checklist
+  // de IA persistido y genera uno nuevo, preservando por item_key el estado
+  // 'ok' de los ítems que sobrevivan al nuevo checklist.
+  regenerarChecklist?: boolean
 }
 
 // M5 (auditoría 2026-07-30): schemas laxos para los 4 parses de este endpoint
@@ -281,6 +286,42 @@ export async function POST(request: Request) {
     .select('*')
     .eq('proyecto_id', body.proyectoId)
 
+  const regenerarChecklist = body.regenerarChecklist === true
+
+  // Backlog (deuda técnica de PROJECT.md): el checklist se generaba una sola
+  // vez y nunca reflejaba una zonificación que llegara después (es async,
+  // vía after() en lib/zonificacion-server.ts). Se detecta comparando cuándo
+  // se creó el checklist existente contra zona_consultada_el — pero nunca se
+  // regenera solo; el arquitecto decide vía el botón "Regenerar checklist".
+  const zonificacionUtilizable = p.zona_status === 'encontrado' && p.zona_usos_disponibles === true
+  const checklistCreatedAtMs = existingChecklist && existingChecklist.length > 0
+    ? Math.min(...existingChecklist.map((row) => new Date(row.created_at as string).getTime()))
+    : null
+  const checklistDesactualizadoPorZonificacion = Boolean(
+    !regenerarChecklist &&
+      checklistCreatedAtMs !== null &&
+      zonificacionUtilizable &&
+      p.zona_consultada_el &&
+      new Date(p.zona_consultada_el).getTime() > checklistCreatedAtMs,
+  )
+
+  // Al regenerar, el único progreso real del arquitecto es `estado='ok'` —
+  // se preserva por item_key en los ítems del nuevo checklist que coincidan;
+  // solo se borran los ítems de origen 'ai' (los 'manual' quedan intactos,
+  // aunque hoy no exista ninguna vía de UI que los cree).
+  const previousOkItemKeys = new Set(
+    (existingChecklist ?? [])
+      .filter((row) => row.source === 'ai' && row.estado === 'ok')
+      .map((row) => row.item_key as string),
+  )
+  if (regenerarChecklist && existingChecklist && existingChecklist.length > 0) {
+    await supabase
+      .from('document_checklist_items')
+      .delete()
+      .eq('proyecto_id', body.proyectoId)
+      .eq('source', 'ai')
+  }
+
   let ufValor = UF_FALLBACK_CLP
   // A4 (auditoría 2026-07-30): la calculadora ya mostraba "UF referencial" en
   // fallback, pero el copiloto callaba el flag — se propaga en `estimacion`
@@ -345,7 +386,7 @@ export async function POST(request: Request) {
   const plazoBase = statsMunicipio?.tiempoPromedioHabiles ?? 45
 
   try {
-    const hasExistingChecklist = (existingChecklist?.length ?? 0) > 0
+    const hasExistingChecklist = (existingChecklist?.length ?? 0) > 0 && !regenerarChecklist
 
     const [ogucText, observacionesText, checklistText, estimacionText] = await Promise.all([
       aiComplete([{ role: 'user', content: buildOgucPrompt(p) }], { max_tokens: 2000 }),
@@ -382,46 +423,83 @@ export async function POST(request: Request) {
       resumen: 'No se pudo generar el diagnóstico de observaciones — la respuesta de la IA no tuvo el formato esperado. Vuelve a intentar o revisa manualmente.',
     }
 
-    let checklist: { items: Array<{ id?: string; item_key: string; nombre: string; articulo_normativo: string; descripcion: string; obligatorio: boolean; estado: string }> }
+    let checklist: {
+      items: Array<{ id?: string; item_key: string; nombre: string; articulo_normativo: string; descripcion: string; obligatorio: boolean; estado: string }>
+      desactualizadoPorZonificacion: boolean
+    }
 
     if (hasExistingChecklist) {
+      // Los nombres de columna reales son label/articulo_oguc (no
+      // nombre/articulo_normativo) — ver migración 20260813 y la nota de
+      // deuda técnica en PROJECT.md: el mapeo anterior leía campos
+      // inexistentes y devolvía siempre undefined.
       checklist = {
         items: (existingChecklist ?? []).map((row: Record<string, unknown>) => ({
           id: row.id as string,
           item_key: row.item_key as string,
-          nombre: row.nombre as string,
-          articulo_normativo: row.articulo_normativo as string,
-          descripcion: row.descripcion as string,
-          obligatorio: row.obligatorio as boolean,
+          nombre: row.label as string,
+          articulo_normativo: (row.articulo_oguc as string) ?? '',
+          descripcion: (row.descripcion as string) ?? '',
+          obligatorio: (row.obligatorio as boolean) ?? true,
           estado: row.estado as string,
         })),
+        desactualizadoPorZonificacion: checklistDesactualizadoPorZonificacion,
       }
     } else if (checklistText) {
       // M5: parseo validado con zod (antes: regex + JSON.parse + cast `as`).
       const parsed = parseAiJson(checklistText, ChecklistSchema, 'copiloto:checklist') ?? { items: [] }
 
       // item_key/nombre en blanco (defaults de zod ante un campo omitido) no
-      // describen ningún documento real — insertarlos deja una fila vacía en
-      // el checklist del arquitecto en vez de simplemente omitir ese item.
+      // describen ningún documento real — se omiten tanto del insert como
+      // de la respuesta (antes solo se omitían del insert, así que igual
+      // aparecían como filas vacías en el checklist mostrado).
       const itemsValidos = parsed.items.filter((item) => item.item_key.trim() && item.nombre.trim())
+
+      let insertedRows: Array<Record<string, unknown>> = []
       if (itemsValidos.length > 0) {
         const rows = itemsValidos.map((item) => ({
           proyecto_id: body.proyectoId,
+          item_key: item.item_key,
+          label: item.nombre,
+          articulo_oguc: item.articulo_normativo,
+          descripcion: item.descripcion,
+          obligatorio: item.obligatorio,
+          // Al regenerar, un item cuyo item_key ya estaba marcado 'ok' en el
+          // checklist anterior conserva ese progreso — nunca se pierde
+          // silenciosamente por el solo hecho de regenerar.
+          estado: previousOkItemKeys.has(item.item_key) ? ('ok' as const) : ('pendiente' as const),
+          source: 'ai' as const,
+        }))
+        const { data: inserted, error: insertError } = await supabase
+          .from('document_checklist_items')
+          .insert(rows)
+          .select()
+        if (insertError) {
+          // La persistencia es auxiliar frente al checklist en sí — no se
+          // falla toda la request por esto, pero ya no se descarta en
+          // silencio (así quedó sin detectarse hasta ahora: 0 filas en
+          // prod, ver migración 20260813).
+          console.error('copiloto: fallo al persistir checklist', insertError)
+        } else {
+          insertedRows = inserted ?? []
+        }
+      }
+
+      const idByItemKey = new Map(insertedRows.map((row) => [row.item_key as string, row.id as string]))
+      checklist = {
+        items: itemsValidos.map((item) => ({
+          id: idByItemKey.get(item.item_key),
           item_key: item.item_key,
           nombre: item.nombre,
           articulo_normativo: item.articulo_normativo,
           descripcion: item.descripcion,
           obligatorio: item.obligatorio,
-          estado: 'pendiente' as const,
-        }))
-        await supabase.from('document_checklist_items').insert(rows)
-      }
-
-      checklist = {
-        items: parsed.items.map((item) => ({ ...item, estado: 'pendiente' })),
+          estado: previousOkItemKeys.has(item.item_key) ? 'ok' : 'pendiente',
+        })),
+        desactualizadoPorZonificacion: false,
       }
     } else {
-      checklist = { items: [] }
+      checklist = { items: [], desactualizadoPorZonificacion: false }
     }
 
     // M5: parseo validado con zod (antes: regex + JSON.parse sin validación).

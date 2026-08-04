@@ -44,6 +44,9 @@ export interface ChecklistItem {
 
 export interface ChecklistResult {
   items: ChecklistItem[]
+  // true cuando la zonificación del proyecto se resolvió después de que
+  // este checklist se generó — el prompt no tuvo ese contexto todavía.
+  desactualizadoPorZonificacion: boolean
 }
 
 export interface EstimacionResult {

@@ -69,10 +69,10 @@ export function CopilotoPanel({ proyecto }: { proyecto: ProyectoCopiloto }) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const analizar = useCallback(
-    async (tabId: TabId, forzar = false) => {
+    async (tabId: TabId, forzar = false, regenerarChecklist = false) => {
       // Los cuatro análisis llegan en una sola respuesta: si ya está cargada,
       // cambiar de pestaña no vuelve a llamar al modelo.
-      if (result && !forzar) {
+      if (result && !forzar && !regenerarChecklist) {
         setActiveTab(tabId)
         return
       }
@@ -83,7 +83,10 @@ export function CopilotoPanel({ proyecto }: { proyecto: ProyectoCopiloto }) {
         const res = await fetch("/api/ai/copiloto", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ proyectoId: proyecto.id }),
+          body: JSON.stringify({
+            proyectoId: proyecto.id,
+            ...(regenerarChecklist ? { regenerarChecklist: true } : {}),
+          }),
         })
         const json = (await res.json()) as { ok?: boolean; error?: string } & Partial<CopilotoResult>
         if (!json.ok || !json.oguc) throw new Error(json.error ?? "Error al cargar el análisis")
@@ -109,6 +112,7 @@ export function CopilotoPanel({ proyecto }: { proyecto: ProyectoCopiloto }) {
           ? {
               ...prev,
               checklist: {
+                ...prev.checklist,
                 items: prev.checklist.items.map((it) =>
                   it.item_key === itemKey ? { ...it, estado: nuevoEstado } : it,
                 ),
@@ -224,7 +228,11 @@ export function CopilotoPanel({ proyecto }: { proyecto: ProyectoCopiloto }) {
       {activeTab === "oguc" && <TabOguc data={result.oguc} />}
       {activeTab === "observaciones" && <TabObservaciones data={result.observaciones} />}
       {activeTab === "checklist" && (
-        <TabChecklist data={result.checklist} onToggle={handleItemToggle} />
+        <TabChecklist
+          data={result.checklist}
+          onToggle={handleItemToggle}
+          onRegenerar={() => void analizar("checklist", true, true)}
+        />
       )}
       {activeTab === "estimacion" && <TabEstimacion data={result.estimacion} />}
     </section>
