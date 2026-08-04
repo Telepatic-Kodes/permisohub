@@ -102,8 +102,6 @@ Serie de sesiones ad-hoc entre v1.5 y v1.6 (sin milestone formal propio) — cap
 - [ ] Indicador de vigencia/antigüedad del PRC ("vigente desde...") — pendiente confirmar si el layer expone fecha de decreto
 - [ ] Ampliar cobertura de comunas ArcGIS más allá de las 4 iniciales
 - [ ] Coeficientes urbanísticos numéricos (FOS, constructibilidad, altura, rasante, distanciamiento) — requiere fuente de datos distinta, paga o verificada
-- [ ] Reparar el mojibake residual de doble-corrupción en un subconjunto de nombres de zona de Las Condes (hallado en el checkpoint de 11-08, cosmético, no bloqueante)
-- [ ] Corregir la etiqueta de cita "Fuente: capa oficial {municipio}" para usar la comuna realmente seleccionada en el fallback manual, no `proyecto.municipio` (hallado en 11-08)
 - [ ] Aplicar el mismo tratamiento de reporte profesional (research-driven) a Reportes de Mercado, una vez validado en Oportunidades v1.6
 
 ### Out of Scope (v1.6 — resuelto, para referencia histórica)
@@ -136,7 +134,7 @@ Serie de sesiones ad-hoc entre v1.5 y v1.6 (sin milestone formal propio) — cap
 - **Marco legal**: Ley 21.718 (ene 2025) — 30 días hábiles máximo DOM. Ley Marco Autorizaciones Sectoriales (sept 2025)
 - **GTM**: Colegio de Arquitectos + AOA, SEO normativa chilena, referidos $50K CLP
 - **Post-v1.4**: Supabase MCP configurado a nivel `user` en `~/.claude.json` — reusable en futuras sesiones de agente sin reconfigurar (project-ref `nojejnebedjpbdlynrqs`). Dev-auth bypass (`BYPASS_AUTH=true` + `/auth/dev-login`) confirmado funcional para testing con sesión real sin password — usar en vez de reportar "sin browser/sesión disponible" como bloqueo en futuros checkpoints.
-- **Deuda técnica conocida (no bloqueante)**: mojibake residual de doble-corrupción en un subconjunto de nombres de zona ArcGIS de Las Condes; etiqueta de cita del fallback manual usa `proyecto.municipio` en vez de la comuna seleccionada; checklist del copiloto se genera una sola vez y no se regenera si la zonificación llega después.
+- **Deuda técnica conocida (no bloqueante)**: checklist del copiloto se genera una sola vez y no se regenera si la zonificación llega después. (Resuelto 03-08: mojibake residual de Las Condes y etiqueta de cita del fallback manual — ver checkpoint 11-08.)
 - **Post-v1.6**: `gsd-tools.cjs phase complete` tiene un bug de regex que captura la línea de Requirements equivocada cuando el bullet-summary de "Phases" en ROADMAP.md menciona una fase antes de la sección completa de otra — ocurrió en Fase 14 y 15, corregido a mano ambas veces, causa raíz no arreglada en el script. `gsd-tools.cjs milestone complete` también copió ROADMAP.md/REQUIREMENTS.md completos sin acotar al milestone (a diferencia de v1.4) — corregido a mano reconstruyendo `milestones/v1.6-*.md`. `.planning/STATE.md` sigue en formato narrativo legacy que los comandos `state advance-plan/update-progress` no pueden parsear — cada ejecutor de plan lo actualiza a mano.
 
 ## Constraints

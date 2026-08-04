@@ -124,6 +124,7 @@ export interface Proyecto {
   zona_fuente_url?: string
   zona_consultada_el?: string
   zona_origen?: 'automatico' | 'manual'
+  zona_comuna_manual?: string          // comuna real seleccionada en el fallback manual (ZONE-05) — distinta de municipio
   // Campos enterprise (cadena comercial)
   local_id?: string
   centro_id?: string

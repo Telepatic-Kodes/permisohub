@@ -140,6 +140,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         zona_usos_disponibles: detalle.usosDisponibles,
         zona_fuente_url: detalle.fuenteUrl,
         zona_consultada_el: new Date().toISOString(),
+        // Backlog 11-08: la comuna real elegida acá, no proyecto.municipio —
+        // ver via-decision.tsx, cita "Fuente: capa oficial {comuna}".
+        zona_comuna_manual: body.manual.comunaId,
       })
       .eq('id', id)
       .eq('user_id', proyecto.user_id)

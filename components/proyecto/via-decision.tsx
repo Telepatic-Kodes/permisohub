@@ -217,7 +217,9 @@ export function ViaDecision({ proyecto }: { proyecto: Proyecto }) {
                   </a>
                 ) : (
                   <span className="text-muted-foreground">
-                    Fuente: capa oficial {proyecto.municipio} — sin link directo disponible para esta zona.
+                    Fuente: capa oficial {proyecto.zona_origen === "manual" && proyecto.zona_comuna_manual
+                      ? proyecto.zona_comuna_manual
+                      : proyecto.municipio} — sin link directo disponible para esta zona.
                   </span>
                 )}
               </div>
