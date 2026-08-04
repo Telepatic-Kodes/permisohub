@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { AlertTriangle, Users } from "lucide-react"
 import type { ConsumoEstimadoResultado } from "@/lib/consumo-macro-zona"
 import type { PoblacionCensoResultado } from "@/lib/censo-manzana-server"
+import { KpiCard } from "@/components/mercado-inmobiliario/charts/kpi-card"
+import { RankingBarChart } from "@/components/mercado-inmobiliario/charts/ranking-bar-chart"
 
 // ---------------------------------------------------------------------------
 // Conecta a la UI (04-08) las dos funciones de demografía/consumo de la
@@ -14,6 +16,10 @@ import type { PoblacionCensoResultado } from "@/lib/censo-manzana-server"
 // ORS/HeiGIT, pausada por decisión del usuario). Acá se usa un radio fijo
 // de 1km en vez de esperar esa isócrona — SIEMPRE declarado como tal, nunca
 // presentado con la precisión de una ruta de caminata/manejo real.
+//
+// Reusa las piezas de "Tema Consultora" (KpiCard, RankingBarChart) en vez de
+// texto plano — verificado=true en los KpiCard porque son datos reales
+// (Censo/CASEN transcritos), no estimaciones del modelo.
 // ---------------------------------------------------------------------------
 
 interface DemografiaConsumoResponse {
@@ -25,6 +31,14 @@ interface DemografiaConsumoResponse {
 
 const NUM = new Intl.NumberFormat("es-CL")
 const PCT = new Intl.NumberFormat("es-CL", { style: "percent", maximumFractionDigits: 1 })
+
+// Nombres largos de categoría EPF (ej. "Vivienda, agua, electricidad, gas y
+// combustibles") no caben en el eje Y del ranking — se abrevian solo para el
+// gráfico, el nombre completo sigue disponible en el texto de abajo.
+function etiquetaCorta(nombre: string): string {
+  if (nombre.length <= 16) return nombre
+  return nombre.split(",")[0].split(" y ")[0]
+}
 
 export function DemografiaConsumoCard({ comuna, lat, lng }: { comuna: string; lat?: number | null; lng?: number | null }) {
   const [data, setData] = useState<DemografiaConsumoResponse | null>(null)
@@ -57,26 +71,31 @@ export function DemografiaConsumoCard({ comuna, lat, lng }: { comuna: string; la
   const categoriasConDato = consumo.categorias.filter((c) => c.participacionPct !== null)
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {poblacion && (
         <div>
-          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <p className="mb-2 flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
             <Users className="size-3.5" /> Población en {NUM.format(radioMetros ?? 0)} m a la redonda
           </p>
           {poblacion.ok ? (
-            <>
-              <p className="mt-0.5 text-sm">
-                <span className="num font-semibold text-primary">{NUM.format(poblacion.totalPersonas)}</span> personas ·{" "}
-                <span className="num font-semibold text-primary">{NUM.format(poblacion.totalViviendas)}</span> viviendas
-              </p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">
-                {poblacion.manzanasIntersectadas} manzana(s), Censo {poblacion.censoAno} — {poblacion.fuente}
-              </p>
-            </>
+            <div className="grid grid-cols-2 gap-2">
+              <KpiCard
+                label="Personas"
+                valor={NUM.format(poblacion.totalPersonas)}
+                verificado
+                contexto={`${poblacion.manzanasIntersectadas} manzana(s), Censo ${poblacion.censoAno}`}
+              />
+              <KpiCard
+                label="Viviendas"
+                valor={NUM.format(poblacion.totalViviendas)}
+                verificado
+                contexto={poblacion.fuente}
+              />
+            </div>
           ) : (
-            <p className="mt-0.5 text-xs text-muted-foreground">No se pudo consultar el censo para este punto.</p>
+            <p className="text-xs text-muted-foreground">No se pudo consultar el censo para este punto.</p>
           )}
-          <p className="mt-1 flex items-start gap-1 text-[10px] leading-snug text-muted-foreground">
+          <p className="mt-2 flex items-start gap-1 text-[10px] leading-snug text-muted-foreground">
             <AlertTriangle className="mt-0.5 size-2.5 shrink-0" />
             Radio fijo de {NUM.format(radioMetros ?? 0)} m en línea recta — no una ruta de caminata o manejo real
             (esa función depende de un proveedor de isócronas hoy pausado). Trátalo como una aproximación gruesa.
@@ -85,28 +104,34 @@ export function DemografiaConsumoCard({ comuna, lat, lng }: { comuna: string; la
       )}
 
       <div>
-        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Consumo estimado del sector</p>
+        <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">Consumo estimado del sector</p>
+
         {consumo.tasaPobrezaComunal !== null ? (
-          <p className="mt-0.5 text-sm">
-            Tasa de pobreza comunal: <span className="num font-semibold text-primary">{PCT.format(consumo.tasaPobrezaComunal / 100)}</span>
-            <span className="ml-1 text-[10px] text-muted-foreground">(CASEN {consumo.casenAno})</span>
-          </p>
+          <KpiCard
+            label="Tasa de pobreza comunal"
+            valor={PCT.format(consumo.tasaPobrezaComunal / 100)}
+            verificado
+            contexto={`CASEN ${consumo.casenAno} SAE`}
+          />
         ) : (
-          <p className="mt-0.5 text-xs text-muted-foreground">Sin dato CASEN transcrito para esta comuna todavía.</p>
+          <p className="text-xs text-muted-foreground">Sin dato CASEN transcrito para esta comuna todavía.</p>
         )}
+
         {categoriasConDato.length > 0 && (
-          <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-            {categoriasConDato.map((c) => (
-              <li key={c.nombre} className="flex items-center justify-between gap-2">
-                <span>{c.nombre}</span>
-                <span className="num">{PCT.format((c.participacionPct as number))}</span>
-              </li>
-            ))}
-          </ul>
+          <RankingBarChart
+            titulo={`Participación en gasto de hogar — IX EPF ${consumo.epfAno}`}
+            items={categoriasConDato.map((c) => ({
+              label: etiquetaCorta(c.nombre),
+              valor: (c.participacionPct as number) * 100,
+            }))}
+            formatValor={(n) => `${n.toFixed(1)}%`}
+            className="mt-2"
+          />
         )}
+
         {consumo.categoriasPendientes.length > 0 && (
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            Sin dato disponible todavía: {consumo.categoriasPendientes.join(', ')}.
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            Sin dato disponible todavía: {consumo.categoriasPendientes.join(", ")}.
           </p>
         )}
         <p className="mt-1 text-[10px] leading-snug text-muted-foreground">{consumo.disclosure}</p>
