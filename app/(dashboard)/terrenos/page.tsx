@@ -1,8 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { ChevronDown, ListFilter, MapPin, Plus, SlidersHorizontal, Store, Tag, TrendingDown, X } from "lucide-react"
+import { ChevronDown, ListFilter, Loader2, MapPin, Plus, SlidersHorizontal, Store, Tag, TrendingDown, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
@@ -143,15 +143,20 @@ export default function TerrenosPage() {
   const [soloCercaAvenida, setSoloCercaAvenida] = useState(false)
   const [mostrarMasFiltros, setMostrarMasFiltros] = useState(false)
   const [ufActual, setUfActual] = useState<UfData>({ valor: UF_FALLBACK_CLP, fecha: null, fallback: true })
+  const [reintentando, setReintentando] = useState(false)
+  const [progresoReintento, setProgresoReintento] = useState<{ procesados: number; resueltos: number } | null>(null)
+  const reintentoCancelado = useRef(false)
+
+  const cargarTerrenos = useCallback(async () => {
+    const r = await fetch("/api/terrenos")
+    const data = (await r.json()) as { data?: Terreno[] }
+    setTerrenos(data.data ?? [])
+  }, [])
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    fetch("/api/terrenos")
-      .then((r) => r.json())
-      .then((data: { data?: Terreno[] }) => {
-        if (!cancelled) setTerrenos(data.data ?? [])
-      })
+    cargarTerrenos()
       .catch(() => undefined)
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
@@ -177,6 +182,41 @@ export default function TerrenosPage() {
     () => Array.from(new Set(terrenos.map((t) => t.fuente))),
     [terrenos],
   )
+  const pendientesCount = useMemo(
+    () => terrenos.filter((t) => (t.zona_status ?? "pendiente") === "pendiente").length,
+    [terrenos],
+  )
+
+  // Reintenta en lotes de 20 (mismo tope que el cron de descubrimiento) hasta
+  // que no queden "pendiente" o el usuario navegue fuera de la página. Nunca
+  // toca "error" — sondeo manual (04-08) mostró que la mayoría son direcciones
+  // no geocodificables (título del aviso guardado como dirección), reintentar
+  // no las arregla. Ver .planning/PROJECT.md.
+  const reintentarPendientes = useCallback(async () => {
+    reintentoCancelado.current = false
+    setReintentando(true)
+    setProgresoReintento({ procesados: 0, resueltos: 0 })
+    try {
+      let restantes = Infinity
+      let totalProcesados = 0
+      let totalResueltos = 0
+      while (restantes > 0 && !reintentoCancelado.current) {
+        const res = await fetch("/api/terrenos/reintentar-pendientes?limit=20", { method: "POST" })
+        if (!res.ok) break
+        const data = (await res.json()) as { procesados: number; resueltos: number; restantes: number }
+        if (data.procesados === 0) break
+        totalProcesados += data.procesados
+        totalResueltos += data.resueltos
+        restantes = data.restantes
+        setProgresoReintento({ procesados: totalProcesados, resueltos: totalResueltos })
+        await cargarTerrenos()
+      }
+    } finally {
+      setReintentando(false)
+    }
+  }, [cargarTerrenos])
+
+  useEffect(() => () => { reintentoCancelado.current = true }, [])
 
   // Filtros "secundarios": los que viven detrás de "Más filtros". Comuna,
   // estado de viabilidad y orden se dejan siempre visibles porque son los
@@ -429,6 +469,35 @@ export default function TerrenosPage() {
           </div>
         ) : (
           <>
+            {(pendientesCount > 0 || reintentando) && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-border bg-muted/30 p-3 text-xs">
+                <div className="text-muted-foreground">
+                  {reintentando && progresoReintento ? (
+                    <>
+                      Reintentando zonificación… {progresoReintento.procesados} procesados,{" "}
+                      {progresoReintento.resueltos} resueltos.
+                    </>
+                  ) : (
+                    <>{pendientesCount} terreno(s) con zonificación sin consultar todavía.</>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={() => void reintentarPendientes()}
+                  disabled={reintentando || pendientesCount === 0}
+                >
+                  {reintentando ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" /> Reintentando…
+                    </>
+                  ) : (
+                    <>Reintentar {pendientesCount} pendiente(s)</>
+                  )}
+                </Button>
+              </div>
+            )}
             <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <ListFilter className="size-3.5" /> {filtrados.length} de {terrenos.length} terrenos

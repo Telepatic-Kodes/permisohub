@@ -30,8 +30,14 @@ const OBTENER_LATLNG_DETALLE: Partial<Record<FuenteTerreno, (url: string) => Pro
  * Mismo principio que persistZonificacionParaProyecto (lib/zonificacion-server.ts):
  * zona_status se escribe explícitamente en TODA rama, incluida la de error —
  * "pendiente" nunca debe quedar indistinguible de "consultado y sin resultado".
+ *
+ * options.skipUbicacion: omite las señales de ubicación (Overpass, throttle
+ * de 5s+ por request en lib/terrenos-ubicacion.ts) para que un reintento
+ * masivo de zona_status='pendiente' no herede ese piso de tiempo — el
+ * terreno queda con ubicacion_status='pendiente' y lo recoge más tarde
+ * app/api/terrenos/backfill-ubicacion/route.ts, que ya existe para eso.
  */
-export async function enriquecerTerreno(terrenoId: string, options?: { force?: boolean }): Promise<void> {
+export async function enriquecerTerreno(terrenoId: string, options?: { force?: boolean; skipUbicacion?: boolean }): Promise<void> {
   const admin = createServiceClient()
   const nowIso = new Date().toISOString()
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
@@ -154,7 +160,7 @@ export async function enriquecerTerreno(terrenoId: string, options?: { force?: b
   // puede venir de la fuente, del truco de detalle, o del geocoding recién
   // resuelto arriba — un terreno en comuna sin cobertura igual puede tener
   // coordenadas válidas.
-  if (terreno.ubicacion_status === 'pendiente' && puntoUbicacion) {
+  if (!options?.skipUbicacion && terreno.ubicacion_status === 'pendiente' && puntoUbicacion) {
     try {
       const senales = await obtenerSenalesUbicacion(puntoUbicacion.lat, puntoUbicacion.lng)
       if (senales) {
