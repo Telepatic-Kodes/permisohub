@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/dashboard/page-header"
 import { PredioMap } from "@/components/proyecto/predio-map"
 import { ZonificacionMapa, type ZonaPolygon } from "@/components/proyecto/zonificacion-mapa"
 import { UsoCompatibleCheck } from "@/components/proyecto/uso-compatible-check"
+import { DemografiaConsumoCard } from "@/components/proyecto/demografia-consumo-card"
 import { fixMojibakeArcGIS } from "@/lib/zonificacion-format"
 import { nombresComunasConCobertura } from "@/lib/zonificacion-comunas"
 import { formatoComercial, FORMATO_COMERCIAL_LABEL } from "@/lib/terrenos-comercial"
@@ -235,6 +236,13 @@ export default function TerrenoDetailPage() {
                 </CardContent>
               </Card>
             )}
+
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Demografía y consumo</CardTitle></CardHeader>
+              <CardContent>
+                <DemografiaConsumoCard comuna={terreno.comuna} lat={terreno.lat} lng={terreno.lng} />
+              </CardContent>
+            </Card>
           </div>
 
           <Card>
