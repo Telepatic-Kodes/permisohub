@@ -331,7 +331,7 @@ export async function POST(request: Request) {
     // Sin timeout, un self-request colgado se comía el maxDuration completo
     // de esta ruta (90s) antes de caer al fallback — mismo fix ya aplicado en
     // lib/scrapers/terrenos-common.ts:obtenerValorUF() para el mismo self-fetch.
-    const ufRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'}/api/utils/uf`, {
+    const ufRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/api/utils/uf`, {
       signal: AbortSignal.timeout(12_000),
     })
     const ufData = await ufRes.json() as { valor?: number; fallback?: boolean }

@@ -80,7 +80,7 @@ export async function POST(request: Request) {
 
     if (error) return apiError('No se pudo crear la invitación', 500, error)
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
     return Response.json({
       ok: true,

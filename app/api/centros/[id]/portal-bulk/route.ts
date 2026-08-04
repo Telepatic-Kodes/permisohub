@@ -20,7 +20,7 @@ export async function POST(
 ) {
   const { id } = await params
   const body = await request.json() as BulkBody
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
   try {
     const supabase = await createClient()

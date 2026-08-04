@@ -25,7 +25,7 @@ export async function persistZonificacionParaProyecto(
   const nowIso = new Date().toISOString()
 
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
     const params = new URLSearchParams({
       direccion,
       comuna: municipio,

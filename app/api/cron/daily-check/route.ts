@@ -119,7 +119,7 @@ export async function GET(request: Request) {
       for (const p of activeProjects) {
         if (!p.numero_expediente || !p.municipio) continue
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
           // expedienteNumero, no "expediente" — el nombre real que exige
           // /api/scraper/dom-en-linea (ver los otros 2 callers,
           // check-status/[proyectoId] y permisos/page.tsx). Con el nombre
@@ -261,7 +261,7 @@ export async function GET(request: Request) {
     // 7. Weekly plan_reguladores sync from datos.gob.cl (Mondays only — data changes infrequently)
     if (today.getDay() === 1) {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
         const syncRes = await fetch(`${baseUrl}/api/scraper/plan-reguladores`, {
           headers: { Authorization: `Bearer ${process.env.CRON_SECRET ?? ''}` },
         })

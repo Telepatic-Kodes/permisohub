@@ -47,7 +47,7 @@ export const PRECIO_CLP_MINIMO_PLAUSIBLE = 1_000_000
 
 export async function obtenerValorUF(): Promise<number> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
     // Sin timeout, un self-request colgado se comía el maxDuration completo
     // de quien llame (ej. 120s de Tasación) antes de caer al fallback.
     const res = await fetch(`${baseUrl}/api/utils/uf`, { signal: AbortSignal.timeout(12_000) })

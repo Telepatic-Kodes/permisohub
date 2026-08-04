@@ -77,7 +77,7 @@ export default async function CompliancePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
   let compliance: ComplianceData | null = null
 

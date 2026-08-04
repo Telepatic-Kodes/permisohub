@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     return Response.json({ error: 'proyectoId, clienteId o local_id requerido' }, { status: 400 })
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   const token = crypto.randomUUID()
 
   try {

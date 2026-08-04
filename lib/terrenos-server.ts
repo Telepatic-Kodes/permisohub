@@ -40,7 +40,7 @@ const OBTENER_LATLNG_DETALLE: Partial<Record<FuenteTerreno, (url: string) => Pro
 export async function enriquecerTerreno(terrenoId: string, options?: { force?: boolean; skipUbicacion?: boolean }): Promise<void> {
   const admin = createServiceClient()
   const nowIso = new Date().toISOString()
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
   const { data: terreno } = await admin
     .from('terrenos')

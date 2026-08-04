@@ -137,7 +137,7 @@ export async function POST(request: Request) {
         // cliente. Pero "fire-and-forget" ya no significa "silencioso" — cada
         // rama que no persiste datos SII se reporta al funnel único (C8).
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
           const siiRes = await fetch(
             `${baseUrl}/api/sii/lookup?rol=${encodeURIComponent(rol)}`,
             { method: 'GET' }

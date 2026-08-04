@@ -22,7 +22,7 @@ export async function buscarDatosSIIPorRol(
   cookieHeader: string | null,
 ): Promise<SIILookupServerData | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7891'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
     // La ruta interna ya acota el fetch al SII (fetchWithTimeout, 15s), pero
     // nada acotaba este salto propio — un self-request colgado se comía el
     // maxDuration completo de Tasación/Due Diligence (120s) antes de que
