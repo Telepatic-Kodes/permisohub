@@ -699,6 +699,52 @@ function construirOportunidadDetalle(
   }
 }
 
+export interface OportunidadBusqueda {
+  id: string
+  titulo: string
+  comuna: string
+  tipoPropiedad: TipoPropiedadComercial
+  operacion: OperacionMercadoLocal
+  precioMonto: number | null
+  precioMoneda: string | null
+  superficieM2: number | null
+}
+
+/**
+ * Búsqueda liviana por comuna, para el picker del comparador terreno-vs-local
+ * (04-08) — a diferencia de obtenerOportunidadesMercadoLocales(), NO filtra
+ * por reasonCodes.length > 0: acá el objetivo es "candidatos comparables en
+ * la misma comuna", no "oportunidades con señal de precio bajo mercado".
+ * Sin bandas/reasonCodes calculados — eso se resuelve recién cuando el
+ * usuario elige una vía obtenerOportunidadPorId(), evitando 1 query de
+ * bandas por fila de una lista que puede tener decenas de candidatos.
+ */
+export async function buscarOportunidadesPorComuna(comuna: string, opts?: { limit?: number }): Promise<OportunidadBusqueda[]> {
+  const supabase = createServiceClient()
+  const comunaCanonica = resolverComunaCanonica(comuna)
+
+  const { data, error } = await supabase
+    .from('mercado_locales_listings')
+    .select('id, titulo, comuna, tipo_propiedad, operacion, precio_monto, precio_moneda, superficie_m2')
+    .eq('comuna', comunaCanonica)
+    .eq('status', 'activo')
+    .order('primera_vez_visto_el', { ascending: false })
+    .limit(opts?.limit ?? 30)
+
+  if (error || !data) return []
+
+  return data.map((d) => ({
+    id: d.id as string,
+    titulo: d.titulo as string,
+    comuna: d.comuna as string,
+    tipoPropiedad: d.tipo_propiedad as TipoPropiedadComercial,
+    operacion: d.operacion as OperacionMercadoLocal,
+    precioMonto: d.precio_monto as number | null,
+    precioMoneda: d.precio_moneda as string | null,
+    superficieM2: d.superficie_m2 as number | null,
+  }))
+}
+
 /**
  * A diferencia de obtenerOportunidadesMercadoLocales(), esta función NO
  * filtra por status='activo' — un aviso dado_de_baja debe poder abrirse

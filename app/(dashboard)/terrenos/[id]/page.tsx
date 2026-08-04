@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { AlertTriangle, ArrowRight, Landmark, Loader2, MapPinned, RefreshCw, ShieldCheck, TrendingDown } from "lucide-react"
+import { AlertTriangle, ArrowRight, Landmark, Loader2, MapPinned, RefreshCw, ShieldCheck, Store, TrendingDown } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -135,6 +135,11 @@ export default function TerrenoDetailPage() {
             >
               <Button variant="outline" size="sm" className="gap-1.5">
                 <ShieldCheck className="size-3.5" /> Due diligence
+              </Button>
+            </Link>
+            <Link href={`/terrenos/${terreno.id}/comparar-local`}>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Store className="size-3.5" /> Comparar con local
               </Button>
             </Link>
             <Link href={`/proyectos/nuevo?municipio=${encodeURIComponent(terreno.comuna)}&direccion=${encodeURIComponent(terreno.direccion)}`}>
