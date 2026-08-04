@@ -147,6 +147,174 @@ export const ZONIFICACION_COMUNAS: Record<string, ComunaZonificacionConfig> = {
     contenidoDeclaradoHasta: '2014-12',
   },
 
+  // ── Ampliación de cobertura vía PrcCuencaMaipo (04 ago 2026) ────────────
+  // La capa agregada de Ñuñoa arriba cubre TODA la cuenca del Maipo, no solo
+  // Ñuñoa — verificado en vivo con una query de valores distintos del campo
+  // COMUNA (47 comunas en la capa, incluyendo zonas fuera de la RM como
+  // Cartagena/Santo Domingo/Mostazal/Codegua, descartadas acá por no ser RM).
+  // De las comunas RM presentes y aún sin cobertura, se probó UPERM/UPROH
+  // real (no placeholder) para cada una con una query filtrada por COMUNA:
+  // - Maipú, La Florida, Peñalolén, San Bernardo, Quilicura, Huechuraba, Lo
+  //   Barnechea, Colina, San Ramón, Quinta Normal, La Reina, Santiago:
+  //   UPERM/UPROH reales y no vacíos, agregadas abajo como
+  //   'agregada'/usosDisponibles:true.
+  // - La Reina y Santiago en particular: sus capas DEDICADAS propias (mismo
+  //   owner que Las Condes/Providencia/etc.) no tienen los campos
+  //   comuna/zona/uperm/uproh que necesita el fieldMap 'dedicada' (solo
+  //   geometría + "zonas"/"dens_b_max" para La Reina, "uso_suelo" para
+  //   Santiago) — se descartaron en la ampliación de 31-jul. Esta capa
+  //   agregada sí las cubre a ambas.
+  // - La Pintana y Peñaflor: el ÚNICO valor de ZONA en toda la comuna es
+  //   "PRMS" con UPERM literal "Ver Zonificación del PRMS" — remiten al Plan
+  //   Regulador Metropolitano de Santiago, no traen texto de uso real. Sin
+  //   dato utilizable, quedan sin cobertura (no fabricar un mapeo a un campo
+  //   que no existe).
+  // Mismo disclaimer de procedencia/vigencia que Ñuñoa (misma capa, mismo
+  // "actualizado hasta diciembre 2014" declarado por el publicador).
+  maipu: {
+    comunaId: 'maipu',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+  'la-florida': {
+    comunaId: 'la-florida',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+  penalolen: {
+    comunaId: 'penalolen',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+  'san-bernardo': {
+    comunaId: 'san-bernardo',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+  quilicura: {
+    comunaId: 'quilicura',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+  huechuraba: {
+    comunaId: 'huechuraba',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+  'lo-barnechea': {
+    comunaId: 'lo-barnechea',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+  colina: {
+    comunaId: 'colina',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+  'san-ramon': {
+    comunaId: 'san-ramon',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+  'quinta-normal': {
+    comunaId: 'quinta-normal',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+  'la-reina': {
+    comunaId: 'la-reina',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    // A diferencia de las otras 10 de este grupo, La Reina SÍ tiene una capa
+    // DEDICADA propia (PRC_La_Reina, mismo owner que Las Condes/Providencia)
+    // — pero esa capa no trae comuna/zona/uperm/uproh, solo geometría +
+    // "zonas"/"dens_b_max" (verificado en vivo 04-08, ver exclusión de 31-jul
+    // más abajo). Esta capa agregada sí resuelve uso real, así que se usa en
+    // su lugar pese a existir la dedicada — la dedicada no se referencia acá.
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+  santiago: {
+    comunaId: 'santiago',
+    tier: 'agregada',
+    featureServerUrl:
+      'https://services7.arcgis.com/UeyripQFTg6pfUe5/arcgis/rest/services/PrcCuencaMaipo/FeatureServer',
+    layerIndex: 0,
+    // Mismo caso que La Reina: la capa DEDICADA propia (PRC_Santiago) no
+    // trae comuna/uperm/uproh, solo 'zona'/'uso_suelo'/'zona_fi' — pero esta
+    // capa agregada sí resuelve uso real (16 zonas distintas verificadas en
+    // vivo 04-08, UPERM/UPROH no vacíos). Comuna de alta densidad comercial,
+    // la más valiosa de las agregadas en esta ronda.
+    fieldMap: { region: 'REGION', comuna: 'COMUNA', sector: 'SECTOR', zona: 'ZONA', nombre: 'NOMBRE', uperm: 'UPERM', uproh: 'UPROH' },
+    usosDisponibles: true,
+    fuenteNombre: 'Capa agregada PRC Cuenca del Maipo (IDE Chile, georref. independiente)',
+    contenidoDeclaradoHasta: '2014-12',
+  },
+
   // ── Ampliación de cobertura (31 jul 2026) ──────────────────────────────
   // Estefanía pidió salir del "solo sector oriente". Búsqueda en el catálogo
   // ArcGIS Online del mismo owner que ya usábamos para Las Condes/Providencia/
@@ -157,10 +325,14 @@ export const ZONIFICACION_COMUNAS: Record<string, ComunaZonificacionConfig> = {
   // - Independencia usa el mismo fieldMap MAYÚSCULA que la capa agregada de
   //   Ñuñoa, pero es su propia capa dedicada a esa comuna (no agregada
   //   multi-comuna) — sí tiene uperm/uproh reales, verificado en vivo.
-  // - Santiago y La Reina quedaron FUERA: sus capas no siguen ninguno de los
-  //   dos fieldMap (Santiago: sin campo comuna/uperm/uproh, solo 'uso_suelo';
-  //   La Reina: sin comuna/zona/uperm/uproh, solo 'zonas'/'dens_b_max') — no
-  //   fabricar un mapeo que no corresponde a esos campos reales.
+  // - Santiago y La Reina quedaron FUERA de ESTA capa dedicada específica:
+  //   sus capas propias no siguen ninguno de los dos fieldMap (Santiago: sin
+  //   campo comuna/uperm/uproh, solo 'uso_suelo'; La Reina: sin comuna/zona/
+  //   uperm/uproh, solo 'zonas'/'dens_b_max') — no fabricar un mapeo que no
+  //   corresponde a esos campos reales. Ambas quedaron cubiertas después
+  //   (04-08) vía la capa agregada PrcCuencaMaipo, que sí resuelve su uso
+  //   real (16 zonas distintas para Santiago, UPERM/UPROH no vacíos) pese a
+  //   que sus capas dedicadas no pueden — ver esas entradas más arriba.
   // Verificado en vivo (2026-07-31): fields de las 15 vía FeatureServer/0?f=json
   // para confirmar casing; point-in-polygon real con uperm/uproh no vacío para
   // Puente Alto, Independencia, San Miguel y Recoleta (muestra representativa
