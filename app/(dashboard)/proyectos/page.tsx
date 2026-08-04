@@ -260,14 +260,24 @@ export default function ProyectosPage() {
         title="Proyectos"
         subtitle="Expedientes de edificación de la oficina"
         action={
-          <Button
-            nativeButton={false}
-            render={<Link href="/proyectos/nuevo" />}
-            className="bg-primary text-white hover:bg-primary/90"
-          >
-            <Plus className="size-4" />
-            Nuevo proyecto
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/proyectos/zonificacion" />}
+            >
+              <MapPin className="size-4" />
+              Zonificación
+            </Button>
+            <Button
+              nativeButton={false}
+              render={<Link href="/proyectos/nuevo" />}
+              className="bg-primary text-white hover:bg-primary/90"
+            >
+              <Plus className="size-4" />
+              Nuevo proyecto
+            </Button>
+          </div>
         }
         toolbar={
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

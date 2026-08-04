@@ -94,10 +94,10 @@ Serie de sesiones ad-hoc entre v1.5 y v1.6 (sin milestone formal propio) — cap
 - ✓ INFO-01→04: Informe exportable/imprimible (individual y de comparación) vía `@media print`, con fecha de generación Y de última verificación por dato, campo "preparado por/para" personalizable — v1.6
 - ✓ `evaluarOportunidad()` extraído como fuente única de verdad para scoring (TDD) — previene divergencia entre lista y ficha de detalle
 - ✓ Patrón `@media print` + `window.print()` establecido como estándar del proyecto para vistas exportables (sin jsPDF/html2canvas) — resuelve una contradicción interna del research de milestone entre sus propios documentos
+- ✓ (04-08, fuera de milestone) Dashboard de zonificación a nivel portafolio en `/proyectos/zonificacion` — reusa GET /api/proyectos y el mismo mapeo zona_status→Veredicto de `/terrenos/page.tsx`, KPIs con `Dato`, filtros por estado/municipio/búsqueda
 
 ### Backlog (no comprometido — semillas para futuras sesiones de discovery)
 
-- [ ] Dashboard de zonificación a nivel portafolio (todos los proyectos activos)
 - [ ] Exportar PDF/anexo del hallazgo de zonificación para el expediente
 - [ ] Indicador de vigencia/antigüedad del PRC ("vigente desde...") — pendiente confirmar si el layer expone fecha de decreto
 - [ ] Ampliar cobertura de comunas ArcGIS más allá de las 4 iniciales
