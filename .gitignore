@@ -44,3 +44,6 @@ next-env.d.ts
 # playwright
 /test-results/
 /playwright-report/
+
+# Output generado por el skill /graphify (7,6 MB: graph.html/json + cache)
+graphify-out/

@@ -1,11 +1,10 @@
-import { fetchWithTimeout } from '@/lib/scraper'
+import { fetchWithTimeout, ScraperUnavailableError } from '@/lib/scraper'
 import { reportError, reportWarning } from '@/lib/observability'
 import { type TerrenoListadoRaw, PRECIO_CLP_MINIMO_PLAUSIBLE, obtenerValorUF, nombreComuna } from './terrenos-common'
 import {
   MERCADO_LOCALES_COMUNA_SLUGS,
   TIPO_PROPIEDAD_DEFAULT,
   precioMercadoLocalEsPlausible,
-  ScraperUnavailableError,
   type MercadoLocalListadoRaw,
   type OperacionMercadoLocal,
   type TipoPropiedadComercial,

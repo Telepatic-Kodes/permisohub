@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { saludDeCorrida } from '@/lib/mercado-locales-server'
+import { saludDeCorrida } from '@/lib/salud-fuentes'
 import type { ResultadoDescubrimientoMercadoLocales } from '@/lib/mercado-locales-server'
-import { ScraperUnavailableError } from '@/lib/scrapers/mercado-locales-common'
+import { ScraperUnavailableError } from '@/lib/scraper'
 import { buscarLocalesComerciales as buscarDoomos } from '@/lib/scrapers/doomos'
-import { buscarLocalesComerciales as buscarPortal } from '@/lib/scrapers/portalinmobiliario'
+import { buscarLocalesComerciales as buscarPortal, buscarTerrenos as buscarTerrenosPortal } from '@/lib/scrapers/portalinmobiliario'
 
 function corrida(overrides: Partial<ResultadoDescubrimientoMercadoLocales> = {}): ResultadoDescubrimientoMercadoLocales {
   return {
@@ -111,5 +111,31 @@ describe('bloqueo suave: 200 sobre una página de verificación', () => {
       return r
     }))
     await expect(buscarPortal('Providencia', 'arriendo')).resolves.toEqual([])
+  })
+})
+
+describe('terrenos de Portalinmobiliario: el otro pipeline del mismo bloqueo', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('lanza ante el mismo redirect de verificación de cuenta', async () => {
+    // Verificado en vivo el 05-08: los DOS pipelines de esta fuente (locales y
+    // terrenos) caen contra /gz/account-verification. Es la única causa
+    // realmente compartida entre los scrapers pendientes — yapo, doomos,
+    // chilepropiedades y portalterreno respondían sanos el mismo día.
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      const r = new Response('<html>verificación</html>', { status: 200 })
+      Object.defineProperty(r, 'url', { value: 'https://www.portalinmobiliario.com/gz/account-verification' })
+      return r
+    }))
+    await expect(buscarTerrenosPortal('las-condes')).rejects.toThrow(/redirigido fuera del listado/)
+  })
+
+  it('no lanza cuando la URL final sigue siendo la del listado de venta', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      const r = new Response('<html>sin resultados</html>', { status: 200 })
+      Object.defineProperty(r, 'url', { value: 'https://www.portalinmobiliario.com/venta/sitio/las-condes-metropolitana' })
+      return r
+    }))
+    await expect(buscarTerrenosPortal('las-condes')).resolves.toEqual([])
   })
 })

@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from '@/lib/scraper'
+import { fetchWithTimeout, ScraperUnavailableError } from '@/lib/scraper'
 import { reportError, reportWarning } from '@/lib/observability'
 import { type TerrenoListadoRaw, PRECIO_CLP_MINIMO_PLAUSIBLE, obtenerValorUF, nombreComuna } from './terrenos-common'
 import {
@@ -9,7 +9,6 @@ import {
   TIPO_PROPIEDAD_PORTAL_PATH,
   TIPO_PROPIEDAD_DEFAULT,
   precioMercadoLocalEsPlausible,
-  ScraperUnavailableError,
 } from './mercado-locales-common'
 
 // ---------------------------------------------------------------------------
@@ -135,8 +134,21 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
     const res = await fetchWithTimeout(url, {}, 15_000)
 
     if (!res.ok) {
-      reportWarning(`HTTP ${res.status} para "${comunaId}" — se omite esta corrida`, { scope: 'scraper.portalinmobiliario', extra: { comunaId, status: res.status } })
-      return []
+      throw new ScraperUnavailableError('Portalinmobiliario', `HTTP ${res.status} para "${comunaId}" (terrenos)`)
+    }
+
+    // MISMO bloqueo que buscarLocalesComerciales, verificado en vivo el 05-08:
+    // ambos pipelines de esta fuente (locales y terrenos) caen contra el mismo
+    // /gz/account-verification de MercadoLibre. Es la única causa realmente
+    // compartida entre los scrapers pendientes — yapo, doomos,
+    // chilepropiedades y portalterreno respondían sanos ese mismo día, con
+    // hosts y parsers propios.
+    const destino = new URL(res.url).pathname
+    if (!destino.includes('/venta/')) {
+      throw new ScraperUnavailableError(
+        'Portalinmobiliario',
+        `redirigido fuera del listado (${destino}) para "${comunaId}" (terrenos) — bloqueo suave o verificación de cuenta`
+      )
     }
 
     const html = await res.text()
@@ -165,7 +177,11 @@ export async function buscarTerrenos(comunaId: string): Promise<TerrenoListadoRa
     return items
   } catch (err) {
     reportError(err, { scope: 'scraper.portalinmobiliario', extra: { comunaId } })
-    return []
+    // Propaga, igual que buscarLocalesComerciales. correrDescubrimientoTerrenos
+    // tiene try/catch por comuna (lib/terrenos-server.ts), así que esto no
+    // tumba la corrida — la vuelve contable.
+    if (err instanceof ScraperUnavailableError) throw err
+    throw new ScraperUnavailableError('Portalinmobiliario', err instanceof Error ? err.message : String(err))
   }
 }
 

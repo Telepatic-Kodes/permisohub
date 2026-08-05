@@ -4,9 +4,9 @@ import {
   correrDescubrimientoMercadoLocales,
   computarYPersistirBandasMercadoLocales,
   obtenerValorUF,
-  saludDeCorrida,
 } from '@/lib/mercado-locales-server'
 import { recordSourceRun } from '@/lib/observability'
+import { saludDeCorrida } from '@/lib/salud-fuentes'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 180

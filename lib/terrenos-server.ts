@@ -7,6 +7,8 @@ import { buscarTerrenos as buscarChilepropiedades } from '@/lib/scrapers/chilepr
 import { buscarTerrenos as buscarPortalterreno } from '@/lib/scrapers/portalterreno'
 import { upsertTerrenosDesdeListado, COMUNAS_CON_ZONIFICACION, type TerrenoListadoRaw, type FuenteTerreno } from '@/lib/scrapers/terrenos-common'
 import { recordSourceRun } from '@/lib/observability'
+import { ScraperUnavailableError } from '@/lib/scraper'
+import { saludDeCorrida } from '@/lib/salud-fuentes'
 import { verificarCompatibilidadUso } from '@/lib/zonificacion-compat'
 import { fixMojibakeArcGIS } from '@/lib/zonificacion-format'
 import { USO_COMERCIAL_PROMPT } from '@/lib/terrenos-comercial'
@@ -234,6 +236,13 @@ export interface ResultadoDescubrimiento {
   enriquecidos: number
   diferidos: number
   errors: string[]
+  /**
+   * Comunas en las que NO se pudo consultar la fuente
+   * (ScraperUnavailableError), distinto de un fallo al persistir. Sin este
+   * conteo, `encontrados: 0` no se puede interpretar: puede ser "no hay
+   * terrenos publicados" o "me bloquearon en las 19 comunas".
+   */
+  fallosDeFuente: number
 }
 
 // Enriquecer implica (en el peor caso) Nominatim (throttle 1.1s) + ArcGIS +
@@ -268,7 +277,7 @@ export async function correrDescubrimientoTerrenos(
   fuenteLabel: string,
 ): Promise<ResultadoDescubrimiento> {
   const admin = createServiceClient()
-  const results: ResultadoDescubrimiento = { encontrados: 0, guardados: 0, enriquecidos: 0, diferidos: 0, errors: [] }
+  const results: ResultadoDescubrimiento = { encontrados: 0, guardados: 0, enriquecidos: 0, diferidos: 0, errors: [], fallosDeFuente: 0 }
 
   for (const comunaId of comunas) {
     try {
@@ -299,6 +308,7 @@ export async function correrDescubrimientoTerrenos(
         results.enriquecidos++
       }
     } catch (err) {
+      if (err instanceof ScraperUnavailableError) results.fallosDeFuente++
       results.errors.push(`${comunaId}: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
@@ -348,7 +358,24 @@ export async function correrDescubrimientoTerrenosFuente(fuente: FuenteTerrenoCr
     try {
       const resultado = await correrDescubrimientoTerrenos(COMUNAS_CON_ZONIFICACION, buscar, ws.id, fuente)
       resultados.push({ workspaceId: ws.id, resultado })
-      await recordSourceRun({ sourceId, status: 'ok', rowCount: resultado.guardados })
+      // Misma política que el pipeline de mercado de locales: llegar hasta acá
+      // sin lanzar NO significa que la corrida haya sido sana. Antes esto
+      // grababa 'ok' siempre, así que un bloqueo en las 19 comunas se
+      // archivaba como "0 terrenos publicados en la RM".
+      const salud = saludDeCorrida({
+        encontrados: resultado.encontrados,
+        guardados: resultado.guardados,
+        comunasBuscadas: COMUNAS_CON_ZONIFICACION.length,
+        fallosDeFuente: resultado.fallosDeFuente,
+        errors: resultado.errors,
+      })
+      await recordSourceRun({
+        sourceId,
+        status: salud.status,
+        rowCount: resultado.guardados,
+        detail: salud.detail,
+        errorMessage: salud.errorMessage,
+      })
     } catch (err) {
       await recordSourceRun({ sourceId, status: 'error', errorMessage: err instanceof Error ? err.message : String(err) })
     }
