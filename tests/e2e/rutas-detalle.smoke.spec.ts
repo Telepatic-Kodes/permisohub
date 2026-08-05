@@ -102,7 +102,16 @@ test('detalle de terreno abre desde el listado, sin 5xx ni errores', async ({ pa
   // Se excluye /terrenos/nuevo por href y no por texto: el link de "Nuevo" del
   // sidebar no siempre expone esa palabra como texto accesible.
   const primero = page.locator('a[href^="/terrenos/"]:not([href="/terrenos/nuevo"])').first()
-  if ((await primero.count()) === 0) {
+
+  // Esperar a que la tabla pinte antes de contar. `networkidle` no alcanza:
+  // el listado hidrata y pinta las filas después, así que contar de una daba
+  // 0 y el test se AUTO-SALTEABA en silencio (visto en vivo: una corrida
+  // "passed", la siguiente "skipped", sin cambiar nada). Un test que se saltea
+  // solo protege tan poco como uno que pasa sin afirmar nada — y encima no se
+  // nota, porque el reporte no sale en rojo.
+  try {
+    await primero.waitFor({ state: 'attached', timeout: 15_000 })
+  } catch {
     test.skip(true, 'sin terrenos en la base — nada que abrir')
     return
   }
@@ -111,14 +120,20 @@ test('detalle de terreno abre desde el listado, sin 5xx ni errores', async ({ pa
   await page.waitForURL(/\/terrenos\/[0-9a-f-]{36}/)
   await page.waitForLoadState('networkidle')
 
-  // Aserción POSITIVA: que exista contenido real de la ficha. Chequear solo
-  // la AUSENCIA de "Cargando terreno…" pasaría igual con una página en 500,
+  // Primero esperar a que SALGA del estado de carga, con holgura: la ficha
+  // encadena varios fetches del lado del cliente (zonificación, demografía,
+  // isócrona real) y en dev pasa de los 5s por defecto de expect. Sin esta
+  // espera el test falla intermitente con "la ficha no renderizó", que se lee
+  // como crash cuando en realidad solo estaba cargando.
+  await expect(page.getByText('Cargando terreno…')).toHaveCount(0, { timeout: 30_000 })
+
+  // Recién ahora la aserción POSITIVA: que exista contenido real. Chequear
+  // solo la AUSENCIA del texto de carga pasaría igual con una página en 500,
   // donde tampoco está ese texto.
   await expect(
     page.getByRole('heading').first(),
     'la ficha no renderizó — probablemente 500 o crash de render'
   ).toBeVisible()
-  await expect(page.getByText('Cargando terreno…')).toHaveCount(0)
   assertSano(ctx, '/terrenos/[id]')
 })
 
@@ -128,14 +143,39 @@ test('detalle de oportunidad abre y recorre TODOS los tabs, sin 5xx ni errores',
   await page.goto('/mercado-inmobiliario/oportunidades')
   await page.waitForLoadState('networkidle')
 
-  const primera = page.locator('a[href^="/mercado-inmobiliario/oportunidades/"]').first()
-  if ((await primera.count()) === 0) {
+  // Mismo criterio que el test de terreno: esperar a que la fila exista antes
+  // de clickear. Contar de una devolvía 0 con el listado a medio pintar, y el
+  // click sobre nada dejaba a waitForURL esperando hasta agotar el timeout de
+  // 60s — que se reporta como "timeout" y parece lentitud de la app, no un
+  // defecto del test.
+  // Se exige href con UUID, no solo el prefijo: el listado también linkea
+  // sub-rutas como /oportunidades/comparar, y clickear ESA dejaba a
+  // waitForURL esperando una ficha que nunca llegaba. Idéntico al caso de
+  // expediente.smoke con /proyectos/zonificacion — el listado y sus
+  // herramientas comparten prefijo, así que el prefijo no alcanza como filtro.
+  const candidatas = page.locator('a[href^="/mercado-inmobiliario/oportunidades/"]')
+  try {
+    await candidatas.first().waitFor({ state: 'attached', timeout: 15_000 })
+  } catch {
     test.skip(true, 'sin oportunidades en la base — nada que abrir')
+    return
+  }
+  let primera: ReturnType<typeof candidatas.nth> | null = null
+  const total = await candidatas.count()
+  for (let i = 0; i < total; i++) {
+    const href = await candidatas.nth(i).getAttribute('href')
+    if (href && /\/oportunidades\/[0-9a-f-]{36}$/.test(href)) {
+      primera = candidatas.nth(i)
+      break
+    }
+  }
+  if (!primera) {
+    test.skip(true, 'sin fichas de oportunidad en el listado')
     return
   }
 
   await primera.click()
-  await page.waitForURL(/\/oportunidades\/[0-9a-f-]{36}/)
+  await page.waitForURL(/\/oportunidades\/[0-9a-f-]{36}/, { timeout: 30_000 })
   await page.waitForLoadState('networkidle')
 
   // Aserción POSITIVA antes de cualquier bucle. La primera versión de este
