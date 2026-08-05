@@ -22,12 +22,24 @@ export interface UbicacionCabida {
 
 export type IsocronaMetodo = 'red_vial' | 'circulo_equivalente'
 
+/**
+ * Proveedores de isócronas contemplados. `openrouteservice` fue el original
+ * (Fase 16) pero su cuenta quedó deshabilitada — verificado 04-08: los tres
+ * endpoints (isochrones, directions, geocode) devuelven 403 "Access to this
+ * API has been disallowed" con la misma key, o sea es bloqueo de cuenta y no
+ * de endpoint ni de configuración local. Se mantiene en la unión porque hay
+ * datos históricos que podrían tenerlo y porque la key sigue en el entorno.
+ * `valhalla` es el que se usa hoy (instancia pública de OSM.de, sin API key);
+ * `mapbox` queda declarado para el salto a producción con token propio.
+ */
+export type IsocronaProveedor = 'openrouteservice' | 'valhalla' | 'mapbox'
+
 export interface IsocronaResultado {
   metodo: IsocronaMetodo // NUNCA opcional — ver Pitfall 1, 16-RESEARCH.md
   geometria: GeoJSON.Polygon | GeoJSON.MultiPolygon
   modo: 'caminando' | 'auto'
   minutos: number
-  proveedor: 'openrouteservice' | null // null cuando metodo === 'circulo_equivalente'
+  proveedor: IsocronaProveedor | null // null cuando metodo === 'circulo_equivalente'
   consultadoEl: string
   cacheHit: boolean
 }

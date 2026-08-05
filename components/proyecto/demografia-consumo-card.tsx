@@ -22,11 +22,19 @@ import { RankingBarChart } from "@/components/mercado-inmobiliario/charts/rankin
 // (Censo/CASEN transcritos), no estimaciones del modelo.
 // ---------------------------------------------------------------------------
 
+/** Metadatos de la isócrona sin la geometría — la API la omite a propósito. */
+interface IsocronaMeta {
+  metodo: "red_vial" | "circulo_equivalente"
+  modo: "caminando" | "auto"
+  minutos: number
+  proveedor: string | null
+}
+
 interface DemografiaConsumoResponse {
   ok: boolean
   consumo: ConsumoEstimadoResultado
   poblacion: PoblacionCensoResultado | null
-  radioMetros: number | null
+  isocrona: IsocronaMeta | null
 }
 
 const NUM = new Intl.NumberFormat("es-CL")
@@ -67,15 +75,17 @@ export function DemografiaConsumoCard({ comuna, lat, lng }: { comuna: string; la
     return null // best-effort, igual que otros bloques opcionales de este tipo de página
   }
 
-  const { consumo, poblacion, radioMetros } = data
+  const { consumo, poblacion, isocrona } = data
   const categoriasConDato = consumo.categorias.filter((c) => c.participacionPct !== null)
+  const esRedVial = isocrona?.metodo === "red_vial"
+  const modoLabel = isocrona?.modo === "auto" ? "en auto" : "caminando"
 
   return (
     <div className="space-y-4">
-      {poblacion && (
+      {poblacion && isocrona && (
         <div>
           <p className="mb-2 flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-            <Users className="size-3.5" /> Población en {NUM.format(radioMetros ?? 0)} m a la redonda
+            <Users className="size-3.5" /> Población a {isocrona.minutos} min {modoLabel}
           </p>
           {poblacion.ok ? (
             <div className="grid grid-cols-2 gap-2">
@@ -95,11 +105,19 @@ export function DemografiaConsumoCard({ comuna, lat, lng }: { comuna: string; la
           ) : (
             <p className="text-xs text-muted-foreground">No se pudo consultar el censo para este punto.</p>
           )}
-          <p className="mt-2 flex items-start gap-1 text-[10px] leading-snug text-muted-foreground">
-            <AlertTriangle className="mt-0.5 size-2.5 shrink-0" />
-            Radio fijo de {NUM.format(radioMetros ?? 0)} m en línea recta — no una ruta de caminata o manejo real
-            (esa función depende de un proveedor de isócronas hoy pausado). Trátalo como una aproximación gruesa.
-          </p>
+          {esRedVial ? (
+            <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
+              Isócrona real de red vial ({isocrona.minutos} min {modoLabel}, vía {isocrona.proveedor}) — el área sigue
+              las calles efectivamente transitables, no un radio en línea recta.
+            </p>
+          ) : (
+            <p className="mt-2 flex items-start gap-1 text-[10px] leading-snug text-muted-foreground">
+              <AlertTriangle className="mt-0.5 size-2.5 shrink-0" />
+              No se pudo calcular la isócrona real: se usó un círculo equivalente en línea recta, que sobreestima el
+              área alcanzable porque ninguna red vial permite avanzar en todas las direcciones. Trátalo como una
+              aproximación gruesa.
+            </p>
+          )}
         </div>
       )}
 
