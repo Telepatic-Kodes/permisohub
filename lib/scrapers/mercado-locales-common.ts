@@ -18,6 +18,38 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 export type OperacionMercadoLocal = 'arriendo' | 'venta'
 
+/**
+ * "No pude buscar", explícitamente distinto de "busqué y no hay nada".
+ *
+ * POR QUÉ EXISTE (05-08): los dos scrapers de mercado de locales devolvían
+ * `[]` en TODOS sus caminos de fallo — HTTP no-2xx, excepción de red, timeout.
+ * Como `correrDescubrimientoMercadoLocales` solo registra en `errors` lo que
+ * SALE lanzado de la función de búsqueda, y nunca salía nada, ese array
+ * estaba vacío por construcción: no vacío porque no hubo errores, vacío
+ * porque los errores no tenían por dónde salir. La corrida terminaba con
+ * `encontrados: 0` y se persistía como `status: 'ok'`.
+ *
+ * El costo real, medido: el 5 ago Doomos registró 0 filas (venía de 452) y se
+ * vio verde en /admin/salud-datos durante un día. Al investigarlo, Doomos
+ * respondía perfecto (15 items/comuna) y el que estaba devolviendo cero en
+ * ese momento era Portalinmobiliario — la fuente que el tablero mostraba como
+ * sana, con 2.408 filas esa misma madrugada. O sea el fallo es intermitente y
+ * les toca alternadamente a los dos; sin esta distinción, al que le toque
+ * caerse a la hora del cron queda archivado como un cero saludable.
+ *
+ * Mismo criterio que OverpassUnavailableError (lib/terrenos-ubicacion.ts): el
+ * caller decide qué hacer, pero no puede seguir sin enterarse.
+ */
+export class ScraperUnavailableError extends Error {
+  constructor(
+    readonly fuente: string,
+    motivo: string
+  ) {
+    super(`${fuente} no disponible: ${motivo}`)
+    this.name = 'ScraperUnavailableError'
+  }
+}
+
 // Fase 8 (ago. 2026): tipos adicionales al local comercial original —
 // verificados en vivo como sub-categorías propias dentro de "Comercial" en
 // Portalinmobiliario (facet ids distintos: 242065 locales, 242067 oficina,

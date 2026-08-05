@@ -9,6 +9,7 @@ import {
   TIPO_PROPIEDAD_PORTAL_PATH,
   TIPO_PROPIEDAD_DEFAULT,
   precioMercadoLocalEsPlausible,
+  ScraperUnavailableError,
 } from './mercado-locales-common'
 
 // ---------------------------------------------------------------------------
@@ -309,8 +310,25 @@ export async function buscarLocalesComerciales(
     const res = await fetchWithTimeout(url, {}, 20_000)
 
     if (!res.ok) {
-      reportWarning(`HTTP ${res.status} para ${tipoPropiedad} en "${comuna}" (${operacion}) — se omite esta corrida`, { scope: 'scraper.portalinmobiliario', extra: { comuna, tipoPropiedad, operacion, status: res.status } })
-      return []
+      // LANZA, no devuelve []: ver ScraperUnavailableError. Esta fuente es la
+      // que motivó el cambio tanto como Doomos — el 5 ago registró 2.408
+      // filas a las 02:23 y horas después devolvía 0 items en Providencia,
+      // Las Condes y Santiago Centro, sin que nada quedara registrado.
+      throw new ScraperUnavailableError('Portalinmobiliario', `HTTP ${res.status} para ${tipoPropiedad} en "${comuna}" (${operacion})`)
+    }
+
+    // Bloqueo suave, verificado en vivo el 05-08: MercadoLibre responde 302
+    // hacia /gz/account-verification y, como fetch() sigue redirects por
+    // defecto, `res.ok` termina siendo true sobre 19 KB de página de desafío
+    // sin una sola tarjeta. Sin este chequeo, "me bloquearon" entraba al
+    // sistema como "no hay locales en arriendo en toda la RM" — que es la
+    // forma más cara de estar equivocado, porque es plausible.
+    const destino = new URL(res.url).pathname
+    if (!destino.includes(`/${operacion}/`)) {
+      throw new ScraperUnavailableError(
+        'Portalinmobiliario',
+        `redirigido fuera del listado (${destino}) para ${tipoPropiedad} en "${comuna}" (${operacion}) — bloqueo suave o verificación de cuenta`
+      )
     }
 
     const html = await res.text()
@@ -332,6 +350,7 @@ export async function buscarLocalesComerciales(
     return items
   } catch (err) {
     reportError(err, { scope: 'scraper.portalinmobiliario', extra: { comuna, tipoPropiedad, operacion } })
-    return []
+    if (err instanceof ScraperUnavailableError) throw err
+    throw new ScraperUnavailableError('Portalinmobiliario', err instanceof Error ? err.message : String(err))
   }
 }

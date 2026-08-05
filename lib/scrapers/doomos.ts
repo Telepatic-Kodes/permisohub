@@ -5,6 +5,7 @@ import {
   MERCADO_LOCALES_COMUNA_SLUGS,
   TIPO_PROPIEDAD_DEFAULT,
   precioMercadoLocalEsPlausible,
+  ScraperUnavailableError,
   type MercadoLocalListadoRaw,
   type OperacionMercadoLocal,
   type TipoPropiedadComercial,
@@ -23,8 +24,16 @@ import {
 // <div id="map4" data-lat="..." data-lng="...">, verificado en vivo (31 jul
 // 2026) — mismo patrón que obtenerLatLngDetalle de Portalinmobiliario.
 //
-// Sitio de terceros sin API pública — toda falla degrada a `[]`/null + warn,
-// nunca lanza. Solo primera página por comuna.
+// Sitio de terceros sin API pública. Solo primera página por comuna.
+//
+// MANEJO DE FALLOS — asimétrico a propósito desde el 05-08:
+//   - buscarTerrenos()/obtenerLatLngDetalle(): degradan a []/null + warn, no
+//     lanzan (su caller, correrDescubrimientoTerrenos, todavía no distingue
+//     "no pude buscar" de "no hay" — misma deuda, sin cerrar).
+//   - buscarLocalesComerciales(): LANZA ScraperUnavailableError ante HTTP
+//     no-2xx o error de red. Devolver [] hacía que un scraper caído se
+//     archivara como una corrida exitosa con cero filas. Ver el comentario de
+//     ScraperUnavailableError en mercado-locales-common.ts.
 // ---------------------------------------------------------------------------
 
 // El slug de URL de Doomos.cl coincide 1:1 con nuestro comunaId (verificado
@@ -272,8 +281,24 @@ export async function buscarLocalesComerciales(
     const url = `https://www.doomos.cl/${operacion}-${pathSegment}-${slug}`
     const res = await fetchWithTimeout(url, {}, 30_000)
     if (!res.ok) {
-      reportWarning(`HTTP ${res.status} para ${tipoPropiedad} en "${comuna}" (${operacion}) — se omite esta corrida`, { scope: 'scraper.doomos', extra: { comuna, tipoPropiedad, operacion, status: res.status } })
-      return []
+      // LANZA, no devuelve []: un HTTP no-2xx significa "no pude buscar", y
+      // devolver la lista vacía lo hacía indistinguible de "no hay locales en
+      // esta comuna" — ver ScraperUnavailableError para el incidente que lo
+      // destapó. El caller (correrDescubrimientoMercadoLocales) ya tiene un
+      // try/catch por par comuna×operación, así que esto NO tumba la corrida:
+      // solo la vuelve contable.
+      throw new ScraperUnavailableError('Doomos', `HTTP ${res.status} para ${tipoPropiedad} en "${comuna}" (${operacion})`)
+    }
+
+    // Mismo chequeo de redirect que Portalinmobiliario (ver ahí el incidente
+    // que lo motivó). Acá el patrón de URL es `/{operacion}-{tipo}-{slug}`, así
+    // que basta con que la operación siga presente en el path final.
+    const destino = new URL(res.url).pathname
+    if (!destino.includes(operacion)) {
+      throw new ScraperUnavailableError(
+        'Doomos',
+        `redirigido fuera del listado (${destino}) para ${tipoPropiedad} en "${comuna}" (${operacion})`
+      )
     }
 
     const html = await res.text()
@@ -292,6 +317,11 @@ export async function buscarLocalesComerciales(
     return items
   } catch (err) {
     reportError(err, { scope: 'scraper.doomos', extra: { comuna, tipoPropiedad, operacion } })
-    return []
+    // Se reporta a Sentry Y se propaga. Antes solo se reportaba: el error
+    // quedaba visible en Sentry pero la corrida seguía y se archivaba como
+    // exitosa con cero filas, así que las dos señales se contradecían y la
+    // que quedaba en la base era la equivocada.
+    if (err instanceof ScraperUnavailableError) throw err
+    throw new ScraperUnavailableError('Doomos', err instanceof Error ? err.message : String(err))
   }
 }

@@ -6,6 +6,7 @@ import {
   MERCADO_LOCALES_COMUNA_SLUGS,
   upsertMercadoLocalesDesdeListado,
   TIPO_PROPIEDAD_DEFAULT,
+  ScraperUnavailableError,
   type OperacionMercadoLocal,
   type MercadoLocalListadoRaw,
   type TipoPropiedadComercial,
@@ -70,7 +71,79 @@ export interface ResultadoDescubrimientoMercadoLocales {
   guardados: number
   dadosDeBaja: number
   errors: string[]
+  /**
+   * Pares comuna×operación en los que la fuente NO se pudo consultar
+   * (ScraperUnavailableError). Distinto de `errors`, que además incluye
+   * fallos de persistencia: acá solo cuenta "no pude preguntarle al sitio".
+   *
+   * Existe porque `encontrados: 0` es ambiguo por sí solo — puede ser "no hay
+   * locales publicados" o "no pude buscar en ninguna parte", y hasta el 05-08
+   * las dos cosas se archivaban idénticas.
+   */
+  fallosDeFuente: number
 }
+
+export interface SaludDeCorrida {
+  status: 'ok' | 'error'
+  detail: string
+  errorMessage?: string
+}
+
+/**
+ * Traduce una corrida de descubrimiento a lo que se persiste en
+ * data_source_runs. Pura y compartida por las 4 rutas de mercado-locales,
+ * para que no puedan divergir en qué consideran "una corrida sana".
+ *
+ * Tres condiciones de error, las tres apuntando al mismo agujero:
+ *
+ *  1. `encontrados === 0` CON fallos de fuente. Cero filas por sí solo puede
+ *     ser legítimo; cero filas porque no se pudo consultar la fuente no lo es,
+ *     y hasta el 05-08 se archivaban idénticos (`status: 'ok', row_count: 0`).
+ *  2. Más de la mitad de los pares comuna×operación inalcanzables, aunque el
+ *     resto haya traído filas. Sin esto, una corrida con 70 de 72 pares caídos
+ *     que igual guarda algo se vería sana.
+ *  3. Cero resultados en TODO un universo grande, aunque no se haya registrado
+ *     ni un fallo. Esta se agregó después de las otras dos, corriendo la ruta
+ *     real: Portalinmobiliario devolvía 200 en los 72 pares (redirigido a su
+ *     página de verificación de cuenta) y la corrida salía `ok` con
+ *     `fallosDeFuente: 0`, porque técnicamente nada había fallado. Un mercado
+ *     vivo que esta madrugada trajo 2.408 filas no tiene cero publicaciones en
+ *     72 pares comuna×operación; una sola comuna vacía sí es plausible, y por
+ *     eso el umbral y no un `=== 0` a secas.
+ *
+ * Deliberadamente NO marca error ante fallos aislados: con 72 pares, un
+ * timeout suelto es esperable, y una alerta que salta todos los días deja de
+ * leerse. Ese caso queda en `detail`, que es la serie donde se ve si los
+ * fallos aislados están creciendo.
+ */
+export function saludDeCorrida(resultado: ResultadoDescubrimientoMercadoLocales): SaludDeCorrida {
+  const { encontrados, guardados, comunasBuscadas, fallosDeFuente, errors } = resultado
+  const detail = `${encontrados} encontrados, ${guardados} guardados, ${fallosDeFuente}/${comunasBuscadas} pares sin respuesta de la fuente`
+
+  const cieloRaso = encontrados === 0 && fallosDeFuente > 0
+  const mayoriaCaida = fallosDeFuente > comunasBuscadas / 2
+  const universoVacio = encontrados === 0 && comunasBuscadas >= UNIVERSO_MINIMO_PARA_EXIGIR_RESULTADOS
+
+  if (cieloRaso || mayoriaCaida || universoVacio) {
+    const errorMessage = cieloRaso
+      ? `Cero resultados con ${fallosDeFuente} pares sin respuesta — la fuente no se pudo consultar, no es que no haya publicaciones. Primeros: ${errors.slice(0, 3).join(' | ')}`
+      : mayoriaCaida
+        ? `${fallosDeFuente} de ${comunasBuscadas} pares sin respuesta. Primeros: ${errors.slice(0, 3).join(' | ')}`
+        : `Cero resultados en ${comunasBuscadas} pares sin que nadie reportara un fallo — la fuente respondió, pero no devolvió nada parseable (¿cambió el markup, o es un bloqueo suave que responde 200?).`
+
+    return { status: 'error', detail, errorMessage }
+  }
+
+  return { status: 'ok', detail }
+}
+
+/**
+ * Bajo este tamaño de universo, cero resultados es plausible de verdad (una
+ * comuna chica sin locales publicados, un tipo de propiedad poco común). Por
+ * encima, cero significa que algo se rompió: el pipeline cubre 36 comunas × 2
+ * operaciones y ninguna corrida sana ha bajado de las centenas.
+ */
+const UNIVERSO_MINIMO_PARA_EXIGIR_RESULTADOS = 8
 
 /**
  * Busca locales comerciales para todas las comunas de
@@ -89,6 +162,7 @@ export async function correrDescubrimientoMercadoLocales(
     guardados: 0,
     dadosDeBaja: 0,
     errors: [],
+    fallosDeFuente: 0,
   }
 
   await enTandas(pares, CONCURRENCIA, async ({ comuna, operacion }) => {
@@ -102,6 +176,10 @@ export async function correrDescubrimientoMercadoLocales(
       resultado.guardados += summary.nuevos + summary.actualizados
       resultado.dadosDeBaja += summary.dadosDeBaja
     } catch (err) {
+      // Se separa "no pude consultar la fuente" de "falló al persistir":
+      // ambos son errores, pero solo el primero explica un `encontrados: 0`
+      // que no significa "no hay nada publicado".
+      if (err instanceof ScraperUnavailableError) resultado.fallosDeFuente++
       resultado.errors.push(`${comuna}/${operacion}: ${err instanceof Error ? err.message : String(err)}`)
     }
   })
@@ -195,6 +273,7 @@ export async function correrDescubrimientoTiposComercialesAdicionales(
     guardados: 0,
     dadosDeBaja: 0,
     errors: [],
+    fallosDeFuente: 0,
   }
 
   await enTandas(pares, CONCURRENCIA, async ({ comuna, operacion, tipoPropiedad }) => {
@@ -208,6 +287,7 @@ export async function correrDescubrimientoTiposComercialesAdicionales(
       resultado.guardados += summary.nuevos + summary.actualizados
       resultado.dadosDeBaja += summary.dadosDeBaja
     } catch (err) {
+      if (err instanceof ScraperUnavailableError) resultado.fallosDeFuente++
       resultado.errors.push(`${comuna}/${operacion}/${tipoPropiedad}: ${err instanceof Error ? err.message : String(err)}`)
     }
   })

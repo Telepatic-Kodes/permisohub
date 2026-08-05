@@ -4,6 +4,7 @@ import {
   correrDescubrimientoMercadoLocales,
   computarYPersistirBandasMercadoLocales,
   obtenerValorUF,
+  saludDeCorrida,
 } from '@/lib/mercado-locales-server'
 import { recordSourceRun } from '@/lib/observability'
 
@@ -29,10 +30,16 @@ export async function GET(request: Request) {
     const uf = await obtenerValorUF()
     const stats = await computarYPersistirBandasMercadoLocales(uf)
 
+    // El estado sale de saludDeCorrida(), no de "llegamos hasta acá sin
+    // lanzar": una corrida puede terminar entera y limpia y aun así no haber
+    // podido consultar la fuente en ningún par comuna×operación.
+    const salud = saludDeCorrida(descubrimiento)
     await recordSourceRun({
       sourceId: 'mercado-locales-doomos',
-      status: 'ok',
+      status: salud.status,
       rowCount: descubrimiento.encontrados,
+      detail: salud.detail,
+      errorMessage: salud.errorMessage,
     })
 
     return Response.json({
