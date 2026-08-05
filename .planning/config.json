@@ -1,7 +1,7 @@
 {
   "project": "permisohub",
-  "version": 1.6,
-  "milestone": "Reportes Profesionales de Oportunidades",
+  "version": 1.7,
+  "milestone": "Cabida Comercial",
   "workflow": {
     "research": true
   }

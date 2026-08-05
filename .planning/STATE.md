@@ -1,6 +1,35 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-05` `75ef9be` fix(scrapers): un scraper bloqueado dejaba de verse como cero publicaciones
+- `2026-08-05` `9e5a980` feat(salud): health check de fuentes externas del camino crítico
+- `2026-08-05` `6685cf8` perf(demografia): cachear isócrona+censo (10,4s → 0,34s) y limpiar sii-lookup
+- `2026-08-05` `649ba71` refactor(copiloto): unificar en getContextoNormativo y eliminar el duplicado DDU
+- `2026-08-05` `76fd1f7` fix(ai): tolerar null en los 6 schemas que parsean salida de LLM
+- `2026-08-05` `6e0c295` fix(copiloto): tolerar null en los campos de texto del diagnóstico OGUC/LGUC
+- `2026-08-05` `26bbc46` fix(e2e): eliminar flakiness y auto-skip silencioso de los smokes de detalle
+- `2026-08-05` `6371398` fix(normativa): conectar LGUC al copiloto + corregir falso positivo del detector
+- `2026-08-04` `9d201de` chore(calidad): "wired or it doesn't count" + smoke E2E de rutas
+- `2026-08-04` `942ad7b` feat(cabida): motor de análisis + siembra de muestra — primer veredicto real
+- `2026-08-04` `eeedf93` feat(cabida): Fase 16 — isócronas reales vía Valhalla, reemplazando ORS
+- `2026-08-04` `ba21579` feat(visual): KpiCard/RankingBarChart en Señales de ubicación y Posicionamiento
+- `2026-08-04` `e5f35f6` feat(proyecto): rediseñar DemografiaConsumoCard con KpiCard + RankingBarChart
+- `2026-08-04` `8a293a2` feat(oportunidades): extender demografía/consumo al tab Historial
+- `2026-08-04` `f7eefeb` feat(terrenos): conectar demografía y consumo (INE/CASEN) al detalle de terreno
+- `2026-08-04` `cdecf19` feat(mercado-locales): segunda fuente — Doomos.cl junto a Portalinmobiliario
+- `2026-08-04` `272c585` feat(terrenos): comparador terreno vacante vs. local ya construido
+- `2026-08-04` `db3a740` feat(terrenos): reintento masivo de señales de ubicación pendientes
+- `2026-08-03` `3784589` feat(zonificacion): ampliar cobertura de 19 a 31 comunas RM
+- `2026-08-03` `ab43f3a` fix(zonificacion): conectar fallback de centroide de comuna para direcciones no geocodificables
+- `2026-08-03` `94ad4a7` fix(config): corregir fallback de puerto dev en self-fetch server-side
+- `2026-08-03` `9de1987` feat(terrenos): reintento masivo de zonificación pendiente
+- `2026-08-03` `fad486e` feat(terrenos): mostrar equivalente en UF junto al precio y al $/m²
+- `2026-08-03` `7ce88bf` refactor(terrenos): mejora de densidad visual de la tabla de terrenos
+- `2026-08-03` `1ea8632` feat(proyectos): dashboard de zonificación a nivel portafolio
+- `2026-08-03` `b0009fc` fix(copiloto): el checklist nunca persistía + regenerar cuando la zonificación llega tarde
+- `2026-08-03` `a1b73df` fix(zonificacion): backlog 11-08 — cita usa la comuna manual, no proyecto.municipio
+- `2026-08-03` `cac349a` fix(zonificacion): backlog 11-08 — reparar residuo de doble-corrupción mojibake
+- `2026-08-03` `e468bef` docs: record commit log entry
 - `2026-08-03` `67570af` docs(16-01): dedupe self-check section in SUMMARY.md
 - `2026-08-03` `3b3318e` docs(16-01): reintento bloqueado — ORS/HeiGIT sigue en 403 tras horas
 - `2026-08-03` `17cf1e1` docs(19-03): plan bloqueado por prerequisito de tres vías (Phase 16/17-03/18-07), sin fabricar código
