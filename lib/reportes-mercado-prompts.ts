@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { textoLaxo } from '@/lib/ai-parse'
 
 // Port de SYSTEM_REPORTE_MERCADO (repo origen PROPRA·BI, lib/prompts.ts) —
 // fase 4 de la fusión. A diferencia del origen (donde TODOS los valores del
@@ -66,8 +67,8 @@ const KpiSchema = z
   .object({
     label: z.string().default(''),
     value: z.string().default(''),
-    trend: z.string().default(''),
-    context: z.string().default(''),
+    trend: textoLaxo,
+    context: textoLaxo,
     verificado: z.boolean().default(false),
   })
   .passthrough()

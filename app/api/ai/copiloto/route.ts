@@ -16,7 +16,7 @@ import { sumarDiasHabiles } from '@/lib/dias-habiles'
 import { fixMojibakeArcGIS } from '@/lib/zonificacion-format'
 import { UF_FALLBACK_CLP } from '@/lib/uf'
 import { flagUnverifiedCita } from '@/lib/normativa-retrieval'
-import { parseAiJson } from '@/lib/ai-parse'
+import { parseAiJson, textoLaxo } from '@/lib/ai-parse'
 import type { Proyecto } from '@/types'
 
 interface CopilotoRequest {
@@ -41,12 +41,6 @@ interface CopilotoRequest {
 // toda razón. Los de OGUC siempre traían una, por eso nunca se había visto.
 // Coherente con el criterio declarado arriba: schemas laxos para que un drift
 // menor del modelo no tumbe el parseo completo.
-const textoLaxo = z
-  .string()
-  .nullable()
-  .optional()
-  .transform((v) => v ?? '')
-
 const OgucArticuloSchema = z
   .object({
     numero: textoLaxo,
@@ -87,8 +81,8 @@ const ChecklistItemSchema = z
   .object({
     item_key: z.string().default(''),
     nombre: z.string().default(''),
-    articulo_normativo: z.string().default(''),
-    descripcion: z.string().default(''),
+    articulo_normativo: textoLaxo,
+    descripcion: textoLaxo,
     // Un item sin `obligatorio` en la respuesta del modelo (parseo parcial,
     // campo omitido) NO es lo mismo que "no obligatorio" — pero
     // `.default(false)` los volvía indistinguibles y el item se guardaba

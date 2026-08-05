@@ -11,7 +11,7 @@ import { getContextoOGUC } from '@/lib/oguc-knowledge'
 import { ESTADISTICAS_MUNICIPIOS } from '@/lib/municipios-stats'
 import { getInteligenciaMunicipio } from '@/lib/inteligencia-dom'
 import { flagUnverifiedCita } from '@/lib/normativa-retrieval'
-import { parseAiJson } from '@/lib/ai-parse'
+import { parseAiJson, textoLaxo } from '@/lib/ai-parse'
 import type { Proyecto } from '@/types'
 
 // ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ const ObservacionActaSchema = z
   .object({
     numero: z.number().default(0),
     materia: z.string().default(''),
-    articulo: z.string().default(''),
+    articulo: textoLaxo,
     severidad: z.string().default('menor'),
     observacion: z.string().default(''),
     fundamento: z.string().default(''),

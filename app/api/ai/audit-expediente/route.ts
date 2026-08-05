@@ -4,7 +4,7 @@ import { getContextoOGUC } from '@/lib/oguc-knowledge'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { parseAiJson } from '@/lib/ai-parse'
+import { parseAiJson, textoLaxo, arrayLaxo } from '@/lib/ai-parse'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,9 +20,13 @@ const DocumentoAuditadoSchema = z
   .object({
     nombre: z.string().default(''),
     tipoInferido: z.string().default(''),
-    estado: z.enum(['OK', 'FALTA', 'INCOMPLETO', 'VERIFICAR']).default('VERIFICAR'),
-    observaciones: z.array(z.string()).default([]),
-    recomendacion: z.string().default(''),
+    // Único enum cerrado de todas las rutas de IA, contra el criterio "schemas
+    // laxos" que declaran las demás: un drift trivial del modelo ("OK con
+    // observaciones", "PARCIAL") tumbaba el parseo completo. Se abre a string
+    // y se normaliza; la UI ya trata cualquier valor desconocido como VERIFICAR.
+    estado: z.string().nullable().optional().transform((v) => v ?? 'VERIFICAR'),
+    observaciones: arrayLaxo(z.string()),
+    recomendacion: textoLaxo,
   })
   .passthrough()
 

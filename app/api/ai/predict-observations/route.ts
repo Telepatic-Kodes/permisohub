@@ -6,7 +6,7 @@ import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { flagUnverifiedCita } from '@/lib/normativa-retrieval'
-import { parseAiJson } from '@/lib/ai-parse'
+import { parseAiJson, textoLaxo } from '@/lib/ai-parse'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +27,7 @@ const PredictSchema = z
   .object({
     municipio: z.string().default(''),
     riesgoGlobal: z.string().default('MEDIO'),
-    mesOptimo: z.string().default(''),
+    mesOptimo: textoLaxo,
     predicciones: z.array(PrediccionSchema).default([]),
     resumen: z.string().default(''),
   })

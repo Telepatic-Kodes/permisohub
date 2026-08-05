@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
-import { parseAiJson } from '@/lib/ai-parse'
+import { parseAiJson, textoLaxo, arrayLaxo } from '@/lib/ai-parse'
 
 const Schema = z
   .object({
@@ -78,5 +78,43 @@ describe('campos de texto laxos ante null', () => {
   it('el schema estricto anterior fallaba con null — por eso existe este test', () => {
     const estricto = z.object({ formula: z.string().default('') })
     expect(estricto.safeParse({ formula: null }).success).toBe(false)
+  })
+})
+
+// Auditoría 05-08: tras el bug de `formula` en copiloto se revisaron las 7
+// rutas que parsean salida de LLM. 5 tenían el mismo agujero latente y solo
+// extract-observations lo tenía bien — no por casualidad: es la única cuyo
+// prompt dice "or null" explícitamente. Estos tests fijan los helpers
+// compartidos que reemplazaron a esa decisión por-archivo.
+describe('helpers laxos compartidos (lib/ai-parse)', () => {
+  it('textoLaxo normaliza null y ausente a cadena vacía', () => {
+    const S = z.object({ a: textoLaxo, b: textoLaxo })
+    const r = S.safeParse({ a: null })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data).toEqual({ a: '', b: '' })
+  })
+
+  it('textoLaxo preserva el valor cuando SÍ viene', () => {
+    const r = z.object({ a: textoLaxo }).safeParse({ a: 'Art. 116 LGUC' })
+    expect(r.success && r.data.a).toBe('Art. 116 LGUC')
+  })
+
+  it('arrayLaxo normaliza null y ausente a []', () => {
+    const S = z.object({ xs: arrayLaxo(z.string()) })
+    expect(S.safeParse({ xs: null }).success).toBe(true)
+    expect(S.parse({ xs: null }).xs).toEqual([])
+    expect(S.parse({}).xs).toEqual([])
+    expect(S.parse({ xs: ['a'] }).xs).toEqual(['a'])
+  })
+
+  it('un objeto entero sobrevive aunque el modelo mande null en varios campos', () => {
+    // Forma real que devolvió el modelo y tumbaba el parseo: artículo LGUC
+    // procedimental, sin fórmula ni valores numéricos.
+    const Articulo = z
+      .object({ numero: textoLaxo, formula: textoLaxo, cumple: z.boolean().nullable().default(null) })
+      .passthrough()
+    const r = Articulo.safeParse({ numero: 'Art. 116 LGUC', formula: null, cumple: null })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.formula).toBe('')
   })
 })

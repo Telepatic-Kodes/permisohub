@@ -6,7 +6,7 @@ import { flagUnverifiedCita } from '@/lib/normativa-retrieval'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { parseAiJson } from '@/lib/ai-parse'
+import { parseAiJson, textoLaxo } from '@/lib/ai-parse'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,10 +18,10 @@ export const dynamic = 'force-dynamic'
 // del modelo sin beneficio real.
 const CheckSchema = z
   .object({
-    item: z.string().default(''),
+    item: textoLaxo,
     resultado: z.string().default('VERIFICAR'),
-    detalle: z.string().default(''),
-    articulo: z.string().default(''),
+    detalle: textoLaxo,
+    articulo: textoLaxo,
     riesgo: z.string().default('BAJO'),
   })
   .passthrough()
