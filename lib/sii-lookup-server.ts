@@ -73,6 +73,50 @@ function parseM2(raw: string): number | null {
  *     mostraba campos vacíos como si fueran el dato real.
  *   - `{ ok: true, data }`          → parseó al menos un campo identificatorio.
  */
+// ---------------------------------------------------------------------------
+// ENDPOINT DE REEMPLAZO — capturado en vivo el 05-08, listo para migrar.
+//
+// El CGI que usa la función de abajo está MUERTO: zeus.sii.cl/avalu_cgi/br/
+// responde 403 al directorio, y tanto erc0000.sh como dbr_menu.sh dan 404. No
+// es un parámetro mal armado, se fue toda la familia. El SII migró a una SPA
+// (www4.sii.cl/mapasui) con API JSON detrás.
+//
+//   POST https://www4.sii.cl/mapasui/services/data/mapasFacadeService/getPredioNacional
+//   {
+//     "metaData": {
+//       "namespace": "cl.sii.sdi.lob.bbrr.mapas.data.api.interfaces.MapasFacadeService/getPredioNacional",
+//       "conversationId": "<string no vacío>",
+//       "transactionId":  "<string no vacío>"
+//     },
+//     "data": { "predio": { "comuna": "15103", "manzana": "14", "predio": "345" }, "servicios": [] }
+//   }
+//
+// SIN AUTENTICACIÓN: conversationId/transactionId los genera el cliente y solo
+// se valida que no estén vacíos (la app oficial manda "UNAUTHENTICATED-CALL<ip>"
+// y un UUID). Verificado con valores inventados: HTTP 200, errors: null, datos
+// completos. No hace falta el handshake de settingsService/obtenerNuevaAut.
+//
+// Respuesta verificada para Providencia 1234 LC 1 (rol 14-345):
+//   { rol, direccion, nombreComuna, destinoDescripcion, valorTotal: 198346511,
+//     valorAfecto, valorExento, supTerreno: 0, supConsMt2: 0, medidaSupConst: "m²" }
+//   Rol inexistente → HTTP 200 con data:null y errors:null (distingue "no
+//   encontrado" de "error", a diferencia del CGI viejo).
+//
+// TRES COSAS QUE NO SON UN CAMBIO DE URL, y por las que esto no se migró en
+// el acto:
+//
+//   1. supTerreno/supConsMt2 vienen en 0, NO en null. Mapearlos directo
+//      persistiría "0 m²" como si fuera una medición — la misma confusión que
+//      esta base de código viene corrigiendo (ver duration_ms en la migración
+//      20260814, y gapScore 0 vs null). Hay que decidir explícitamente si el 0
+//      de esta API significa "sin dato" y convertirlo.
+//   2. No trae avalúo en UF, solo valorTotal en pesos. avaluo_fiscal_uf tendría
+//      que calcularse con la UF del día o quedar en null declarado.
+//   3. La comuna usa un CÓDIGO PROPIO DEL SII, no el de INE: Providencia es
+//      15103, no 13123. Hace falta un mapeo; la lista completa (347 comunas
+//      con {codigo, nombre}) sale de
+//      POST mapasFacadeService/listComunas, el mismo estilo de payload.
+// ---------------------------------------------------------------------------
 export async function consultarRolEnSII(rolRaw: string, region = '13'): Promise<ConsultaRolSII> {
   const { manzana, predio, rolNorm } = normalizarRolSII(rolRaw)
 

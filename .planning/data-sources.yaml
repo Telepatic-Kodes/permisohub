@@ -227,6 +227,12 @@
   duplicate_of: null
   status: active
   notes: "Scrape en vivo de zeus.sii.cl, sin caché. Era duplicado con sii-enrich-post (POST /api/enrich/sii) — RESUELTO 1 ago 2026: se confirmó cero callers reales del duplicado (la única referencia era texto en app/(marketing)/docs/page.tsx, una página de documentación estática, no código funcional), se eliminó la ruta y se actualizó la doc. Esta es ahora la única implementación."
+  # ENDPOINT DE REEMPLAZO capturado 05-08 — ver el bloque de comentario sobre
+  # consultarRolEnSII() en lib/sii-lookup-server.ts: POST a
+  # www4.sii.cl/mapasui/services/data/mapasFacadeService/getPredioNacional, SIN
+  # autenticación. Migrar NO es cambiar la URL: supTerreno/supConsMt2 vienen en 0
+  # y no en null, no hay avalúo en UF, y la comuna usa código propio del SII
+  # (Providencia = 15103, no el 13123 de INE).
 
 - id: rut-enrich
   name: "Enriquecimiento RUT — /api/enrich/rut"
