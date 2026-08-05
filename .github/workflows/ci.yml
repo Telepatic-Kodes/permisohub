@@ -21,6 +21,13 @@ jobs:
         run: npm run lint
       - name: Unit tests
         run: npm test
+      # "Wired or it doesn't count": el 04-08 se encontraron tres módulos
+      # completos y testeados sin un solo caller (demografía, veredicto de
+      # cabida, motor de cabida). Bloqueante a propósito, con trinquete: los 39
+      # huérfanos preexistentes viven en el baseline y no fallan; solo falla si
+      # aparece uno nuevo.
+      - name: Funciones huérfanas (wired or it doesn't count)
+        run: npm run check:orphans
       - name: Registro de fuentes de datos (Torre de Control)
         run: npm run check:data-sources
         continue-on-error: true # no bloqueante mientras el registro madura — ver .planning/data-sources.yaml

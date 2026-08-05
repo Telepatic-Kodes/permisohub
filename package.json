@@ -8,6 +8,7 @@
     "start": "next start",
     "seed:petshop": "node scripts/seed-petshop.mjs",
     "check:data-sources": "node scripts/check-data-sources.mjs",
+    "check:orphans": "node scripts/check-orphaned-exports.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

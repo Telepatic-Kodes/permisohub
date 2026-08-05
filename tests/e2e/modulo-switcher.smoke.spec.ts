@@ -10,14 +10,14 @@ test('el switcher navega de verdad y cambia el sidebar', async ({ page }) => {
   await page.getByRole('button', { name: 'Mercado' }).click()
   await page.waitForURL(/\/mercado-inmobiliario\/pricing/)
 
-  await expect(page.locator('nav').getByRole('link', { name: 'Oportunidades' })).toBeVisible()
-  await expect(page.locator('nav').getByRole('link', { name: 'Terrenos' })).toHaveCount(0)
+  await expect(page.locator('nav').getByRole('link', { name: 'Oportunidades', exact: true })).toBeVisible()
+  await expect(page.locator('nav').getByRole('link', { name: 'Terrenos', exact: true })).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Permisos' }).click()
   await page.waitForURL(/\/dashboard/)
 
-  await expect(page.locator('nav').getByRole('link', { name: 'Terrenos' })).toBeVisible()
-  await expect(page.locator('nav').getByRole('link', { name: 'Oportunidades' })).toHaveCount(0)
+  await expect(page.locator('nav').getByRole('link', { name: 'Terrenos', exact: true })).toBeVisible()
+  await expect(page.locator('nav').getByRole('link', { name: 'Oportunidades', exact: true })).toHaveCount(0)
 })
 
 test('el estado activo es correcto al navegar directo, sin click', async ({ page }) => {
@@ -25,7 +25,7 @@ test('el estado activo es correcto al navegar directo, sin click', async ({ page
   await page.waitForLoadState('networkidle')
 
   await expect(page.getByRole('button', { name: 'Mercado' })).toBeVisible()
-  await expect(page.locator('nav').getByRole('link', { name: 'Oportunidades' })).toBeVisible()
+  await expect(page.locator('nav').getByRole('link', { name: 'Oportunidades', exact: true })).toBeVisible()
 })
 
 test('el badge de módulo aparece en ambos lados y no en el hub compartido', async ({ page }) => {
@@ -40,7 +40,15 @@ test('el badge de módulo aparece en ambos lados y no en el hub compartido', asy
   await page.goto('/dashboard')
   await page.waitForLoadState('networkidle')
   // El hub compartido no debe mostrar ningún badge de módulo en su encabezado.
-  const header = page.locator('main').locator('div').first()
+  // Se acota al div MÁS INTERNO que contiene el h1: el locator anterior
+  // (`main > div` primero) abarcaba todo el contenido, así que empezó a fallar
+  // cuando el dashboard sumó el panel de "Mercado Inmobiliario" — panel que el
+  // test siguiente justamente exige que exista. El test medía el encabezado,
+  // no la página entera.
+  const header = page
+    .locator('main div')
+    .filter({ has: page.getByRole('heading', { level: 1 }) })
+    .last()
   await expect(header.getByText('Permisos', { exact: true })).toHaveCount(0)
   await expect(header.getByText('Mercado Inmobiliario', { exact: true })).toHaveCount(0)
 })
