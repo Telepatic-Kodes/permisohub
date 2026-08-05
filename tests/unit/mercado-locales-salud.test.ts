@@ -139,3 +139,20 @@ describe('terrenos de Portalinmobiliario: el otro pipeline del mismo bloqueo', (
     await expect(buscarTerrenosPortal('las-condes')).resolves.toEqual([])
   })
 })
+
+describe('red agregada sobre el Grupo B (yapo, doomos, chilepropiedades, portalterreno)', () => {
+  it('un scraper de terrenos que se apaga mudo igual sale error, sin haber tocado su código', () => {
+    // Esos 4 siguen devolviendo [] en silencio ante un fallo, así que
+    // fallosDeFuente queda en 0. Pero el universo de terrenos son 31 comunas
+    // (COMUNAS_CON_ZONIFICACION) y el umbral es 8: la regla de universo vacío
+    // los cubre igual, porque no depende de que el scraper hable.
+    //
+    // Es la razón por la que NO se construyó un helper compartido para ellos:
+    // lo único compartible ya está acá, y detectar el bloqueo suave de cada uno
+    // no lo es (yapo/doomos van por Cloudflare, chilepropiedades es nginx
+    // desnudo, portalterreno CloudFront — tres familias de defensa distintas).
+    const salud = saludDeCorrida({ encontrados: 0, guardados: 0, comunasBuscadas: 31, fallosDeFuente: 0, errors: [] })
+    expect(salud.status).toBe('error')
+    expect(salud.errorMessage).toContain('no devolvió nada parseable')
+  })
+})

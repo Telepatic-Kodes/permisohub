@@ -1,4 +1,6 @@
 import { validateCronSecret } from '@/lib/scraper'
+import { recordSourceRun } from '@/lib/observability'
+import { saludDeCorrida } from '@/lib/salud-fuentes'
 import { buscarLocalesComerciales } from '@/lib/scrapers/doomos'
 import { MERCADO_LOCALES_COMUNA_SLUGS, type TipoPropiedadComercial } from '@/lib/scrapers/mercado-locales-common'
 import {
@@ -25,6 +27,25 @@ export async function GET(request: Request) {
     TIPOS_ADICIONALES,
     buscarLocalesComerciales,
   )
+
+  // source_id PROPIO, no el del cron de local_comercial: son universos
+  // distintos (3 tipos × 36 comunas × 2 operaciones vs. local_comercial solo)
+  // y corren por separado. Compartir id haría que la "última corrida" de la
+  // página alternara entre dos cosas que no se pueden comparar entre sí.
+  const salud = saludDeCorrida({
+    encontrados: descubrimiento.encontrados,
+    guardados: descubrimiento.guardados,
+    comunasBuscadas: descubrimiento.comunasBuscadas,
+    fallosDeFuente: descubrimiento.fallosDeFuente,
+    errors: descubrimiento.errors,
+  })
+  await recordSourceRun({
+    sourceId: 'mercado-locales-doomos-tipos-adicionales',
+    status: salud.status,
+    rowCount: descubrimiento.encontrados,
+    detail: salud.detail,
+    errorMessage: salud.errorMessage,
+  })
 
   const uf = await obtenerValorUF()
   let filasEscritas = 0

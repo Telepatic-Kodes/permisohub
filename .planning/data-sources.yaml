@@ -46,6 +46,32 @@
   status: active
   notes: "Agregada el 04-08 (commit cdecf19) y NO registrada acá hasta el 05-08 — el chequeo 2 del validador la venía marcando como indocumentada, pero el validador corría rojo por otras 12 razones (ver mercado-locales-portalinmobiliario y el resto de los trigger:cron), así que el hallazgo real quedó enterrado en el ruido. Ya llamaba a recordSourceRun({sourceId:'mercado-locales-doomos'}) desde el día uno, o sea escribía salud contra un id que este registro no conocía. El chequeo 5 (recordSourceRun → registro) existe para que esa combinación no vuelva a pasar en silencio."
 
+- id: mercado-locales-portalinmobiliario-tipos-adicionales
+  name: "Portalinmobiliario — oficina/bodega/industrial (cron separado de local comercial)"
+  type: scraper
+  owner_files: [lib/scrapers/portalinmobiliario.ts, lib/mercado-locales-server.ts]
+  trigger: "cron:/api/scraper/mercado-locales-tipos-adicionales"
+  called_from: [app/api/scraper/mercado-locales-tipos-adicionales/route.ts]
+  freshness_sla_days: 1
+  last_verified: 2026-08-05
+  monitoring: sentry
+  duplicate_of: null
+  status: active
+  notes: "id propio y no el de mercado-locales-portalinmobiliario a propósito: son universos distintos (3 tipos × 36 comunas × 2 operaciones vs. solo local_comercial) que corren en crons separados, así que compartir id haría que la 'última corrida' de /admin/salud-datos alternara entre dos cosas no comparables. Hasta el 05-08 esta ruta NO llamaba a recordSourceRun: no mentía como los otros casos, simplemente no registraba nada — un agujero distinto y menos venenoso, pero agujero igual. Comparte el bloqueo de MercadoLibre con las otras dos entradas de Portalinmobiliario (ver isocrona/terrenos-portalinmobiliario)."
+
+- id: mercado-locales-doomos-tipos-adicionales
+  name: "Doomos — oficina/bodega/industrial (cron separado de local comercial)"
+  type: scraper
+  owner_files: [lib/scrapers/doomos.ts, lib/mercado-locales-server.ts]
+  trigger: "cron:/api/scraper/mercado-locales-doomos-tipos-adicionales"
+  called_from: [app/api/scraper/mercado-locales-doomos-tipos-adicionales/route.ts]
+  freshness_sla_days: 1
+  last_verified: 2026-08-05
+  monitoring: sentry
+  duplicate_of: null
+  status: active
+  notes: "Espejo de mercado-locales-portalinmobiliario-tipos-adicionales sobre la segunda fuente. Mismo motivo para el id propio. Doomos NO comparte la defensa anti-bot de MercadoLibre — verificado en vivo el 05-08, respondía sano (13-15 tarjetas por comuna) el mismo día en que los dos pipelines de Portalinmobiliario estaban bloqueados."
+
 - id: terrenos-portalinmobiliario
   name: "Portalinmobiliario — terrenos/sitios en venta"
   type: scraper
