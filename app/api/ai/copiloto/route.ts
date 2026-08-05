@@ -8,6 +8,7 @@ import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getContextoOGUC } from '@/lib/oguc-knowledge'
+import { getContextoLGUC } from '@/lib/lguc-knowledge'
 import { ESTADISTICAS_MUNICIPIOS } from '@/lib/municipios-stats'
 import { getInteligenciaMunicipio } from '@/lib/inteligencia-dom'
 import { calcularDerechosMunicipales, type TipoObra } from '@/lib/derechos-municipales'
@@ -109,7 +110,15 @@ function seccionZonificacion(p: Proyecto): string {
 
 function buildOgucPrompt(p: Proyecto): string {
   const ogucCtx = getContextoOGUC('FOT FOS rasante distanciamiento altura pisos')
-  return `Eres un experto en normativa OGUC chilena. Analiza este proyecto y produce un diagnóstico normativo.
+  // La LGUC (DFL 458) es la LEY; la OGUC (D.S. 47) es su reglamento. El
+  // copiloto conocía solo el reglamento: lib/lguc-knowledge.ts existía desde
+  // hacía meses, con el mismo interface que OGUC "para reutilizar la
+  // recuperación por keywords", y sin un solo caller — lo detectó
+  // check:orphans (05-08). La consulta apunta a lo procedimental/legal
+  // (permisos, recepciones, responsabilidad), que es lo que la LGUC cubre y
+  // la OGUC no; consultarla con "FOT rasante" no habría traído nada útil.
+  const lgucCtx = getContextoLGUC('permiso de edificación recepción definitiva responsabilidad profesional sanciones')
+  return `Eres un experto en normativa urbanística chilena. Analiza este proyecto y produce un diagnóstico normativo.
 
 ## Datos del proyecto
 - Nombre: ${p.nombre}
@@ -121,9 +130,18 @@ function buildOgucPrompt(p: Proyecto): string {
 - Rol SII: ${p.rol_sii ?? 'no disponible'}
 - Avalúo fiscal: ${p.avaluo_fiscal_clp ? `$${p.avaluo_fiscal_clp.toLocaleString('es-CL')}` : 'no disponible'}
 ${seccionZonificacion(p)}
-## Artículos OGUC relevantes
+## Artículos OGUC relevantes (D.S. N°47/1992 — reglamento)
 ${ogucCtx}
+${lgucCtx ? `
+## Artículos LGUC relevantes (DFL N°458/1975 — ley)
+${lgucCtx}
 
+IMPORTANTE sobre los textos LGUC de arriba: son RESÚMENES técnicos, NO
+transcripciones literales del DFL 458. Nunca los presentes como texto legal
+textual ni los pongas entre comillas como si fueran la letra de la ley. Si un
+número, plazo o texto exacto tiene peso legal, indicá que debe verificarse
+contra el texto oficial.
+` : ''}
 Responde SOLO con JSON válido (sin markdown):
 {
   "articulos": [

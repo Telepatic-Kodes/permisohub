@@ -122,6 +122,19 @@ for (const archivo of archivosLib) {
     }
 
     if (usado) continue
+
+    // Antes de acusar: ¿se usa dentro de su PROPIO archivo, más allá de la
+    // línea que lo declara? Es el caso de flagUnverifiedArticulo, que solo
+    // llama flagUnverifiedCita (mismo archivo) pero llega a 6 rutas por esa
+    // vía. No es código muerto — a lo sumo el `export` sobra. Sin esta
+    // distinción el baseline acumula acusaciones falsas y el check se
+    // desacredita, que es la otra forma en que muere una herramienta así.
+    const usosPropios = (contenido.match(new RegExp(`\\b${nombre}\\b`, 'g')) ?? []).length
+    if (usosPropios > 1) {
+      huerfanosInertes.push(`${rel}:${nombre} (solo uso interno — el export sobra)`)
+      continue
+    }
+
     if (clase === 'funcion' || clase === 'clase') huerfanos.push(`${rel}:${nombre}`)
     else huerfanosInertes.push(`${rel}:${nombre}`)
   }
