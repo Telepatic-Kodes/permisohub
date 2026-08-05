@@ -9,9 +9,6 @@
     "lib/municipios-stats.ts:getMunicipioStats",
     "lib/rag.ts:getContextoNormativoSemantico",
     "lib/reajuste-renta.ts:estimarRentaReajustadaIPC",
-    "lib/scraper.ts:parseChileanDate",
-    "lib/sii-lookup.ts:formatRolSII",
-    "lib/sii-lookup.ts:lookupSIIByAddress",
-    "lib/sii-lookup.ts:lookupSIIByRol"
+    "lib/scraper.ts:parseChileanDate"
   ]
 }

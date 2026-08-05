@@ -28,8 +28,14 @@ jobs:
       # aparece uno nuevo.
       - name: Funciones huérfanas (wired or it doesn't count)
         run: npm run check:orphans
+      # Bloqueante desde el 05-08. Venía con continue-on-error "mientras el
+      # registro madura", y el costo de esa tolerancia se cobró: acumuló 15
+      # fallos duros (12 de ellos falsos positivos del chequeo 3, que quedó
+      # obsoleto al consolidar los crons en /api/cron/dispatch) y con ese
+      # ruido de fondo nadie vio los 3 reales — entre ellos una fuente
+      # (mercado-locales-doomos) escribiendo salud contra un id inexistente
+      # durante 4 días. Un guard que grita siempre no dice nada.
       - name: Registro de fuentes de datos (Torre de Control)
         run: npm run check:data-sources
-        continue-on-error: true # no bloqueante mientras el registro madura — ver .planning/data-sources.yaml
       # El smoke E2E (npm run test:e2e) necesita Supabase + OPENAI_API_KEY
       # reales; se corre localmente, no en CI.

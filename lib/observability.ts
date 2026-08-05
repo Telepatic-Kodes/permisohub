@@ -67,6 +67,27 @@ export interface SourceRunResult {
   status: 'ok' | 'error'
   rowCount?: number
   errorMessage?: string
+  /**
+   * Latencia medida en ms. Omitir cuando NO se midió — se guarda null, que
+   * no es lo mismo que 0. Un 0 por defecto haría que cualquier promedio o
+   * umbral de latencia mezclara "rapidísimo" con "nunca medido", y esa
+   * confusión es indetectable después.
+   */
+  durationMs?: number
+  /**
+   * 'run' (default) = corrida de ingesta real; 'probe' = chequeo sintético
+   * de disponibilidad. No colapsar: un probe verde no dice nada sobre si la
+   * ingesta está al día, ni al revés.
+   */
+  kind?: 'run' | 'probe'
+  /**
+   * Qué se afirmó en esta corrida, tanto en éxito como en fallo
+   * ("53 manzanas, 19.266 personas"). NO es errorMessage: guardar el detalle
+   * de una corrida sana en el campo de error haría que la UI pinte error
+   * sobre una fila verde. Su valor está en la serie: una fuente que responde
+   * ok pero con la mitad de los datos se ve acá y en ningún otro lado.
+   */
+  detail?: string
 }
 
 /**
@@ -85,6 +106,9 @@ export async function recordSourceRun(result: SourceRunResult): Promise<void> {
       status: result.status,
       row_count: result.rowCount ?? null,
       error_message: result.errorMessage ?? null,
+      duration_ms: result.durationMs ?? null,
+      kind: result.kind ?? 'run',
+      detail: result.detail ?? null,
     })
     if (error) throw error
   } catch (err) {

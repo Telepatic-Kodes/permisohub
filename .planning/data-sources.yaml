@@ -33,6 +33,19 @@
   status: active
   notes: "Único pipeline de terceros que corre en producción a diario. Ahora reporta a Sentry vía reportWarning/reportError (checkpoint A de Torre de Control)."
 
+- id: mercado-locales-doomos
+  name: "Doomos.cl — locales comerciales (segunda fuente de mercado_locales_listings)"
+  type: scraper
+  owner_files: [lib/scrapers/doomos.ts, lib/mercado-locales-server.ts]
+  trigger: "cron:/api/scraper/mercado-locales-doomos"
+  called_from: [app/api/scraper/mercado-locales-doomos/route.ts, app/api/scraper/mercado-locales-doomos-tipos-adicionales/route.ts]
+  freshness_sla_days: 1
+  last_verified: 2026-08-05
+  monitoring: sentry
+  duplicate_of: null
+  status: active
+  notes: "Agregada el 04-08 (commit cdecf19) y NO registrada acá hasta el 05-08 — el chequeo 2 del validador la venía marcando como indocumentada, pero el validador corría rojo por otras 12 razones (ver mercado-locales-portalinmobiliario y el resto de los trigger:cron), así que el hallazgo real quedó enterrado en el ruido. Ya llamaba a recordSourceRun({sourceId:'mercado-locales-doomos'}) desde el día uno, o sea escribía salud contra un id que este registro no conocía. El chequeo 5 (recordSourceRun → registro) existe para que esa combinación no vuelva a pasar en silencio."
+
 - id: terrenos-portalinmobiliario
   name: "Portalinmobiliario — terrenos/sitios en venta"
   type: scraper
@@ -397,6 +410,19 @@
   status: active
   notes: "DECISIÓN (2 ago 2026): cerrado como 'no ahora', tras investigar viabilidad real (WebSearch + verificación en vivo) en los 6 municipios de mayor volumen (Santiago, Providencia, Las Condes, Ñuñoa, Maipú, Puente Alto). domenlinea.minvu.cl confirmado sin ningún endpoint público (exige Clave Única tanto al solicitante como al municipio). De los 6: Ñuñoa niega explícitamente poder consultar estado de expediente; Providencia/Santiago exigen login; Puente Alto (FileDOM) es para pedir certificados ya emitidos, no rastrear trámites en curso; Maipú no tiene portal propio. Único hallazgo real — Las Condes (lascondesonline.cl/Permisos Obras) — sí permite consulta pública sin login por RUT del propietario, pero es tecnología ASP legacy sin API (requeriría scraping HTML frágil), cubre 1 de 6 municipios, y exige un dato (RUT del propietario) que PermisoHub no siempre tiene. No justifica construir ni una integración general ni un piloto de un solo municipio. El endpoint se mantiene como placeholder honesto (503 explícito en producción, nunca datos fabricados) — corregido de paso: called_from decía [] (huérfano) pero SÍ tiene un caller real, DomDigitalBadge en la vista de cadenas comerciales, que trata el 503 como 'no disponible' sin mostrar nada. Revisar solo si un cliente enterprise específico necesita Las Condes puntualmente y tiene el RUT del propietario a mano — ahí evaluar un scraper aislado, no una plataforma general."
 
+- id: isocrona-valhalla
+  name: "Valhalla (instancia pública de OSM.de) — isócronas de red vial"
+  type: api-endpoint
+  owner_files: [lib/isocrona.ts]
+  trigger: manual
+  called_from: [lib/cabida-comercial-server.ts]
+  freshness_sla_days: null
+  last_verified: 2026-08-05
+  monitoring: sentry
+  duplicate_of: null
+  status: active
+  notes: "Fase 16 (04-08, commit eeedf93), reemplazó a OpenRouteService tras confirmar que la cuenta estaba deshabilitada. NO estaba en este registro hasta el 05-08 — la fuente externa más nueva del camino crítico era invisible para la Torre de Control. Instancia comunitaria sin API key ni SLA: apta para consultas de a una, NO para batch masivo (para eso, ISOCRONA_PROVEEDOR=mapbox + MAPBOX_ACCESS_TOKEN). Degrada a círculo equivalente marcado metodo:'circulo_equivalente'/proveedor:null — nunca presenta un círculo como isócrona real, y calcularVeredictoCabida() se niega a emitir veredicto ante uno. Desde el 05-08 el caché de cabida_comercial_cache absorbe la mayoría de las consultas repetidas, lo que BAJA la exposición pero también deja de generar muestras naturales de disponibilidad: por eso tiene probe sintético diario (lib/data-source-probes.ts)."
+
 - id: geocoding-nominatim
   name: "Nominatim (OpenStreetMap) — geocoding"
   type: api-endpoint
@@ -454,9 +480,9 @@
   type: api-endpoint
   owner_files: [lib/censo-manzana-server.ts]
   trigger: manual
-  called_from: []
+  called_from: [lib/cabida-comercial-server.ts, app/api/demografia-consumo/route.ts]
   freshness_sla_days: null
-  last_verified: 2026-08-03
+  last_verified: 2026-08-05
   monitoring: none
   duplicate_of: null
   status: active
@@ -480,9 +506,9 @@
   type: static-kb
   owner_files: [lib/consumo-macro-zona.ts]
   trigger: none
-  called_from: []
+  called_from: [lib/cabida-comercial-server.ts, lib/veredicto-cabida.ts, app/api/demografia-consumo/route.ts]
   freshness_sla_days: null
-  last_verified: 2026-08-03
+  last_verified: 2026-08-05
   monitoring: none
   duplicate_of: null
   status: active

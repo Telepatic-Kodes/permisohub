@@ -39,6 +39,15 @@ const MARTES = (fecha: Date) => fecha.getUTCDay() === 2
 const DIA_2_DEL_MES = (fecha: Date) => fecha.getUTCDate() === 2
 
 export const TAREAS_CRON: TareaCron[] = [
+  // PRIMERA a propósito: mide la salud de las fuentes externas ANTES de que
+  // corran los scrapers del día. Si midiera después, estaría midiendo la
+  // contención que produce este mismo cron (los martes las 5 tareas de
+  // terrenos golpean Overpass, el mismo servicio que el probe consulta) y
+  // reportaría como "fuente degradada" lo que en realidad es carga propia.
+  // El stagger de 10 s deja que el slot de Overpass se regenere antes de que
+  // arranque lo demás.
+  { path: '/api/cron/salud-fuentes', horarioOriginal: 'nuevo — 05-08', debidaHoy: DIARIA, staggerMs: 10_000 },
+
   // Terrenos: 5 fuentes, mismo día (martes) — stagger alto preserva la
   // intención original de vercel.json.
   { path: '/api/cron/terrenos-portalinmobiliario', horarioOriginal: '0 6 * * 2', debidaHoy: MARTES, staggerMs: 30_000 },
