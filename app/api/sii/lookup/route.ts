@@ -1,39 +1,27 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { fetchWithTimeout, extractBetween, stripTags } from '@/lib/scraper'
+import { ScraperUnavailableError } from '@/lib/scraper'
 import { createClient } from '@/lib/supabase/server'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { reportError } from '@/lib/observability'
+import { consultarRolEnSII, type DatosSIIParseados } from '@/lib/sii-lookup-server'
 
 export const dynamic = 'force-dynamic'
 
+// El scraping y el parseo se extrajeron a lib/sii-lookup-server.ts el 05-08.
+// Acá queda SOLO lo que es propio de la ruta: autenticación, rate limit,
+// validación del parámetro y la traducción a códigos HTTP.
+//
+// El motivo del corte es concreto: el probe de salud de fuentes externas
+// (lib/data-source-probes.ts) necesita ejercitar el MISMO parser que usan los
+// usuarios, y no tiene sesión con la que atravesar el gate de auth. La
+// alternativa —un probe con su propia copia del parser— podría dar verde con
+// el parser real roto, que es precisamente lo que un health check no puede
+// permitirse.
 interface LookupResult {
   ok: boolean
   rol?: string
-  data?: {
-    direccion_normalizada: string
-    region: string
-    comuna: string
-    destino: string
-    avaluo_fiscal_clp: number | null
-    avaluo_fiscal_uf: number | null
-    superficie_terreno_m2: number | null
-    superficie_construida_m2: number | null
-    lat?: number
-    lng?: number
-  }
+  data?: DatosSIIParseados
   error?: string
-}
-
-// Parse Chilean number string: "1.234.567" → 1234567
-function parseChileanNumber(raw: string): number | null {
-  const cleaned = raw.replace(/\./g, '').replace(',', '.').replace(/[^0-9.]/g, '')
-  const n = parseFloat(cleaned)
-  return isNaN(n) ? null : n
-}
-
-function parseM2(raw: string): number | null {
-  const match = raw.match(/([\d.,]+)\s*m?²?/i)
-  if (!match) return null
-  return parseChileanNumber(match[1])
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse<LookupResult>> {
@@ -51,51 +39,29 @@ export async function GET(request: NextRequest): Promise<NextResponse<LookupResu
     return NextResponse.json({ ok: false, error: 'Parámetro "rol" requerido (ej: ?rol=1234-056)' }, { status: 400 })
   }
 
-  // Normalize rol: "1234-056" or "1234-56" accepted
-  const [manzana, predio] = rolRaw.includes('-') ? rolRaw.split('-') : [rolRaw, '000']
-  const rolNorm = `${manzana}-${predio}`
+  // region 13 = RM por defecto; la mayoría de los arquitectos trabaja acá.
+  const region = searchParams.get('region') ?? '13'
 
   try {
-    // SII property detail page (region 13 = RM as default; most architects work here)
-    const region = searchParams.get('region') ?? '13'
-    const url =
-      `https://zeus.sii.cl/avalu_cgi/br/erc0000.sh` +
-      `?RGN=${region}&MNZ=${manzana.padStart(4, '0')}&PRD=${predio.padStart(3, '0')}`
+    const consulta = await consultarRolEnSII(rolRaw, region)
 
-    const response = await fetchWithTimeout(url, {}, 15_000)
-    if (!response.ok) throw new Error(`SII HTTP ${response.status}`)
+    if (!consulta.ok) {
+      // 404 y no 200: el SII respondió, pero no hay ficha que leer. Antes esto
+      // salía 200 con ok:true y todos los campos vacíos, así que la UI pintaba
+      // huecos como si fueran el dato real del predio.
+      return NextResponse.json({ ok: false, rol: consulta.rol, error: consulta.error }, { status: 404 })
+    }
 
-    const html = await response.text()
-
-    const rawDireccion = extractBetween(html, 'DIRECCIÓN</TD>', '</TD>')
-    const rawRegion    = extractBetween(html, 'REGIÓN</TD>', '</TD>')
-    const rawComuna    = extractBetween(html, 'COMUNA</TD>', '</TD>')
-    const rawTerreno   = extractBetween(html, 'SUP.TERRENO</TD>', '</TD>')
-    const rawConstruida = extractBetween(html, 'SUP.CONSTRUIDA</TD>', '</TD>')
-    const rawDestino   = extractBetween(html, 'DESTINO</TD>', '</TD>')
-    // Avalúo fiscal appears in lines like "AVALÚO FISCAL TOTAL</TD><TD>$ 48.500.000</TD>"
-    const rawAvaluoCLP = extractBetween(html, 'AVALÚO FISCAL TOTAL</TD>', '</TD>')
-    const rawAvaluoUF  = extractBetween(html, 'AVALÚO FISCAL TOTAL UF</TD>', '</TD>')
-
-    return NextResponse.json({
-      ok: true,
-      rol: rolNorm,
-      data: {
-        direccion_normalizada: rawDireccion ? stripTags(rawDireccion) : '',
-        region: rawRegion ? stripTags(rawRegion) : '',
-        comuna: rawComuna ? stripTags(rawComuna) : '',
-        destino: rawDestino ? stripTags(rawDestino) : '',
-        avaluo_fiscal_clp: rawAvaluoCLP ? parseChileanNumber(stripTags(rawAvaluoCLP).replace('$', '')) : null,
-        avaluo_fiscal_uf: rawAvaluoUF ? parseChileanNumber(stripTags(rawAvaluoUF).replace('UF', '')) : null,
-        superficie_terreno_m2: rawTerreno ? parseM2(stripTags(rawTerreno)) : null,
-        superficie_construida_m2: rawConstruida ? parseM2(stripTags(rawConstruida)) : null,
-      },
-    })
+    return NextResponse.json({ ok: true, rol: consulta.rol, data: consulta.data })
   } catch (err) {
-    console.warn('[sii-lookup] SII unreachable:', err)
-    return NextResponse.json(
-      { ok: false, error: 'SII no disponible en este momento. Intenta nuevamente o ingresa los datos manualmente.' },
-      { status: 503 },
-    )
+    // reportError y no console.warn: este camino no llegaba a Sentry, así que
+    // una caída sostenida del SII solo era visible revisando logs de Vercel a
+    // mano — y el SII está en el camino crítico de la ficha de propiedad.
+    reportError(err, { scope: 'api.sii.lookup', extra: { rol: rolRaw, region } })
+    const mensaje =
+      err instanceof ScraperUnavailableError
+        ? 'SII no disponible en este momento. Intenta nuevamente o ingresa los datos manualmente.'
+        : 'Error inesperado consultando el SII.'
+    return NextResponse.json({ ok: false, error: mensaje }, { status: 503 })
   }
 }

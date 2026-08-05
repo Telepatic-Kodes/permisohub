@@ -2,6 +2,7 @@ import { obtenerIsocrona } from '@/lib/isocrona'
 import { obtenerPoblacionEnPoligono } from '@/lib/censo-manzana-server'
 import { geocodeDireccion } from '@/lib/geocoding'
 import { obtenerSenalesUbicacion } from '@/lib/terrenos-ubicacion'
+import { consultarRolEnSII } from '@/lib/sii-lookup-server'
 
 // Probes sintéticos de las fuentes externas que viven en el CAMINO CRÍTICO de
 // un request de usuario — no en un cron. recordSourceRun() ya cubría las
@@ -39,11 +40,6 @@ import { obtenerSenalesUbicacion } from '@/lib/terrenos-ubicacion'
 // FUERA DE ALCANCE, A PROPÓSITO (no es un olvido)
 // -------------------------------------------------------------------------
 //
-// - sii-lookup-get (zeus.sii.cl): su parser vive dentro de
-//   app/api/sii/lookup/route.ts, detrás de auth + rate limit. Un probe
-//   tendría que duplicar el scraping (dos fuentes de verdad: el probe podría
-//   dar verde con el parser real roto) o autenticarse. Lo honesto es extraer
-//   ese scraper a lib/ primero; hasta entonces esta fuente NO está cubierta.
 // - macro-indicadores-cron (mindicador.cl): es fuente pull con cron diario
 //   propio; lo que le falta no es un probe sino una llamada a recordSourceRun()
 //   en app/api/cron/noticias-macro/route.ts.
@@ -96,6 +92,11 @@ const POLIGONO_PROBE: GeoJSON.Polygon = {
     ],
   ],
 }
+
+// Rol fijo de la Región Metropolitana. Fijo por el mismo motivo que
+// PUNTO_PROBE: si variara, una caída sería indistinguible de "hoy tocó un rol
+// que no existe".
+const ROL_PROBE_SII = '1234-056'
 
 /** Chile continental — sanity check grueso del geocoder, no precisión. */
 const BBOX_CHILE = { latMin: -56, latMax: -17, lngMin: -76, lngMax: -66 }
@@ -160,6 +161,32 @@ export const PROBES: Probe[] = [
         return { ok: false, detalle: `coordenadas fuera de Chile (${r.lat}, ${r.lng})` }
       }
       return { ok: true, detalle: `${r.lat.toFixed(4)}, ${r.lng.toFixed(4)} — ${r.comunaDetectada ?? 'sin comuna'}` }
+    },
+  },
+  {
+    sourceId: 'sii-lookup-get',
+    nombre: 'SII — ficha de avalúo por rol',
+    umbralLatenciaMs: 10000,
+    ejecutar: async () => {
+      // Usa consultarRolEnSII(), la MISMA función que sirve a
+      // /api/sii/lookup — ese fue el punto entero de extraerla el 05-08. Un
+      // probe con su propia copia del parser podría dar verde con el parser
+      // real roto.
+      //
+      // ADVERTENCIA AL LEER ESTO EN ROJO: al momento de escribirlo, el
+      // endpoint ya estaba caído — zeus.sii.cl/avalu_cgi/br/erc0000.sh
+      // devuelve 404 (el host responde y el directorio existe con 403, pero
+      // el script no). Este probe NO va a ponerse verde solo; que esté rojo
+      // es el reporte correcto de un hecho, no un probe mal calibrado. Se
+      // arregla cuando se encuentre el endpoint vigente del SII.
+      const r = await consultarRolEnSII(ROL_PROBE_SII)
+      if (!r.ok) return { ok: false, detalle: r.error ?? 'consulta no exitosa' }
+      const d = r.data!
+      // No basta con ok: la ficha tiene que traer campos identificatorios.
+      if (!d.comuna && !d.direccion_normalizada) {
+        return { ok: false, detalle: 'ficha sin comuna ni dirección — ¿cambió el markup?' }
+      }
+      return { ok: true, detalle: `${d.comuna || 's/comuna'}, destino "${d.destino || 's/destino'}"` }
     },
   },
   {
