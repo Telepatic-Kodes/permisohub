@@ -32,15 +32,30 @@ interface CopilotoRequest {
 // (antes: regex + JSON.parse sin validación, tipado implícito `any`). Solo se
 // garantiza forma estructural; los valores de enum no se restringen a un set
 // cerrado para que un drift menor del modelo no tumbe el parseo completo.
+// Los campos de texto aceptan null explícito, no solo undefined: `.default()`
+// de zod SOLO cubre undefined, así que un `"formula": null` del modelo tumbaba
+// el parseo entero y el endpoint caía al fallback, devolviendo articulos:[] y
+// el JSON crudo (con cerca de markdown) volcado dentro de `resumen`.
+// Apareció al conectar la LGUC (05-08): sus artículos son procedimentales
+// —permiso, recepción— y no tienen fórmula, así que el modelo emite null con
+// toda razón. Los de OGUC siempre traían una, por eso nunca se había visto.
+// Coherente con el criterio declarado arriba: schemas laxos para que un drift
+// menor del modelo no tumbe el parseo completo.
+const textoLaxo = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((v) => v ?? '')
+
 const OgucArticuloSchema = z
   .object({
-    numero: z.string().default(''),
-    titulo: z.string().default(''),
-    formula: z.string().default(''),
-    valor_normativo: z.string().default(''),
-    valor_proyecto: z.string().default(''),
+    numero: textoLaxo,
+    titulo: textoLaxo,
+    formula: textoLaxo,
+    valor_normativo: textoLaxo,
+    valor_proyecto: textoLaxo,
     cumple: z.boolean().nullable().default(null),
-    observacion: z.string().default(''),
+    observacion: textoLaxo,
   })
   .passthrough()
 
