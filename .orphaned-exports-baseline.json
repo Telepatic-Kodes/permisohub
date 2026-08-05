@@ -1,7 +1,6 @@
 {
   "huerfanos": [
     "lib/boletas.ts:getPeriodoAnterior",
-    "lib/circulares-ddu.ts:getContextoCirculares",
     "lib/comunas-chile.ts:getComunasByRegion",
     "lib/comunas-chile.ts:getComunasByStatus",
     "lib/dom-requirements.ts:getBoletasRequeridas",

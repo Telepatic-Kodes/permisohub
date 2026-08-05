@@ -250,37 +250,9 @@ Texto completo en la fuente oficial MINVU (PDF).`,
 ]
 
 // Recuperación por keyword matching (mismo patrón que oguc-knowledge)
-export function getCircularesRelevantes(query: string, limit = 3): CircularDDU[] {
-  const q = query.toLowerCase()
-
-  const scored = CIRCULARES_DDU.map((circ) => {
-    let score = 0
-    for (const kw of circ.keywords) {
-      if (q.includes(kw.toLowerCase())) score += 3
-    }
-    if (q.includes(circ.titulo.toLowerCase())) score += 5
-    if (q.includes(circ.categoria)) score += 2
-    for (const kw of circ.keywords) {
-      if (kw.toLowerCase().includes(q.slice(0, 5))) score += 1
-    }
-    return { circ, score }
-  })
-
-  return scored
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((s) => s.circ)
-}
-
-export function getContextoCirculares(query: string): string {
-  const circulares = getCircularesRelevantes(query)
-  if (circulares.length === 0) return ''
-  return circulares
-    .map((c) => {
-      const num = c.verificado ? c.numero : `${c.numero} [n° por verificar]`
-      const fuente = c.verificado && c.fuente ? `\nFuente oficial: ${c.fuente}` : ''
-      return `**Circular ${num} — ${c.titulo}**\n${c.texto}${fuente}`
-    })
-    .join('\n\n---\n\n')
-}
+// getCircularesRelevantes/getContextoCirculares se eliminaron el 05-08: eran
+// un segundo camino para inyectar circulares DDU en los prompts, con ranking
+// propio y su propia lógica de `verificado`, mientras getContextoNormativo()
+// (lib/normativa-retrieval.ts) ya fusiona OGUC + LGUC + DDU con un ranking
+// único y lo usan las rutas de IA. Dos formas de hacer lo mismo con criterios
+// distintos es peor que una: la data (CIRCULARES_DDU) sigue exportada y en uso.

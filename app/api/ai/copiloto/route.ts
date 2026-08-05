@@ -7,15 +7,13 @@ import { isAIAvailable, aiComplete } from '@/lib/ai'
 import { aiAuthGuard } from '@/lib/ai-guard'
 import { recordUsage } from '@/lib/usage'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { getContextoOGUC } from '@/lib/oguc-knowledge'
-import { getContextoLGUC } from '@/lib/lguc-knowledge'
 import { ESTADISTICAS_MUNICIPIOS } from '@/lib/municipios-stats'
 import { getInteligenciaMunicipio } from '@/lib/inteligencia-dom'
 import { calcularDerechosMunicipales, type TipoObra } from '@/lib/derechos-municipales'
 import { sumarDiasHabiles } from '@/lib/dias-habiles'
 import { fixMojibakeArcGIS } from '@/lib/zonificacion-format'
 import { UF_FALLBACK_CLP } from '@/lib/uf'
-import { flagUnverifiedCita } from '@/lib/normativa-retrieval'
+import { flagUnverifiedCita, getContextoNormativo } from '@/lib/normativa-retrieval'
 import { parseAiJson, textoLaxo } from '@/lib/ai-parse'
 import type { Proyecto } from '@/types'
 
@@ -118,15 +116,17 @@ function seccionZonificacion(p: Proyecto): string {
 }
 
 function buildOgucPrompt(p: Proyecto): string {
-  const ogucCtx = getContextoOGUC('FOT FOS rasante distanciamiento altura pisos')
-  // La LGUC (DFL 458) es la LEY; la OGUC (D.S. 47) es su reglamento. El
-  // copiloto conocía solo el reglamento: lib/lguc-knowledge.ts existía desde
-  // hacía meses, con el mismo interface que OGUC "para reutilizar la
-  // recuperación por keywords", y sin un solo caller — lo detectó
-  // check:orphans (05-08). La consulta apunta a lo procedimental/legal
-  // (permisos, recepciones, responsabilidad), que es lo que la LGUC cubre y
-  // la OGUC no; consultarla con "FOT rasante" no habría traído nada útil.
-  const lgucCtx = getContextoLGUC('permiso de edificación recepción definitiva responsabilidad profesional sanciones')
+  // getContextoNormativo() fusiona OGUC + LGUC + circulares DDU con un ranking
+  // único y ya maneja el flag de circulares no verificadas. Antes acá se
+  // llamaba a getContextoOGUC() y getContextoLGUC() por separado: el 05-08 se
+  // conectó la LGUC por esa vía sin notar que el recuperador fusionado ya
+  // existía y lo usaban /api/ai/chat y observation-response. Unificar suma las
+  // DDU sin código nuevo (verificado: 10.106 chars con OGUC+LGUC+DDU-ESP-084-07
+  // para esta consulta, contra ~2 fuentes antes) y deja UNA sola forma de
+  // inyectar normativa, en vez de dos con rankings distintos.
+  const normativaCtx = getContextoNormativo(
+    'permiso de edificación recepción definitiva responsabilidad profesional sanciones FOT rasante distanciamiento altura'
+  )
   return `Eres un experto en normativa urbanística chilena. Analiza este proyecto y produce un diagnóstico normativo.
 
 ## Datos del proyecto
@@ -139,23 +139,25 @@ function buildOgucPrompt(p: Proyecto): string {
 - Rol SII: ${p.rol_sii ?? 'no disponible'}
 - Avalúo fiscal: ${p.avaluo_fiscal_clp ? `$${p.avaluo_fiscal_clp.toLocaleString('es-CL')}` : 'no disponible'}
 ${seccionZonificacion(p)}
-## Artículos OGUC relevantes (D.S. N°47/1992 — reglamento)
-${ogucCtx}
-${lgucCtx ? `
-## Artículos LGUC relevantes (DFL N°458/1975 — ley)
-${lgucCtx}
+## Contexto normativo (OGUC D.S. N°47/1992, LGUC DFL N°458/1975, circulares DDU)
+${normativaCtx}
 
-IMPORTANTE sobre los textos LGUC de arriba: son RESÚMENES técnicos, NO
+IMPORTANTE: los textos de LGUC de arriba son RESÚMENES técnicos, NO
 transcripciones literales del DFL 458. Nunca los presentes como texto legal
-textual ni los pongas entre comillas como si fueran la letra de la ley. Si un
-número, plazo o texto exacto tiene peso legal, indicá que debe verificarse
-contra el texto oficial.
-` : ''}
+textual ni entre comillas. Si un número, plazo o texto exacto tiene peso legal,
+indicá que debe verificarse contra el texto oficial. Las circulares marcadas
+"[n° por verificar]" nunca se citan con su número.
+
+Cubrí las TRES fuentes cuando apliquen, no solo la OGUC: la LGUC (ley) rige
+permisos, recepciones, responsabilidad profesional y sanciones —materias que la
+OGUC no cubre— y las circulares DDU interpretan casos concretos. Un diagnóstico
+que solo cita OGUC deja fuera la capa legal y la interpretativa.
+
 Responde SOLO con JSON válido (sin markdown):
 {
   "articulos": [
     {
-      "numero": "Art. X.X.X",
+      "numero": "UNA sola cita, con su fuente. Ej: \"Art. 5.1.1 OGUC\", \"Art. 116 LGUC\" o \"DDU-ESP 084-07\"",
       "titulo": "nombre del artículo",
       "formula": "FOT = Superficie construida / Superficie terreno",
       "valor_normativo": "máximo 1.5 según zona",
