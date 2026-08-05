@@ -10,31 +10,22 @@ export interface SIIData {
   lng?: number
 }
 
-export interface SIILookupResponse {
-  ok: boolean
-  data?: SIIData
-  error?: string
-}
-
-export async function lookupSIIByAddress(
-  direccion: string,
-  comuna: string,
-): Promise<SIILookupResponse> {
-  const params = new URLSearchParams({ direccion, comuna })
-  const res = await fetch(`/api/sii/lookup?${params.toString()}`)
-  return res.json() as Promise<SIILookupResponse>
-}
-
-export async function lookupSIIByRol(rol: string): Promise<SIILookupResponse> {
-  const params = new URLSearchParams({ rol })
-  const res = await fetch(`/api/sii/lookup?${params.toString()}`)
-  return res.json() as Promise<SIILookupResponse>
-}
-
-export function formatRolSII(rol: string): string {
-  // Normalize to XXXX-YYYY display format
-  return rol.replace(/[^0-9-]/g, "")
-}
+// ELIMINADO 05-08: lookupSIIByAddress, lookupSIIByRol, SIILookupResponse.
+//
+// No solo estaban sin usar (check:orphans): declaraban una forma de respuesta
+// que /api/sii/lookup NO devuelve. La ruta responde `{ ok, rol, data }` con el
+// rol al NIVEL SUPERIOR, mientras SIILookupResponse lo ponía dentro de `data`
+// y marcaba como no-anulables campos que sí lo son. Quien las hubiera
+// "conectado" habría leído undefined con la bendición de TypeScript.
+// components/proyecto/sii-enricher.tsx hace el fetch a mano justamente porque
+// mapea la forma REAL (ver su LookupAPIResponse).
+//
+// Además lookupSIIByAddress(direccion, comuna) llamaba a un endpoint que solo
+// resuelve por rol — ya documentado en lib/tasacion-prompts.ts:10.
+//
+// El camino vivo para servidor es buscarDatosSIIPorRol() en
+// lib/sii-lookup-server.ts. Acá quedan solo el tipo SIIData (lo importan 4
+// vistas) y formatDestinoSII (avaluo-fiscal-card).
 
 export function formatDestinoSII(destino: string): string {
   const map: Record<string, string> = {

@@ -153,13 +153,17 @@ test('detalle de oportunidad abre y recorre TODOS los tabs, sin 5xx ni errores',
   // waitForURL esperando una ficha que nunca llegaba. Idéntico al caso de
   // expediente.smoke con /proyectos/zonificacion — el listado y sus
   // herramientas comparten prefijo, así que el prefijo no alcanza como filtro.
+  // Espera generosa y fallo RUIDOSO. Este test alternaba entre "skipped" y
+  // "failed" según la carga: el listado tarda en pintar sus filas y a veces no
+  // llegaba a tiempo. Saltearse era lo peor de los dos mundos —el reporte daba
+  // verde sin haber probado nada—, así que se prefiere fallar. La base tiene
+  // >9.000 locales activos: si acá no aparece ninguna fila, es un problema real
+  // del listado, no una base vacía.
   const candidatas = page.locator('a[href^="/mercado-inmobiliario/oportunidades/"]')
-  try {
-    await candidatas.first().waitFor({ state: 'attached', timeout: 15_000 })
-  } catch {
-    test.skip(true, 'sin oportunidades en la base — nada que abrir')
-    return
-  }
+  await expect(
+    candidatas.first(),
+    'el listado de oportunidades no pintó ninguna fila'
+  ).toBeAttached({ timeout: 30_000 })
   let primera: ReturnType<typeof candidatas.nth> | null = null
   const total = await candidatas.count()
   for (let i = 0; i < total; i++) {

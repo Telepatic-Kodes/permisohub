@@ -108,7 +108,10 @@ type PersistirParams = {
   minutos: number
   isocrona: Awaited<ReturnType<typeof obtenerIsocrona>>
   poblacion: Awaited<ReturnType<typeof obtenerPoblacionEnPoligono>>
-  competencia: Awaited<ReturnType<typeof obtenerCompetenciaPorFormato>>
+  // null cuando se persiste SOLO isócrona+población (ver obtenerDemografiaConCache):
+  // escribir una competencia vacía crearía una fila con competidores_n=0 que el
+  // sembrador interpretaría como "ya analizado" y saltearía esa ubicación.
+  competencia: Awaited<ReturnType<typeof obtenerCompetenciaPorFormato>> | null
   gapScore: number | null
 }
 
@@ -148,6 +151,8 @@ async function persistirAnalisis(p: PersistirParams): Promise<string | null> {
       })
       return null
     }
+
+    if (!p.competencia) return cache.id as string
 
     const { error: errComp } = await supabase.from('cabida_comercial_competencia').upsert(
       {
@@ -220,4 +225,81 @@ export function percentil(ordenados: number[], fraccion: number): number {
   const alto = Math.ceil(pos)
   if (bajo === alto) return ordenados[bajo]
   return ordenados[bajo] + (ordenados[alto] - ordenados[bajo]) * (pos - bajo)
+}
+
+export interface DemografiaCacheada {
+  isocrona: Awaited<ReturnType<typeof obtenerIsocrona>>
+  poblacion: Awaited<ReturnType<typeof obtenerPoblacionEnPoligono>>
+}
+
+/**
+ * Isócrona + población con caché en cabida_comercial_cache.
+ *
+ * Sin esto, /api/demografia-consumo recalculaba todo en cada carga de la ficha
+ * de terreno: 10,4 s medidos, contra 204 ms cuando no hay coordenadas. Valhalla
+ * aporta solo 0,7 s de eso — el grueso es la consulta espacial al censo
+ * (ArcGIS) sobre el polígono. La tabla ya existía desde la migración del 05-08
+ * y guarda exactamente esta clave; simplemente nadie la leía (mismo patrón que
+ * este proyecto viene corrigiendo todo el día).
+ *
+ * Nunca lanza: ante cualquier fallo de caché, recalcula.
+ */
+export async function obtenerDemografiaConCache(opciones: {
+  lat: number
+  lng: number
+  modo?: ModoIsocrona
+  minutos?: number
+}): Promise<DemografiaCacheada> {
+  const modo = opciones.modo ?? MODO_DEFECTO
+  const minutos = opciones.minutos ?? MINUTOS_DEFECTO
+  const lat_r = redondear(opciones.lat)
+  const lng_r = redondear(opciones.lng)
+
+  try {
+    const { data } = await createServiceClient()
+      .from('cabida_comercial_cache')
+      .select('isocrona_metodo, isocrona_geometria, isocrona_proveedor, poblacion_status, poblacion_personas, poblacion_viviendas, poblacion_manzanas, consultado_el')
+      .eq('lat_r', lat_r).eq('lng_r', lng_r).eq('modo', modo).eq('minutos', minutos)
+      .maybeSingle()
+
+    // Solo sirve un hit COMPLETO: con geometría y con censo resuelto. Una fila
+    // a medias se recalcula en vez de devolver población parcial como si fuera
+    // el total del área.
+    if (data?.isocrona_geometria && data.poblacion_status === 'encontrado') {
+      return {
+        isocrona: {
+          metodo: data.isocrona_metodo as 'red_vial' | 'circulo_equivalente',
+          geometria: data.isocrona_geometria as GeoJSON.Polygon | GeoJSON.MultiPolygon,
+          modo, minutos,
+          proveedor: (data.isocrona_proveedor ?? null) as DemografiaCacheada['isocrona']['proveedor'],
+          consultadoEl: data.consultado_el as string,
+          cacheHit: true,
+        },
+        poblacion: {
+          ok: true,
+          totalPersonas: data.poblacion_personas ?? 0,
+          totalViviendas: data.poblacion_viviendas ?? 0,
+          manzanasIntersectadas: data.poblacion_manzanas ?? 0,
+          comunasTocadas: [],
+          censoAno: 2017,
+          fuente: 'INE Censo 2017 — manzana censal',
+          consultadoEl: data.consultado_el as string,
+          paginado: false,
+        },
+      }
+    }
+  } catch (err) {
+    reportError(err, { scope: 'cabida.demografia.cache', extra: { lat_r, lng_r } })
+  }
+
+  const isocrona = await obtenerIsocrona({ lat: opciones.lat, lng: opciones.lng, minutos, modo })
+  const poblacion = await obtenerPoblacionEnPoligono(isocrona.geometria)
+
+  await persistirAnalisis({
+    lat: opciones.lat, lng: opciones.lng, modo, minutos, isocrona, poblacion,
+    competencia: null, // solo demografía: la competencia depende del formato
+    gapScore: null,
+  }).catch(() => null)
+
+  return { isocrona, poblacion }
 }

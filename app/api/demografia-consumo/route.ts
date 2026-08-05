@@ -3,9 +3,9 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { obtenerPoblacionEnPoligono } from '@/lib/censo-manzana-server'
 import { obtenerConsumoEstimado } from '@/lib/consumo-macro-zona'
-import { obtenerIsocrona, type ModoIsocrona } from '@/lib/isocrona'
+import type { ModoIsocrona } from '@/lib/isocrona'
+import { obtenerDemografiaConCache } from '@/lib/cabida-comercial-server'
 
 // Conecta obtenerPoblacionEnPoligono() y obtenerConsumoEstimado() (Fase 17)
 // a la UI. Originalmente (04-08, primera versión) usaba un círculo fijo de 1km
@@ -51,8 +51,12 @@ export async function GET(request: Request) {
       Number.isFinite(minutosCrudo) && minutosCrudo > 0 ? Math.min(minutosCrudo, MINUTOS_MAX) : MINUTOS_DEFECTO
     const modo: ModoIsocrona = modoParam === 'auto' ? 'auto' : MODO_DEFECTO
 
-    const isocrona = await obtenerIsocrona({ lat: lat as number, lng: lng as number, minutos, modo })
-    const poblacion = await obtenerPoblacionEnPoligono(isocrona.geometria)
+    // Con caché: sin ella esta ruta tardaba 10,4 s por carga de ficha (medido),
+    // contra 204 ms cuando no hay coordenadas. Valhalla aporta 0,7 s; el resto
+    // es la consulta espacial al censo. La tabla ya guardaba esta misma clave.
+    const { isocrona, poblacion } = await obtenerDemografiaConCache({
+      lat: lat as number, lng: lng as number, minutos, modo,
+    })
 
     // Se omite `geometria` a propósito: la tarjeta solo necesita los metadatos
     // para el disclosure, y el polígono puede traer cientos de vértices
