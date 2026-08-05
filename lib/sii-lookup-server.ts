@@ -102,8 +102,8 @@ function parseM2(raw: string): number | null {
 //   Rol inexistente → HTTP 200 con data:null y errors:null (distingue "no
 //   encontrado" de "error", a diferencia del CGI viejo).
 //
-// TRES COSAS QUE NO SON UN CAMBIO DE URL, y por las que esto no se migró en
-// el acto:
+// CUATRO COSAS QUE NO SON UN CAMBIO DE URL, y por las que esto no se migró en
+// el acto (la 3 quedó resuelta el 05-08; la 4 apareció resolviéndola):
 //
 //   1. LAS SUPERFICIES NO VIENEN. supTerreno y supConsMt2 están SIEMPRE en 0:
 //      11 predios muestreados el 05-08 en 5 direcciones de Providencia y 4
@@ -119,10 +119,29 @@ function parseM2(raw: string): number | null {
 //      Salvedad del muestreo: ninguna de las 11 era CASA HABITACION ni SITIO.
 //   2. No trae avalúo en UF, solo valorTotal en pesos. avaluo_fiscal_uf tendría
 //      que calcularse con la UF del día o quedar en null declarado.
-//   3. La comuna usa un CÓDIGO PROPIO DEL SII, no el de INE: Providencia es
-//      15103, no 13123. Hace falta un mapeo; la lista completa (347 comunas
-//      con {codigo, nombre}) sale de
-//      POST mapasFacadeService/listComunas, el mismo estilo de payload.
+//   3. RESUELTO — la comuna usa un CÓDIGO PROPIO DEL SII, no el de INE
+//      (Providencia es 15103, no 13123). El mapeo vive en lib/comunas-sii.ts:
+//      las 347 filas de listComunas más el puente desde los nombres que usa la
+//      app. Dos cosas que salieron de ahí y afectan a esta función:
+//        - La clave NO es el código INE: la identidad de comuna que circula por
+//          PermisoHub es el NOMBRE. No hace falta padrón INE, hace falta el
+//          nombre en la mano — y hoy no llega: el prop `municipio` de
+//          <SIIEnricher> existe pero handleSearch nunca lo manda.
+//        - codigosSIIPorComuna() devuelve un ARREGLO. Santiago son TRES códigos
+//          (13101, y 13134/13135 que son subdivisiones internas del SII con
+//          predios propios), así que resolver un rol de Santiago contra 13101 a
+//          secas deja predios sin encontrar. Falta decidir la política de
+//          fallback, y no es gratis por lo que viene en el punto 4.
+//   4. EL ENDPOINT TIENE RATE LIMIT. ~40 requests en ~3 minutos desde una sola
+//      IP devolvieron `HTTP 429: Se ha superado el límite de conexiones
+//      permitidas` (HTML, no JSON). No lo vimos el 04-08 porque las 11 muestras
+//      fueron a mano. Dos consecuencias:
+//        - El enriquecimiento masivo de v1.3 (cron sobre la cartera) no se
+//          puede portar tal cual: necesita backoff y ritmo, o deja de ser un
+//          barrido y pasa a ser bajo demanda. Es decisión de producto abierta.
+//        - Hay que distinguir 429 de "predio no existe" ANTES de sacar
+//          conclusiones: durante la investigación un barrido con 429 se leyó
+//          como "el código 13101 está muerto", y era falso.
 // ---------------------------------------------------------------------------
 export async function consultarRolEnSII(rolRaw: string, region = '13'): Promise<ConsultaRolSII> {
   const { manzana, predio, rolNorm } = normalizarRolSII(rolRaw)
