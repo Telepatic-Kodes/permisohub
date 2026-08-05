@@ -7,7 +7,9 @@ import { AlertTriangle, ArrowRight, Landmark, Loader2, MapPinned, RefreshCw, Shi
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { KpiCard } from "@/components/mercado-inmobiliario/charts/kpi-card"
 import { EstadoNormativo, type Veredicto } from "@/components/arch/estado"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PredioMap } from "@/components/proyecto/predio-map"
@@ -217,18 +219,18 @@ export default function TerrenoDetailPage() {
             {terreno.ubicacion_status === "resuelto" && (
               <Card>
                 <CardHeader><CardTitle className="text-sm">Señales de ubicación</CardTitle></CardHeader>
-                <CardContent className="space-y-2 text-xs">
-                  <p className="flex items-center gap-1.5">
-                    <MapPinned className="size-3.5 shrink-0 text-muted-foreground" />
+                <CardContent className="space-y-3 text-xs">
+                  <Badge variant={terreno.cerca_avenida_principal ? "default" : "muted"} className="gap-1.5">
+                    <MapPinned className="size-3.5 shrink-0" />
                     {terreno.cerca_avenida_principal
                       ? "Cerca de una avenida principal (≤300 m)"
                       : "Sin avenida principal cercana (≤300 m)"}
-                  </p>
-                  <p className="flex items-center gap-1.5">
-                    <MapPinned className="size-3.5 shrink-0 text-muted-foreground" />
-                    {terreno.anchors_comerciales_cercanos ?? 0} anchor(s) comercial(es) (mall/supermercado/tienda por
-                    departamento) a menos de 1 km
-                  </p>
+                  </Badge>
+                  <KpiCard
+                    label="Anchors comerciales cercanos"
+                    valor={String(terreno.anchors_comerciales_cercanos ?? 0)}
+                    contexto="Mall, supermercado o tienda por departamento a menos de 1 km"
+                  />
                   <p className="text-[11px] text-muted-foreground">
                     Fuente: OpenStreetMap (Overpass API) — cobertura de comercio puede ser incompleta fuera de zonas
                     bien mapeadas.
