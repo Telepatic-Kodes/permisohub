@@ -105,11 +105,18 @@ function parseM2(raw: string): number | null {
 // TRES COSAS QUE NO SON UN CAMBIO DE URL, y por las que esto no se migró en
 // el acto:
 //
-//   1. supTerreno/supConsMt2 vienen en 0, NO en null. Mapearlos directo
-//      persistiría "0 m²" como si fuera una medición — la misma confusión que
-//      esta base de código viene corrigiendo (ver duration_ms en la migración
-//      20260814, y gapScore 0 vs null). Hay que decidir explícitamente si el 0
-//      de esta API significa "sin dato" y convertirlo.
+//   1. LAS SUPERFICIES NO VIENEN. supTerreno y supConsMt2 están SIEMPRE en 0:
+//      11 predios muestreados el 05-08 en 5 direcciones de Providencia y 4
+//      destinos distintos (estacionamiento, bodega, oficina, comercio), todos
+//      en 0, con medidaSupConst:"m²" presente pero sin valor. No es "a veces
+//      cero": este endpoint no expone superficies.
+//      Consecuencia: el CGI viejo SÍ parseaba SUP.TERRENO y SUP.CONSTRUIDA, y
+//      el enriquecimiento automático de v1.3 escribe esas dos columnas — o sea
+//      migrar acá PIERDE dos campos. Hay que declararlos null (nunca 0, que
+//      sería inventar una medición) y buscar de dónde salen: quizá otro método
+//      de la misma API (datosCsa/datosAh vienen null en esta respuesta pero
+//      existen en el schema), quizá no estén públicos.
+//      Salvedad del muestreo: ninguna de las 11 era CASA HABITACION ni SITIO.
 //   2. No trae avalúo en UF, solo valorTotal en pesos. avaluo_fiscal_uf tendría
 //      que calcularse con la UF del día o quedar en null declarado.
 //   3. La comuna usa un CÓDIGO PROPIO DEL SII, no el de INE: Providencia es
