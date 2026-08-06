@@ -99,6 +99,8 @@ RESTRICCIONES DE FORMATO:
 export interface DueDiligencePropiedadInput {
   direccion: string
   rol?: string
+  /** Necesaria para consultar el SII: su endpoint resuelve por comuna. */
+  comuna?: string
   tipo?: string
   superficie?: string
   precioOferta?: string

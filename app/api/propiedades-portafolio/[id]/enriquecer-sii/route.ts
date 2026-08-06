@@ -22,14 +22,14 @@ export async function POST(
 
     const { data: propiedad, error: fetchError } = await supabase
       .from('propiedades_portafolio')
-      .select('rol_sii, tipo_propiedad')
+      .select('rol_sii, comuna, tipo_propiedad')
       .eq('id', id)
       .single()
 
     if (fetchError || !propiedad) return Response.json({ error: 'Propiedad no encontrada' }, { status: 404 })
     if (!propiedad.rol_sii) return Response.json({ error: 'Esta propiedad no tiene Rol SII declarado' }, { status: 400 })
 
-    const resultado = await consultarSII(propiedad.rol_sii, propiedad.tipo_propiedad as TipoPropiedadComercial, request.headers.get('cookie'))
+    const resultado = await consultarSII(propiedad.rol_sii, propiedad.comuna, propiedad.tipo_propiedad as TipoPropiedadComercial, request.headers.get('cookie'))
     if (!resultado) {
       return Response.json({ error: 'No se pudo consultar el SII para este rol — intenta de nuevo más tarde' }, { status: 502 })
     }

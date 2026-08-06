@@ -46,6 +46,9 @@ function DueDiligencePageInner() {
     hipotecas: "",
     impuestoHerencia: "",
     zonificacion: searchParams.get("comuna") ?? "",
+    // Campo propio y no reusando `zonificacion`: desde el 06-08 la comuna viaja
+    // al backend para poder consultar el SII, que resuelve por comuna.
+    comuna: searchParams.get("comuna") ?? "",
     documentos: "",
     observaciones: "",
   })

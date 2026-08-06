@@ -10,7 +10,11 @@ import type { SIIData } from "@/lib/sii-lookup"
 interface SIIEnricherProps {
   /** Called when SII data is fetched — parent should pre-fill form fields */
   onEnrich: (data: SIIData) => void
-  /** Whether a municipio is already selected (needed for region hint) */
+  /**
+   * Comuna del predio. OBLIGATORIA para consultar: el endpoint del SII resuelve
+   * por código de comuna. Hasta el 06-08 este prop existía y no se usaba — la
+   * consulta viajaba solo con el rol y el servidor asumía Región Metropolitana.
+   */
   municipio?: string
   /** Texto del botón "Aplicar" — el default asume un formulario de proyecto */
   applyLabel?: string
@@ -23,15 +27,12 @@ interface LookupAPIResponse {
   rol?: string
   data?: {
     direccion_normalizada: string
-    region: string
     comuna: string
     destino: string
     avaluo_fiscal_clp: number | null
     avaluo_fiscal_uf: number | null
-    superficie_terreno_m2: number | null
-    superficie_construida_m2: number | null
-    lat?: number
-    lng?: number
+    lat: number | null
+    lng: number | null
   }
   error?: string
 }
@@ -44,14 +45,14 @@ export function SIIEnricher({ onEnrich, municipio, applyLabel = "Aplicar al proy
 
   const handleSearch = async () => {
     const trimmed = rol.trim()
-    if (!trimmed) return
+    if (!trimmed || !municipio) return
 
     setLoading(true)
     setError(null)
     setResult(null)
 
     try {
-      const params = new URLSearchParams({ rol: trimmed })
+      const params = new URLSearchParams({ rol: trimmed, comuna: municipio })
       const res = await fetch(`/api/sii/lookup?${params.toString()}`)
       const json = (await res.json()) as LookupAPIResponse
 
@@ -60,14 +61,15 @@ export function SIIEnricher({ onEnrich, municipio, applyLabel = "Aplicar al proy
         return
       }
 
+      // Sin `?? 0`: un avalúo ausente no es un avalúo de cero pesos. Antes se
+      // coercía y la ficha mostraba "$0" como si fuera el dato del SII.
       const mapped: SIIData = {
         rol: json.rol ?? trimmed,
-        avaluo_fiscal_clp: json.data.avaluo_fiscal_clp ?? 0,
+        avaluo_fiscal_clp: json.data.avaluo_fiscal_clp,
         avaluo_fiscal_uf: json.data.avaluo_fiscal_uf,
-        superficie_terreno_m2: json.data.superficie_terreno_m2 ?? 0,
-        superficie_construida_m2: json.data.superficie_construida_m2 ?? 0,
         destino: json.data.destino,
         direccion_normalizada: json.data.direccion_normalizada,
+        comuna: json.data.comuna,
         lat: json.data.lat,
         lng: json.data.lng,
       }
@@ -118,7 +120,7 @@ export function SIIEnricher({ onEnrich, municipio, applyLabel = "Aplicar al proy
                 variant="outline"
                 size="sm"
                 onClick={() => void handleSearch()}
-                disabled={loading || !rol.trim()}
+                disabled={loading || !rol.trim() || !municipio}
                 className="shrink-0"
               >
                 {loading ? (
@@ -130,8 +132,8 @@ export function SIIEnricher({ onEnrich, municipio, applyLabel = "Aplicar al proy
             </div>
             <p className="text-xs text-muted-foreground">
               {municipio
-                ? `Busca por el rol del predio en ${municipio}`
-                : "El rol del predio aparece en la escritura o en sii.cl"}
+                ? `Busca por el rol del predio en ${municipio}. El SII no publica superficies: esas van a mano.`
+                : "Selecciona primero la comuna — el SII busca el rol dentro de una comuna."}
             </p>
           </div>
 
@@ -151,7 +153,7 @@ export function SIIEnricher({ onEnrich, municipio, applyLabel = "Aplicar al proy
             <span className="text-muted-foreground">Destino</span>
             <span className="capitalize">{result.destino.toLowerCase()}</span>
 
-            {result.avaluo_fiscal_clp > 0 && (
+            {result.avaluo_fiscal_clp !== null && (
               <>
                 <span className="text-muted-foreground">Avalúo fiscal</span>
                 <span className="font-medium">{CLP.format(result.avaluo_fiscal_clp)}</span>
@@ -165,24 +167,17 @@ export function SIIEnricher({ onEnrich, municipio, applyLabel = "Aplicar al proy
               </>
             )}
 
-            {result.superficie_terreno_m2 > 0 && (
-              <>
-                <span className="text-muted-foreground">Sup. terreno</span>
-                <span>{result.superficie_terreno_m2.toLocaleString("es-CL")} m²</span>
-              </>
-            )}
-
-            {result.superficie_construida_m2 > 0 && (
-              <>
-                <span className="text-muted-foreground">Sup. construida</span>
-                <span>{result.superficie_construida_m2.toLocaleString("es-CL")} m²</span>
-              </>
-            )}
-
             {result.direccion_normalizada && (
               <>
                 <span className="text-muted-foreground">Dirección SII</span>
                 <span className="leading-snug">{result.direccion_normalizada}</span>
+              </>
+            )}
+
+            {result.comuna && (
+              <>
+                <span className="text-muted-foreground">Comuna SII</span>
+                <span className="leading-snug">{result.comuna}</span>
               </>
             )}
           </div>

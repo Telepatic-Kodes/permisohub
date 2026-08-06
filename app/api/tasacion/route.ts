@@ -46,7 +46,9 @@ export async function POST(request: Request) {
   body.superficieM2 = String(body.superficieM2)
 
   const uf = await obtenerValorUF()
-  const siiData = body.rolSii ? await buscarDatosSIIPorRol(body.rolSii, request.headers.get('cookie')) : null
+  const siiData = body.rolSii && body.comuna
+    ? await buscarDatosSIIPorRol(body.rolSii, body.comuna, request.headers.get('cookie'))
+    : null
 
   const instructions = buildSystemTasacionTerreno({ tieneDatosSII: siiData !== null })
   const userQuery = buildUserQueryTasacion(body, uf, siiData)

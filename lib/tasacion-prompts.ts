@@ -221,8 +221,6 @@ REGLAS DE CALIDAD:
 interface TasacionSIIData {
   avaluo_fiscal_clp: number | null
   avaluo_fiscal_uf: number | null
-  superficie_terreno_m2: number | null
-  superficie_construida_m2: number | null
   destino: string
 }
 
@@ -263,8 +261,9 @@ export function buildUserQueryTasacion(input: TasacionInput, uf: number, siiData
     lines.push('[DATOS SII VERIFICADOS]')
     lines.push(`Avalúo fiscal: ${siiData.avaluo_fiscal_clp !== null ? `$${siiData.avaluo_fiscal_clp.toLocaleString('es-CL')} CLP` : 'no disponible'}.`)
     lines.push(`Avalúo fiscal (UF): ${siiData.avaluo_fiscal_uf !== null ? `${siiData.avaluo_fiscal_uf.toLocaleString('es-CL')} UF` : 'no disponible'}.`)
-    lines.push(`Superficie terreno (SII): ${siiData.superficie_terreno_m2 ?? 'no disponible'} m².`)
-    lines.push(`Superficie construida (SII): ${siiData.superficie_construida_m2 ?? 'no disponible'} m².`)
+    // Las superficies del SII se eliminaron el 06-08: el endpoint nuevo no las
+    // expone. Emitirlas como "no disponible m²" solo gastaba contexto y le
+    // sugería al modelo que existía un dato catastral que nunca hubo.
     lines.push(`Destino (SII): ${siiData.destino}.`)
   }
 

@@ -32,7 +32,12 @@ export async function POST(request: Request) {
   await recordUsage(auth.userId, 'ai_chats')
 
   const uf = await obtenerValorUF()
-  const siiData = body.rol ? await buscarDatosSIIPorRol(body.rol, request.headers.get('cookie')) : null
+  // Sin comuna no hay consulta al SII: su endpoint resuelve por comuna, y
+  // asumir una (antes se asumía Región Metropolitana) devolvería el predio de
+  // otra persona con el mismo rol. Preferimos el informe sin cruce fiscal.
+  const siiData = body.rol && body.comuna
+    ? await buscarDatosSIIPorRol(body.rol, body.comuna, request.headers.get('cookie'))
+    : null
   const userQuery = buildUserQueryDueDiligencePropiedad(body, uf, siiData)
 
   const encoder = new TextEncoder()

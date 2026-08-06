@@ -108,9 +108,7 @@ function PredictorPageInner() {
           ...(siiData && {
             rolSII: siiData.rol,
             destinoActualSII: siiData.destino,
-            avaluoFiscalCLP: siiData.avaluo_fiscal_clp || undefined,
-            superficieTerrenoSII: siiData.superficie_terreno_m2 || undefined,
-            superficieConstruidaSII: siiData.superficie_construida_m2 || undefined,
+            avaluoFiscalCLP: siiData.avaluo_fiscal_clp ?? undefined,
           }),
         }),
       })
@@ -228,18 +226,14 @@ function PredictorPageInner() {
                   </div>
                 </div>
 
-                {/* SII Enricher — auto-populates superficie fields and sends catastral context to AI */}
+                {/* SII Enricher — aporta rol, destino y avalúo al contexto de la IA.
+                    Ya NO autocompleta superficies: el SII dejó de publicarlas
+                    (ver cabecera de lib/sii-lookup-server.ts). Las escribe el
+                    arquitecto. */}
                 <SIIEnricher
                   municipio={form.municipio}
                   onEnrich={(data) => {
                     setSIIData(data)
-                    // Auto-fill surfaces if architect hasn't entered them yet
-                    if (!form.superficieTerreno && data.superficie_terreno_m2 > 0) {
-                      setField('superficieTerreno', String(data.superficie_terreno_m2))
-                    }
-                    if (!form.superficieConstruida && data.superficie_construida_m2 > 0) {
-                      setField('superficieConstruida', String(data.superficie_construida_m2))
-                    }
                   }}
                 />
 

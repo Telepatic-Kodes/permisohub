@@ -215,10 +215,11 @@ export interface EnriquecimientoSII {
  */
 export async function consultarSII(
   rolSii: string,
+  comuna: string,
   tipoPropiedad: TipoPropiedadComercial,
   cookieHeader: string | null,
 ): Promise<EnriquecimientoSII | null> {
-  const datos = await buscarDatosSIIPorRol(rolSii, cookieHeader)
+  const datos = await buscarDatosSIIPorRol(rolSii, comuna, cookieHeader)
   if (!datos) return null
 
   return {

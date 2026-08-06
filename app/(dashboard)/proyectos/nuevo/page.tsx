@@ -116,9 +116,7 @@ function NuevoProyectoPageInner() {
       // SII enrichment (optional)
       ...(siiData && {
         rol_sii: siiData.rol,
-        avaluo_fiscal_clp: siiData.avaluo_fiscal_clp || undefined,
-        superficie_terreno_m2: siiData.superficie_terreno_m2 || undefined,
-        superficie_construida_m2: siiData.superficie_construida_m2 || undefined,
+        avaluo_fiscal_clp: siiData.avaluo_fiscal_clp ?? undefined,
         destino_sii: siiData.destino || undefined,
         lat: siiData.lat,
         lng: siiData.lng,
