@@ -1,34 +1,115 @@
 // Server-only. Dos cosas viven acá:
 //
-//   1. consultarRolEnSII() — el scraping y parseo del SII, extraído de
-//      app/api/sii/lookup/route.ts el 05-08 para que la ruta Y el probe de
-//      salud consuman LA MISMA función. Un probe con su propia copia del
-//      parser puede estar verde mientras el parser real está roto, que es
+//   1. consultarRolEnSII() — la consulta al SII y la normalización de su
+//      respuesta, extraída de app/api/sii/lookup/route.ts el 05-08 para que la
+//      ruta Y el probe de salud consuman LA MISMA función. Un probe con su
+//      propia copia puede estar verde mientras el camino real está roto, que es
 //      exactamente el modo de falla que este subsistema existe para evitar.
-//
-//      Se extrajo DESDE la ruta, no reconstruido a partir de lo que uno cree
-//      que la ruta hace: ese error ya se cometió una vez en lib/sii-lookup.ts
-//      (lookupSIIByRol declaraba `{ ok, data }` con el rol adentro de data
-//      cuando la ruta lo devuelve arriba), y produjo tres funciones muertas
-//      que había que borrar.
 //
 //   2. buscarDatosSIIPorRol() — cliente HTTP hacia la ruta interna, para las
 //      rutas de IA (tasación, due-diligence-propiedad).
 //
 // NO reemplaza lib/sii-lookup.ts (ese es el wrapper client-safe de SIIEnricher).
+//
+// =============================================================================
+// MIGRACIÓN AL ENDPOINT NUEVO — hecha el 06-08. Lo que sigue es el resultado de
+// tres días de investigación; está acá y no en un informe porque quien vuelva a
+// tocar esto lo necesita a mano.
+//
+// EL CGI VIEJO ESTÁ MUERTO. zeus.sii.cl/avalu_cgi/br/ responde 403 al directorio
+// y 404 a erc0000.sh y dbr_menu.sh: se fue toda la familia, no es un parámetro
+// mal armado. El SII migró a una SPA (www4.sii.cl/mapasui) con API JSON detrás.
+// El scraping de HTML que vivía acá se borró en esta misma migración: ya no
+// había nada que parsear.
+//
+// SIN AUTENTICACIÓN. conversationId/transactionId los genera el cliente y solo
+// se valida que no vengan vacíos (la app oficial manda "UNAUTHENTICATED-CALL<ip>"
+// y un UUID). Verificado con valores inventados. No hace falta el handshake de
+// settingsService/obtenerNuevaAut.
+//
+// LO QUE SE PIERDE, y por qué no hubo alternativa:
+//
+//   - SUPERFICIES. supTerreno y supConsMt2 vienen SIEMPRE en 0. Evidencia: 14
+//     predios, 3 comunas (Providencia, La Florida, Pirque), 6 destinos
+//     (ESTACIONAMIENTO, BODEGA, OFICINA, COMERCIO, HABITACIONAL, SALUD), tanto
+//     unidades en edificio como lotes con terreno propio.
+//     LA HIPÓTESIS QUE SE PROBÓ Y FALLÓ, para que nadie la repita: se sospechó
+//     que los ceros eran copropiedad (para una unidad el terreno es bien común,
+//     así que 0 sería el dato correcto). Se testeó con una casa en villa de La
+//     Florida —HABITACIONAL, urbana, lote propio, rol 1112-6— y dio 0 igual que
+//     un estacionamiento.
+//     Explicación que sí queda en pie, sin efecto para nosotros: la ficha
+//     oficial muestra "0 m²" al visitante anónimo, y la app manda un `tokenARSII`
+//     (cookie ARSII_AVA_RECURSO) que no tenemos. Es plausible que las
+//     superficies solo se pueblen para el contribuyente dueño, autenticado.
+//     DESCARTADO como origen alternativo: getDatosCsa son sectores agrícolas y
+//     getDatosAh son áreas homogéneas (devuelve valorUnitario y rangoSuperficie
+//     DEL ÁREA, no del predio).
+//     Por eso superficie_terreno_m2 y superficie_construida_m2 SE ELIMINARON de
+//     todo el camino del SII (esta interfaz, SIIData, el enricher y el prompt de
+//     Tasación) en vez de dejarse en null. Un campo estructuralmente vacío no es
+//     un dato faltante, es código muerto que hace creer que algún día llega. Las
+//     columnas de la BD siguen existiendo: las llena el arquitecto a mano, que
+//     ahora es su única fuente.
+//
+// LO QUE SE GANA, que el CGI no daba:
+//   - lat/lng del predio. OJO: en la respuesta del SII, `ubicacionX` es la
+//     LATITUD e `ubicacionY` la LONGITUD, al revés de lo que sugieren los
+//     nombres. No es interpretación nuestra: así lo usa su propio
+//     detalle-controller.js, y cuadra con las coordenadas reales.
+//   - Rol inexistente → HTTP 200 con data:null, en vez del HTML ambiguo del CGI.
+//   - Disponibles y sin consumidor todavía (por eso no se mapean): `ubicacion`
+//     (URBANA/RURAL), `valorAfecto`/`valorExento` por separado, `ah` (código de
+//     área homogénea, insumo de Tasación vía getDatosAh) y `periodo` (a qué
+//     reavalúo corresponde el dato — el CGI nunca lo dijo).
+//
+// EL AVALÚO EN UF SE CALCULA, no viene. El endpoint solo entrega pesos. Se
+// convierte con la UF del día (lib/uf-server.ts, caché 24h y constante de
+// respaldo), así que el campo se conserva en vez de perderse.
+//
+// RATE LIMIT — el riesgo operacional de este módulo. ~40 requests en ~3 minutos
+// devolvieron `HTTP 429: Se ha superado el límite de conexiones permitidas`, y
+// el bloqueo NO cedió en más de una hora (5 sondas, una cada 10 min, sin header
+// Retry-After). El texto además dice que las consultas recurrentes infringen las
+// condiciones de uso del sitio.
+// Por qué igual es viable: todo el consumo del SII en esta app es BAJO DEMANDA y
+// por registro — creación de proyecto, enriquecer-sii de una propiedad,
+// Tasación, Due Diligence. No hay ni hubo nunca un cron que barra la cartera; se
+// verificó contra vercel.json y contra todos los usos de rol_sii. Un barrido es
+// justamente lo que NO se puede agregar acá: se auto-bloquearía en la primera
+// corrida y dejaría sin SII a los usuarios interactivos, que salen por la misma
+// IP.
+//
+// CÓMO SEGUIR INVESTIGANDO SIN GASTAR CUOTA: los estáticos de la SPA no están
+// rate-limited (responden 200 con la API bloqueada), así que el contrato se lee
+// del código del propio SII en vez de adivinarlo a fuerza de requests:
+//   /mapasui/common/js/services.js               → los 17 métodos del facade
+//   /mapasui/common/_content/js/*-controller.js  → la forma de cada payload
+//   /mapasui/common/_content/detalle-predio.html → qué campos muestra la ficha
+// Y para encontrar roles reales sin picar manzanas al azar: getPrediosDireccion
+// devuelve TODOS los roles de una calle en UNA request (2.992 para Froilán Roa
+// en La Florida). Buscar por dirección y luego pedir detalle cuesta 2 requests;
+// adivinar cuesta decenas y gatilla el 429.
+// =============================================================================
 
-import { fetchWithTimeout, extractBetween, stripTags, ScraperUnavailableError } from '@/lib/scraper'
+import { fetchWithTimeout, ScraperUnavailableError, ScraperRateLimitedError } from '@/lib/scraper'
+import { codigosSIIPorComuna } from '@/lib/comunas-sii'
+import { obtenerUfActual } from '@/lib/uf-server'
+
+const ENDPOINT = 'https://www4.sii.cl/mapasui/services/data/mapasFacadeService/getPredioNacional'
+const NAMESPACE =
+  'cl.sii.sdi.lob.bbrr.mapas.data.api.interfaces.MapasFacadeService/getPredioNacional'
 
 /** Exactamente la forma del campo `data` de /api/sii/lookup — el rol va afuera. */
 export interface DatosSIIParseados {
   direccion_normalizada: string
-  region: string
   comuna: string
   destino: string
   avaluo_fiscal_clp: number | null
+  /** Calculado con la UF del día; null si no vino el avalúo en pesos. */
   avaluo_fiscal_uf: number | null
-  superficie_terreno_m2: number | null
-  superficie_construida_m2: number | null
+  lat: number | null
+  lng: number | null
 }
 
 export interface ConsultaRolSII {
@@ -45,130 +126,145 @@ export function normalizarRolSII(rolRaw: string): { manzana: string; predio: str
   return { manzana, predio, rolNorm: `${manzana}-${predio}` }
 }
 
-// "1.234.567" → 1234567
-function parseChileanNumber(raw: string): number | null {
-  const cleaned = raw.replace(/\./g, '').replace(',', '.').replace(/[^0-9.]/g, '')
-  const n = parseFloat(cleaned)
-  return isNaN(n) ? null : n
-}
-
-function parseM2(raw: string): number | null {
-  const match = raw.match(/([\d.,]+)\s*m?²?/i)
-  if (!match) return null
-  return parseChileanNumber(match[1])
+/** Solo los campos que consumimos. El SII devuelve bastantes más. */
+interface PredioSII {
+  direccion?: string | null
+  nombreComuna?: string | null
+  destinoDescripcion?: string | null
+  valorTotal?: number | null
+  /** LATITUD, pese al nombre. */
+  ubicacionX?: number | null
+  /** LONGITUD, pese al nombre. */
+  ubicacionY?: number | null
 }
 
 /**
- * Consulta un rol en el SII y parsea la ficha. Sin auth ni rate limit: eso es
- * responsabilidad de la ruta, no del scraping — y es justamente lo que hacía
- * imposible ponerle un probe (un chequeo sintético no tiene sesión).
+ * Una consulta al SII para un (comuna, manzana, predio).
  *
- * Tres desenlaces DISTINTOS, que antes eran dos:
- *
- *   - lanza ScraperUnavailableError → el SII no respondió (red, HTTP no-2xx).
- *   - `{ ok: false, error }`        → respondió, pero no se parseó NINGÚN
- *     campo identificatorio. Antes esto devolvía `ok: true` con direccion:'',
- *     comuna:'' y todos los números en null — o sea "cambió el markup del SII"
- *     y "esta propiedad no tiene datos" se veían idénticos, y la ficha
- *     mostraba campos vacíos como si fueran el dato real.
- *   - `{ ok: true, data }`          → parseó al menos un campo identificatorio.
+ * Devuelve null cuando el predio no existe — que el SII distingue limpiamente
+ * de un error respondiendo HTTP 200 con data:null.
  */
-// ---------------------------------------------------------------------------
-// ENDPOINT DE REEMPLAZO — capturado en vivo el 05-08, listo para migrar.
-//
-// El CGI que usa la función de abajo está MUERTO: zeus.sii.cl/avalu_cgi/br/
-// responde 403 al directorio, y tanto erc0000.sh como dbr_menu.sh dan 404. No
-// es un parámetro mal armado, se fue toda la familia. El SII migró a una SPA
-// (www4.sii.cl/mapasui) con API JSON detrás.
-//
-//   POST https://www4.sii.cl/mapasui/services/data/mapasFacadeService/getPredioNacional
-//   {
-//     "metaData": {
-//       "namespace": "cl.sii.sdi.lob.bbrr.mapas.data.api.interfaces.MapasFacadeService/getPredioNacional",
-//       "conversationId": "<string no vacío>",
-//       "transactionId":  "<string no vacío>"
-//     },
-//     "data": { "predio": { "comuna": "15103", "manzana": "14", "predio": "345" }, "servicios": [] }
-//   }
-//
-// SIN AUTENTICACIÓN: conversationId/transactionId los genera el cliente y solo
-// se valida que no estén vacíos (la app oficial manda "UNAUTHENTICATED-CALL<ip>"
-// y un UUID). Verificado con valores inventados: HTTP 200, errors: null, datos
-// completos. No hace falta el handshake de settingsService/obtenerNuevaAut.
-//
-// Respuesta verificada para Providencia 1234 LC 1 (rol 14-345):
-//   { rol, direccion, nombreComuna, destinoDescripcion, valorTotal: 198346511,
-//     valorAfecto, valorExento, supTerreno: 0, supConsMt2: 0, medidaSupConst: "m²" }
-//   Rol inexistente → HTTP 200 con data:null y errors:null (distingue "no
-//   encontrado" de "error", a diferencia del CGI viejo).
-//
-// TRES COSAS QUE NO SON UN CAMBIO DE URL, y por las que esto no se migró en
-// el acto:
-//
-//   1. LAS SUPERFICIES NO VIENEN. supTerreno y supConsMt2 están SIEMPRE en 0:
-//      11 predios muestreados el 05-08 en 5 direcciones de Providencia y 4
-//      destinos distintos (estacionamiento, bodega, oficina, comercio), todos
-//      en 0, con medidaSupConst:"m²" presente pero sin valor. No es "a veces
-//      cero": este endpoint no expone superficies.
-//      Consecuencia: el CGI viejo SÍ parseaba SUP.TERRENO y SUP.CONSTRUIDA, y
-//      el enriquecimiento automático de v1.3 escribe esas dos columnas — o sea
-//      migrar acá PIERDE dos campos. Hay que declararlos null (nunca 0, que
-//      sería inventar una medición) y buscar de dónde salen: quizá otro método
-//      de la misma API (datosCsa/datosAh vienen null en esta respuesta pero
-//      existen en el schema), quizá no estén públicos.
-//      Salvedad del muestreo: ninguna de las 11 era CASA HABITACION ni SITIO.
-//   2. No trae avalúo en UF, solo valorTotal en pesos. avaluo_fiscal_uf tendría
-//      que calcularse con la UF del día o quedar en null declarado.
-//   3. La comuna usa un CÓDIGO PROPIO DEL SII, no el de INE: Providencia es
-//      15103, no 13123. Hace falta un mapeo; la lista completa (347 comunas
-//      con {codigo, nombre}) sale de
-//      POST mapasFacadeService/listComunas, el mismo estilo de payload.
-// ---------------------------------------------------------------------------
-export async function consultarRolEnSII(rolRaw: string, region = '13'): Promise<ConsultaRolSII> {
-  const { manzana, predio, rolNorm } = normalizarRolSII(rolRaw)
-
-  const url =
-    `https://zeus.sii.cl/avalu_cgi/br/erc0000.sh` +
-    `?RGN=${region}&MNZ=${manzana.padStart(4, '0')}&PRD=${predio.padStart(3, '0')}`
+async function pedirPredio(
+  codigoComuna: string,
+  manzana: string,
+  predio: string,
+): Promise<PredioSII | null> {
+  const body = JSON.stringify({
+    metaData: { namespace: NAMESPACE, conversationId: 'permisohub', transactionId: `permisohub-${codigoComuna}` },
+    data: { predio: { comuna: codigoComuna, manzana, predio }, servicios: [] },
+  })
 
   let response: Response
   try {
-    response = await fetchWithTimeout(url, {}, 15_000)
+    response = await fetchWithTimeout(
+      ENDPOINT,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Accept: '*/*' NO es descuido, es obligatorio. El servidor del SII
+          // devuelve HTTP 500 ante un Accept que no incluya */* — verificado el
+          // 06-08: 'application/json' → 500, 'text/html,application/xhtml+xml'
+          // → 500, '*/*' → 200, 'application/json, */*' → 200. Y el default de
+          // fetchWithTimeout es justamente 'text/html,...', así que hay que
+          // pisarlo o toda consulta falla.
+          // Costó encontrarlo porque los tests con stub pasaban perfecto: el
+          // payload era correcto, lo que rompía era un header que agregaba el
+          // helper. Solo apareció al llamar al SII de verdad.
+          Accept: '*/*',
+        },
+        body,
+      },
+      15_000,
+    )
   } catch (err) {
     throw new ScraperUnavailableError('SII', err instanceof Error ? err.message : String(err))
   }
-  if (!response.ok) {
-    throw new ScraperUnavailableError('SII', `HTTP ${response.status} para rol ${rolNorm}`)
-  }
 
-  const html = await response.text()
-  const campo = (marcador: string): string => {
-    const raw = extractBetween(html, marcador, '</TD>')
-    return raw ? stripTags(raw) : ''
-  }
+  // El 429 se distingue ANTES de mirar el body, y no por prolijidad: la página
+  // de bloqueo es HTML, así que leerla como JSON falla con un mensaje que no
+  // menciona el bloqueo, y el 429 se termina reportando como "el SII cambió el
+  // formato" o como "este predio no existe". Ambas conclusiones ya se sacaron
+  // por error durante la investigación.
+  if (response.status === 429) throw new ScraperRateLimitedError('SII')
+  if (!response.ok) throw new ScraperUnavailableError('SII', `HTTP ${response.status}`)
 
-  const data: DatosSIIParseados = {
-    direccion_normalizada: campo('DIRECCIÓN</TD>'),
-    region: campo('REGIÓN</TD>'),
-    comuna: campo('COMUNA</TD>'),
-    destino: campo('DESTINO</TD>'),
-    avaluo_fiscal_clp: parseChileanNumber(campo('AVALÚO FISCAL TOTAL</TD>').replace('$', '')),
-    avaluo_fiscal_uf: parseChileanNumber(campo('AVALÚO FISCAL TOTAL UF</TD>').replace('UF', '')),
-    superficie_terreno_m2: parseM2(campo('SUP.TERRENO</TD>')),
-    superficie_construida_m2: parseM2(campo('SUP.CONSTRUIDA</TD>')),
+  let json: { data?: PredioSII | null }
+  try {
+    json = (await response.json()) as { data?: PredioSII | null }
+  } catch (err) {
+    throw new ScraperUnavailableError('SII', `respuesta no es JSON: ${err instanceof Error ? err.message : String(err)}`)
   }
+  return json.data ?? null
+}
 
-  // Los tres campos que SIEMPRE trae una ficha real. Que los tres salgan
-  // vacíos no es un predio sin datos: es que no estamos leyendo una ficha.
-  if (!data.direccion_normalizada && !data.comuna && !data.region) {
+/**
+ * Consulta un rol en el SII. Sin auth ni rate limit propios: eso es
+ * responsabilidad de la ruta, no de la consulta — y es justamente lo que hacía
+ * imposible ponerle un probe (un chequeo sintético no tiene sesión).
+ *
+ * `comuna` es el NOMBRE tal como lo usa la app ("Providencia", "La Florida").
+ * El SII pide un código propio suyo y el mapeo vive en lib/comunas-sii.ts.
+ *
+ * Tres desenlaces distintos:
+ *   - lanza ScraperRateLimitedError → nos bloquearon (HTTP 429).
+ *   - lanza ScraperUnavailableError → el SII no respondió (red, HTTP no-2xx).
+ *   - `{ ok: false, error }`        → respondió y el rol no existe en esa
+ *     comuna, o la comuna no tiene código SII. No es lo mismo que un fallo, y
+ *     por eso no lanza.
+ *   - `{ ok: true, data }`          → predio encontrado.
+ */
+export async function consultarRolEnSII(rolRaw: string, comuna: string): Promise<ConsultaRolSII> {
+  const { manzana, predio, rolNorm } = normalizarRolSII(rolRaw)
+
+  // Santiago son TRES códigos (13101, más 13134/13135 que son subdivisiones
+  // internas del SII con predios propios), así que esto itera. Para las otras
+  // 346 comunas el arreglo trae un solo elemento y se resuelve en una request.
+  const codigos = codigosSIIPorComuna(comuna)
+  if (codigos.length === 0) {
     return {
       ok: false,
       rol: rolNorm,
-      error: `El SII respondió pero no se parseó ningún campo de la ficha del rol ${rolNorm} (¿rol inexistente, o cambió el markup?)`,
+      error: `No hay código SII para la comuna "${comuna}". Revisa el nombre, o la comuna no está en el padrón del SII.`,
     }
   }
 
-  return { ok: true, rol: rolNorm, data }
+  for (const codigo of codigos) {
+    const p = await pedirPredio(codigo, manzana, predio)
+    if (!p) continue
+
+    // El avalúo en UF se calcula, no viene. Solo se pide la UF si hay avalúo
+    // que convertir — está cacheada 24h, pero no hay razón para tocarla si no.
+    let avaluoUf: number | null = null
+    const avaluoClp = typeof p.valorTotal === 'number' ? p.valorTotal : null
+    if (avaluoClp !== null) {
+      const uf = await obtenerUfActual()
+      avaluoUf = Math.round((avaluoClp / uf.valor) * 100) / 100
+    }
+
+    return {
+      ok: true,
+      rol: rolNorm,
+      data: {
+        direccion_normalizada: p.direccion?.trim() ?? '',
+        // El nombre que devuelve el SII, no el de entrada: para Santiago puede
+        // ser "SANTIAGO OESTE", y decir dónde está realmente el predio es más
+        // útil que devolver el nombre que ya nos habían dado.
+        comuna: p.nombreComuna?.trim() ?? comuna,
+        destino: p.destinoDescripcion?.trim() ?? '',
+        avaluo_fiscal_clp: avaluoClp,
+        avaluo_fiscal_uf: avaluoUf,
+        lat: typeof p.ubicacionX === 'number' ? p.ubicacionX : null,
+        lng: typeof p.ubicacionY === 'number' ? p.ubicacionY : null,
+      },
+    }
+  }
+
+  return {
+    ok: false,
+    rol: rolNorm,
+    error: `El SII no tiene un predio con rol ${rolNorm} en ${comuna}.`,
+  }
 }
 
 export interface SIILookupServerData {
@@ -178,8 +274,8 @@ export interface SIILookupServerData {
   destino: string
   avaluo_fiscal_clp: number | null
   avaluo_fiscal_uf: number | null
-  superficie_terreno_m2: number | null
-  superficie_construida_m2: number | null
+  lat: number | null
+  lng: number | null
 }
 
 // Best-effort/no lanza — si el SII no responde o el rol no existe, quien
@@ -187,6 +283,7 @@ export interface SIILookupServerData {
 // app/api/tasacion/route.ts, del cual se extrajo esta función).
 export async function buscarDatosSIIPorRol(
   rol: string,
+  comuna: string,
   cookieHeader: string | null,
 ): Promise<SIILookupServerData | null> {
   try {
@@ -195,7 +292,8 @@ export async function buscarDatosSIIPorRol(
     // nada acotaba este salto propio — un self-request colgado se comía el
     // maxDuration completo de Tasación/Due Diligence (120s) antes de que
     // saliera un solo token del stream.
-    const res = await fetch(`${baseUrl}/api/sii/lookup?rol=${encodeURIComponent(rol)}`, {
+    const params = new URLSearchParams({ rol, comuna })
+    const res = await fetch(`${baseUrl}/api/sii/lookup?${params.toString()}`, {
       headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
       signal: AbortSignal.timeout(12_000),
     })

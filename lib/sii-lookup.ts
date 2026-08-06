@@ -1,14 +1,26 @@
 export interface SIIData {
   rol: string
-  avaluo_fiscal_clp: number
+  avaluo_fiscal_clp: number | null
   avaluo_fiscal_uf: number | null
-  superficie_terreno_m2: number
-  superficie_construida_m2: number
   destino: string
   direccion_normalizada: string
-  lat?: number
-  lng?: number
+  comuna: string
+  lat: number | null
+  lng: number | null
 }
+
+// ELIMINADO 06-08: superficie_terreno_m2 y superficie_construida_m2.
+//
+// El endpoint nuevo del SII no las expone (14 predios, 6 destinos, todos en 0 —
+// la investigación completa está en la cabecera de lib/sii-lookup-server.ts).
+// Se sacaron del tipo en vez de dejarlas en `number | null` porque un campo que
+// estructuralmente nunca llega no es un dato faltante: es una promesa falsa. Con
+// `| null` las tres vistas que las leían habrían seguido compilando y mostrando
+// huecos para siempre; sacándolas, el compilador señaló exactamente los cuatro
+// lugares que había que limpiar.
+//
+// Las columnas superficie_terreno_m2 / superficie_construida_m2 de la BD siguen
+// existiendo y se llenan a mano — el SII ya no es una fuente para ellas.
 
 // ELIMINADO 05-08: lookupSIIByAddress, lookupSIIByRol, SIILookupResponse.
 //

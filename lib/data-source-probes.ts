@@ -3,6 +3,7 @@ import { obtenerPoblacionEnPoligono } from '@/lib/censo-manzana-server'
 import { geocodeDireccion } from '@/lib/geocoding'
 import { obtenerSenalesUbicacion } from '@/lib/terrenos-ubicacion'
 import { consultarRolEnSII } from '@/lib/sii-lookup-server'
+import { ScraperRateLimitedError } from '@/lib/scraper'
 
 // Probes sintéticos de las fuentes externas que viven en el CAMINO CRÍTICO de
 // un request de usuario — no en un cron. recordSourceRun() ya cubría las
@@ -93,10 +94,17 @@ const POLIGONO_PROBE: GeoJSON.Polygon = {
   ],
 }
 
-// Rol fijo de la Región Metropolitana. Fijo por el mismo motivo que
+// Rol fijo, y verificado contra el SII el 06-08: 14-345 en Providencia es
+// "PROVIDENCIA 1234 LC 1", destino COMERCIO. Fijo por el mismo motivo que
 // PUNTO_PROBE: si variara, una caída sería indistinguible de "hoy tocó un rol
 // que no existe".
-const ROL_PROBE_SII = '1234-056'
+//
+// El anterior era '1234-056', un rol INVENTADO que servía con el CGI viejo
+// porque ahí bastaba con que la página tuviera la forma de una ficha. Con el
+// endpoint nuevo, un rol inexistente devuelve data:null y el probe habría
+// quedado rojo para siempre por un motivo falso.
+const ROL_PROBE_SII = '14-345'
+const COMUNA_PROBE_SII = 'Providencia'
 
 /** Chile continental — sanity check grueso del geocoder, no precisión. */
 const BBOX_CHILE = { latMin: -56, latMax: -17, lngMin: -76, lngMax: -66 }
@@ -170,23 +178,32 @@ export const PROBES: Probe[] = [
     ejecutar: async () => {
       // Usa consultarRolEnSII(), la MISMA función que sirve a
       // /api/sii/lookup — ese fue el punto entero de extraerla el 05-08. Un
-      // probe con su propia copia del parser podría dar verde con el parser
-      // real roto.
+      // probe con su propia copia podría dar verde con el camino real roto.
       //
-      // ADVERTENCIA AL LEER ESTO EN ROJO: al momento de escribirlo, el
-      // endpoint ya estaba caído — zeus.sii.cl/avalu_cgi/br/erc0000.sh
-      // devuelve 404 (el host responde y el directorio existe con 403, pero
-      // el script no). Este probe NO va a ponerse verde solo; que esté rojo
-      // es el reporte correcto de un hecho, no un probe mal calibrado. Se
-      // arregla cuando se encuentre el endpoint vigente del SII.
-      const r = await consultarRolEnSII(ROL_PROBE_SII)
-      if (!r.ok) return { ok: false, detalle: r.error ?? 'consulta no exitosa' }
-      const d = r.data!
-      // No basta con ok: la ficha tiene que traer campos identificatorios.
-      if (!d.comuna && !d.direccion_normalizada) {
-        return { ok: false, detalle: 'ficha sin comuna ni dirección — ¿cambió el markup?' }
+      // Estuvo rojo por diseño entre el 04-08 y el 06-08, mientras el CGI del
+      // SII estaba caído y no había reemplazo: preferimos que se viera
+      // verdadero antes que verde. Con la migración al endpoint nuevo debería
+      // ponerse verde solo; si vuelve a rojo, esta vez sí pasa algo.
+      try {
+        const r = await consultarRolEnSII(ROL_PROBE_SII, COMUNA_PROBE_SII)
+        if (!r.ok) return { ok: false, detalle: r.error ?? 'consulta no exitosa' }
+        const d = r.data!
+        // No basta con ok: la ficha tiene que traer campos identificatorios.
+        if (!d.comuna && !d.direccion_normalizada) {
+          return { ok: false, detalle: 'ficha sin comuna ni dirección — ¿cambió la respuesta?' }
+        }
+        return { ok: true, detalle: `${d.comuna || 's/comuna'}, destino "${d.destino || 's/destino'}"` }
+      } catch (err) {
+        // "Nos bloquearon" NO es "el SII se cayó", y mezclarlos hace que el
+        // dashboard mienta en las dos direcciones: manda a investigar una caída
+        // que no existe, y esconde que estamos gastando la cuota. El bloqueo
+        // además dura más de una hora, así que el rojo se va a sostener y hay
+        // que saber por qué.
+        if (err instanceof ScraperRateLimitedError) {
+          return { ok: false, detalle: 'el SII nos bloqueó por volumen (HTTP 429) — no está caído' }
+        }
+        throw err
       }
-      return { ok: true, detalle: `${d.comuna || 's/comuna'}, destino "${d.destino || 's/destino'}"` }
     },
   },
   {

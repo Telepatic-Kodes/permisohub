@@ -1,34 +1,16 @@
 export const dynamic = 'force-dynamic'
 
-import { UF_FALLBACK_CLP } from '@/lib/uf'
+import { obtenerUfActual } from '@/lib/uf-server'
 
-let _cache: { valor: number; fecha: string; cachedAt: number } | null = null
-const TTL_MS = 24 * 60 * 60 * 1000
-
+// El fetch, la caché y el fallback viven en lib/uf-server.ts desde el 06-08:
+// consultarRolEnSII() también necesita la UF y no puede hacerse un self-fetch a
+// esta ruta. Acá queda solo la traducción al contrato HTTP, que NO cambió — lo
+// consumen 5 vistas del dashboard y el copiloto.
 export async function GET() {
-  if (_cache && Date.now() - _cache.cachedAt < TTL_MS) {
-    return Response.json({ ok: true, valor: _cache.valor, fecha: _cache.fecha, cached: true })
+  const uf = await obtenerUfActual()
+
+  if (uf.fallback) {
+    return Response.json({ ok: false, valor: uf.valor, fecha: null, error: uf.error, fallback: true })
   }
-
-  try {
-    const res = await fetch('https://mindicador.cl/api/uf', {
-      next: { revalidate: 86400 },
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-    const data = await res.json() as { serie: { fecha: string; valor: number }[] }
-    const latest = data.serie?.[0]
-    if (!latest?.valor) throw new Error('Respuesta inválida de mindicador.cl')
-
-    _cache = { valor: latest.valor, fecha: latest.fecha, cachedAt: Date.now() }
-    return Response.json({ ok: true, valor: latest.valor, fecha: latest.fecha, cached: false })
-  } catch (err) {
-    return Response.json({
-      ok: false,
-      valor: UF_FALLBACK_CLP,
-      fecha: null,
-      error: err instanceof Error ? err.message : String(err),
-      fallback: true,
-    })
-  }
+  return Response.json({ ok: true, valor: uf.valor, fecha: uf.fecha, cached: uf.cached })
 }

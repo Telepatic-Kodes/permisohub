@@ -46,20 +46,6 @@ export function AvaluoFiscalCard({ data }: { data: SIILookupServerData }) {
           </>
         )}
 
-        {data.superficie_terreno_m2 !== null && (
-          <>
-            <span className="text-muted-foreground">Sup. terreno (SII)</span>
-            <span className="num text-right">{data.superficie_terreno_m2.toLocaleString("es-CL")} m²</span>
-          </>
-        )}
-
-        {data.superficie_construida_m2 !== null && (
-          <>
-            <span className="text-muted-foreground">Sup. construida (SII)</span>
-            <span className="num text-right">{data.superficie_construida_m2.toLocaleString("es-CL")} m²</span>
-          </>
-        )}
-
         {data.direccion_normalizada && (
           <>
             <span className="text-muted-foreground">Dirección SII</span>

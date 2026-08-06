@@ -5,6 +5,7 @@ import { NuevoProyectoSchema } from '@/lib/schemas'
 import { apiError } from '@/lib/api-error'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { persistZonificacionParaProyecto } from '@/lib/zonificacion-server'
+import { consultarRolEnSII } from '@/lib/sii-lookup-server'
 import { reportError } from '@/lib/observability'
 import { asegurarWorkspace } from '@/lib/workspace'
 
@@ -128,40 +129,39 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fallback de scraping SII: patente sin datos del enricher pero con rol.
-    if (body.tipo === 'patente_comercial' && !(raw as Record<string, unknown>).destino_sii && proyecto?.id && body.numero_expediente) {
+    // Fallback SII: patente sin datos del enricher pero con rol y comuna.
+    //
+    // Reescrito el 06-08 y arregla dos cosas, además de pasar la comuna que el
+    // endpoint nuevo exige:
+    //
+    //   1. Llama a consultarRolEnSII() directo en vez de hacerse un fetch a
+    //      /api/sii/lookup. Ese self-fetch iba SIN cookie contra una ruta que
+    //      exige sesión, así que siempre recibía 401: este fallback nunca
+    //      enriqueció nada, solo reportaba su propio fracaso a Sentry. Acá ya
+    //      estamos en el servidor; el salto HTTP no aportaba más que el bug.
+    //   2. Ya no escribe superficie_terreno_m2 ni superficie_construida_m2. El
+    //      SII dejó de exponerlas, y el `?? null` que había habría BORRADO las
+    //      que el arquitecto cargó a mano.
+    if (
+      body.tipo === 'patente_comercial' &&
+      !(raw as Record<string, unknown>).destino_sii &&
+      proyecto?.id &&
+      body.numero_expediente &&
+      body.municipio
+    ) {
       const proyectoId = proyecto.id
       const rol = body.numero_expediente
+      const comuna = body.municipio
       after(async () => {
         // Fire-and-forget: nunca debe fallar el request que ya respondió al
         // cliente. Pero "fire-and-forget" ya no significa "silencioso" — cada
         // rama que no persiste datos SII se reporta al funnel único (C8).
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-          const siiRes = await fetch(
-            `${baseUrl}/api/sii/lookup?rol=${encodeURIComponent(rol)}`,
-            { method: 'GET' }
-          )
-          if (!siiRes.ok) {
-            reportError(new Error(`SII lookup respondió HTTP ${siiRes.status}`), {
-              scope: 'api.proyectos.sii-after.lookup-not-ok',
-              extra: { proyectoId, rol, status: siiRes.status },
-            })
-            return
-          }
-          const siiData = await siiRes.json() as {
-            ok?: boolean
-            data?: {
-              superficie_terreno_m2: number | null
-              superficie_construida_m2: number | null
-              destino: string
-              direccion_normalizada?: string
-            }
-          }
-          if (!siiData.ok || !siiData.data) {
-            reportError(new Error('SII lookup respondió ok:false o sin data'), {
+          const consulta = await consultarRolEnSII(rol, comuna)
+          if (!consulta.ok || !consulta.data) {
+            reportError(new Error(consulta.error ?? 'SII sin datos para el rol'), {
               scope: 'api.proyectos.sii-after.data-not-ok',
-              extra: { proyectoId, rol, siiOk: siiData.ok },
+              extra: { proyectoId, rol, comuna },
             })
             return
           }
@@ -169,9 +169,9 @@ export async function POST(request: Request) {
           const { error: updateErr } = await supabase
             .from('proyectos')
             .update({
-              superficie_terreno_m2: siiData.data.superficie_terreno_m2 ?? null,
-              superficie_construida_m2: siiData.data.superficie_construida_m2 ?? null,
-              destino_sii: siiData.data.destino ?? null,
+              destino_sii: consulta.data.destino || null,
+              lat: consulta.data.lat,
+              lng: consulta.data.lng,
               updated_at: new Date().toISOString(),
             })
             .eq('id', proyectoId)
@@ -184,7 +184,7 @@ export async function POST(request: Request) {
         } catch (err) {
           reportError(err, {
             scope: 'api.proyectos.sii-after.unhandled',
-            extra: { proyectoId, rol },
+            extra: { proyectoId, rol, comuna },
           })
         }
       })

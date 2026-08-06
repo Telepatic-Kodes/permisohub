@@ -48,6 +48,28 @@ export class ScraperUnavailableError extends Error {
   }
 }
 
+/**
+ * HTTP 429: la fuente nos está bloqueando por volumen, no está caída.
+ *
+ * Subclase a propósito — todo `catch (e) { if (e instanceof
+ * ScraperUnavailableError) }` que ya existe la sigue atrapando igual, así que
+ * distinguirla no cambia el comportamiento de nadie. Lo que habilita es no
+ * confundir "nos bloquearon" con "no existe el dato", que es un error caro:
+ * investigando el SII el 05-08, un barrido con 429 se leyó como "este código de
+ * comuna está muerto" y era falso.
+ *
+ * Importa además porque la penalización es larga. En el SII, ~40 requests en 3
+ * minutos costaron más de una hora de bloqueo sin header Retry-After, y como el
+ * server sale por una sola IP, el bloqueo lo pagan también los usuarios que
+ * consultan a mano.
+ */
+export class ScraperRateLimitedError extends ScraperUnavailableError {
+  constructor(fuente: string) {
+    super(fuente, 'bloqueado por exceso de consultas (HTTP 429)')
+    this.name = 'ScraperRateLimitedError'
+  }
+}
+
 // Fetch with timeout and user agent
 export async function fetchWithTimeout(
   url: string,
