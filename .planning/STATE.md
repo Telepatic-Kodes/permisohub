@@ -1,6 +1,20 @@
 # State
 
 ## Commits sin procesar
+- `2026-08-06` `9126de3` fix(via-tramitacion): alinear la RLS al modelo de workspaces antes de correrla
+- `2026-08-06` `e618f44` ci: agregar el build de producción, la única puerta que faltaba
+- `2026-08-06` `a04bed4` merge: reponer el SII en producción y cerrar el agujero de CI
+- `2026-08-06` `9126de3` fix(via-tramitacion): alinear la RLS al modelo de workspaces antes de correrla
+- `2026-08-06` `e618f44` ci: agregar el build de producción, la única puerta que faltaba
+- `2026-08-06` `6710cf9` feat(sii): migrar al endpoint nuevo y eliminar el CGI muerto
+- `2026-08-06` `1b1234b` refactor(uf): extraer el valor de la UF a lib/uf-server.ts
+- `2026-08-05` `aea640d` feat(sii): mapeo nombre→código de comuna, y el rate limit que apareció al hacerlo
+- `2026-08-05` `19774a2` docs(sii): el endpoint nuevo NO expone superficies — reabre la estimación
+- `2026-08-05` `dfd0716` docs(sii): endpoint de reemplazo capturado en vivo — y por qué no es cambiar una URL
+- `2026-08-05` `1e90ded` feat(sii): extraer el parser de la ruta y probarlo — la fuente está caída
+- `2026-08-05` `f733276` feat(salud): registrar los 2 crons de tipos adicionales y descartar el helper del Grupo B
+- `2026-08-05` `f9fcc9f` fix(terrenos): cerrar el Grupo A — el otro pipeline del mismo bloqueo
+- `2026-08-05` `b84d178` chore(planning): capturar commits pendientes, bump a v1.7 y script de env de Vercel
 - `2026-08-05` `75ef9be` fix(scrapers): un scraper bloqueado dejaba de verse como cero publicaciones
 - `2026-08-05` `9e5a980` feat(salud): health check de fuentes externas del camino crítico
 - `2026-08-05` `6685cf8` perf(demografia): cachear isócrona+censo (10,4s → 0,34s) y limpiar sii-lookup
