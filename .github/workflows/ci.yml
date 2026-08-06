@@ -37,5 +37,21 @@ jobs:
       # durante 4 días. Un guard que grita siempre no dice nada.
       - name: Registro de fuentes de datos (Torre de Control)
         run: npm run check:data-sources
+      # Va al final por ser el paso lento, pero es el que faltaba: hasta el
+      # 06-08 CI corría typecheck, lint, tests y los dos guards, o sea todo
+      # menos la única puerta que rompe un deploy. Un build roto pasaba CI en
+      # verde y moría recién en Vercel.
+      #
+      # Credenciales placeholder a propósito: `next build` no necesita una base
+      # real (verificado apartando .env.local y compilando en limpio), y darle
+      # las de verdad sería exponer secretos para no ganar nada. Si algún día
+      # el build empieza a exigir Supabase, es señal de que algo se movió a
+      # tiempo de compilación y hay que mirarlo, no de que falten secrets.
+      - name: Build de producción
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-key
       # El smoke E2E (npm run test:e2e) necesita Supabase + OPENAI_API_KEY
       # reales; se corre localmente, no en CI.
